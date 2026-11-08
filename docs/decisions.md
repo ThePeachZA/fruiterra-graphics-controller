@@ -365,6 +365,19 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - Tests guard the custom NSIS template against losing the approved display name or the CLI placeholders.
 - M0 findings are recorded in the Phase 6 section above: the bundler reads `[bundle.windows]`, not `[windows]`, and UI assets are filesystem assets that must ship beside the executable.
 
+## M1 — Core domain, validation and store (verified)
+
+**Status: green locally.** `fgc-core` owns the persisted model, repair rules, versioned JSON store, migrations and asset/path helpers; it has no async runtime, HTTP or UI dependency.
+
+- **Enum spellings are fixed by tests.** Lowercase for `Role`, `Position`, `MatchStatus`, `AssetOrigin`, `BracketMatchStatus`, `TimerMode`, `TimerAlignment` and `SocialPlatform`; kebab-case for `AssetCategory` (`game-mode`), `BracketFormat` (`single-elim`, `double-elim`, `round-robin`), `TournamentStatus` and `Tiebreaker`. `TeamSide` is uppercase `"A"`/`"B"` and `Side` is numeric `0`/`1`/`2`. `Scoring` is internally tagged with `mode`.
+- **Unknown-field policy.** Unknown top-level `AppState` keys are preserved verbatim in a `#[serde(flatten)] extra` map and survive a save/load round trip. Unknown nested fields are ignored. This keeps forward compatibility without freezing every nested struct.
+- **Scores are clamped at parse time.** Scores are `u16` in the domain model, so negative values are clamped to 0 by a deserializer rather than by `validate_and_repair`; `validate_and_repair` never sees a negative score.
+- **Error paths use `serde_path_to_error`.** A bad document reports the JSON field path, for example `teams[0].players[0].role`, instead of a bare serde message.
+- **Migrations are version-indexed.** A missing `schemaVersion` is treated as version 0. `MIGRATIONS[n]` upgrades from version `n`; a document newer than `SCHEMA_VERSION` is refused with `UnsupportedSchema`. There is no Electron import.
+- **Store behaviour.** `JsonStore::save` writes `app.json.tmp`, fsyncs, rotates the current file to `app.json.bak`, then renames the temp file into place. `load` returns defaults when the primary is missing, and falls back to the backup when the primary is corrupt. `MemoryStore` backs pure logic and tests.
+- **Validation is shared.** `validate_and_repair` is called by `migrate`, so files, imports and tests all use the same repair table. It logs each repair once via `tracing::warn!`.
+- **Tests:** 36 `fgc-core` tests (1 unit + 7 assets + 9 migrate + 2 paths + 6 store + 11 validation) and 40 workspace tests pass; `fmt`, `clippy -D warnings` and `doc` are clean.
+
 
 
 

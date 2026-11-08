@@ -319,9 +319,16 @@ pub struct Settings {
 | Asset `ext` not on the allow-list | Rejected; the asset is dropped from the library and logged (C11) |
 | Two assets share a hash | Allowed; identical bytes are stored once and both metadata entries remain valid |
 | Unknown enum values | Rejected with a field path in the error |
-| Unknown JSON fields | Preserved in a `#[serde(flatten)] extra` map where safe, otherwise ignored with a warning |
+| Unknown JSON fields | Top-level `AppState` keys are preserved in a `#[serde(flatten)] extra` map; nested unknown fields are ignored |
 
 Import/export uses the same validator, so a hand-edited file cannot crash the app (C8).
+
+### 4.1 M1 implementation notes
+
+- **Score clamping happens during deserialization.** Scores are `u16`, so a negative value is clamped to 0 by a field deserializer before the repair table runs. The repair table never observes a negative score.
+- **Field paths in errors.** `migrate` deserializes through `serde_path_to_error`, so an invalid enum or type reports its JSON location (for example `teams[0].players[0].role`).
+- **Fixed enum spellings.** Lowercase: `Role`, `Position`, `MatchStatus`, `AssetOrigin`, `BracketMatchStatus`, `TimerMode`, `TimerAlignment`, `SocialPlatform`. Kebab-case: `AssetCategory` (`game-mode`), `BracketFormat` (`single-elim`, `double-elim`, `round-robin`), `TournamentStatus`, `Tiebreaker`. `TeamSide` is `"A"`/`"B"`; `Side` is `0`/`1`/`2`; `Scoring` is tagged with `mode`.
+- **Repairs are logged once.** `validate_and_repair` emits a `tracing::warn!` per repair; `migrate` calls it without logging the results again.
 
 ---
 

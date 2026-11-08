@@ -2,7 +2,30 @@
 //! Graphics Controller.
 //!
 //! This crate is deliberately free of async runtimes, HTTP servers and UI
-//! frameworks. The full domain model arrives in milestone M1.
+//! frameworks. It owns the persisted domain model, the versioned JSON store
+//! and the validation rules that keep user data loadable.
+
+mod assets;
+mod error;
+mod migrate;
+mod model;
+mod paths;
+mod store;
+mod validation;
+
+pub use assets::{
+    ALLOWED_EXTENSIONS, blob_path, blob_relative_path, bundled_asset_id, is_allowed_extension,
+    is_valid_hash, validate_asset_identity,
+};
+pub use error::CoreError;
+pub use migrate::migrate;
+pub use model::*;
+pub use paths::{
+    app_data_dir, assets_root, backup_file, blobs_dir, data_dir, ensure_app_dirs, ensure_dirs,
+    logs_dir, overlays_override_dir, state_file,
+};
+pub use store::{JsonStore, MemoryStore, Store};
+pub use validation::{Repair, RepairKind, validate_and_repair};
 
 /// User-facing application name.
 pub const APP_NAME: &str = "Fruiterra Graphics Controller";
@@ -13,13 +36,8 @@ pub const BINARY_NAME: &str = "fruiterra-gc";
 /// Application version from the workspace manifest.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Errors surfaced by the core domain.
-#[derive(Debug, thiserror::Error)]
-pub enum CoreError {
-    /// A value failed validation.
-    #[error("invalid data: {0}")]
-    Invalid(String),
-}
+/// Current persisted schema version.
+pub const SCHEMA_VERSION: u32 = 1;
 
 /// Returns the application name.
 #[must_use]
@@ -35,6 +53,7 @@ mod tests {
     fn metadata_is_stable() {
         assert_eq!(APP_NAME, "Fruiterra Graphics Controller");
         assert_eq!(BINARY_NAME, "fruiterra-gc");
+        assert_eq!(SCHEMA_VERSION, 1);
         assert!(!VERSION.is_empty());
     }
 }
