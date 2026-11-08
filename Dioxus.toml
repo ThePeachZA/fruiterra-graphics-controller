@@ -1,0 +1,37 @@
+[application]
+name = "Fruiterra Graphics Controller"
+# Used only by `dx components add`; paths here are relative to the invocation
+# directory (the workspace root). Build-time asset discovery uses manganis.
+asset_dir = "crates/app/assets"
+
+[bundle]
+identifier = "com.fruiterra.fgc"
+publisher = "Fruiterra"
+# Bundle paths are relative to the crate directory (crates/app), not the
+# workspace root where this file lives.
+icon = ["assets/icons/icon.ico"]
+copyright = "Copyright (c) 2026 Fruiterra"
+category = "Utility"
+short_description = "Broadcast graphics control for Overwatch"
+long_description = """
+Fruiterra Graphics Controller is a Windows broadcast control application for
+Overwatch. It manages teams, talent, matches, maps and tournaments, and serves
+OBS-compatible HTML overlays at 1920x1080.
+"""
+
+# Dioxus CLI 0.7.10 reads Windows bundle settings from [bundle.windows].
+# The newer top-level [windows] table is parsed but not wired into the bundler,
+# so putting these keys there silently falls back to the offline installer.
+# EmbedBootstrapper applies to the NSIS (.exe) installer; the WiX MSI does not
+# carry a WebView2 bootstrapper. See docs/build.md.
+[bundle.windows]
+webview_install_mode = { EmbedBootstrapper = { silent = true } }
+
+# The CLI derives the installer product name from the binary target
+# (`fruiterra-gc` -> `FruiterraGc`). The custom template keeps the approved
+# display name while the installed executable stays `fruiterra-gc.exe`.
+[bundle.windows.nsis]
+template = "installer/installer.nsi"
+start_menu_folder = "Fruiterra Graphics Controller"
+installer_icon = "assets/icons/icon.ico"
+

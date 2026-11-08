@@ -1,0 +1,10 @@
+# Normalise text files to LF in the repository and in checkouts. This keeps
+# rustfmt, CI and local Windows builds consistent.
+* text=auto eol=lf
+
+# Binary assets.
+*.ico binary
+*.png binary
+*.woff2 binary
+*.exe binary
+*.zip binary
