@@ -1,0 +1,241 @@
+{
+  "data": {
+    "castersData": [
+      {
+        "displayName": "Caster One",
+        "portraitUrl": "http://127.0.0.1:3001/assets/1515151515151515151515151515151515151515151515151515151515151515.png",
+        "pronouns": "he/him",
+        "socialMedia": {
+          "handle": "@caster1",
+          "platform": "twitter"
+        }
+      },
+      {
+        "displayName": "Caster Two",
+        "portraitUrl": null
+      }
+    ],
+    "currentMap": "Ilios",
+    "currentMapIndex": 0,
+    "firstTo": 3,
+    "gameModeIcons": {
+      "control": "http://127.0.0.1:3001/assets/3131313131313131313131313131313131313131313131313131313131313131.png",
+      "escort": "http://127.0.0.1:3001/assets/3232323232323232323232323232323232323232323232323232323232323232.png",
+      "flashpoint": "http://127.0.0.1:3001/assets/3434343434343434343434343434343434343434343434343434343434343434.png",
+      "hybrid": "http://127.0.0.1:3001/assets/3333333333333333333333333333333333333333333333333333333333333333.png",
+      "push": "http://127.0.0.1:3001/assets/3535353535353535353535353535353535353535353535353535353535353535.png"
+    },
+    "heroBans": [
+      {
+        "firstBanTeam": "A",
+        "teamA": [
+          "Ana"
+        ],
+        "teamB": [
+          "Kiriko"
+        ]
+      },
+      {
+        "firstBanTeam": "B",
+        "teamA": [
+          "Tracer"
+        ],
+        "teamB": []
+      }
+    ],
+    "heroIcons": {
+      "Ana": "http://127.0.0.1:3001/assets/1717171717171717171717171717171717171717171717171717171717171717.png"
+    },
+    "heroPortraits": {
+      "Ana": "http://127.0.0.1:3001/assets/1818181818181818181818181818181818181818181818181818181818181818.png"
+    },
+    "loserPicks": true,
+    "mapPool": [
+      "Nepal",
+      "Ilios",
+      "Dorado",
+      "King's Row",
+      "Suravasa",
+      "Colosseo",
+      "Unknown Map"
+    ],
+    "mapPoolData": [
+      {
+        "maps": [
+          {
+            "chosenBy": null,
+            "chosenByLogo": null,
+            "imageUrl": "http://127.0.0.1:3001/assets/2222222222222222222222222222222222222222222222222222222222222222.png",
+            "name": "Nepal"
+          },
+          {
+            "chosenBy": "A",
+            "chosenByLogo": "http://127.0.0.1:3001/assets/1111111111111111111111111111111111111111111111111111111111111111.png",
+            "imageUrl": "http://127.0.0.1:3001/assets/2121212121212121212121212121212121212121212121212121212121212121.png",
+            "name": "Ilios"
+          }
+        ],
+        "modeIcons": [
+          "http://127.0.0.1:3001/assets/3131313131313131313131313131313131313131313131313131313131313131.png"
+        ],
+        "modeName": "Control"
+      },
+      {
+        "maps": [
+          {
+            "chosenBy": "B",
+            "chosenByLogo": null,
+            "imageUrl": "http://127.0.0.1:3001/assets/2323232323232323232323232323232323232323232323232323232323232323.png",
+            "name": "Dorado"
+          }
+        ],
+        "modeIcons": [
+          "http://127.0.0.1:3001/assets/3232323232323232323232323232323232323232323232323232323232323232.png"
+        ],
+        "modeName": "Escort"
+      },
+      {
+        "maps": [
+          {
+            "chosenBy": null,
+            "chosenByLogo": null,
+            "imageUrl": "http://127.0.0.1:3001/assets/2424242424242424242424242424242424242424242424242424242424242424.png",
+            "name": "King's Row"
+          }
+        ],
+        "modeIcons": [
+          "http://127.0.0.1:3001/assets/3333333333333333333333333333333333333333333333333333333333333333.png"
+        ],
+        "modeName": "Hybrid"
+      },
+      {
+        "maps": [
+          {
+            "chosenBy": null,
+            "chosenByLogo": null,
+            "imageUrl": "http://127.0.0.1:3001/assets/2525252525252525252525252525252525252525252525252525252525252525.png",
+            "name": "Suravasa"
+          }
+        ],
+        "modeIcons": [
+          "http://127.0.0.1:3001/assets/3434343434343434343434343434343434343434343434343434343434343434.png"
+        ],
+        "modeName": "Flashpoint"
+      },
+      {
+        "maps": [
+          {
+            "chosenBy": null,
+            "chosenByLogo": null,
+            "imageUrl": "http://127.0.0.1:3001/assets/2626262626262626262626262626262626262626262626262626262626262626.png",
+            "name": "Colosseo"
+          }
+        ],
+        "modeIcons": [
+          "http://127.0.0.1:3001/assets/3535353535353535353535353535353535353535353535353535353535353535.png"
+        ],
+        "modeName": "Push"
+      }
+    ],
+    "mapType": "Control",
+    "maps": [
+      {
+        "chosenBy": "A",
+        "chosenByName": "ALP",
+        "completed": true,
+        "mapImageUrl": "http://127.0.0.1:3001/assets/2121212121212121212121212121212121212121212121212121212121212121.png",
+        "name": "Ilios",
+        "scoreA": 2,
+        "scoreB": 1,
+        "type": "Control"
+      },
+      {
+        "chosenBy": null,
+        "chosenByName": null,
+        "completed": false,
+        "mapImageUrl": "http://127.0.0.1:3001/assets/2222222222222222222222222222222222222222222222222222222222222222.png",
+        "name": "Nepal",
+        "scoreA": 0,
+        "scoreB": 0,
+        "type": "Control"
+      },
+      {
+        "chosenBy": "B",
+        "chosenByName": "BRV",
+        "completed": false,
+        "mapImageUrl": "http://127.0.0.1:3001/assets/2323232323232323232323232323232323232323232323232323232323232323.png",
+        "name": "Dorado",
+        "scoreA": 0,
+        "scoreB": 0,
+        "type": "Escort"
+      }
+    ],
+    "roleIcons": {
+      "Damage": "http://127.0.0.1:3001/assets/4242424242424242424242424242424242424242424242424242424242424242.png",
+      "Support": "http://127.0.0.1:3001/assets/4343434343434343434343434343434343434343434343434343434343434343.png",
+      "Tank": "http://127.0.0.1:3001/assets/4141414141414141414141414141414141414141414141414141414141414141.png",
+      "damage": "http://127.0.0.1:3001/assets/4242424242424242424242424242424242424242424242424242424242424242.png",
+      "support": "http://127.0.0.1:3001/assets/4343434343434343434343434343434343434343434343434343434343434343.png",
+      "tank": "http://127.0.0.1:3001/assets/4141414141414141414141414141414141414141414141414141414141414141.png"
+    },
+    "scoreA": 1,
+    "scoreB": 0,
+    "showPlayerPortraits": true,
+    "side": 1,
+    "sideIcons": {
+      "attack": "http://127.0.0.1:3001/assets/5151515151515151515151515151515151515151515151515151515151515151.png",
+      "defend": "http://127.0.0.1:3001/assets/5252525252525252525252525252525252525252525252525252525252525252.png"
+    },
+    "status": "live",
+    "subtitle": "Upper Bracket",
+    "swapSides": true,
+    "teamA": {
+      "color": "#ff0000",
+      "logoBgColor": "#111111",
+      "logoUrl": "http://127.0.0.1:3001/assets/1111111111111111111111111111111111111111111111111111111111111111.png",
+      "name": "Alpha",
+      "record": "12-3",
+      "tag": "ALP"
+    },
+    "teamAPlayers": [
+      {
+        "heroImageUrl": "http://127.0.0.1:3001/assets/1818181818181818181818181818181818181818181818181818181818181818.png",
+        "name": "Ace",
+        "portraitUrl": "http://127.0.0.1:3001/assets/1414141414141414141414141414141414141414141414141414141414141414.png",
+        "position": "core",
+        "pronouns": "they/them",
+        "role": "tank"
+      },
+      {
+        "heroImageUrl": null,
+        "name": "Bench",
+        "portraitUrl": null,
+        "position": "sub",
+        "role": "damage"
+      }
+    ],
+    "teamB": {
+      "color": "#00ff00",
+      "logoBgColor": "#090909",
+      "logoUrl": null,
+      "name": "Bravo",
+      "record": "0-0",
+      "tag": "BRV"
+    },
+    "teamBPlayers": [
+      {
+        "heroImageUrl": null,
+        "name": "Blaze",
+        "portraitUrl": null,
+        "position": "core",
+        "pronouns": "she/her",
+        "role": "support"
+      }
+    ],
+    "teamColorsEnabled": true,
+    "title": "Grand Final",
+    "tournamentLogoUrl": "http://127.0.0.1:3001/assets/1212121212121212121212121212121212121212121212121212121212121212.png",
+    "watermarkLogoUrl": "http://127.0.0.1:3001/assets/1313131313131313131313131313131313131313131313131313131313131313.png"
+  },
+  "type": "scoreboard"
+}

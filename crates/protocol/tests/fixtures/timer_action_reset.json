@@ -1,0 +1,9 @@
+{
+  "data": {
+    "action": "reset",
+    "hours": 0,
+    "minutes": 0,
+    "seconds": 0
+  },
+  "type": "matchTimer"
+}

@@ -378,6 +378,19 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - **Validation is shared.** `validate_and_repair` is called by `migrate`, so files, imports and tests all use the same repair table. It logs each repair once via `tracing::warn!`.
 - **Tests:** 36 `fgc-core` tests (1 unit + 7 assets + 9 migrate + 2 paths + 6 store + 11 validation) and 40 workspace tests pass; `fmt`, `clippy -D warnings` and `doc` are clean.
 
+## M2 — Protocol DTOs, projection and golden tests (verified)
+
+**Status: green locally.** `fgc-protocol` owns the wire DTOs, asset catalogue, URL resolvers, section cache and projector. It depends only on `fgc-core`, `serde`, `base64` and `thiserror`; it has no server, HTTP or UI dependency.
+
+- **Projection is pure in served mode.** `Projector` reads `AppState` and an `AssetCatalog`, and formats `/assets/<hash>.<ext>` URLs. It performs no filesystem access. `DataUrlResolver` is the only I/O-capable path, and it reads bytes solely through a caller-supplied loader.
+- **`show` shape corrected.** The overlays read `visible` at the top level of the frame (`{ "type": "show", "visible": true }`), not under `data`. `docs/protocol.md` §3.4 previously showed the nested form and is fixed. `ShowMessage` serialises the flat shape; `SectionCache` never stores `show`.
+- **Hero art convention.** A `Hero` asset's own file is its large portrait art; `Asset.icon` links the small icon, and an optional `Asset.portrait` link overrides the large art. `heroIcons` reads the icon; `heroPortraits` and a player's `heroImageUrl` prefer the override and otherwise use the asset itself. This preserves the original's `hero.path || hero.portraitPath` preference and fixes the original's `heroImageUrl` always being `null` because hero entries lacked a `path`.
+- **Watermark fallback.** No configured watermark, or a configured id missing from the catalogue, falls back to the bundled `Peach` logo. A configured asset whose bytes are unavailable in `data_url` mode resolves to `null` instead of falling back, matching the original.
+- **Small parity fixes.** Empty `auxColor` serialises as `#090909`; `record` defaults to `"0-0"` when absent or empty; `pronouns` and `socialMedia` are omitted when unset; `sideIcons` always carries `attack` and `defend` keys; `currentMapIndex` is the raw zero-based value and is `null` when no map is selected.
+- **Quirks locked by tests.** Five identical scoreboard payloads under five type names; `casters` carries `{ castersData }`; `roleIcons` has lower-case and original-case keys; `gameModeIcons` keys are lower-case; hero keys are case-sensitive; `mapPoolData` groups by mode, keeps first-occurrence map order, sorts modes alphabetically with `Flashpoint` and `Push` last, always emits `modeIcons` as an array and skips unknown maps; `maps[].type` is the game-mode display string; chosen-by names use team tags.
+- **Golden fixtures.** `scoreboard_full`, `scoreboard_minimal`, `init_after_broadcast`, `init_empty`, `casters`, `timer_tick`, three timer actions and `show` are checked in under `crates/protocol/tests/fixtures/`. They were derived field-by-field from the original `MatchController.tsx`, `electron/main.ts` and overlay HTML rather than captured from a running Electron build; provenance is recorded in `docs/protocol.md` §6.
+- **Tests:** 67 `fgc-protocol` tests (1 unit + 16 asset URL/catalogue + 11 golden + 8 init + 31 quirks) and 106 workspace tests pass; `fmt --check`, `clippy -D warnings` and `doc` are clean.
+
 
 
 

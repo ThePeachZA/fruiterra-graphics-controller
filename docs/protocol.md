@@ -202,9 +202,10 @@ Two shapes, exactly as the original sends them:
 ### 3.4 `show`
 
 ```json
-{ "type": "show", "data": { "visible": true } }
+{ "type": "show", "visible": true }
 ```
 
+- `visible` sits at the **top level** of the frame, beside `type`. There is no `data` object; every bundled overlay reads `data.visible` where `data` is the whole frame.
 - Implemented by all seven overlays; **not sent by the app in v1** (no UI toggle). The B1 backlog item turns it on.
 - Must remain supported server-side; no schema change.
 
@@ -239,7 +240,7 @@ Two shapes, exactly as the original sends them:
 
 ## 6. Compatibility tests (golden files)
 
-Fixtures captured from the original app live in `protocol/tests/fixtures/`:
+Fixtures live in `protocol/tests/fixtures/`:
 
 | Fixture | Asserts |
 |---|---|
@@ -248,8 +249,17 @@ Fixtures captured from the original app live in `protocol/tests/fixtures/`:
 | `init_after_broadcast.json` | Keyed map shape and duplicate keys |
 | `init_empty.json` | Empty map before any match |
 | `casters.json` | `{ castersData }` wrapper and ordering |
-| `timer_tick.json`, `timer_action.json` | Both timer shapes |
-| `show.json` | `visible` boolean |
+| `timer_tick.json` | Timer tick shape |
+| `timer_action_start.json`, `timer_action_pause.json`, `timer_action_reset.json` | All three timer control shapes |
+| `show.json` | Top-level `visible` boolean, no `data` envelope |
+
+Fixture provenance: the fixtures were derived field-by-field from the original
+Electron projection (`src/views/MatchController.tsx`, `electron/main.ts` and the
+seven overlay HTML files) and are regenerated only when the wire contract
+intentionally changes. They are **not** a snapshot of the original app's runtime
+output; every field was checked against the source listed above. `asset_urls.rs`,
+`init.rs` and `quirks.rs` cover the URL, cache and quirk rules that a single
+fixture cannot express.
 
 Test rules:
 
@@ -257,6 +267,17 @@ Test rules:
 2. Every field present in the fixture must be present in the output; extra fields are a failure unless the fixture is explicitly marked `allow_extra`.
 3. Any intentional difference is documented in the test name and in this file.
 4. A separate render smoke test loads each overlay HTML in a headless browser, feeds it the fixture, and asserts the expected DOM text (team names, scores, map number). This is the closest thing to automated OBS compatibility we can get (risk E3).
+
+### 6.1 Implementation notes (M2)
+
+These behaviours are locked by tests and are not wire changes:
+
+- **Hero art convention.** A `Hero` asset's own file is its large portrait art. `Asset.icon` links the small icon asset, and an optional `Asset.portrait` link overrides the large art. `heroIcons` therefore reads `icon`; `heroPortraits` and a player's `heroImageUrl` read the override if present, else the asset itself. This preserves the original's `hero.path || hero.portraitPath` preference and fixes the original's `heroImageUrl` always being `null` (hero entries had no `path`).
+- **Watermark fallback.** When no watermark is configured, or the configured asset id is not in the catalogue, the bundled `Peach` logo is used. A configured asset whose bytes are unavailable in `data_url` mode resolves to `null` rather than silently switching to `Peach`, matching the original.
+- **Empty auxiliary colour.** An empty `auxColor` serialises as `#090909`, mirroring the original's `auxColor || '#090909'`.
+- **Map-pool ordering.** Mode groups are ordered with `Flashpoint` and `Push` last and the rest alphabetically. Rust compares mode names bytewise; all bundled mode names are ASCII, so this matches the original's `localeCompare` for the supported data set.
+- **`data_url` mode.** Projection never reads the filesystem. The caller supplies a byte loader to `DataUrlResolver`; a missing file yields a `null` URL, exactly like the original's `readImageAsDataUrl` failure path.
+- **`show` is not cached.** `SectionCache` only stores broadcast sections. `show` is a direct frame and never appears in `init`, matching the original `overlayState` behaviour.
 
 ---
 

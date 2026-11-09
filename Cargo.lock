@@ -1372,9 +1372,11 @@ dependencies = [
 name = "fgc-protocol"
 version = "1.0.0"
 dependencies = [
+ "base64",
  "fgc-core",
  "serde",
  "serde_json",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

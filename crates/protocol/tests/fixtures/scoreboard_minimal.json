@@ -1,0 +1,38 @@
+{
+  "data": {
+    "castersData": [],
+    "currentMap": "",
+    "currentMapIndex": null,
+    "firstTo": 3,
+    "gameModeIcons": {},
+    "heroBans": [],
+    "heroIcons": {},
+    "heroPortraits": {},
+    "loserPicks": false,
+    "mapPool": [],
+    "mapPoolData": [],
+    "mapType": "",
+    "maps": [],
+    "roleIcons": {},
+    "scoreA": 0,
+    "scoreB": 0,
+    "showPlayerPortraits": true,
+    "side": 0,
+    "sideIcons": {
+      "attack": null,
+      "defend": null
+    },
+    "status": "pre",
+    "subtitle": "",
+    "swapSides": false,
+    "teamA": null,
+    "teamAPlayers": [],
+    "teamB": null,
+    "teamBPlayers": [],
+    "teamColorsEnabled": false,
+    "title": "",
+    "tournamentLogoUrl": null,
+    "watermarkLogoUrl": null
+  },
+  "type": "scoreboard"
+}

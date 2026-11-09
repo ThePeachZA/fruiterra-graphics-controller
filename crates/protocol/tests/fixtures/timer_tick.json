@@ -1,0 +1,13 @@
+{
+  "data": {
+    "hours": 0,
+    "minutes": 12,
+    "seconds": 34,
+    "settings": {
+      "alignment": "center",
+      "leadingZeroes": true,
+      "standalone": false
+    }
+  },
+  "type": "matchTimer"
+}

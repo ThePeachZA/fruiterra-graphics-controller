@@ -1,7 +1,32 @@
 //! OBS-compatible wire protocol: DTOs, projection and the keyed `init` map.
 //!
-//! Message shapes are locked in `docs/protocol.md`. The full DTO layer and
-//! golden fixtures arrive in milestone M2.
+//! Message shapes are locked in `docs/protocol.md`. Projection is pure: it
+//! reads the domain state and an [`AssetCatalog`], and formats URLs through an
+//! [`AssetUrlResolver`]. Only the data-URL resolver may perform I/O, and only
+//! through a caller-supplied loader.
+
+mod cache;
+mod catalog;
+mod dto;
+mod error;
+mod projection;
+mod url;
+
+pub use cache::SectionCache;
+pub use catalog::AssetCatalog;
+pub use dto::{
+    CasterDto, CastersDto, HeroBansDto, MapDto, MapPoolGroupDto, MapPoolMapDto, Message, PlayerDto,
+    ScoreboardDto, ShowMessage, SideIconsDto, TeamDto, TimerActionDto, TimerActionKind,
+    TimerPayload, TimerSettingsDto, TimerTickDto,
+};
+pub use error::ProtocolError;
+pub use projection::{
+    DEFAULT_WATERMARK_NAME, Projector, SCOREBOARD_TYPES, scores, show, timer_action, timer_tick,
+};
+pub use url::{
+    AssetUrlResolver, DataUrlResolver, ServedAssetResolver, data_url_for, font_url,
+    mime_for_extension,
+};
 
 pub use fgc_core::APP_NAME;
 
