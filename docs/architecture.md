@@ -88,41 +88,58 @@ pub fn overlays_override_dir() -> Result<PathBuf, CoreError>;
 Public surface:
 
 ```rust
-pub enum Outbound {
-    Scoreboard(Box<ScoreboardDto>),   // sent under 5 type names
-    Casters(CastersDto),
-    Timer(TimerDto),
-    Show { visible: bool },
+pub struct Projector<'a> { /* state, catalogue, resolver */ }
+
+impl Projector<'_> {
+    pub fn new(
+        state: &AppState,
+        catalog: &AssetCatalog,
+        resolver: &dyn AssetUrlResolver,
+    ) -> Self;
+    pub fn scoreboard(&self, match_state: &Match) -> ScoreboardDto;
+    pub fn scoreboard_messages(&self, match_state: &Match) -> Vec<Message<ScoreboardDto>>;
+    pub fn casters(&self, match_state: &Match) -> CastersDto;
+    pub fn casters_message(&self, match_state: &Match) -> Message<CastersDto>;
 }
 
-pub struct InitMap(BTreeMap<String, serde_json::Value>);
+pub fn timer_tick(settings: &TimerSettings, hours: u32, minutes: u32, seconds: u32)
+    -> Message<TimerPayload>;
+pub fn timer_action(action: TimerActionDto) -> Message<TimerPayload>;
+pub fn show(visible: bool) -> ShowMessage;
 
-pub fn project_scoreboard(state: &AppState, assets: &AssetResolver) -> ScoreboardDto;
-pub fn project_casters(state: &AppState, assets: &AssetResolver) -> CastersDto;
-pub fn project_timer(timer: &TimerSnapshot) -> TimerDto;
-pub fn init_map(cache: &SectionCache) -> InitMap;
+pub struct SectionCache { /* BTreeMap<String, Value> */ }
+impl SectionCache {
+    pub fn set<T: Serialize>(&mut self, message_type: &str, payload: &T)
+        -> Result<(), ProtocolError>;
+    pub fn set_value(&mut self, message_type: &str, payload: Value);
+    pub fn init(&self) -> Message<BTreeMap<String, Value>>;
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &Value)>;
+}
 
-pub struct AssetResolver { /* base_url, data_url_mode */ }
+pub trait AssetUrlResolver: Send + Sync { fn url(&self, asset: &Asset) -> Option<String>; }
+pub struct ServedAssetResolver { /* base_url */ }
+pub struct DataUrlResolver<F> { /* byte loader */ }
 ```
 
-- `AssetResolver` is constructed with `base_url` (`http://127.0.0.1:3001` or the LAN URL) and mode (`served` | `data_url`).
-- Projection never performs I/O in `served` mode. In `data_url` mode it reads and base64-encodes, matching the original fallback.
+- `ServedAssetResolver` is constructed with `base_url` (`http://127.0.0.1:3001` or the LAN URL). `DataUrlResolver` takes a caller-supplied byte loader.
+- Projection never performs I/O in `served` mode. In `data_url` mode the loader reads and base64-encodes, matching the original fallback.
+- `scoreboard_messages` returns the same payload under all five scoreboard type names.
 - Golden fixtures live in `crates/protocol/tests/fixtures/` and are compared as parsed JSON.
 
 ### `fgc-server` — HTTP + WebSocket
 
 | Dependency | Why |
 |---|---|
-| `axum` 0.8 | HTTP + WS |
-| `tokio` 1 (`rt-multi-thread`, `net`, `sync`, `time`, `macros`) | runtime |
-| `tokio-util` | `CancellationToken` |
+| `axum` 0.8 (`ws`) | HTTP + WebSocket |
+| `tokio` 1 (`rt-multi-thread`, `net`, `sync`, `time`, `macros`, `signal`, `fs`) | runtime |
+| `tokio-util` (`rt`) | `CancellationToken` |
 | `tower-http` (`cors`) | CORS `*` |
 | `rust-embed` 8 | overlays + bundled assets |
-| `sha2` | content hashes (runtime validation + `build.rs` bundled manifest) |
+| `sha2` | `build.rs` bundled-manifest hashes and test fixtures (build/dev only) |
 | `mime_guess` | content types |
+| `futures-util` | split WebSocket streams |
 | `tracing` | logs |
 | `fgc-core`, `fgc-protocol` | state + DTOs |
-| `base64` (only for `data_url` mode) | fallback |
 
 Public surface:
 
@@ -132,26 +149,48 @@ pub struct ServerConfig {
     pub allow_lan: bool,
     pub asset_mode: AssetMode,
     pub overlay_override_dir: Option<PathBuf>,
+    pub blob_dir: Option<PathBuf>,      // asset-store root containing blobs/
+    pub broadcast_capacity: usize,      // ring buffer, default 256
+}
+
+pub enum Outbound {
+    Message { kind: String, data: serde_json::Value },
+    Show { visible: bool },
+}
+
+impl Outbound {
+    pub fn section<T: Serialize>(kind: impl Into<String>, payload: &T)
+        -> Result<Self, ProtocolError>;
+    pub fn from_message<T: Serialize>(message: &Message<T>) -> Result<Self, ProtocolError>;
+    pub fn show(visible: bool) -> Self;
 }
 
 pub struct ServerHandle { /* cloneable */ }
 
 impl ServerHandle {
     pub fn start(cfg: ServerConfig) -> Result<Self, ServerError>;
-    pub fn broadcast(&self, msg: Outbound);          // non-blocking, coalescing
-    pub fn rebroadcast_all(&self);                   // after port change
+    pub fn broadcast(&self, msg: Outbound);          // non-blocking
+    pub fn rebroadcast_all(&self);                   // resend every cached section
     pub fn status(&self) -> ServerStatus;            // Stopped|Starting|Running{port,clients}|Stopping|Failed
+    pub fn port(&self) -> Option<u16>;
+    pub fn watcher(&self) -> StatusWatcher;          // status after stop(self)
     pub async fn stop(self) -> Result<(), ServerError>;
     pub async fn restart(self, cfg: ServerConfig) -> Result<Self, ServerError>;
 }
+
+pub fn bundled_assets() -> &'static [BundledAsset];
+pub fn bundled_catalog() -> Vec<Asset>;
 ```
 
+- `Outbound` carries an already-serialised JSON value so the UI can reuse the protocol DTOs without the server depending on UI types.
 - Broadcast is serialised **once** into `Arc<str>` and fanned out with `tokio::sync::broadcast::Sender<Arc<str>>` (the tokio broadcast requirement).
 - The server keeps a `SectionCache` (keyed map) so `init` and `/state` are always available without touching the UI thread.
 - If a WS client lags behind the broadcast buffer, it receives a fresh `init` instead of silently missing frames.
 - Static serving: overlays are served from a per-file user override (if present) or embedded HTML; assets are served as `/assets/<hash>.<ext>` from the embedded blob set or the user blob store; fonts use stable `/assets/fonts/<name>.woff2` paths.
 - Asset requests accept only a 64-character lowercase hex hash and an allow-listed extension; overlay requests reject `..`, separators and non-`.html` names before any filesystem access (C11).
-- `/health` → `{ status, port, overlays, version }`; `/state` → the keyed map.
+- `/health` → `{ status, port, overlays, version }`; `/state` → the keyed map (not the `init` envelope).
+- Asset and font responses send `Cache-Control: public, max-age=31536000, immutable`, an `ETag`, `Accept-Ranges: bytes` and single-range `206` responses. Overlay responses send `Cache-Control: no-cache` so OBS picks up overrides.
+- `stop` is idempotent and waits for graceful shutdown (with a bounded abort fallback); dropping every handle closes the command channel and stops the thread.
 
 ### `fgc-app` — Dioxus desktop UI
 

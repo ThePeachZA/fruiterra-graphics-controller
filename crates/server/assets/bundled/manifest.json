@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "assets": [
+    { "name": "Peach", "category": "logo", "file": "logos/Peach.png" },
+    { "name": "Control", "category": "game-mode", "file": "game-modes/control.png" },
+    { "name": "Escort", "category": "game-mode", "file": "game-modes/escort.png" },
+    { "name": "Flashpoint", "category": "game-mode", "file": "game-modes/flashpoint.png" },
+    { "name": "Hybrid", "category": "game-mode", "file": "game-modes/hybrid.png" },
+    { "name": "Push", "category": "game-mode", "file": "game-modes/push.png" },
+    { "name": "Tank", "category": "role", "file": "roles/tank.png" },
+    { "name": "Damage", "category": "role", "file": "roles/damage.png" },
+    { "name": "Support", "category": "role", "file": "roles/support.png" },
+    { "name": "Attack", "category": "side", "file": "sides/attack.png" },
+    { "name": "Defend", "category": "side", "file": "sides/defend.png" }
+  ]
+}

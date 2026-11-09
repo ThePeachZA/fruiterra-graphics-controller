@@ -93,7 +93,7 @@ The build is deterministic: same files → same hashes → same IDs. `rust-embed
 - URLs in the wire protocol are absolute: `http://<host>:<port>/assets/<hash>.<ext>`.
 - Because the hash is content identity, a changed image gets a new URL. OBS never shows a stale logo after a replace — this fixes C3 (stale caches) structurally.
 - Validation before any lookup: hash is exactly 64 lowercase hex characters; extension is on the allow-list. No filesystem path is ever built from user input beyond that.
-- Range requests are supported for large blobs; ETag is the hash.
+- Range requests are supported for blobs and fonts. Asset `ETag`s are the quoted hash and extension (`"<hash>.<ext>"`); font `ETag`s are the quoted file name (`"<name>.woff2"`).
 
 ### 1.5 Import
 

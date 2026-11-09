@@ -49,6 +49,16 @@ impl SectionCache {
         self.sections.get(message_type)
     }
 
+    /// Iterates every cached section in message-type order.
+    ///
+    /// The server uses this to resend all known sections after a port or
+    /// asset-mode change.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, &Value)> {
+        self.sections
+            .iter()
+            .map(|(message_type, payload)| (message_type.as_str(), payload))
+    }
+
     /// Removes a cached payload.
     pub fn remove(&mut self, message_type: &str) -> Option<Value> {
         self.sections.remove(message_type)
@@ -81,5 +91,20 @@ impl SectionCache {
     #[must_use]
     pub fn init(&self) -> Message<BTreeMap<String, Value>> {
         Message::new("init", self.sections.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn iter_returns_sections_in_message_type_order() {
+        let mut cache = SectionCache::new();
+        cache.set_value("zeta", serde_json::json!({ "value": 2 }));
+        cache.set_value("alpha", serde_json::json!({ "value": 1 }));
+
+        let kinds: Vec<&str> = cache.iter().map(|(kind, _)| kind).collect();
+        assert_eq!(kinds, ["alpha", "zeta"]);
     }
 }
