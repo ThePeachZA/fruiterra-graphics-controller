@@ -1,0 +1,217 @@
+//! Native dialogs, URL fetching and Windows shell integration for assets.
+//!
+//! This module is the only place in the UI that talks to `rfd`, `reqwest` or
+//! `explorer.exe`. Keeping it isolated makes the state layer easy to test and
+//! keeps every filesystem/network failure on a blocking task.
+
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+use fgc_core::MAX_ASSET_BYTES;
+use reqwest::Url;
+
+/// Timeout applied to a single URL import.
+const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Opens the native file picker for an allow-listed image.
+#[must_use]
+pub fn pick_image_file() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Import image")
+        .add_filter("Images", &["png", "jpg", "jpeg", "webp", "gif", "svg"])
+        .pick_file()
+}
+
+/// Opens the native folder picker used for project bundles.
+#[must_use]
+pub fn pick_bundle_folder(title: &str) -> Option<PathBuf> {
+    rfd::FileDialog::new().set_title(title).pick_folder()
+}
+
+/// Validates a URL before any network request is made.
+///
+/// Only absolute `http`/`https` URLs without embedded credentials are
+/// accepted. Relative URLs, `file:` URLs and other schemes are rejected.
+pub fn validate_import_url(raw: &str) -> Result<Url, String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err("Enter an image URL.".to_owned());
+    }
+
+    let url = Url::parse(trimmed).map_err(|_| "That is not a valid URL.".to_owned())?;
+    match url.scheme() {
+        "http" | "https" => {}
+        scheme => {
+            return Err(format!(
+                "Only http and https URLs can be imported, not {scheme}:."
+            ));
+        }
+    }
+    if url.host_str().is_none() {
+        return Err("The URL must include a host name.".to_owned());
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err("URLs containing credentials are not supported.".to_owned());
+    }
+    Ok(url)
+}
+
+/// Fetches an image with a timeout and a hard size cap.
+///
+/// The cap is enforced both from `Content-Length` and while streaming, so a
+/// server that lies about its length cannot exhaust memory.
+pub async fn fetch_image(url: Url) -> Result<(Vec<u8>, Option<String>), String> {
+    let client = reqwest::Client::builder()
+        .timeout(FETCH_TIMEOUT)
+        .build()
+        .map_err(|error| format!("Could not create the HTTP client: {error}"))?;
+
+    let mut response = client
+        .get(url.clone())
+        .send()
+        .await
+        .map_err(|error| format!("Could not fetch the image: {error}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("The server returned {}.", response.status()));
+    }
+    if let Some(length) = response.content_length()
+        && length > MAX_ASSET_BYTES
+    {
+        return Err(format!(
+            "The image is larger than the {} limit.",
+            format_bytes(MAX_ASSET_BYTES)
+        ));
+    }
+
+    let filename = url
+        .path_segments()
+        .and_then(|mut segments| segments.next_back())
+        .filter(|name| !name.is_empty())
+        .map(ToOwned::to_owned);
+
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|error| format!("Could not read the image: {error}"))?
+    {
+        if bytes.len() as u64 + chunk.len() as u64 > MAX_ASSET_BYTES {
+            return Err(format!(
+                "The image is larger than the {} limit.",
+                format_bytes(MAX_ASSET_BYTES)
+            ));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+
+    Ok((bytes, filename))
+}
+
+/// Formats a byte count for display in Settings and toasts.
+#[must_use]
+pub fn format_bytes(bytes: u64) -> String {
+    const KIB: f64 = 1024.0;
+    const MIB: f64 = 1024.0 * 1024.0;
+    let value = bytes as f64;
+    if value >= MIB {
+        format!("{:.1} MB", value / MIB)
+    } else if value >= KIB {
+        format!("{:.1} KB", value / KIB)
+    } else {
+        format!("{bytes} B")
+    }
+}
+
+/// Creates the per-file overlay override directory and reveals it in Explorer.
+pub fn open_overlays_folder() -> Result<PathBuf, String> {
+    let directory = fgc_core::overlays_override_dir()
+        .map_err(|error| format!("Could not resolve it: {error}"))?;
+    std::fs::create_dir_all(&directory)
+        .map_err(|error| format!("Could not create {}: {error}", directory.display()))?;
+    reveal(&directory)?;
+    Ok(directory)
+}
+
+#[cfg(target_os = "windows")]
+fn reveal(directory: &Path) -> Result<(), String> {
+    std::process::Command::new("explorer")
+        .arg(directory)
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| format!("Could not open the overlays folder: {error}"))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn reveal(directory: &Path) -> Result<(), String> {
+    let _ = directory;
+    Err("Opening the overlays folder is only supported on Windows.".to_owned())
+}
+
+/// Creates a timestamped bundle directory beneath `parent`.
+///
+/// Exporting into a fresh folder means a previous export can never leave stale
+/// blobs behind in the new bundle.
+#[must_use]
+pub fn unique_bundle_directory(parent: &Path) -> PathBuf {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default();
+    let base = parent.join(format!("fruiterra-project-{stamp}"));
+    if !base.exists() {
+        return base;
+    }
+    for suffix in 1..1000 {
+        let candidate = parent.join(format!("fruiterra-project-{stamp}-{suffix}"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    base
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_http_and_https_urls() {
+        assert!(validate_import_url("https://example.com/logo.png").is_ok());
+        assert!(validate_import_url("http://example.com/logo.png").is_ok());
+        assert!(validate_import_url("  https://example.com/a.webp  ").is_ok());
+    }
+
+    #[test]
+    fn rejects_relative_and_non_http_urls() {
+        assert!(validate_import_url("logo.png").is_err());
+        assert!(validate_import_url("file:///C:/logo.png").is_err());
+        assert!(validate_import_url("javascript:alert(1)").is_err());
+        assert!(validate_import_url("data:image/png;base64,AAAA").is_err());
+        assert!(validate_import_url("").is_err());
+    }
+
+    #[test]
+    fn rejects_urls_with_credentials() {
+        assert!(validate_import_url("https://user:secret@example.com/a.png").is_err());
+        assert!(validate_import_url("https://user@example.com/a.png").is_err());
+    }
+
+    #[test]
+    fn formats_bytes_for_display() {
+        assert_eq!(format_bytes(0), "0 B");
+        assert_eq!(format_bytes(512), "512 B");
+        assert_eq!(format_bytes(1024), "1.0 KB");
+        assert_eq!(format_bytes(1536), "1.5 KB");
+        assert_eq!(format_bytes(MAX_ASSET_BYTES), "20.0 MB");
+    }
+
+    #[test]
+    fn unique_bundle_directories_do_not_collide() {
+        let parent = tempfile::tempdir().expect("temp dir");
+        let first = unique_bundle_directory(parent.path());
+        std::fs::create_dir_all(&first).expect("create first bundle");
+        let second = unique_bundle_directory(parent.path());
+        assert_ne!(first, second);
+    }
+}

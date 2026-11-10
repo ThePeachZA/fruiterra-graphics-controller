@@ -15,6 +15,7 @@ const APP_CSS: Asset = asset!("/assets/app.css");
 const COMPONENTS_CSS: Asset = asset!("/assets/components.css");
 const OVERLAY_CSS: Asset = asset!("/assets/overlay.css");
 const SETTINGS_CSS: Asset = asset!("/assets/settings.css");
+const ASSETS_CSS: Asset = asset!("/assets/assets.css");
 const PLACEHOLDER_CSS: Asset = asset!("/assets/placeholder.css");
 
 const INTER_LATIN: Asset = asset!("/assets/fonts/Inter-latin.woff2");
@@ -66,10 +67,12 @@ pub fn App() -> Element {
         document::Link { rel: "stylesheet", href: COMPONENTS_CSS }
         document::Link { rel: "stylesheet", href: OVERLAY_CSS }
         document::Link { rel: "stylesheet", href: SETTINGS_CSS }
+        document::Link { rel: "stylesheet", href: ASSETS_CSS }
         document::Link { rel: "stylesheet", href: PLACEHOLDER_CSS }
         style { dangerous_inner_html: font_faces }
         ToastProvider {
             ErrorToasts {}
+            NoticeToasts {}
             div { class: "fgc-app",
                 Sidebar {
                     destination: destination(),
@@ -191,6 +194,27 @@ fn ErrorToasts() -> Element {
                     "Something went wrong".to_owned(),
                     ToastOptions::new().description(message.clone()),
                 );
+            }
+            seen.set(current);
+        }
+    });
+
+    rsx! {}
+}
+
+/// Surfaces new success messages as toasts.
+#[component]
+fn NoticeToasts() -> Element {
+    let store = use_context::<AppStore>();
+    let toast = use_toast();
+    let mut seen = use_signal(|| None::<String>);
+
+    use_effect(move || {
+        let current = store.notice();
+        if current != *seen.peek() {
+            if let Some(message) = &current {
+                toast.success(message.clone(), ToastOptions::new());
+                store.dismiss_notice();
             }
             seen.set(current);
         }

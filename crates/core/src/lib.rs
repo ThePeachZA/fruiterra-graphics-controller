@@ -5,6 +5,7 @@
 //! frameworks. It owns the persisted domain model, the versioned JSON store
 //! and the validation rules that keep user data loadable.
 
+mod asset_store;
 mod assets;
 mod error;
 mod migrate;
@@ -13,9 +14,13 @@ mod paths;
 mod store;
 mod validation;
 
+pub use asset_store::{
+    AssetStore, BlobEntry, BlobReport, InsertOutcome, UnusedAssets, referenced_hashes, sha256_hex,
+};
 pub use assets::{
-    ALLOWED_EXTENSIONS, blob_path, blob_relative_path, bundled_asset_id, is_allowed_extension,
-    is_valid_hash, validate_asset_identity,
+    ALLOWED_EXTENSIONS, MAX_ASSET_BYTES, blob_path, blob_relative_path, bundled_asset_id,
+    detect_extension, extensions_match, is_allowed_extension, is_valid_hash, sanitize_svg,
+    validate_asset_identity,
 };
 pub use error::CoreError;
 pub use migrate::migrate;

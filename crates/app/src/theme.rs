@@ -80,7 +80,7 @@ impl Destination {
     /// True when the destination has real functionality in this milestone.
     #[must_use]
     pub const fn is_implemented(self) -> bool {
-        matches!(self, Self::Overlay | Self::Settings)
+        matches!(self, Self::Overlay | Self::Settings | Self::Assets)
     }
 
     /// Two-letter monogram used by the sidebar.
@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn implemented_destinations_are_the_m4_views() {
+    fn implemented_destinations_are_the_live_views() {
         let implemented: Vec<Destination> = Destination::ALL
             .iter()
             .copied()
@@ -120,7 +120,11 @@ mod tests {
             .collect();
         assert_eq!(
             implemented,
-            vec![Destination::Overlay, Destination::Settings]
+            vec![
+                Destination::Overlay,
+                Destination::Settings,
+                Destination::Assets
+            ]
         );
     }
 

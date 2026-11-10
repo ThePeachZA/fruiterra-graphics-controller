@@ -107,22 +107,29 @@ The build is deterministic: same files → same hashes → same IDs. `rust-embed
 
 Allowed types: `png`, `jpg`/`jpeg`, `webp`, `gif`, `svg`. Max 20 MB per file. SVG is sanitised to reject `<script>` and external references before storing.
 
+Bundled assets are read-only in the library: they cannot be renamed or deleted because they live inside the binary. Imported assets are read-only once stored as well; “replace” is expressed by pointing the team, player or setting at a different asset, never by mutating bytes in place.
+
 ### 1.6 Deletion and garbage collection
 
 - Deleting an asset removes its metadata. If no other asset shares its hash and it is not bundled, the blob becomes unreferenced.
-- GC runs **after a successful save** (never mid-edit) and on startup:
+- GC runs **after a successful save** (never mid-edit) and on startup. Startup GC only runs when the state file loaded successfully, so a corrupt or missing `app.json` cannot cause every blob to be treated as unreferenced.
+- The keep set is the union of hashes referenced by the saved snapshot and the current in-memory state:
   1. Collect every `Asset.hash` in the saved state.
-  2. Collect hashes referenced directly by teams/players (via their `AssetId` → metadata).
-  3. Delete user blobs whose hash is not in the set.
+  2. Collect every `Asset.hash` in the in-memory state.
+  3. Delete user blobs whose hash is in neither set.
   4. Never delete embedded blobs.
 - Settings shows “Unused asset data: N files, X MB” with a **Clean up now** button (replaces the original “temp assets” counter, which was a symptom of the broken replace flow).
-- A blob is never deleted while the in-memory state references it, even if the saved state does not yet.
+- A blob is never deleted while either the saved or the in-memory state references it, even if a save has not completed yet.
 
-### 1.7 Export
+### 1.7 Export and import
 
-- Export produces a folder or zip: `app.json` + `blobs/` containing only referenced user blobs + a small `export.json` manifest with `schemaVersion` and the app version.
+- Export asks for a parent folder and creates a fresh timestamped subfolder, `fruiterra-project-<unix>/`, so a previous export can never leave stale blobs behind. The bundle contains:
+  - `app.json` — the full domain state, including asset metadata;
+  - `export.json` — a small manifest with `schemaVersion` and the app version;
+  - `blobs/` — only the user blobs referenced by that state, at the normal `<prefix>/<hash>.<ext>` paths.
 - Bundled assets are not exported; they come from the binary.
-- Import of an export validates hashes before writing anything (C8).
+- Import validates `export.json` and `app.json`, then reads, type-checks, sanitises and hash-verifies every referenced user blob before writing anything locally. A hash mismatch, missing blob or unsupported schema aborts the import with no partial store.
+- Import replaces the current project (teams, talent, tournaments, settings and asset library). The UI confirms before doing so.
 
 ---
 

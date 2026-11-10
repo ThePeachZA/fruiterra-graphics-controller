@@ -68,6 +68,45 @@ pub enum CoreError {
     #[error("asset extension {0:?} is not allowed")]
     InvalidAssetExtension(String),
 
+    /// A user asset exceeded the import size limit.
+    #[error("asset is {size} bytes; the maximum is {max} bytes")]
+    AssetTooLarge {
+        /// Size of the rejected asset in bytes.
+        size: u64,
+        /// Maximum accepted size in bytes.
+        max: u64,
+    },
+
+    /// The bytes were not one of the supported image formats.
+    #[error("unsupported asset type; expected PNG, JPEG, WebP, GIF or SVG")]
+    UnsupportedAssetType,
+
+    /// The SVG contained a construct that is unsafe to serve.
+    #[error("unsafe SVG: {0}")]
+    UnsafeSvg(String),
+
+    /// A referenced user blob was not present in the asset store.
+    #[error("asset blob {hash}.{ext} is missing")]
+    AssetBlobMissing {
+        /// Content hash of the missing blob.
+        hash: String,
+        /// Extension of the missing blob.
+        ext: String,
+    },
+
+    /// A blob's bytes did not match the content hash that addressed it.
+    #[error("asset blob hash mismatch: expected {expected}, got {actual}")]
+    AssetHashMismatch {
+        /// Hash recorded in the asset metadata or bundle.
+        expected: String,
+        /// Hash computed from the bytes on disk.
+        actual: String,
+    },
+
+    /// A project bundle was malformed or incomplete.
+    #[error("invalid project bundle: {0}")]
+    InvalidBundle(String),
+
     /// A schema migration failed.
     #[error("migration from schema version {from} failed: {message}")]
     Migration {

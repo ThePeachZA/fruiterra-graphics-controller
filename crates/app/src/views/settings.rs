@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use fgc_core::{TimerAlignment, TimerMode};
 use fgc_server::AssetMode;
 
+use crate::assets_io::format_bytes;
 use crate::components::button::{Button, ButtonVariant};
 use crate::components::input::Input;
 use crate::components::switch::Switch;
@@ -11,7 +12,7 @@ use crate::components::{Field, KeyValue, KeyValues, Panel, ToggleRow};
 use crate::server::DEFAULT_PORT;
 use crate::state::AppStore;
 
-/// Editable settings that are live in milestone M4.
+/// Editable settings that are live in milestone M4 and M5.
 #[component]
 pub fn SettingsView() -> Element {
     let store = use_context::<AppStore>();
@@ -19,9 +20,17 @@ pub fn SettingsView() -> Element {
     let server = store.server();
     let settings = state.read().settings.clone();
     let asset_mode = server.asset_mode();
+    let unused = store.unused();
+    let busy = store.asset_busy();
+    let overlays_path = fgc_core::overlays_override_dir().map_or_else(
+        |_| "Unavailable".to_owned(),
+        |path| path.display().to_string(),
+    );
 
     let port_text = use_signal(|| settings.overlay.port.to_string());
     let port_error = use_signal(|| None::<String>);
+
+    use_effect(move || store.refresh_unused());
 
     rsx! {
         div { class: "fgc-view",
@@ -177,7 +186,51 @@ pub fn SettingsView() -> Element {
                             .map_or_else(|| "None".to_owned(), ToString::to_string),
                     }
                 }
-                p { class: "fgc-note", "Logo selection arrives with the Assets view in milestone M5." }
+                p { class: "fgc-note", "Asset pickers arrive with the Teams, Talent and Tournament views." }
+            }
+            Panel {
+                title: "Asset storage".to_owned(),
+                description: "Content-addressed images used by the overlays and the asset library.".to_owned(),
+                KeyValues {
+                    KeyValue {
+                        label: "Unused asset data".to_owned(),
+                        value: format!("{} file(s), {}", unused.files, format_bytes(unused.bytes)),
+                    }
+                }
+                div { class: "fgc-actions",
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        disabled: busy || unused.files == 0,
+                        onclick: move |_| store.clean_up_unused(),
+                        if busy { "Working…" } else { "Clean up now" }
+                    }
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        onclick: move |_| {
+                            match crate::assets_io::open_overlays_folder() {
+                                Ok(directory) => store.notify(format!(
+                                    "Opened {}.",
+                                    directory.display()
+                                )),
+                                Err(error) => store.report_error(error),
+                            }
+                        },
+                        "Open overlays folder"
+                    }
+                }
+                p { class: "fgc-note",
+                    "Unreferenced image data is deleted automatically after a successful save and on startup. Clean up now removes anything the saved and current projects no longer use."
+                }
+            }
+            Panel {
+                title: "Overlay overrides".to_owned(),
+                description: "Tweak one overlay without rebuilding the application.".to_owned(),
+                KeyValues {
+                    KeyValue { label: "Overlays folder".to_owned(), value: overlays_path }
+                }
+                p { class: "fgc-note",
+                    "Place a copy of any of the seven overlay HTML files in this folder to override it. A missing or broken override falls back to the embedded file, and the other six overlays are unaffected."
+                }
             }
         }
     }

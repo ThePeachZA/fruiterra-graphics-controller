@@ -192,6 +192,13 @@ The exact module split can change during implementation, but the crate boundarie
 
 **Exit criterion:** AS1–AS6 pass, and no `_temp` directory exists anywhere.
 
+**Implementation notes**
+
+- Bundled assets appear in the library but are read-only; rename/delete actions are shown only for user assets.
+- Exports create a fresh `fruiterra-project-<unix>/` subfolder beneath the chosen parent and contain `app.json`, `export.json` and the referenced user blobs under `blobs/`.
+- GC after save uses the union of the saved snapshot and the current in-memory state; startup GC runs only when the state loaded successfully.
+- The asset library lives in `crates/app/src/views/assets.rs`; native dialogs and URL fetching live in `crates/app/src/assets_io.rs`; hashing, GC and bundle I/O live in `crates/core/src/asset_store.rs`.
+
 ---
 
 ### M6 — Teams and Talent

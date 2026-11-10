@@ -9,6 +9,7 @@
 //! launches the Dioxus desktop application.
 
 mod app;
+mod assets_io;
 mod components;
 mod server;
 mod state;

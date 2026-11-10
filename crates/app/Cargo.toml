@@ -22,6 +22,8 @@ dioxus-icons.workspace = true
 palette.workspace = true
 
 anyhow.workspace = true
+reqwest.workspace = true
+rfd.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true
@@ -31,3 +33,6 @@ tracing-subscriber.workspace = true
 default = []
 # Enabled by the release bundle command to hide the console window.
 bundle = []
+
+[dev-dependencies]
+tempfile.workspace = true

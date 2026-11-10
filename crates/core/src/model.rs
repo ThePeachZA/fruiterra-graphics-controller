@@ -233,6 +233,55 @@ pub enum AssetCategory {
     Side,
 }
 
+impl AssetCategory {
+    /// Every category in display order.
+    pub const ALL: [Self; 7] = [
+        Self::Logo,
+        Self::Portrait,
+        Self::Map,
+        Self::Hero,
+        Self::GameMode,
+        Self::Role,
+        Self::Side,
+    ];
+
+    /// Human-readable label used by filters and badges.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Logo => "Logo",
+            Self::Portrait => "Portrait",
+            Self::Map => "Map",
+            Self::Hero => "Hero",
+            Self::GameMode => "Game mode",
+            Self::Role => "Role",
+            Self::Side => "Side",
+        }
+    }
+
+    /// Stable kebab-case slug matching the serde representation.
+    #[must_use]
+    pub const fn slug(self) -> &'static str {
+        match self {
+            Self::Logo => "logo",
+            Self::Portrait => "portrait",
+            Self::Map => "map",
+            Self::Hero => "hero",
+            Self::GameMode => "game-mode",
+            Self::Role => "role",
+            Self::Side => "side",
+        }
+    }
+
+    /// Parses a slug produced by [`Self::slug`].
+    #[must_use]
+    pub fn from_slug(slug: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|category| category.slug() == slug)
+    }
+}
+
 /// Where an asset's bytes come from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
