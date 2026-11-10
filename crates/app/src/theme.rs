@@ -80,7 +80,10 @@ impl Destination {
     /// True when the destination has real functionality in this milestone.
     #[must_use]
     pub const fn is_implemented(self) -> bool {
-        matches!(self, Self::Overlay | Self::Settings | Self::Assets)
+        matches!(
+            self,
+            Self::Overlay | Self::Settings | Self::Talent | Self::Teams | Self::Assets
+        )
     }
 
     /// Two-letter monogram used by the sidebar.
@@ -123,6 +126,8 @@ mod tests {
             vec![
                 Destination::Overlay,
                 Destination::Settings,
+                Destination::Talent,
+                Destination::Teams,
                 Destination::Assets
             ]
         );
@@ -132,6 +137,7 @@ mod tests {
     fn placeholders_report_their_milestone() {
         assert_eq!(Destination::Assets.milestone(), "M5");
         assert_eq!(Destination::Talent.milestone(), "M6");
+        assert_eq!(Destination::Teams.milestone(), "M6");
         assert_eq!(Destination::MatchController.milestone(), "M7");
         assert_eq!(Destination::Tournament.milestone(), "M8");
     }

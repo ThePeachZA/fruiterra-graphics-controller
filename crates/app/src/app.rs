@@ -16,6 +16,7 @@ const COMPONENTS_CSS: Asset = asset!("/assets/components.css");
 const OVERLAY_CSS: Asset = asset!("/assets/overlay.css");
 const SETTINGS_CSS: Asset = asset!("/assets/settings.css");
 const ASSETS_CSS: Asset = asset!("/assets/assets.css");
+const TEAMS_CSS: Asset = asset!("/assets/teams.css");
 const PLACEHOLDER_CSS: Asset = asset!("/assets/placeholder.css");
 
 const INTER_LATIN: Asset = asset!("/assets/fonts/Inter-latin.woff2");
@@ -68,6 +69,7 @@ pub fn App() -> Element {
         document::Link { rel: "stylesheet", href: OVERLAY_CSS }
         document::Link { rel: "stylesheet", href: SETTINGS_CSS }
         document::Link { rel: "stylesheet", href: ASSETS_CSS }
+        document::Link { rel: "stylesheet", href: TEAMS_CSS }
         document::Link { rel: "stylesheet", href: PLACEHOLDER_CSS }
         style { dangerous_inner_html: font_faces }
         ToastProvider {

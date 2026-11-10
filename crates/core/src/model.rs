@@ -99,6 +99,37 @@ pub enum Role {
     Support,
 }
 
+impl Role {
+    /// Every role in display order.
+    pub const ALL: [Self; 3] = [Self::Tank, Self::Damage, Self::Support];
+
+    /// Human-readable label.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Tank => "Tank",
+            Self::Damage => "Damage",
+            Self::Support => "Support",
+        }
+    }
+
+    /// Stable lowercase slug matching the serde representation.
+    #[must_use]
+    pub const fn slug(self) -> &'static str {
+        match self {
+            Self::Tank => "tank",
+            Self::Damage => "damage",
+            Self::Support => "support",
+        }
+    }
+
+    /// Parses a slug produced by [`Self::slug`].
+    #[must_use]
+    pub fn from_slug(slug: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|role| role.slug() == slug)
+    }
+}
+
 /// Roster position.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -112,6 +143,41 @@ pub enum Position {
     Manager,
     /// Coach.
     Coach,
+}
+
+impl Position {
+    /// Every position in display order.
+    pub const ALL: [Self; 4] = [Self::Core, Self::Sub, Self::Manager, Self::Coach];
+
+    /// Human-readable label.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Core => "Core",
+            Self::Sub => "Sub",
+            Self::Manager => "Manager",
+            Self::Coach => "Coach",
+        }
+    }
+
+    /// Stable lowercase slug matching the serde representation.
+    #[must_use]
+    pub const fn slug(self) -> &'static str {
+        match self {
+            Self::Core => "core",
+            Self::Sub => "sub",
+            Self::Manager => "manager",
+            Self::Coach => "coach",
+        }
+    }
+
+    /// Parses a slug produced by [`Self::slug`].
+    #[must_use]
+    pub fn from_slug(slug: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|position| position.slug() == slug)
+    }
 }
 
 /// Match lifecycle state.
@@ -378,10 +444,11 @@ pub enum TimerAlignment {
 }
 
 /// Social platform shown by the casters overlay.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SocialPlatform {
     /// Twitter / X.
+    #[default]
     Twitter,
     /// Twitch.
     Twitch,
@@ -391,6 +458,49 @@ pub enum SocialPlatform {
     Instagram,
     /// TikTok.
     TikTok,
+}
+
+impl SocialPlatform {
+    /// Every platform in display order.
+    pub const ALL: [Self; 5] = [
+        Self::Twitter,
+        Self::Twitch,
+        Self::YouTube,
+        Self::Instagram,
+        Self::TikTok,
+    ];
+
+    /// Human-readable label.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Twitter => "Twitter / X",
+            Self::Twitch => "Twitch",
+            Self::YouTube => "YouTube",
+            Self::Instagram => "Instagram",
+            Self::TikTok => "TikTok",
+        }
+    }
+
+    /// Stable lowercase slug matching the serde representation.
+    #[must_use]
+    pub const fn slug(self) -> &'static str {
+        match self {
+            Self::Twitter => "twitter",
+            Self::Twitch => "twitch",
+            Self::YouTube => "youtube",
+            Self::Instagram => "instagram",
+            Self::TikTok => "tiktok",
+        }
+    }
+
+    /// Parses a slug produced by [`Self::slug`].
+    #[must_use]
+    pub fn from_slug(slug: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|platform| platform.slug() == slug)
+    }
 }
 
 /// A team and its roster.
@@ -1055,4 +1165,48 @@ fn default_tiebreakers() -> Vec<Tiebreaker> {
         Tiebreaker::PointsFor,
         Tiebreaker::Seed,
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn role_slugs_round_trip() {
+        for role in Role::ALL {
+            assert_eq!(Role::from_slug(role.slug()), Some(role));
+            assert!(!role.label().is_empty());
+        }
+        assert_eq!(Role::from_slug("unknown"), None);
+    }
+
+    #[test]
+    fn position_slugs_round_trip() {
+        for position in Position::ALL {
+            assert_eq!(Position::from_slug(position.slug()), Some(position));
+            assert!(!position.label().is_empty());
+        }
+        assert_eq!(Position::from_slug("unknown"), None);
+    }
+
+    #[test]
+    fn social_platform_slugs_round_trip() {
+        for platform in SocialPlatform::ALL {
+            assert_eq!(SocialPlatform::from_slug(platform.slug()), Some(platform));
+            assert!(!platform.label().is_empty());
+        }
+        assert_eq!(SocialPlatform::from_slug("unknown"), None);
+    }
+
+    #[test]
+    fn role_and_position_serialise_to_their_slugs() {
+        for role in Role::ALL {
+            let json = serde_json::to_string(&role).expect("serialise role");
+            assert_eq!(json, format!("\"{}\"", role.slug()));
+        }
+        for position in Position::ALL {
+            let json = serde_json::to_string(&position).expect("serialise position");
+            assert_eq!(json, format!("\"{}\"", position.slug()));
+        }
+    }
 }

@@ -1510,6 +1510,7 @@ dependencies = [
  "palette",
  "reqwest",
  "rfd",
+ "serde_json",
  "tempfile",
  "tokio",
  "tracing",

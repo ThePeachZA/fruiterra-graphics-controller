@@ -20,6 +20,9 @@ pub mod textarea;
 pub mod toast;
 
 // Hand-rolled layout primitives (not vendored).
+pub mod asset_picker;
 pub mod panel;
 
+#[allow(unused_imports)]
+pub use asset_picker::{AssetPicker, AssetThumb, find_asset, library_assets};
 pub use panel::{Field, KeyValue, KeyValues, Panel, ToggleRow};

@@ -256,3 +256,39 @@ fn dedupe_ids<T>(
         ));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn duplicate_player_and_talent_ids_are_regenerated() {
+        let mut state: AppState = serde_json::from_value(json!({
+            "teams": [{
+                "id": "team-1",
+                "players": [
+                    { "id": "player-1", "name": "First" },
+                    { "id": "player-1", "name": "Second" }
+                ]
+            }],
+            "talents": [
+                { "id": "talent-1", "displayName": "First" },
+                { "id": "talent-1", "displayName": "Second" }
+            ]
+        }))
+        .expect("valid fixture");
+
+        let repairs = validate_and_repair(&mut state);
+
+        assert_ne!(state.teams[0].players[0].id, state.teams[0].players[1].id);
+        assert_ne!(state.talents[0].id, state.talents[1].id);
+        assert_eq!(
+            repairs
+                .iter()
+                .filter(|repair| repair.kind == RepairKind::DuplicateId)
+                .count(),
+            2
+        );
+    }
+}

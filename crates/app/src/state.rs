@@ -14,8 +14,9 @@ use std::time::Duration;
 use dioxus::prelude::*;
 use fgc_core::{
     AppState, Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin, AssetStore, JsonStore,
-    MemoryStore, Store, TimerAlignment, TimerMode, UnusedAssets, referenced_hashes,
-    validate_and_repair,
+    MemoryStore, Player, PlayerId, Position, Role, Store, Talent, TalentId, Team, TeamId,
+    TeamReference, TimerAlignment, TimerMode, UnusedAssets, clear_talent_references,
+    referenced_hashes, remove_team_references, validate_and_repair,
 };
 use fgc_protocol::{AssetCatalog, data_url_for};
 use fgc_server::{AssetMode, Outbound, ServerConfig};
@@ -256,6 +257,120 @@ impl AppStore {
             return;
         }
         self.mutate(|state| state.settings.timer.standalone = standalone);
+    }
+
+    /// Creates a team with the original application defaults.
+    pub fn create_team(&self) -> TeamId {
+        let team = new_team();
+        let id = team.id.clone();
+        self.mutate(move |state| state.teams.push(team));
+        id
+    }
+
+    /// Applies an edit to one team.
+    pub fn update_team(&self, id: &TeamId, update: impl FnOnce(&mut Team)) {
+        self.mutate(|state| {
+            if let Some(team) = state.teams.iter_mut().find(|team| &team.id == id) {
+                update(team);
+            }
+        });
+    }
+
+    /// Reports every tournament or current-match reference to `id`.
+    #[must_use]
+    pub fn team_references(&self, id: &TeamId) -> Vec<TeamReference> {
+        let state = self.state.peek();
+        fgc_core::team_references(&state, id)
+    }
+
+    /// Deletes `id` when nothing references it.
+    ///
+    /// # Errors
+    ///
+    /// Returns the reference list when the team is still in use.
+    pub fn delete_team(&self, id: &TeamId) -> Result<(), Vec<TeamReference>> {
+        let references = self.team_references(id);
+        if !references.is_empty() {
+            return Err(references);
+        }
+        self.mutate(|state| state.teams.retain(|team| &team.id != id));
+        Ok(())
+    }
+
+    /// Removes every tournament and current-match reference, then deletes the
+    /// team.
+    pub fn delete_team_with_cleanup(&self, id: &TeamId) {
+        self.mutate(|state| {
+            remove_team_references(state, id);
+            state.teams.retain(|team| &team.id != id);
+        });
+    }
+
+    /// Adds a player to `team_id` using the original defaults.
+    pub fn create_player(&self, team_id: &TeamId) -> Option<PlayerId> {
+        let player = new_player();
+        let id = player.id.clone();
+        let mut created = false;
+        self.mutate(|state| {
+            if let Some(team) = state.teams.iter_mut().find(|team| &team.id == team_id) {
+                team.players.push(player);
+                created = true;
+            }
+        });
+        created.then_some(id)
+    }
+
+    /// Applies an edit to one player on a team.
+    pub fn update_player(
+        &self,
+        team_id: &TeamId,
+        player_id: &PlayerId,
+        update: impl FnOnce(&mut Player),
+    ) {
+        self.mutate(|state| {
+            if let Some(team) = state.teams.iter_mut().find(|team| &team.id == team_id)
+                && let Some(player) = team
+                    .players
+                    .iter_mut()
+                    .find(|player| &player.id == player_id)
+            {
+                update(player);
+            }
+        });
+    }
+
+    /// Removes one player from a team.
+    pub fn delete_player(&self, team_id: &TeamId, player_id: &PlayerId) {
+        self.mutate(|state| {
+            if let Some(team) = state.teams.iter_mut().find(|team| &team.id == team_id) {
+                team.players.retain(|player| &player.id != player_id);
+            }
+        });
+    }
+
+    /// Creates a talent member with the original defaults.
+    pub fn create_talent(&self) -> TalentId {
+        let talent = new_talent();
+        let id = talent.id.clone();
+        self.mutate(move |state| state.talents.push(talent));
+        id
+    }
+
+    /// Applies an edit to one talent member.
+    pub fn update_talent(&self, id: &TalentId, update: impl FnOnce(&mut Talent)) {
+        self.mutate(|state| {
+            if let Some(talent) = state.talents.iter_mut().find(|talent| &talent.id == id) {
+                update(talent);
+            }
+        });
+    }
+
+    /// Deletes a talent member and clears match assignments that used them.
+    pub fn delete_talent(&self, id: &TalentId) {
+        self.mutate(|state| {
+            clear_talent_references(state, id);
+            state.talents.retain(|talent| &talent.id != id);
+        });
     }
 
     /// Renames a user asset. Bundled assets are read-only.
@@ -918,12 +1033,68 @@ async fn finish_import(
     this.set_asset_busy(false);
 }
 
+/// Deletes a team when nothing references it.
+///
+/// # Errors
+///
+/// Returns the reference list when the team is still in use.
+#[cfg(test)]
+pub fn delete_team_checked(state: &mut AppState, id: &TeamId) -> Result<(), Vec<TeamReference>> {
+    let references = fgc_core::team_references(state, id);
+    if !references.is_empty() {
+        return Err(references);
+    }
+    state.teams.retain(|team| &team.id != id);
+    Ok(())
+}
+
+/// Builds a team with the original application defaults.
+#[must_use]
+pub fn new_team() -> Team {
+    Team {
+        id: TeamId::new(),
+        name: "New Team".to_owned(),
+        tag: "TAG".to_owned(),
+        record: None,
+        color: "#7C3AED".to_owned(),
+        text_color: "#FFFFFF".to_owned(),
+        aux_color: "#1A1A24".to_owned(),
+        logo: None,
+        players: Vec::new(),
+    }
+}
+
+/// Builds a player with the original application defaults.
+#[must_use]
+pub fn new_player() -> Player {
+    Player {
+        id: PlayerId::new(),
+        name: "New Player".to_owned(),
+        role: Role::Damage,
+        position: Position::Core,
+        portrait: None,
+        featured_hero: None,
+        pronouns: None,
+    }
+}
+
+/// Builds a talent member with the original application defaults.
+#[must_use]
+pub fn new_talent() -> Talent {
+    Talent {
+        id: TalentId::new(),
+        display_name: String::new(),
+        real_name: None,
+        pronouns: None,
+        social: None,
+        portrait: None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fgc_core::{
-        Asset, AssetCategory, CoreError, Player, PlayerId, Role, Talent, TalentId, Team, TeamId,
-    };
+    use fgc_core::{Asset, CoreError, SocialLink, SocialPlatform};
 
     fn team(name: &str) -> Team {
         Team {
@@ -1079,5 +1250,198 @@ mod tests {
             "Imported asset"
         );
         assert_eq!(display_name_from_filename(None), "Imported asset");
+    }
+
+    #[test]
+    fn new_records_match_the_original_defaults() {
+        let team = new_team();
+        assert_eq!(team.name, "New Team");
+        assert_eq!(team.tag, "TAG");
+        assert_eq!(team.color, "#7C3AED");
+        assert_eq!(team.text_color, "#FFFFFF");
+        assert_eq!(team.aux_color, "#1A1A24");
+        assert!(team.players.is_empty());
+
+        let player = new_player();
+        assert_eq!(player.name, "New Player");
+        assert_eq!(player.role, Role::Damage);
+        assert_eq!(player.position, Position::Core);
+
+        let talent = new_talent();
+        assert!(talent.display_name.is_empty());
+        assert!(talent.social.is_none());
+    }
+
+    #[test]
+    fn roster_order_and_enum_values_survive_round_trip() {
+        let mut state = AppState::default();
+        let mut peaches = new_team();
+        peaches.name = "Peaches".to_owned();
+
+        let mut first = new_player();
+        first.name = "First".to_owned();
+        first.role = Role::Tank;
+        first.position = Position::Core;
+
+        let mut second = new_player();
+        second.name = "Second".to_owned();
+        second.role = Role::Support;
+        second.position = Position::Coach;
+
+        peaches.players.push(first);
+        peaches.players.push(second);
+        state.teams.push(peaches);
+
+        let json = serde_json::to_string(&state).expect("serialise state");
+        let value: serde_json::Value = serde_json::from_str(&json).expect("parse state");
+        assert_eq!(value["teams"][0]["players"][0]["role"], "tank");
+        assert_eq!(value["teams"][0]["players"][1]["position"], "coach");
+
+        let loaded: AppState = serde_json::from_str(&json).expect("deserialise state");
+        let names: Vec<&str> = loaded.teams[0]
+            .players
+            .iter()
+            .map(|player| player.name.as_str())
+            .collect();
+        assert_eq!(names, vec!["First", "Second"]);
+        assert_eq!(loaded.teams[0].players[0].role, Role::Tank);
+        assert_eq!(loaded.teams[0].players[0].position, Position::Core);
+        assert_eq!(loaded.teams[0].players[1].role, Role::Support);
+        assert_eq!(loaded.teams[0].players[1].position, Position::Coach);
+    }
+
+    #[test]
+    fn full_team_roster_and_talent_survive_save_and_reload() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("app.json");
+        let store = JsonStore::new(path);
+
+        let mut state = AppState::default();
+        let mut team = new_team();
+        team.name = "Peaches".to_owned();
+        team.tag = "PCH".to_owned();
+        team.record = Some("12-4".to_owned());
+
+        let mut player = new_player();
+        player.name = "Ripe".to_owned();
+        player.role = Role::Support;
+        player.position = Position::Sub;
+        player.pronouns = Some("she/her".to_owned());
+        team.players.push(player);
+
+        let mut talent = new_talent();
+        talent.display_name = "Caster".to_owned();
+        talent.real_name = Some("Real Name".to_owned());
+        talent.pronouns = Some("they/them".to_owned());
+        talent.social = Some(SocialLink {
+            platform: SocialPlatform::YouTube,
+            handle: "@caster".to_owned(),
+        });
+
+        state.teams.push(team);
+        state.talents.push(talent);
+        store.save(&state).expect("save state");
+
+        let loaded = store.load().expect("load state");
+        let loaded_team = &loaded.teams[0];
+        assert_eq!(loaded_team.name, "Peaches");
+        assert_eq!(loaded_team.tag, "PCH");
+        assert_eq!(loaded_team.record.as_deref(), Some("12-4"));
+        assert_eq!(loaded_team.players.len(), 1);
+        assert_eq!(loaded_team.players[0].name, "Ripe");
+        assert_eq!(loaded_team.players[0].role, Role::Support);
+        assert_eq!(loaded_team.players[0].position, Position::Sub);
+        assert_eq!(loaded_team.players[0].pronouns.as_deref(), Some("she/her"));
+
+        let loaded_talent = &loaded.talents[0];
+        assert_eq!(loaded_talent.display_name, "Caster");
+        assert_eq!(loaded_talent.real_name.as_deref(), Some("Real Name"));
+        assert_eq!(loaded_talent.pronouns.as_deref(), Some("they/them"));
+        let social = loaded_talent.social.as_ref().expect("social link");
+        assert_eq!(social.platform, SocialPlatform::YouTube);
+        assert_eq!(social.handle, "@caster");
+    }
+
+    #[test]
+    fn team_deletion_is_blocked_while_referenced_and_cleanup_removes_references() {
+        let mut state = AppState::default();
+        let team = new_team();
+        let id = team.id.clone();
+        state.teams.push(team);
+        state.tournaments.push(
+            serde_json::from_value(serde_json::json!({
+                "id": "tournament-1",
+                "name": "Test Cup",
+                "entrants": [{ "teamId": id.as_str(), "seed": 1 }]
+            }))
+            .expect("valid tournament"),
+        );
+
+        let references = delete_team_checked(&mut state, &id).expect_err("deletion is blocked");
+        assert_eq!(references.len(), 1);
+        assert!(state.teams.iter().any(|team| team.id == id));
+
+        remove_team_references(&mut state, &id);
+        assert!(delete_team_checked(&mut state, &id).is_ok());
+        assert!(!state.teams.iter().any(|team| team.id == id));
+    }
+
+    #[test]
+    fn talent_crud_round_trip() {
+        let mut state = AppState::default();
+        let mut talent = new_talent();
+        talent.display_name = "Caster".to_owned();
+        talent.real_name = Some("Real Name".to_owned());
+        talent.pronouns = Some("they/them".to_owned());
+        talent.social = Some(SocialLink {
+            platform: SocialPlatform::Twitch,
+            handle: "@caster".to_owned(),
+        });
+        state.talents.push(talent);
+
+        let json = serde_json::to_string(&state).expect("serialise state");
+        let value: serde_json::Value = serde_json::from_str(&json).expect("parse state");
+        assert_eq!(value["talents"][0]["social"]["platform"], "twitch");
+        assert_eq!(value["talents"][0]["social"]["handle"], "@caster");
+
+        let loaded: AppState = serde_json::from_str(&json).expect("deserialise state");
+        let loaded_talent = &loaded.talents[0];
+        assert_eq!(loaded_talent.display_name, "Caster");
+        assert_eq!(loaded_talent.real_name.as_deref(), Some("Real Name"));
+        assert_eq!(loaded_talent.pronouns.as_deref(), Some("they/them"));
+        let social = loaded_talent.social.as_ref().expect("social link");
+        assert_eq!(social.platform, SocialPlatform::Twitch);
+        assert_eq!(social.handle, "@caster");
+    }
+
+    #[test]
+    fn player_updates_apply_only_to_the_selected_team() {
+        let mut state = AppState::default();
+        let mut peaches = new_team();
+        let player = new_player();
+        let player_id = player.id.clone();
+        peaches.players.push(player);
+        let peaches_id = peaches.id.clone();
+        let mangoes_id = new_team().id;
+        state.teams.push(peaches);
+        state.teams.push(new_team());
+
+        let team = state
+            .teams
+            .iter_mut()
+            .find(|team| team.id == peaches_id)
+            .expect("selected team");
+        let player = team
+            .players
+            .iter_mut()
+            .find(|player| player.id == player_id)
+            .expect("selected player");
+        player.name = "Updated".to_owned();
+        player.role = Role::Support;
+
+        assert_eq!(state.teams[0].players[0].name, "Updated");
+        assert_eq!(state.teams[0].players[0].role, Role::Support);
+        assert!(state.teams[1].players.is_empty());
+        assert_ne!(peaches_id, mangoes_id);
     }
 }

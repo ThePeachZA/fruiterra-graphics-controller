@@ -11,6 +11,7 @@ mod error;
 mod migrate;
 mod model;
 mod paths;
+mod references;
 mod store;
 mod validation;
 
@@ -28,6 +29,9 @@ pub use model::*;
 pub use paths::{
     app_data_dir, assets_root, backup_file, blobs_dir, data_dir, ensure_app_dirs, ensure_dirs,
     logs_dir, overlays_override_dir, state_file,
+};
+pub use references::{
+    TeamReference, clear_talent_references, remove_team_references, team_references,
 };
 pub use store::{JsonStore, MemoryStore, Store};
 pub use validation::{Repair, RepairKind, validate_and_repair};

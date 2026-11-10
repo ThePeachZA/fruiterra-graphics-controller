@@ -330,6 +330,13 @@ Import/export uses the same validator, so a hand-edited file cannot crash the ap
 - **Fixed enum spellings.** Lowercase: `Role`, `Position`, `MatchStatus`, `AssetOrigin`, `BracketMatchStatus`, `TimerMode`, `TimerAlignment`, `SocialPlatform`. Kebab-case: `AssetCategory` (`game-mode`), `BracketFormat` (`single-elim`, `double-elim`, `round-robin`), `TournamentStatus`, `Tiebreaker`. `TeamSide` is `"A"`/`"B"`; `Side` is `0`/`1`/`2`; `Scoring` is tagged with `mode`.
 - **Repairs are logged once.** `validate_and_repair` emits a `tracing::warn!` per repair; `migrate` calls it without logging the results again.
 
+### 4.2 M6 reference rules
+
+- Deleting a team is a UI operation, not a load repair. `fgc_core::team_references` reports every tournament entrant, winners/losers/grand-final slot and winner, group membership, group fixture, champion and current-match `teamA`/`teamB` reference.
+- The Teams view blocks deletion while references exist and offers an explicit cleanup path. `remove_team_references` clears those references before the team is removed.
+- Deleting a talent clears any current-match caster, panel or interviewer assignment that pointed at them; talents are not referenced by tournaments.
+- Reference discovery never repairs dangling IDs on load. A hand-edited file with a missing team still loads, and the overlay projection renders the slot as empty.
+
 ---
 
 ## 5. Wire boundary

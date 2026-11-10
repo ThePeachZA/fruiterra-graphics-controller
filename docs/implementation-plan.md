@@ -219,6 +219,14 @@ The exact module split can change during implementation, but the crate boundarie
 
 **Exit criterion:** a full team, roster and talent set can be created, edited, saved and reloaded.
 
+**Implementation notes**
+
+- Team, player and talent edits go through `AppStore` mutations, so every change validates, marks the state dirty and reprojects the overlay payloads immediately.
+- Cross-entity reference discovery lives in `fgc-core::references`; the Teams deletion dialog lists every tournament and current-match reference, and “remove references and delete” clears entrants, bracket slots/winners, groups, group fixtures, champions and the current match before removing the team.
+- Deleting talent clears any current-match caster, panel or interviewer assignment that used them.
+- The reusable `AssetPicker` merges the bundled and user catalogues, filters by category and name, and previews images through the same data-URL path as the asset library.
+- Roster order is the stored `players` vector order; role and position are chosen from the shared core enums, so the saved JSON uses the documented lowercase spellings.
+
 ---
 
 ### M7 — Match Controller
