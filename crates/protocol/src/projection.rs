@@ -414,20 +414,7 @@ impl<'a> Projector<'a> {
 pub fn scores(match_state: &Match) -> (u16, u16) {
     match &match_state.scoring {
         Scoring::Manual { a, b } => (*a, *b),
-        Scoring::Derived => {
-            let wins_a = match_state
-                .maps
-                .iter()
-                .filter(|slot| slot.completed && slot.score_a > slot.score_b)
-                .count();
-            let wins_b = match_state
-                .maps
-                .iter()
-                .filter(|slot| slot.completed && slot.score_b > slot.score_a)
-                .count();
-            let cap = usize::from(u16::MAX);
-            (wins_a.min(cap) as u16, wins_b.min(cap) as u16)
-        }
+        Scoring::Derived => fgc_core::derived_scores(match_state),
     }
 }
 

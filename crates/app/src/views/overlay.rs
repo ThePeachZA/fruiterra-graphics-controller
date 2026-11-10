@@ -140,7 +140,7 @@ fn SourceRow(file: String, url: String) -> Element {
 
 /// Copies `text` to the clipboard, falling back to `execCommand` when the
 /// async clipboard API is unavailable in the WebView.
-fn copy_to_clipboard(text: &str) {
+pub(crate) fn copy_to_clipboard(text: &str) {
     let script = format!(
         "(() => {{ \
             const text = {text:?}; \

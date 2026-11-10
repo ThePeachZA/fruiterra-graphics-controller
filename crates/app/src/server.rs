@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 use fgc_core::{AppState, Asset, AssetOrigin, Match};
-use fgc_protocol::{AssetCatalog, DataUrlResolver, Projector, ServedAssetResolver};
+use fgc_protocol::{AssetCatalog, DataUrlResolver, Projector, SectionCache, ServedAssetResolver};
 use fgc_server::{AssetMode, Outbound, ServerConfig, ServerHandle, ServerStatus};
 use tracing::{debug, warn};
 
@@ -30,6 +30,7 @@ pub struct ServerController {
     asset_mode: Signal<AssetMode>,
     busy: Signal<bool>,
     blob_dir: Signal<Option<PathBuf>>,
+    differ: Signal<ProjectionDiffer>,
 }
 
 impl ServerController {
@@ -43,6 +44,7 @@ impl ServerController {
         let asset_mode = use_signal(|| AssetMode::Served);
         let busy = use_signal(|| false);
         let blob_dir = use_signal(|| fgc_core::assets_root().ok());
+        let differ = use_signal(ProjectionDiffer::new);
 
         use_future(move || async move {
             let mut status = status;
@@ -64,6 +66,7 @@ impl ServerController {
             asset_mode,
             busy,
             blob_dir,
+            differ,
         }
     }
 
@@ -115,6 +118,8 @@ impl ServerController {
         if self.busy() || self.is_running() {
             return;
         }
+        let mut differ = self.differ;
+        differ.write().seed(&initial);
         let mut busy = self.busy;
         let mut status = self.status;
         busy.set(true);
@@ -162,6 +167,8 @@ impl ServerController {
             status.set(ServerStatus::Stopped);
             return;
         };
+        let mut differ = self.differ;
+        differ.write().reset();
 
         let mut busy = self.busy;
         busy.set(true);
@@ -189,6 +196,8 @@ impl ServerController {
         if self.busy() {
             return;
         }
+        let mut differ = self.differ;
+        differ.write().seed(&initial);
         let mut handle_signal = self.handle;
         let previous = handle_signal.write().take();
         let mut busy = self.busy;
@@ -236,6 +245,23 @@ impl ServerController {
     /// In served mode this performs no I/O. In data-URL mode the resolver reads
     /// bundled bytes from the binary and user blobs from the asset store.
     pub fn project(&self, state: &AppState, catalog: &AssetCatalog) {
+        self.project_with(state, catalog, false);
+    }
+
+    /// Resends every projected section, even when it is unchanged.
+    pub fn project_force(&self, state: &AppState, catalog: &AssetCatalog) {
+        self.project_with(state, catalog, true);
+    }
+
+    /// Sends one outbound frame without touching the projection cache.
+    pub fn broadcast(&self, message: Outbound) {
+        let handle = self.handle.peek().as_ref().cloned();
+        if let Some(handle) = handle {
+            handle.broadcast(message);
+        }
+    }
+
+    fn project_with(&self, state: &AppState, catalog: &AssetCatalog, force: bool) {
         let handle = self.handle.peek().as_ref().cloned();
         let Some(handle) = handle else {
             return;
@@ -249,9 +275,66 @@ impl ServerController {
             self.asset_mode(),
             blob_dir.as_deref(),
         );
-        for message in outbound {
+
+        let mut differ = self.differ;
+        let frames = differ.write().take(outbound, force);
+        for message in frames {
             handle.broadcast(message);
         }
+    }
+}
+
+/// Filters projected frames down to sections whose content changed.
+///
+/// The server always caches and sends every frame it receives, so the UI layer
+/// owns content deduplication. Seeding records what the server already has
+/// without emitting anything; `take` then returns only changed sections unless
+/// a forced update was requested.
+#[derive(Clone, Debug, Default)]
+pub struct ProjectionDiffer {
+    cache: SectionCache,
+}
+
+impl ProjectionDiffer {
+    /// Creates an empty differ.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Forgets every previously projected section.
+    pub fn reset(&mut self) {
+        self.cache.clear();
+    }
+
+    /// Records frames that were sent without passing through the differ.
+    pub fn seed(&mut self, outbound: &[Outbound]) {
+        for frame in outbound {
+            if let Outbound::Message { kind, data } = frame {
+                self.cache.set_value(kind, data.clone());
+            }
+        }
+    }
+
+    /// Returns the frames that should be sent and records their content.
+    ///
+    /// `show` frames always pass through because they are not cached by the
+    /// server. When `force` is true every frame passes through.
+    pub fn take(&mut self, outbound: Vec<Outbound>, force: bool) -> Vec<Outbound> {
+        let mut frames = Vec::with_capacity(outbound.len());
+        for frame in outbound {
+            match frame {
+                Outbound::Message { kind, data } => {
+                    if !force && self.cache.get(&kind) == Some(&data) {
+                        continue;
+                    }
+                    self.cache.set_value(&kind, data.clone());
+                    frames.push(Outbound::Message { kind, data });
+                }
+                Outbound::Show { visible } => frames.push(Outbound::Show { visible }),
+            }
+        }
+        frames
     }
 }
 
@@ -413,5 +496,66 @@ mod tests {
     #[test]
     fn server_config_clamps_zero_to_a_valid_port() {
         assert_eq!(server_config(0, false, AssetMode::Served).port, 1);
+    }
+
+    #[test]
+    fn projection_differ_sends_only_changed_sections() {
+        let mut differ = ProjectionDiffer::new();
+        let first = vec![
+            Outbound::section("scoreboard", &serde_json::json!({ "a": 0 })).unwrap(),
+            Outbound::section("casters", &serde_json::json!({ "casters": [] })).unwrap(),
+        ];
+        assert_eq!(differ.take(first.clone(), false).len(), 2);
+
+        assert!(differ.take(first.clone(), false).is_empty());
+
+        let changed = vec![
+            Outbound::section("scoreboard", &serde_json::json!({ "a": 1 })).unwrap(),
+            Outbound::section("casters", &serde_json::json!({ "casters": [] })).unwrap(),
+        ];
+        let frames = differ.take(changed, false);
+        assert_eq!(frames.len(), 1);
+        assert!(matches!(
+            &frames[0],
+            Outbound::Message { kind, .. } if kind == "scoreboard"
+        ));
+    }
+
+    #[test]
+    fn projection_differ_force_resends_unchanged_sections() {
+        let mut differ = ProjectionDiffer::new();
+        let frames = vec![
+            Outbound::section("scoreboard", &serde_json::json!({ "a": 0 })).unwrap(),
+            Outbound::section("casters", &serde_json::json!({ "casters": [] })).unwrap(),
+        ];
+        assert_eq!(differ.take(frames.clone(), false).len(), 2);
+        assert_eq!(differ.take(frames, true).len(), 2);
+    }
+
+    #[test]
+    fn projection_differ_seed_suppresses_the_initial_rebroadcast() {
+        let mut differ = ProjectionDiffer::new();
+        let frames = vec![
+            Outbound::section("scoreboard", &serde_json::json!({ "a": 0 })).unwrap(),
+            Outbound::section("casters", &serde_json::json!({ "casters": [] })).unwrap(),
+        ];
+        differ.seed(&frames);
+        assert!(differ.take(frames, false).is_empty());
+    }
+
+    #[test]
+    fn projection_differ_reset_forces_everything_through_again() {
+        let mut differ = ProjectionDiffer::new();
+        let frames = vec![Outbound::section("scoreboard", &serde_json::json!({ "a": 0 })).unwrap()];
+        assert_eq!(differ.take(frames.clone(), false).len(), 1);
+        differ.reset();
+        assert_eq!(differ.take(frames, false).len(), 1);
+    }
+
+    #[test]
+    fn projection_differ_always_passes_show_frames() {
+        let mut differ = ProjectionDiffer::new();
+        let frames = vec![Outbound::show(true), Outbound::show(true)];
+        assert_eq!(differ.take(frames, false).len(), 2);
     }
 }

@@ -1,0 +1,304 @@
+/* Match Controller destination: seven tabs that drive the live overlays. */
+
+.fgc-match {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-4);
+}
+
+/* Toolbar. */
+
+.fgc-match__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fgc-space-4);
+    padding: var(--fgc-space-4) var(--fgc-space-5);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-lg);
+    background: var(--fgc-panel);
+    box-shadow: var(--fgc-shadow-panel);
+}
+
+.fgc-match__identity {
+    min-width: 0;
+}
+
+.fgc-match__title {
+    font-size: var(--fgc-text-xl);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+}
+
+.fgc-match__subtitle {
+    margin-top: 0.15rem;
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-sm);
+}
+
+.fgc-match__tabs {
+    flex-wrap: wrap;
+}
+
+.fgc-match__section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fgc-space-3);
+}
+
+.fgc-match__section-header .fgc-note {
+    flex: 1;
+    min-width: 14rem;
+}
+
+/* Setup tab. */
+
+.fgc-match-teams {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-4);
+}
+
+.fgc-match-teams__swap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--fgc-space-3);
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.fgc-match-score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--fgc-space-5);
+    padding: var(--fgc-space-4);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-md);
+    background: var(--fgc-bg-elevated);
+}
+
+.fgc-match-score__team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--fgc-space-1);
+    min-width: 0;
+}
+
+.fgc-match-score__tag {
+    max-width: 9rem;
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.fgc-match-score__value {
+    font-size: var(--fgc-text-2xl);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.fgc-match-score__dash {
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xl);
+    font-weight: 700;
+}
+
+/* Map selection tab. */
+
+.fgc-map-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-4);
+}
+
+.fgc-map-slot {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-4);
+}
+
+.fgc-map-slot__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fgc-space-4);
+}
+
+.fgc-map-slot__row .fgc-toggle-row--inline {
+    flex: 0 0 auto;
+    gap: var(--fgc-space-3);
+    padding: 0;
+    border-bottom: 0;
+}
+
+.fgc-map-slot__row .fgc-actions {
+    margin-left: auto;
+}
+
+.fgc-map-slot__scores {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--fgc-space-4);
+    max-width: 26rem;
+}
+
+.fgc-map-slot__scores .fgc-field {
+    flex: 1;
+    min-width: 0;
+}
+
+.fgc-map-slot__vs {
+    padding-bottom: 0.55rem;
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Hero bans tab. */
+
+.fgc-bans-table {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-bans-table__head,
+.fgc-bans-table__row {
+    display: grid;
+    grid-template-columns: minmax(7rem, 1fr) minmax(7rem, 10rem) minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--fgc-space-3);
+}
+
+.fgc-bans-table__head {
+    padding: 0 var(--fgc-space-2) var(--fgc-space-2);
+    border-bottom: 1px solid var(--fgc-line);
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.fgc-bans-table__row {
+    padding: var(--fgc-space-2);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-md);
+    background: var(--fgc-bg-elevated);
+}
+
+.fgc-bans-table__map {
+    font-size: var(--fgc-text-sm);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+/* Talent tab. */
+
+.fgc-talent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--fgc-space-4);
+}
+
+/* Map pool tab. */
+
+.fgc-map-pool__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+    padding: var(--fgc-space-3) 0;
+    border-bottom: 1px solid var(--fgc-line);
+}
+
+.fgc-map-pool__group:last-child {
+    border-bottom: 0;
+}
+
+.fgc-map-pool__mode {
+    color: var(--fgc-accent);
+    font-size: var(--fgc-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.fgc-map-pool__item {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-3);
+    padding: var(--fgc-space-1) 0;
+    color: var(--fgc-text);
+    font-size: var(--fgc-text-sm);
+    cursor: pointer;
+}
+
+.fgc-map-pool__custom {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-2);
+    margin-top: var(--fgc-space-4);
+}
+
+.fgc-map-pool__order {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-map-pool__order-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fgc-space-3);
+    padding: var(--fgc-space-2) var(--fgc-space-3);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-md);
+    background: var(--fgc-bg-elevated);
+}
+
+.fgc-map-pool__order-name {
+    min-width: 0;
+    font-size: var(--fgc-text-sm);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+/* Timer tab. */
+
+.fgc-timer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--fgc-space-2);
+    padding: var(--fgc-space-5);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-md);
+    background: var(--fgc-bg-elevated);
+}
+
+.fgc-timer__value {
+    font-family: var(--fgc-font-mono);
+    font-size: clamp(2.4rem, 8vw, 4rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    line-height: 1;
+}

@@ -218,6 +218,7 @@ Two shapes, exactly as the original sends them:
 3. Timer tick: `matchTimer` is sent once per second while running (same as the original), and once on settings change while paused.
 4. The original's 3 s polling debounce disappears. Dioxus state changes trigger projection + broadcast directly; there is no `pendingOverlayUpdate` flag.
 5. New clients always get `init` first, then live messages.
+6. Force Update resends every projected section even when unchanged. Timer frames are separate and are not replayed by Force Update, matching the original controller.
 
 ---
 

@@ -8,6 +8,7 @@
 mod asset_store;
 mod assets;
 mod error;
+mod match_control;
 mod migrate;
 mod model;
 mod paths;
@@ -24,6 +25,7 @@ pub use assets::{
     validate_asset_identity,
 };
 pub use error::CoreError;
+pub use match_control::*;
 pub use migrate::migrate;
 pub use model::*;
 pub use paths::{

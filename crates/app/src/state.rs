@@ -13,10 +13,14 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 use fgc_core::{
-    AppState, Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin, AssetStore, JsonStore,
-    MemoryStore, Player, PlayerId, Position, Role, Store, Talent, TalentId, Team, TeamId,
-    TeamReference, TimerAlignment, TimerMode, UnusedAssets, clear_talent_references,
-    referenced_hashes, remove_team_references, validate_and_repair,
+    AppState, Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin, AssetStore, IntervieweeRef,
+    JsonStore, Match, MatchStatus, MemoryStore, Player, PlayerId, Position, Role, Scoring, Side,
+    Store, Talent, TalentId, TalentRef, TalentSlot, Team, TeamId, TeamReference, TeamSide,
+    TimerAlignment, TimerMode, UnusedAssets, clear_talent_references, derived_scores, insert_map,
+    move_map as move_map_slot, move_map_pool as move_map_pool_slot, new_match,
+    recalculate_loser_picks, referenced_hashes, remove_map, remove_team_references,
+    reset_hero_bans, reset_maps, set_first_ban_team, set_hero_ban, set_map_name, set_map_scores,
+    toggle_map_pool, validate_and_repair,
 };
 use fgc_protocol::{AssetCatalog, data_url_for};
 use fgc_server::{AssetMode, Outbound, ServerConfig};
@@ -257,6 +261,234 @@ impl AppStore {
             return;
         }
         self.mutate(|state| state.settings.timer.standalone = standalone);
+    }
+
+    /// Returns the merged bundled and user asset catalogue.
+    #[must_use]
+    pub fn catalog(&self) -> AssetCatalog {
+        self.catalog.peek().clone()
+    }
+
+    /// Creates the default current match with eight empty map slots.
+    pub fn create_match(&self) {
+        let match_state = new_match();
+        self.mutate(move |state| state.current_match = Some(match_state));
+    }
+
+    /// Applies an edit to the current match, if one exists.
+    pub fn update_match(&self, update: impl FnOnce(&mut Match)) {
+        self.mutate(|state| {
+            if let Some(current) = state.current_match.as_mut() {
+                update(current);
+            }
+        });
+    }
+
+    /// Assigns or clears one side of the current match.
+    pub fn set_match_team(&self, side: TeamSide, team: Option<TeamId>) {
+        self.update_match(|current| match side {
+            TeamSide::A => current.team_a = team,
+            TeamSide::B => current.team_b = team,
+        });
+    }
+
+    /// Sets the match status.
+    pub fn set_match_status(&self, status: MatchStatus) {
+        self.update_match(|current| current.status = status);
+    }
+
+    /// Sets the side indicator shown by the game overlay.
+    pub fn set_match_side(&self, side: Side) {
+        self.update_match(|current| current.side = side);
+    }
+
+    /// Sets the first-to target, clamped to the supported 1–4 range.
+    pub fn set_match_first_to(&self, first_to: u8) {
+        let first_to = first_to.clamp(1, 4);
+        self.update_match(|current| current.first_to = first_to);
+    }
+
+    /// Enables loser picks and recalculates every map's picker.
+    pub fn set_match_loser_picks(&self, enabled: bool) {
+        self.update_match(|current| {
+            current.loser_picks = enabled;
+            if enabled {
+                recalculate_loser_picks(&mut current.maps);
+            }
+        });
+    }
+
+    /// Switches between derived and manual match scores.
+    pub fn set_manual_scoring(&self, enabled: bool) {
+        self.update_match(|current| {
+            current.scoring = if enabled {
+                match &current.scoring {
+                    Scoring::Manual { a, b } => Scoring::Manual { a: *a, b: *b },
+                    Scoring::Derived => {
+                        let (a, b) = derived_scores(current);
+                        Scoring::Manual { a, b }
+                    }
+                }
+            } else {
+                Scoring::Derived
+            };
+        });
+    }
+
+    /// Sets one side of a manual match score.
+    pub fn set_manual_score(&self, side: TeamSide, score: u16) {
+        self.update_match(|current| {
+            let (a, b) = match &current.scoring {
+                Scoring::Manual { a, b } => (*a, *b),
+                Scoring::Derived => derived_scores(current),
+            };
+            current.scoring = Scoring::Manual {
+                a: if side == TeamSide::A { score } else { a },
+                b: if side == TeamSide::B { score } else { b },
+            };
+        });
+    }
+
+    /// Updates a map name and its free-text mode.
+    pub fn set_map_name(&self, index: usize, name: &str, mode: &str) {
+        self.update_match(|current| set_map_name(current, index, name, mode));
+    }
+
+    /// Updates only a map's free-text mode.
+    pub fn set_map_mode(&self, index: usize, mode: &str) {
+        self.update_match(|current| {
+            if let Some(map) = current.maps.get_mut(index) {
+                map.game_mode_name = mode.to_owned();
+            }
+        });
+    }
+
+    /// Updates one map's score.
+    pub fn set_map_scores(&self, index: usize, score_a: u16, score_b: u16) {
+        self.update_match(|current| set_map_scores(current, index, score_a, score_b));
+    }
+
+    /// Marks one map as complete or incomplete.
+    pub fn set_map_completed(&self, index: usize, completed: bool) {
+        self.update_match(|current| {
+            if let Some(map) = current.maps.get_mut(index) {
+                map.completed = completed;
+            }
+        });
+    }
+
+    /// Marks one map as the current map, or clears the current map.
+    pub fn set_current_map(&self, index: Option<usize>) {
+        self.update_match(|current| {
+            current.current_map = index.filter(|index| *index < current.maps.len());
+        });
+    }
+
+    /// Overrides one map's picker.
+    pub fn set_map_chosen_by(&self, index: usize, side: Option<TeamSide>) {
+        self.update_match(|current| {
+            if let Some(map) = current.maps.get_mut(index) {
+                map.chosen_by = side;
+            }
+        });
+    }
+
+    /// Inserts an empty map slot at `index`.
+    pub fn insert_map(&self, index: usize) {
+        self.update_match(|current| insert_map(current, index));
+    }
+
+    /// Removes one map slot.
+    pub fn remove_map(&self, index: usize) {
+        self.update_match(|current| remove_map(current, index));
+    }
+
+    /// Moves one map slot by `delta` positions.
+    pub fn move_map(&self, index: usize, delta: isize) {
+        self.update_match(|current| {
+            move_map_slot(current, index, delta);
+        });
+    }
+
+    /// Resets every map slot and hero-ban row.
+    pub fn reset_maps(&self) {
+        self.update_match(reset_maps);
+    }
+
+    /// Clears every hero ban.
+    pub fn reset_hero_bans(&self) {
+        self.update_match(reset_hero_bans);
+    }
+
+    /// Sets the team that placed the first ban for one map.
+    pub fn set_first_ban_team(&self, index: usize, team: Option<TeamSide>) {
+        self.update_match(|current| set_first_ban_team(current, index, team));
+    }
+
+    /// Sets one team's hero ban for one map.
+    pub fn set_hero_ban(&self, index: usize, side: TeamSide, hero: &str) {
+        self.update_match(|current| set_hero_ban(current, index, side, hero));
+    }
+
+    /// Assigns or clears one talent slot.
+    pub fn set_talent_slot(&self, slot: TalentSlot, talent: Option<TalentId>) {
+        self.update_match(|current| {
+            current
+                .talent
+                .set_slot(slot, talent.map(|talent_id| TalentRef { talent_id }));
+        });
+    }
+
+    /// Assigns an interviewee from the talent library, or switches to a custom
+    /// interviewee when `talent` is `None`.
+    pub fn set_interviewee_talent(&self, talent: Option<TalentId>) {
+        self.update_match(|current| {
+            let interviewee = current
+                .talent
+                .interviewee
+                .get_or_insert_with(IntervieweeRef::default);
+            let has_talent = talent.is_some();
+            interviewee.talent_id = talent;
+            if has_talent {
+                interviewee.custom_name = None;
+                interviewee.custom_subtext = None;
+            }
+        });
+    }
+
+    /// Sets the custom interviewee name and subtext.
+    pub fn set_interviewee_custom(&self, name: &str, subtext: &str) {
+        self.update_match(|current| {
+            let interviewee = current
+                .talent
+                .interviewee
+                .get_or_insert_with(IntervieweeRef::default);
+            interviewee.custom_name = non_empty(name);
+            interviewee.custom_subtext = non_empty(subtext);
+        });
+    }
+
+    /// Adds or removes a map name from the map pool.
+    pub fn set_map_pool_included(&self, name: &str, included: bool) {
+        self.update_match(|current| toggle_map_pool(current, name, included));
+    }
+
+    /// Moves a map-pool entry by `delta` positions.
+    pub fn move_map_pool(&self, index: usize, delta: isize) {
+        self.update_match(|current| {
+            move_map_pool_slot(current, index, delta);
+        });
+    }
+
+    /// Resends every projected overlay section.
+    pub fn force_update(&self) {
+        self.server
+            .project_force(&self.state.peek(), &self.catalog.peek());
+    }
+
+    /// Sends one timer frame to the overlays.
+    pub fn broadcast_timer(&self, message: Outbound) {
+        self.server.broadcast(message);
     }
 
     /// Creates a team with the original application defaults.
@@ -954,6 +1186,15 @@ pub fn load_state(store: &dyn Store) -> (AppState, Option<String>) {
             AppState::default(),
             Some(format!("Could not load saved state: {error}")),
         ),
+    }
+}
+
+/// Returns `Some(value)` when the trimmed text is not empty.
+fn non_empty(value: &str) -> Option<String> {
+    if value.trim().is_empty() {
+        None
+    } else {
+        Some(value.to_owned())
     }
 }
 

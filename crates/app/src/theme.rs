@@ -82,7 +82,12 @@ impl Destination {
     pub const fn is_implemented(self) -> bool {
         matches!(
             self,
-            Self::Overlay | Self::Settings | Self::Talent | Self::Teams | Self::Assets
+            Self::Overlay
+                | Self::Settings
+                | Self::Talent
+                | Self::Teams
+                | Self::MatchController
+                | Self::Assets
         )
     }
 
@@ -128,6 +133,7 @@ mod tests {
                 Destination::Settings,
                 Destination::Talent,
                 Destination::Teams,
+                Destination::MatchController,
                 Destination::Assets
             ]
         );

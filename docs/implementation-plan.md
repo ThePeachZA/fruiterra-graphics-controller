@@ -253,6 +253,15 @@ The exact module split can change during implementation, but the crate boundarie
 
 **Exit criterion:** all existing Match Controller workflows are usable and the seven overlays update from live changes.
 
+**Implementation notes**
+
+- Match rules live in `fgc-core::match_control`: eight default map slots, first map picked by team A, later maps picked by the previous map's loser (or the previous picker after a draw), derived scores from completed map wins, and map/hero-ban alignment when slots are inserted, removed or moved. These are unit-tested without a UI.
+- Content deduplication lives in `ProjectionDiffer` (`crates/app/src/server.rs`). It is seeded with the frames sent on server start/restart, reset on stop, and bypassed by Force Update. The server itself always caches and sends whatever it receives.
+- Timer run state is ephemeral in `MatchControllerView` so switching tabs does not reset a running clock; the configured timer settings persist in `AppState::settings.timer`. A tick is broadcast once per second while running, and a settings change broadcasts the current paused value.
+- Map names and modes are free text backed by datalists. Map assets are optional until M9, and map-pool entries without a matching asset are skipped by projection rather than emitted as blank rows.
+- Hero bans store one hero per team per map, matching the overlay contract; selecting a new hero replaces the previous ban and clearing the field removes it.
+- The seven tabs reuse the shared `.fgc-tabs`/`.fgc-tab` controls from the Teams destination, with Match Controller-specific layout in `crates/app/assets/match-controller.css`.
+
 ---
 
 ### M8 — Tournament
