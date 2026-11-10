@@ -21,8 +21,9 @@ fgc/
 │  │  ├─ overlays/             # 7 HTML files (embedded)
 │  │  └─ assets/               # Saira, Inter, icons, maps, manifest.json (embedded)
 │  └─ app/                     # fgc-app  (bin: fruiterra-gc)
-│     ├─ src/{main,app,state,views,components,theme}.rs
-│     ├─ components/           # vendored via `dx components add`
+│     ├─ src/{main,app,state,server,status,theme}.rs
+│     ├─ src/views/            # seven destination views
+│     ├─ src/components/       # hand-rolled + vendored primitives
 │     └─ assets/               # UI CSS, Inter, app icons
 ├─ docs/
 └─ .github/workflows/release.yml
@@ -73,7 +74,7 @@ pub fn assets_root() -> Result<PathBuf, CoreError>;    // …/assets
 pub fn overlays_override_dir() -> Result<PathBuf, CoreError>;
 ```
 
-- `app_data_dir()` uses `directories::ProjectDirs::from("com", "Fruiterra", "Fruiterra Graphics Controller")`.
+- `app_data_dir()` uses `directories::ProjectDirs::from("com", "Fruiterra", "Fruiterra Graphics Controller")`. On Windows `ProjectDirs::data_dir()` appends a `data` component, so the helper returns its parent; otherwise the state file would live under `<base>\data\data\app.json`.
 - Atomic save: write `app.json.tmp`, fsync, rename over `app.json`, copy previous to `app.json.bak`.
 - Migrations are a `Vec<fn(Value) -> Result<Value>>` indexed by `schemaVersion`.
 
@@ -198,14 +199,15 @@ pub fn bundled_catalog() -> Vec<Asset>;
 |---|---|
 | `dioxus` 0.7.10 (`desktop`) | UI |
 | `dioxus-primitives` (git, pinned rev) | accessible widgets |
-| vendored components | styled Dialog/Select/Tabs/etc. |
+| `dioxus-icons`, `palette` | icons and colour maths for the vendored widgets |
+| vendored components | styled Button/Input/Select/Switch/Tabs/Dialog/Toast/etc. |
 | `fgc-core`, `fgc-protocol`, `fgc-server` | domain, DTOs, server |
+| `tokio` | server lifecycle tasks and the status poller |
 | `tracing`, `tracing-subscriber`, `tracing-appender` | logs |
 | `anyhow` | binary-level error context |
-| `arboard` | clipboard for overlay URLs |
-| `rfd` | native file pickers for asset import/export |
-| `reqwest` | import an asset from a URL (10 s timeout, 20 MB cap) |
 | `directories` | paths (via core) |
+
+`rfd` and `reqwest` arrive with asset import in M5; overlay URL copying uses the WebView clipboard API through `document::eval` with an `execCommand` fallback.
 
 ---
 
@@ -245,7 +247,7 @@ Stopped ──start──► Starting ──bind ok──► Running ──stop�
 ```
 
 - One dedicated OS thread named `fgc-server`, owning a multi-thread tokio runtime (Q5).
-- The UI talks to it through an unbounded `tokio::sync::mpsc` command channel: `Start(cfg)`, `Stop`, `Broadcast(Outbound)`, `RebroadcastAll`, `Status(oneshot)`.
+- The UI talks to it through an unbounded `tokio::sync::mpsc` command channel: `Broadcast(Outbound)`, `RebroadcastAll`, `Stop(oneshot)`. Starting creates the thread and binds before returning; restart stops the previous listener first.
 - `Stop` cancels a `CancellationToken`, axum performs a graceful shutdown, the thread joins, and the result is reported through a oneshot.
 - The UI never blocks on the join; `stop()` is awaited inside `dioxus::prelude::spawn`.
 - A panic in the server thread is caught at the thread boundary, logged, and surfaced as `Failed`.
@@ -264,28 +266,25 @@ Match Controller keeps its 7 tabs: `Match`, `Map Selection`, `Hero Bans`, `Talen
 
 | Need | Source |
 |---|---|
-| Dialog / AlertDialog | `dioxus-primitives` + copied styled version |
-| Select / Combobox | `dioxus-primitives` + copied styled version |
-| Tabs | `dioxus-primitives` + copied styled version |
-| Dropdown / Context menu | `dioxus-primitives` + copied styled version |
-| Tooltip / HoverCard | `dioxus-primitives` |
-| Toast | `dioxus-primitives` + copied styled version |
-| Switch / Slider | `dioxus-primitives` |
-| ScrollArea / Separator / Badge | `dioxus-primitives` |
-| Button, IconButton | hand-rolled (small, themed) |
-| Panel / Card, Input, TextArea, NumberInput | hand-rolled |
-| ColorPicker | hand-rolled (`<input type="color">` + hex field) |
-| ImagePicker, FilePicker | hand-rolled over `rfd` + asset library |
-| Bracket board, standings table | hand-rolled |
+| Button, Input, Textarea, Label | vendored styled component |
+| Select / Combobox | vendored styled component; enum settings use a native `<select>` |
+| Switch | vendored styled component |
+| Tabs, Dialog, ColorPicker, Card | vendored styled component |
+| Toast | `dioxus-primitives` + vendored styled version |
+| Panel / Field / ToggleRow / KeyValues | hand-rolled |
 | Sidebar, status bar, page header | hand-rolled |
+| ImagePicker, FilePicker | M5 over `rfd` + asset library |
+| Bracket board, standings table | M8 |
 
 Vendored component files keep their upstream MIT/Apache-2.0 headers, and `THIRD_PARTY_NOTICES.md` records the pinned upstream revision.
 
 ### Styling (Q3)
 
 - `crates/app/assets/theme.css` defines tokens: colours, spacing, radii, typography, z-index.
-- One CSS file per view (`teams.css`, `match-controller.css`, …), imported once at startup.
-- Class naming: `fgc-<block>__<element>--<modifier>`; no CSS modules, no Tailwind, no Node.
+- `app.css` owns the shell, `components.css` owns the hand-rolled panel/form primitives, and `dx-components-theme.css` carries the vendored widget tokens.
+- Per-view CSS (`overlay.css`, `settings.css`, `placeholder.css`, and later views) is linked once at startup.
+- Vendored component CSS modules are registered through `#[css_module]` and bundled by `dx`.
+- Class naming: `fgc-<block>__<element>--<modifier>`; no CSS modules for app styles, no Tailwind, no Node.
 - Dark theme only in v1; light theme is a backlog item.
 - UI font: Inter (OFL) bundled locally with `@font-face`. Overlay font: Saira (OFL), served by the server.
 
@@ -302,7 +301,7 @@ Vendored component files keep their upstream MIT/Apache-2.0 headers, and `THIRD_
 
 - No `unwrap`/`expect` outside tests and `main` startup.
 - `tracing` spans around: load, save, project, broadcast, server start/stop, WS connect/disconnect.
-- Log file: `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\fgc.log`, daily rotation, 7 files kept. `RUST_LOG` overrides the filter.
+- Log file: `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\fruiterra-gc.log`, daily rotation, 7 files kept. `RUST_LOG` overrides the filter.
 - Clippy: `cargo clippy --workspace --all-targets -- -D warnings`; `cargo fmt --check`.
 
 ---

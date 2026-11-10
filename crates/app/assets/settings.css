@@ -1,0 +1,16 @@
+/* Settings destination: inline form controls. */
+
+.fgc-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-inline > input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.fgc-inline > button {
+    flex: 0 0 auto;
+}

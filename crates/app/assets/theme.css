@@ -1,0 +1,178 @@
+/*
+ * Fruiterra Graphics Controller theme tokens.
+ *
+ * Dark theme only in v1. The vendored Dioxus Components stylesheet defines the
+ * raw component variables; this file forces it into dark mode and adds the
+ * application's own tokens.
+ */
+
+:root {
+    /* Force the vendored component theme into dark mode regardless of the
+     * operating-system preference. */
+    --dark: initial;
+    --light: ;
+
+    /* Surfaces */
+    --fgc-bg: #0b0d12;
+    --fgc-bg-elevated: #11151d;
+    --fgc-panel: #151922;
+    --fgc-panel-hover: #1b2130;
+    --fgc-line: #2a3140;
+    --fgc-line-strong: #3a4356;
+
+    /* Text */
+    --fgc-text: #eef2f8;
+    --fgc-text-muted: #8d99ad;
+    --fgc-text-faint: #667188;
+
+    /* Brand */
+    --fgc-accent: #ff7a1a;
+    --fgc-accent-strong: #ff9346;
+    --fgc-accent-soft: rgb(255 122 26 / 14%);
+    --fgc-success: #3ecf8e;
+    --fgc-warning: #f5b84b;
+    --fgc-danger: #ef5b5b;
+
+    /* Spacing */
+    --fgc-space-1: 0.25rem;
+    --fgc-space-2: 0.5rem;
+    --fgc-space-3: 0.75rem;
+    --fgc-space-4: 1rem;
+    --fgc-space-5: 1.5rem;
+    --fgc-space-6: 2rem;
+    --fgc-space-7: 3rem;
+
+    /* Radii */
+    --fgc-radius-sm: 0.4rem;
+    --fgc-radius-md: 0.7rem;
+    --fgc-radius-lg: 1rem;
+    --fgc-radius-pill: 999px;
+
+    /* Typography */
+    --fgc-font-ui: "Inter", "Segoe UI", system-ui, sans-serif;
+    --fgc-font-mono: "Cascadia Mono", "Consolas", monospace;
+    --fgc-text-xs: 0.72rem;
+    --fgc-text-sm: 0.82rem;
+    --fgc-text-md: 0.92rem;
+    --fgc-text-lg: 1.1rem;
+    --fgc-text-xl: 1.5rem;
+    --fgc-text-2xl: 2rem;
+
+    /* Depth */
+    --fgc-shadow-panel: 0 12px 32px rgb(0 0 0 / 28%);
+    --fgc-z-sticky: 10;
+    --fgc-z-toast: 1000;
+
+    /* Map the vendored component tokens onto the brand palette. */
+    --secondary-color-2: var(--fgc-accent);
+    --focused-border-color: var(--fgc-accent);
+    --primary-color-1: var(--fgc-bg);
+    --primary-color-2: var(--fgc-bg-elevated);
+    --primary-color-3: var(--fgc-panel);
+    --primary-color-4: var(--fgc-panel);
+    --primary-color-5: var(--fgc-panel-hover);
+    --primary-color-6: var(--fgc-line);
+    --primary-color-7: var(--fgc-line-strong);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: var(--fgc-bg);
+    color: var(--fgc-text);
+    font-family: var(--fgc-font-ui);
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+    margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
+a {
+    color: var(--fgc-accent);
+}
+
+::selection {
+    background: var(--fgc-accent-soft);
+}
+
+/* A slim, dark scrollbar that matches the shell. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--fgc-line-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 0.6rem;
+    height: 0.6rem;
+}
+
+*::-webkit-scrollbar-thumb {
+    border-radius: var(--fgc-radius-pill);
+    background: var(--fgc-line-strong);
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.fgc-eyebrow {
+    color: var(--fgc-accent);
+    font-size: var(--fgc-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.fgc-muted {
+    color: var(--fgc-text-muted);
+}
+
+.fgc-mono {
+    font-family: var(--fgc-font-mono);
+    font-size: var(--fgc-text-sm);
+}
+
+.fgc-divider {
+    height: 1px;
+    border: 0;
+    background: var(--fgc-line);
+}
+
+.fgc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--fgc-space-2);
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-pill);
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}

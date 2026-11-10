@@ -1,0 +1,210 @@
+/* Hand-rolled base components shared by the views. */
+
+.fgc-view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-5);
+}
+
+.fgc-status-row {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-note {
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-sm);
+    line-height: 1.5;
+}
+
+.fgc-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-lg);
+    background: var(--fgc-panel);
+    box-shadow: var(--fgc-shadow-panel);
+    overflow: hidden;
+}
+
+.fgc-panel__header {
+    padding: var(--fgc-space-4) var(--fgc-space-5);
+    border-bottom: 1px solid var(--fgc-line);
+}
+
+.fgc-panel__title {
+    font-size: var(--fgc-text-lg);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.fgc-panel__description {
+    margin-top: var(--fgc-space-1);
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-sm);
+    line-height: 1.5;
+}
+
+.fgc-panel__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-4);
+    padding: var(--fgc-space-5);
+}
+
+.fgc-panel__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--fgc-space-2);
+    padding: var(--fgc-space-3) var(--fgc-space-5);
+    border-top: 1px solid var(--fgc-line);
+    background: rgb(0 0 0 / 12%);
+}
+
+.fgc-grid {
+    display: grid;
+    gap: var(--fgc-space-5);
+}
+
+.fgc-grid--two {
+    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+}
+
+.fgc-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-field__label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--fgc-space-2);
+    color: var(--fgc-text);
+    font-size: var(--fgc-text-sm);
+    font-weight: 600;
+}
+
+.fgc-field__hint {
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xs);
+    font-weight: 400;
+}
+
+.fgc-field__error {
+    color: var(--fgc-danger);
+    font-size: var(--fgc-text-xs);
+}
+
+.fgc-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fgc-space-4);
+    padding: var(--fgc-space-3) 0;
+    border-bottom: 1px solid var(--fgc-line);
+}
+
+.fgc-toggle-row:last-child {
+    border-bottom: 0;
+}
+
+.fgc-toggle-row__text {
+    min-width: 0;
+}
+
+.fgc-toggle-row__title {
+    font-size: var(--fgc-text-md);
+    font-weight: 600;
+}
+
+.fgc-toggle-row__hint {
+    margin-top: 0.15rem;
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-sm);
+    line-height: 1.4;
+}
+
+.fgc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-kv {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--fgc-space-2) var(--fgc-space-4);
+    align-items: baseline;
+    font-size: var(--fgc-text-sm);
+}
+
+.fgc-kv__key {
+    color: var(--fgc-text-muted);
+}
+
+.fgc-kv__value {
+    min-width: 0;
+    color: var(--fgc-text);
+    overflow-wrap: anywhere;
+}
+
+.fgc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--fgc-space-2);
+    font-size: var(--fgc-text-sm);
+    font-weight: 600;
+}
+
+.fgc-status--running {
+    color: var(--fgc-success);
+}
+
+.fgc-status--busy {
+    color: var(--fgc-warning);
+}
+
+.fgc-status--failed {
+    color: var(--fgc-danger);
+}
+
+.fgc-status--stopped {
+    color: var(--fgc-text-muted);
+}
+
+.fgc-code {
+    display: block;
+    padding: var(--fgc-space-2) var(--fgc-space-3);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-sm);
+    background: #0a0c11;
+    color: #d7e0ee;
+    font-family: var(--fgc-font-mono);
+    font-size: var(--fgc-text-sm);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
+.fgc-native-select {
+    width: 100%;
+    min-height: 2.25rem;
+    padding: 0 var(--fgc-space-3);
+    border: 1px solid var(--fgc-line-strong);
+    border-radius: var(--fgc-radius-sm);
+    background: var(--fgc-bg-elevated);
+    color: var(--fgc-text);
+    font-size: var(--fgc-text-sm);
+}
+
+.fgc-native-select:focus-visible {
+    border-color: var(--fgc-accent);
+    outline: 2px solid var(--fgc-accent-soft);
+    outline-offset: 1px;
+}

@@ -73,7 +73,7 @@ installer_icon = "assets/icons/icon.ico"
 - NSIS `install_mode` is left at its default `CurrentUser`: per-user install under `%LOCALAPPDATA%\Programs\Fruiterra Graphics Controller`, no UAC prompt, uninstall entry in the current user's registry hive.
 - `Dioxus.toml` lives at the workspace root. The CLI walks up from `crates/app` to find it, and `default-members = ["crates/app"]` selects the app package.
 - The binary target is `fruiterra-gc`; the display name is set in the app and installer metadata.
-- `#![cfg_attr(all(feature = "bundle", target_os = "windows"), windows_subsystem = "windows")]` hides the console in release builds. Logs still go to `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\fgc.log`.
+- `#![cfg_attr(all(feature = "bundle", target_os = "windows"), windows_subsystem = "windows")]` hides the console in release builds. Logs still go to `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\fruiterra-gc.log`.
 - `bundle` is an app-crate feature enabled by the release command, so `cargo run` keeps the console for development.
 - The icon is a multi-resolution `.ico`; the PNG set is used by the UI and documentation.
 

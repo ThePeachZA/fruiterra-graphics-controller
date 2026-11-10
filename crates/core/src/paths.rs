@@ -12,7 +12,22 @@ pub fn project_dirs() -> Result<ProjectDirs, CoreError> {
 
 /// `%APPDATA%\Fruiterra\Fruiterra Graphics Controller` on Windows.
 pub fn app_data_dir() -> Result<PathBuf, CoreError> {
-    Ok(project_dirs()?.data_dir().to_path_buf())
+    let dirs = project_dirs()?;
+    let data = dirs.data_dir();
+    // `ProjectDirs::data_dir` appends a `data` component on Windows. The app
+    // owns that name itself (`<base>\data\app.json`), so use the parent there
+    // to avoid a nested `data\data` layout. Other platforms already return the
+    // base directory.
+    #[cfg(target_os = "windows")]
+    {
+        data.parent()
+            .map(Path::to_path_buf)
+            .ok_or(CoreError::NoDataDir)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(data.to_path_buf())
+    }
 }
 
 /// Directory containing `app.json` and its backup.
@@ -69,4 +84,26 @@ pub fn ensure_dirs(root: &Path) -> Result<(), CoreError> {
         })?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ensure_dirs_creates_the_expected_layout() {
+        let root = tempfile::tempdir().expect("temp dir");
+        ensure_dirs(root.path()).expect("create dirs");
+        for relative in ["data", "assets/blobs", "overlays", "logs"] {
+            assert!(root.path().join(relative).is_dir(), "{relative} missing");
+        }
+    }
+
+    #[test]
+    fn app_data_dir_ends_with_the_application_name() {
+        // Regression: `ProjectDirs::data_dir` appends `data` on Windows, which
+        // would have produced `<base>\data\data` for the state file.
+        let directory = app_data_dir().expect("app data dir");
+        assert!(directory.ends_with(APP_NAME), "{}", directory.display());
+    }
 }

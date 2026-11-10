@@ -1,0 +1,43 @@
+/* Placeholder pages for destinations that arrive in later milestones. */
+
+.fgc-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--fgc-space-3);
+    max-width: 46rem;
+    padding: var(--fgc-space-6);
+    border: 1px dashed var(--fgc-line-strong);
+    border-radius: var(--fgc-radius-lg);
+    background: rgb(0 0 0 / 12%);
+}
+
+.fgc-placeholder__badge {
+    padding: 0.2rem 0.6rem;
+    border: 1px solid rgb(255 122 26 / 35%);
+    border-radius: var(--fgc-radius-pill);
+    background: var(--fgc-accent-soft);
+    color: var(--fgc-accent);
+    font-size: var(--fgc-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.fgc-placeholder__title {
+    font-size: var(--fgc-text-2xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.fgc-placeholder__blurb {
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-md);
+    line-height: 1.55;
+}
+
+.fgc-placeholder__note {
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-sm);
+    line-height: 1.55;
+}

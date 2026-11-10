@@ -1,0 +1,13 @@
+﻿/* Vendored from Dioxus Components (https://github.com/DioxusLabs/components)
+ * at revision 9a758255ea26e2b20c8cecf4c1c946feb9e71da7.
+ * Copyright (c) Dioxus Labs. Licensed under MIT OR Apache-2.0.
+ */
+
+/* Label Styles */
+.dx-label {
+  display: flex;
+  align-items: center;
+  color: var(--secondary-color-4);
+  font-size: 0.8rem;
+  line-height: 1;
+}

@@ -1,0 +1,290 @@
+/* Application shell: sidebar, page header and status bar. */
+
+.fgc-app {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+    height: 100vh;
+    background:
+        radial-gradient(1200px 600px at 85% -10%, rgb(255 122 26 / 8%), transparent 60%),
+        var(--fgc-bg);
+}
+
+.fgc-sidebar {
+    display: flex;
+    flex-direction: column;
+    grid-row: 1 / 3;
+    min-height: 0;
+    padding: var(--fgc-space-5) var(--fgc-space-4);
+    border-right: 1px solid var(--fgc-line);
+    background: linear-gradient(180deg, #0e1118 0%, #0b0d12 100%);
+}
+
+.fgc-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-3);
+    padding: 0 var(--fgc-space-2) var(--fgc-space-5);
+    border-bottom: 1px solid var(--fgc-line);
+}
+
+.fgc-brand__mark {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--fgc-radius-md);
+    background: var(--fgc-accent);
+    color: #1a0d02;
+    font-size: 1.15rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+}
+
+.fgc-brand__name {
+    font-size: var(--fgc-text-md);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+
+.fgc-brand__sub {
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.fgc-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: var(--fgc-space-4) 0;
+    overflow-y: auto;
+}
+
+.fgc-nav__item {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-3);
+    width: 100%;
+    padding: 0.55rem var(--fgc-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--fgc-radius-sm);
+    background: transparent;
+    color: var(--fgc-text-muted);
+    cursor: pointer;
+    font-size: var(--fgc-text-md);
+    font-weight: 500;
+    text-align: left;
+    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.fgc-nav__item:hover {
+    background: var(--fgc-panel);
+    color: var(--fgc-text);
+}
+
+.fgc-nav__item--active {
+    border-color: rgb(255 122 26 / 35%);
+    background: var(--fgc-accent-soft);
+    color: var(--fgc-text);
+}
+
+.fgc-nav__item--active .fgc-nav__monogram {
+    background: var(--fgc-accent);
+    color: #1a0d02;
+}
+
+.fgc-nav__monogram {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 1.7rem;
+    height: 1.7rem;
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-sm);
+    color: var(--fgc-text-faint);
+    font-family: var(--fgc-font-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.fgc-nav__soon {
+    margin-left: auto;
+    color: var(--fgc-text-faint);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.fgc-sidebar__footer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-1);
+    margin-top: auto;
+    padding: var(--fgc-space-4) var(--fgc-space-2) 0;
+    border-top: 1px solid var(--fgc-line);
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xs);
+}
+
+.fgc-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.fgc-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--fgc-space-4);
+    padding: var(--fgc-space-5) var(--fgc-space-6) var(--fgc-space-4);
+    border-bottom: 1px solid var(--fgc-line);
+}
+
+.fgc-page-header__title {
+    font-size: var(--fgc-text-xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.fgc-page-header__blurb {
+    margin-top: var(--fgc-space-1);
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-sm);
+}
+
+.fgc-page-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--fgc-space-5) var(--fgc-space-6) var(--fgc-space-6);
+    overflow-y: auto;
+}
+
+.fgc-statusbar {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-4);
+    min-height: 2.2rem;
+    padding: 0 var(--fgc-space-6);
+    border-top: 1px solid var(--fgc-line);
+    background: #0a0c11;
+    color: var(--fgc-text-muted);
+    font-size: var(--fgc-text-xs);
+}
+
+.fgc-statusbar__group {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-2);
+    white-space: nowrap;
+}
+
+.fgc-statusbar__spacer {
+    flex: 1 1 auto;
+}
+
+.fgc-statusbar__error {
+    max-width: 34rem;
+    overflow: hidden;
+    color: var(--fgc-danger);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fgc-statusbar__button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--fgc-text-faint);
+    cursor: pointer;
+    font: inherit;
+    text-decoration: underline;
+}
+
+.fgc-statusbar__button:hover {
+    color: var(--fgc-text);
+}
+
+.fgc-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--fgc-text-faint);
+    box-shadow: 0 0 0 3px rgb(255 255 255 / 4%);
+}
+
+.fgc-dot--running {
+    background: var(--fgc-success);
+    box-shadow: 0 0 0 3px rgb(62 207 142 / 15%);
+}
+
+.fgc-dot--busy {
+    background: var(--fgc-warning);
+    box-shadow: 0 0 0 3px rgb(245 184 75 / 15%);
+}
+
+.fgc-dot--failed {
+    background: var(--fgc-danger);
+    box-shadow: 0 0 0 3px rgb(239 91 91 / 15%);
+}
+
+.fgc-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--fgc-space-3);
+    margin: 0 var(--fgc-space-6) var(--fgc-space-4);
+    padding: var(--fgc-space-3) var(--fgc-space-4);
+    border: 1px solid rgb(239 91 91 / 35%);
+    border-radius: var(--fgc-radius-md);
+    background: rgb(239 91 91 / 10%);
+    color: #ffd7d7;
+    font-size: var(--fgc-text-sm);
+}
+
+.fgc-banner__body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.fgc-banner__title {
+    font-weight: 700;
+}
+
+.fgc-banner__message {
+    margin-top: 0.15rem;
+    color: #ffb9b9;
+    overflow-wrap: anywhere;
+}
+
+.fgc-banner__close {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #ffb9b9;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.fgc-empty {
+    display: grid;
+    place-items: center;
+    min-height: 18rem;
+    padding: var(--fgc-space-6);
+    border: 1px dashed var(--fgc-line-strong);
+    border-radius: var(--fgc-radius-lg);
+    color: var(--fgc-text-muted);
+    text-align: center;
+}
