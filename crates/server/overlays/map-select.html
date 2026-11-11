@@ -362,6 +362,17 @@
   </div>
 
   <script>
+    // Escape user-supplied text before interpolating it into innerHTML.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character]);
+    }
+
     const el = {
       overlay: document.getElementById('overlay'),
       title: document.getElementById('map-select-title'),
@@ -470,14 +481,14 @@
         <div class="${logoClass}" id="logo-${index}" style="${logoContent}"></div>
         <div class="${imageClass}" id="image-${index}" style="${imageStyle}"></div>
         <div class="${boardClass}" id="board-${index}">
-          <div class="map-card__score" id="score-a-${index}">${mapData.scoreA || 0}</div>
+          <div class="map-card__score" id="score-a-${index}">${escapeHtml(mapData.scoreA || 0)}</div>
           <div class="map-card__score-divider">-</div>
-          <div class="map-card__score" id="score-b-${index}">${mapData.scoreB || 0}</div>
+          <div class="map-card__score" id="score-b-${index}">${escapeHtml(mapData.scoreB || 0)}</div>
         </div>
         <div class="map-card__text">
-          <div class="map-card__type">${mapType || ''}</div>
-          <div class="map-card__name">${mapName || ''}</div>
-          <div class="${chosenByClass}">${chosenByText}</div>
+          <div class="map-card__type">${escapeHtml(mapType || '')}</div>
+          <div class="map-card__name">${escapeHtml(mapName || '')}</div>
+          <div class="${chosenByClass}">${escapeHtml(chosenByText)}</div>
         </div>
       `;
 

@@ -540,6 +540,17 @@
   </div>
 
   <script>
+    // Escape user-supplied text before interpolating it into innerHTML.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character]);
+    }
+
     const el = {
       title: document.getElementById('title'),
       subtitle: document.getElementById('subtitle'),
@@ -758,7 +769,7 @@
         // Show text content - use mode name for all states
         const textContent = map.type || 'TBC';
         
-        return `<div class="mode-item ${stateClass}" data-mode="${modeName}">${iconHtml}<span>${textContent}</span></div>`;
+        return `<div class="mode-item ${stateClass}" data-mode="${escapeHtml(modeName)}">${iconHtml}<span>${escapeHtml(textContent)}</span></div>`;
       }).join('');
     }
 

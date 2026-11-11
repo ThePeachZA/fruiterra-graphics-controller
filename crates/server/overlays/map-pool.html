@@ -239,6 +239,17 @@
   </div>
 
   <script>
+    // Escape user-supplied text before interpolating it into innerHTML.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character]);
+    }
+
     const el = {
       mapPool: document.getElementById('map-pool'),
       overlay: document.querySelector('.overlay'),
@@ -273,15 +284,15 @@
       }
       
       if (!modeData || !modeData.icons || modeData.icons.length === 0) {
-        return `<div class="mode-header"><span class="mode-name">${modeName}</span></div>`;
+        return `<div class="mode-header"><span class="mode-name">${escapeHtml(modeName)}</span></div>`;
       }
       
       const iconsHtml = modeData.icons
         .filter(iconUrl => iconUrl)
-        .map(iconUrl => `<div class="mode-icon"><img src="${iconUrl}" alt="mode icon" /></div>`)
+        .map(iconUrl => `<div class="mode-icon"><img src="${escapeHtml(iconUrl)}" alt="mode icon" /></div>`)
         .join('');
       
-      return `<div class="mode-header">${iconsHtml}<span class="mode-name">${modeName}</span></div>`;
+      return `<div class="mode-header">${iconsHtml}<span class="mode-name">${escapeHtml(modeName)}</span></div>`;
     }
 
     function createMapCard(mapData) {
@@ -301,14 +312,14 @@
       
       let logoHtml = '';
       if (isChosen) {
-        logoHtml = `<div class="map-logo-overlay"><img src="${mapData.chosenByLogo}" alt="chosen by team" /></div>`;
+        logoHtml = `<div class="map-logo-overlay"><img src="${escapeHtml(mapData.chosenByLogo)}" alt="chosen by team" /></div>`;
       }
 
       card.innerHTML = `
         <div class="${imageClass}" style="${imageStyle}"></div>
         ${logoHtml}
         <div class="map-name">
-          <span class="map-name-text">${mapData.name}</span>
+          <span class="map-name-text">${escapeHtml(mapData.name)}</span>
         </div>
       `;
       

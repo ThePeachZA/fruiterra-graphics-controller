@@ -276,6 +276,17 @@
   </div>
 
   <script>
+    // Escape user-supplied text before interpolating it into innerHTML.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character]);
+    }
+
     const TEAM_SIDE = 'B';
 
     const el = {
@@ -328,7 +339,7 @@
       const normalizedRole = roleName.toLowerCase();
       const iconUrl = roleIcons[normalizedRole] || roleIcons[roleName];
       if (!iconUrl) return '';
-      return `<img src="${iconUrl}" alt="${roleName}" />`;
+      return `<img src="${iconUrl}" alt="${escapeHtml(roleName)}" />`;
     }
 
     function createCorePlayerCard(player, index) {
@@ -353,8 +364,8 @@
         <div class="role-badge">${getRoleIcon(player.role)}</div>
         ${heroImageHtml}
         <div class="player-info">
-          <div class="player-name">${player.name || 'PLAYER'}</div>
-          <div class="player-pronouns">${player.pronouns || ''}</div>
+          <div class="player-name">${escapeHtml(player.name || 'PLAYER')}</div>
+          <div class="player-pronouns">${escapeHtml(player.pronouns || '')}</div>
         </div>
       `;
 
@@ -372,8 +383,8 @@
       card.innerHTML = `
         <div class="role-badge">${getRoleIcon(player.role)}</div>
         <div class="player-info">
-          <div class="player-name">${player.name || 'PLAYER'}</div>
-          <div class="player-pronouns">${player.pronouns || ''}</div>
+          <div class="player-name">${escapeHtml(player.name || 'PLAYER')}</div>
+          <div class="player-pronouns">${escapeHtml(player.pronouns || '')}</div>
         </div>
       `;
 

@@ -162,6 +162,17 @@
   </div>
 
   <script>
+    // Escape user-supplied text before interpolating it into innerHTML.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character]);
+    }
+
     const el = {
       castersContainer: document.getElementById('casters-container'),
       overlay: document.querySelector('.overlay')
@@ -205,13 +216,13 @@
         ? `<div class="social-icon">${getSocialIcon(caster.socialMedia.platform)}</div>`
         : '';
       const socialHandle = caster.socialMedia?.handle 
-        ? `<span class="social-handle">@${caster.socialMedia.handle}</span>`
+        ? `<span class="social-handle">@${escapeHtml(caster.socialMedia.handle)}</span>`
         : '';
       const separator = (socialIcon || socialHandle) && caster.pronouns 
         ? '<span class="separator">|</span>' 
         : '';
       const pronouns = caster.pronouns 
-        ? `<span class="pronouns">${caster.pronouns}</span>` 
+        ? `<span class="pronouns">${escapeHtml(caster.pronouns)}</span>`
         : '';
 
       const socialHtml = (socialIcon || socialHandle) ? `
@@ -223,14 +234,14 @@
         </div>
       ` : caster.pronouns ? `
         <div class="talent-subtext">
-          <span class="pronouns">${caster.pronouns}</span>
+          <span class="pronouns">${escapeHtml(caster.pronouns)}</span>
         </div>
       ` : '';
 
       card.innerHTML = `
         <div class="talent-image" style="${imageStyle}"></div>
         <div class="talent-text">
-          <div class="talent-name">${caster.displayName || 'TALENT NAME'}</div>
+          <div class="talent-name">${escapeHtml(caster.displayName || 'TALENT NAME')}</div>
           ${socialHtml}
         </div>
       `;
