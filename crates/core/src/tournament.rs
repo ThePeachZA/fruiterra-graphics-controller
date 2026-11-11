@@ -821,9 +821,15 @@ pub fn round_robin_pairs(team_ids: &[TeamId]) -> Vec<(TeamId, TeamId)> {
 }
 
 /// Generates a playoff bracket from the group standings.
-pub fn generate_playoff(tournament: &mut Tournament) -> Result<(), String> {
+///
+/// # Errors
+///
+/// Returns [`PlayoffError::NoGroups`] when there is no group stage, and
+/// [`PlayoffError::NotEnoughQualifiers`] when fewer than two teams would
+/// advance.
+pub fn generate_playoff(tournament: &mut Tournament) -> Result<(), PlayoffError> {
     if tournament.groups.is_empty() {
-        return Err("Create at least one group first.".to_owned());
+        return Err(PlayoffError::NoGroups);
     }
 
     recompute_standings(tournament);
@@ -846,7 +852,7 @@ pub fn generate_playoff(tournament: &mut Tournament) -> Result<(), String> {
     }
 
     if qualifiers.len() < MIN_ENTRANTS {
-        return Err("At least two teams must qualify for a playoff.".to_owned());
+        return Err(PlayoffError::NotEnoughQualifiers);
     }
 
     let format = if tournament.playoff_format == BracketFormat::DoubleElim {
@@ -864,11 +870,11 @@ pub fn generate_playoff(tournament: &mut Tournament) -> Result<(), String> {
 
 /// Recomputes and caches standings for every group.
 pub fn recompute_standings(tournament: &mut Tournament) {
-    let groups = tournament.groups.clone();
-    let mut standings = BTreeMap::new();
-    for group in &groups {
-        standings.insert(group.id.clone(), compute_standings(tournament, group));
-    }
+    let standings = tournament
+        .groups
+        .iter()
+        .map(|group| (group.id.clone(), compute_standings(tournament, group)))
+        .collect();
     tournament.standings = standings;
 }
 
@@ -1739,6 +1745,17 @@ pub enum LinkKind {
     Winner,
     /// Loser drops.
     Loser,
+}
+
+/// Errors raised when generating a playoff from group standings.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum PlayoffError {
+    /// No group stage exists, so there are no standings to qualify from.
+    #[error("Create at least one group first.")]
+    NoGroups,
+    /// Fewer than two teams would advance from the groups.
+    #[error("At least two teams must qualify for a playoff.")]
+    NotEnoughQualifiers,
 }
 
 /// Errors raised by slot edits.

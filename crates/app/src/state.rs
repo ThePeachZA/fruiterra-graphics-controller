@@ -711,7 +711,7 @@ impl AppStore {
         let mut result = Err("Tournament not found.".to_owned());
         self.mutate(|state| {
             if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
-                result = core_generate_playoff(tournament);
+                result = core_generate_playoff(tournament).map_err(|error| error.to_string());
             }
         });
         result

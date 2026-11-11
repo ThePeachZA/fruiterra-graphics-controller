@@ -9,9 +9,9 @@ use std::collections::HashSet;
 
 use fgc_core::{
     AppState, BracketFormat, BracketMatch, BracketMatchStatus, BracketSection, BracketSlot,
-    Entrant, LinkError, LinkKind, MatchId, MatchLink, SlotError, TeamId, Tiebreaker, Tournament,
-    TournamentId, TournamentRepairKind, TournamentStatus, add_group_fixture, add_match, add_round,
-    generate_double_elimination, generate_playoff, generate_round_robin,
+    Entrant, LinkError, LinkKind, MatchId, MatchLink, PlayoffError, SlotError, TeamId, Tiebreaker,
+    Tournament, TournamentId, TournamentRepairKind, TournamentStatus, add_group_fixture, add_match,
+    add_round, generate_double_elimination, generate_playoff, generate_round_robin,
     generate_single_elimination, match_address, match_mut, migrate, move_match, new_tournament,
     refresh, remove_group, remove_group_fixture, remove_match, remove_round, rename_group,
     rename_round, repair_tournament, reset_bracket_match, rounds, seeding_order,
@@ -929,12 +929,18 @@ fn t10_playoff_cross_seeds_group_qualifiers_and_stays_editable() {
 #[test]
 fn t10_playoff_requires_groups_and_two_qualifiers() {
     let mut tournament = tournament_with_teams(4, BracketFormat::SingleElim);
-    assert!(generate_playoff(&mut tournament).is_err());
+    assert_eq!(
+        generate_playoff(&mut tournament),
+        Err(PlayoffError::NoGroups)
+    );
 
     generate_round_robin(&mut tournament, 1);
     tournament.playoff_qualifiers = 1;
     // Only one team qualifies per group, so a single-group stage has one team.
-    assert!(generate_playoff(&mut tournament).is_err());
+    assert_eq!(
+        generate_playoff(&mut tournament),
+        Err(PlayoffError::NotEnoughQualifiers)
+    );
 }
 
 // ---------------------------------------------------------------------------
