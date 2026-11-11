@@ -169,14 +169,14 @@ This validates the packaged binary, embedded overlays, embedded assets and the s
 3. **Install** — installer or portable ZIP; SmartScreen note and checksum verification.
 4. **Quick start** — start the server, add teams/assets, create a match, copy the overlay URL into OBS at 1920×1080.
 5. **Overlay URLs** — the seven bundled files, the `?port=` parameter, and the default port 3001.
-6. **Migrating from the Electron app** — **no automatic import**: teams, talent, matches and assets must be re-entered. This is stated plainly, not buried.
-7. **Timer** — control-only in v1; there is no bundled timer overlay. Third-party timer overlays still receive `matchTimer`.
-8. **Network and security** — localhost by default; “Allow LAN access” binds `0.0.0.0`; CORS is `*`; there is no authentication in v1.
-9. **Fonts and licences** — Saira and Inter are OFL 1.1; local only; no PenPot/Google Fonts requests.
+6. **Migrating from the Google Sheets workflow** - **no automatic import**: teams, talent, matches and assets must be re-entered. This is stated plainly, not buried.
+7. **Timer** - control-only in v1; there is no bundled timer overlay. Third-party timer overlays still receive `matchTimer`.
+8. **Network and security** - localhost by default; "Allow LAN access" binds `0.0.0.0`; CORS is `*`; there is no authentication in v1.
+9. **Fonts and licences** - Saira and Inter are OFL 1.1; local only; no runtime font requests.
 10. **Build from source** — Rust stable, `dioxus-cli` 0.7.10, `cargo test`, `dx bundle`.
 11. **Troubleshooting** — SmartScreen, WebView2 missing, port already in use, firewall prompt on LAN mode.
-12. **Known limitations** — no legacy import, timer control-only, no code signing, Windows-only, bracket overlay post-v1.
-13. **Licence** — MIT, with a link to `LICENSE`.
+12. **Known limitations** - no import from the earlier Google Sheets workflow, timer control-only, no code signing, Windows-only, bracket overlay post-v1.
+13. **Licence** - MIT, stated in the font/licence section with a link to `LICENSE`; no separate top-level section.
 
 The README must not claim features that are backlogged (undo/redo, presets, multiple scenes, HTTP control API, bracket overlay).
 
@@ -196,7 +196,7 @@ Windows 10/11 x64. Unsigned build — SmartScreen may warn; verify SHA-256 below
 - <fixes>
 
 ## Known issues
-- No import from the old Electron app; data must be re-entered.
+- No import from the earlier Google Sheets workflow; data must be re-entered.
 - The timer is control-only; there is no bundled timer overlay.
 - LAN mode has no authentication; use it only on a trusted network.
 - Bracket overlay is not included in v1.
@@ -282,3 +282,28 @@ GitHub's generated notes are appended below this template, not used instead of i
 9. Embedded WebView2 bootstrapper in the NSIS installer; portable ZIP requires WebView2.
 10. CI: fmt/clippy/test on every push and PR; tag `v*` publishes; manual dispatch builds artifacts only.
 11. No MSI in v1: the WiX path cannot embed the WebView2 bootstrapper. Revisit only with an explicit decision.
+
+---
+
+## 10. Wiki maintenance
+
+The end-user guide lives in [`docs/wiki/`](wiki/Home.md) so it is versioned with
+the code and reviewed in the same pull requests as user-facing changes. When a
+UI label, workflow or limitation changes, update the matching page in that
+folder.
+
+Publish the pages to the GitHub wiki with:
+
+```powershell
+pwsh ./scripts/publish-wiki.ps1
+```
+
+The script clones `https://github.com/<owner>/<repo>.wiki.git`, copies every
+`docs/wiki/*.md` page, commits and pushes. Pass `-Repo owner/name` to target a
+different repository.
+
+> [!IMPORTANT]
+> The GitHub wiki must be enabled first. Private repositories on the GitHub Free
+> plan cannot enable wikis, so the wiki clone fails with `Repository not found`
+> until the repository is public or the plan supports private wikis. Until then,
+> `docs/wiki/Home.md` is the published end-user guide.

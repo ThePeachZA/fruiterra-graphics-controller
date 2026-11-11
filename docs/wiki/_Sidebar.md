@@ -1,0 +1,14 @@
+## Fruiterra Graphics Controller
+
+- [Home](Home)
+- [Installation](Installation)
+- [Quick Start](Quick-Start)
+- [Overlays in OBS](Overlays-in-OBS)
+- [Teams and Talent](Teams-and-Talent)
+- [Match Controller](Match-Controller)
+- [Tournament](Tournament)
+- [Assets](Assets)
+- [Settings](Settings)
+- [Data and Backups](Data-and-Backups)
+- [Troubleshooting](Troubleshooting)
+- [FAQ](FAQ)

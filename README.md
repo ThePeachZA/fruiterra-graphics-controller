@@ -21,10 +21,11 @@ Fruiterra Graphics Controller is a Rust/Dioxus desktop application for running
 an Overwatch broadcast. It manages teams, talent, matches, maps and tournaments,
 and serves seven plain-HTML overlays for OBS Browser Sources at **1920×1080**.
 
-It is a ground-up rebuild of the earlier Electron/React "OW Graphics Control"
-that keeps the existing overlay WebSocket protocol, so existing overlay HTML
-remains drop-in compatible. The control UI is Dioxus 0.7 with a WebView2
-frontend; the overlay server is Axum on Tokio.
+It replaces the earlier Google Sheets-based production workflow with one
+desktop application. The existing overlay WebSocket protocol is unchanged, so
+overlay HTML written for the previous setup remains drop-in compatible. The
+control UI is Dioxus 0.7 with a WebView2 frontend; the overlay server is Axum
+on Tokio.
 
 ## Features
 
@@ -114,6 +115,9 @@ For a tournament, add entrants on the Tournament **Setup** tab, generate the
 bracket, then use **Board** to run results and **Groups** / **Settings** for
 round-robin and tiebreaker configuration.
 
+The end-user guide covers the same flow in more detail, starting at
+[`docs/wiki/Home.md`](docs/wiki/Home.md).
+
 ## Build from source
 
 ```powershell
@@ -153,10 +157,16 @@ The dependency direction is one-way: `core` → `protocol` → `server` → `app
 
 ## Data and logs
 
-Application data, settings and the versioned `app.json` live under:
+Application data, settings and the versioned save file live under:
 
 ```text
 %APPDATA%\Fruiterra\Fruiterra Graphics Controller\
+├── data\
+│   ├── app.json
+│   └── app.json.bak
+├── assets\blobs\
+├── overlays\
+└── logs\
 ```
 
 Logs are written to the `logs\` subfolder. Imported assets are stored by hash,
@@ -166,6 +176,7 @@ and a backup of the previous save is kept as `app.json.bak`.
 
 | Document | Contents |
 |---|---|
+| [`docs/wiki/Home.md`](docs/wiki/Home.md) | End-user guide (source for the GitHub wiki) |
 | [`docs/architecture.md`](docs/architecture.md) | Crate boundaries and design decisions |
 | [`docs/data-model.md`](docs/data-model.md) | Persisted model and schema |
 | [`docs/protocol.md`](docs/protocol.md) | Overlay WebSocket contract |
@@ -177,6 +188,7 @@ and a backup of the previous save is kept as `app.json.bak`.
 | [`docs/decisions.md`](docs/decisions.md) | Decision log |
 | [`docs/overlay-qa.md`](docs/overlay-qa.md) | Overlay QA checklist |
 | [`docs/manual-qa.md`](docs/manual-qa.md) | Manual QA and intervention register |
+| [`docs/manual-qa-runbook.md`](docs/manual-qa-runbook.md) | Step-by-step manual QA runbook |
 
 ## Network and security
 
@@ -186,16 +198,16 @@ and a backup of the previous save is kept as `app.json.bak`.
 - CORS is `*` to match the original overlays.
 - There is **no authentication** in v1. Use LAN mode only on a trusted network.
 
-## Migrating from the Electron app
+## Migrating from the Google Sheets workflow
 
-There is no automatic import. Teams, talent, matches and assets must be
-re-entered. The new data directory is shown above; the old application's files
-are not read.
+There is no automatic import from the earlier Google Sheets-based workflow.
+Teams, talent, matches and assets must be re-entered in the app. The new data
+directory is shown above; the old spreadsheets are not read or modified.
 
 ## Known limitations
 
 - Windows x64 only.
-- No import from the old Electron application.
+- No import from the earlier Google Sheets-based workflow.
 - The timer is control-only; there is no bundled timer overlay.
 - No bracket overlay in v1.
 - Releases are unsigned, so Windows SmartScreen may warn on first run.
@@ -215,15 +227,12 @@ are not read.
 ## Fonts and licences
 
 The overlays use **Saira** and the control UI uses **Inter**. Both are licensed
-under the SIL Open Font License 1.1 and are bundled locally, so there are no
-PenPot or Google Fonts requests at runtime. The overlay families are exposed
-behind the neutral `FGC Display*` aliases; see [`docs/fonts.md`](docs/fonts.md).
+under the SIL Open Font License 1.1 and are bundled locally, so neither the
+overlays nor the UI make runtime font requests. The overlay families are
+exposed behind the neutral `FGC Display*` aliases; see
+[`docs/fonts.md`](docs/fonts.md).
 
 Apotek is a commercial typeface and is not redistributed. The full font,
 dependency and vendored-component notices are in
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-
-## Licence
-
-Released under the MIT licence. See [`LICENSE`](LICENSE). Font and dependency
-licences are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). The application is released
+under the MIT licence; see [`LICENSE`](LICENSE).

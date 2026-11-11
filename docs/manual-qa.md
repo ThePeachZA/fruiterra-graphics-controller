@@ -6,6 +6,10 @@ M10. The two authoritative checklists remain [`docs/overlay-qa.md`](overlay-qa.m
 and [`docs/build.md`](build.md) §7; this file records what is still outstanding
 and why it needs a human.
 
+The step-by-step instructions, exact expected results and failure conditions are
+in [`docs/manual-qa-runbook.md`](manual-qa-runbook.md). Use the runbook to run a
+test and this register to record its status.
+
 Status values:
 
 - **Pending** — not run, or no signed-off record exists.
@@ -58,7 +62,7 @@ Update the status and add a row to the sign-off log when an item is completed.
 | M1-1 | Corrupt `app.json` falls back to `app.json.bak` in the real app-data folder without losing the last good save. | Store tests use temp folders; real permissions and paths are not exercised. | Pending |
 | M1-2 | A change made immediately before closing the app is saved on shutdown. | Requires the real 500 ms saver loop and window close. | Pending |
 | M1-3 | Daily logs appear under `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\` and stop at seven files. | File-system side effect over several days. | Pending |
-| M1-4 | A newer `schemaVersion` is refused with a readable error rather than silently overwriting data. | Requires editing the real save file. | Pending |
+| M1-4 | A newer `schemaVersion` is refused with a readable error when no usable backup exists, rather than silently overwriting data. | Requires editing the real save file and removing `app.json.bak`. | Pending |
 
 ### M2 — Protocol and projection
 
@@ -87,7 +91,7 @@ Update the status and add a row to the sign-off log when an item is completed.
 | M4-1 | Every destination and dialog is usable with the keyboard alone; focus order and focus rings are correct. | UIAutomation smoke does not prove the whole interaction model. | Partial |
 | M4-2 | The UI is legible and unclipped at 100%, 125% and 150% Windows scaling. | Requires display scaling changes and visual judgment. | Pending |
 | M4-3 | Error toasts and inline errors are readable and do not leak internal paths. | Requires triggering real failures. | Pending |
-| M4-4 | Launching a second instance focuses or exits the first instance instead of running two servers. | Needs two real process launches. | Pending |
+| M4-4 | Launching a second instance exits immediately instead of running a second window and server. | Needs two real process launches. | Pending |
 | M4-5 | Inter renders locally in the UI with no Google Fonts request. | Network inspection in the packaged app. | Partial |
 | M4-6 | State survives an app restart, including settings, teams, talent, match and tournament data. | Needs the real app-data directory. | Pending |
 
@@ -130,8 +134,8 @@ Update the status and add a row to the sign-off log when an item is completed.
 | M8-1 | A 32-team double-elimination board is usable at 1080p with 50–150% zoom and scrolling. | Usability and visual density need a human. | Pending |
 | M8-2 | Click-to-swap and keyboard pick-up/drop (Enter/Space, arrows, Escape) work on bracket slots. | Interactive input model. | Pending |
 | M8-3 | The match modal edits slots, scores, status, first-to, winner override and links; invalid input is rejected. | Full UI pass. | Pending |
-| M8-4 | Adding/removing rounds and matches clears dependent links after confirmation. | Destructive interactive flow. | Pending |
-| M8-5 | Round-robin groups, fixtures, standings, ordered tiebreakers and head-to-head mini-tables behave correctly. | UI-level verification of tested rules. | Pending |
+| M8-4 | Adding and removing rounds and matches clears dependent links; removing a round is immediate. | Destructive interactive flow. | Pending |
+| M8-5 | Round-robin groups, fixtures, standings, ordered tiebreakers and head-to-head tiebreaking behave correctly. | UI-level verification of tested rules. | Pending |
 | M8-6 | Playoff generation, grand-final reset and champion override work from the UI. | Full UI pass. | Pending |
 | M8-7 | Tournament data survives reload and malformed data is repaired rather than crashing. | Requires editing a real save file. | Partial |
 | M8-8 | The Teams deletion guard handles tournament entrants, slots, groups and champions. | Cross-view destructive flow. | Pending |
