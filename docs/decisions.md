@@ -394,3 +394,14 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 
 
 
+
+## M10 - Packaging and release (implemented, gates pending)
+
+**Status: implementation green locally and in CI; tagging `v1.0.0` remains blocked on the manual gates in `docs/manual-qa.md`.**
+
+- **Process deviation.** M10 implementation started before the OBS sign-off at the maintainer's request. The plan says M10 cannot start until the overlay QA gate passes; the tag is still withheld until R1-R8 pass, so the release itself remains gated.
+- **Release workflow.** `.github/workflows/release.yml` runs on `v*` tags and manual dispatch. It verifies the tag against the workspace version, runs fmt/clippy/tests, regenerates the notices, discovers the NSIS installer from `BundleOutput` JSON, renames it, builds the portable ZIP from the `dx` app output, runs the packaged `--smoke-test`, writes `SHA256SUMS.txt` and uploads the artifacts. Only a tag creates a GitHub release; manual dispatch stops after the artifact upload.
+- **Smoke test.** The hidden `--smoke-test` path starts the real server on an ephemeral port with a temporary data directory, checks `/health`, an embedded overlay, a bundled asset, the `init` handshake and `requestInit`, then exits 0 without opening a window or touching app data.
+- **Notices.** `THIRD_PARTY_NOTICES.md` is generated from `about.toml` and `about.hbs` with `cargo-about` 0.9.3 (CLI feature). CI regenerates it and fails if the committed file differs.
+- **Local release candidate.** `dx bundle --release --desktop --package-types nsis --features bundle` produced the NSIS installer and the `dx` app output; the packaged binary passed `--smoke-test`. The portable ZIP was staged and checked locally (exe, `assets\`, README, LICENSE, notices) and the two artifact hashes were generated.
+- **CI release candidate.** Manual dispatch run `43050860851` passed every step and uploaded `fruiterra-gc-1.0.0-windows-x64` (installer, portable ZIP, checksums). Tag-only steps were skipped as designed. CI run `43050843933` passed the main checks and the new notices job.

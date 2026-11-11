@@ -154,14 +154,31 @@ Update the status and add a row to the sign-off log when an item is completed.
 | ID | Check | Why manual | Status |
 |---|---|---|---|
 | M10-1 | `docs/build.md` §7 release checklist items 1–12 are complete. | Mix of local commands and human gates. | Pending |
-| M10-2 | The packaged `--smoke-test` passes on the release binary. | Automated in CI once M10 lands; run locally too. | Pending |
+| M10-2 | The packaged `--smoke-test` passes on the release binary. | Automated in CI; run locally too. | Done — local release binary and CI release run [43050860851](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/43050860851) (2026-11-11). |
 | M10-3 | The installer creates the Start Menu folder, desktop shortcut, uninstall entry and correct icon. | Installer UI. | Pending |
 | M10-4 | Uninstall removes the install and shortcuts; confirm whether `%APPDATA%` user data is intentionally preserved. | Installer UI and data-retention policy. | Pending |
-| M10-5 | The portable ZIP contains the executable, `assets\`, README, LICENSE and notices, and runs with no install. | Covered by R6. | Pending |
-| M10-6 | The release workflow publishes both artifacts, checksums and notes on a tag, and only artifacts on manual dispatch. | Covered by R9. | Pending |
+| M10-5 | The portable ZIP contains the executable, `assets\`, README, LICENSE and notices, and runs with no install. | Covered by R6. | Partial — contents verified in the release workflow; running it without an install remains R6. |
+| M10-6 | The release workflow publishes both artifacts, checksums and notes on a tag, and only artifacts on manual dispatch. | Covered by R9. | Partial — manual dispatch produced the workflow artifact, installer, portable ZIP and checksums; tag publishing remains R9. |
 | M10-7 | `SHA256SUMS.txt` matches both artifacts. | Covered by R7. | Pending |
 | M10-8 | The tag version equals the workspace version. | Workflow check; confirm on the first tag. | Pending |
 | M10-9 | README and release notes match the shipped feature set and contain no backlog claims. | Editorial review. | Pending |
+
+### Automated evidence (2026-11-11)
+
+These checks passed locally and in CI; they do not replace the human gates above.
+
+| Check | Evidence |
+|---|---|
+| `cargo fmt --all -- --check` | Local and CI run [43050843933](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/43050843933) |
+| `cargo clippy --workspace --all-targets -- -D warnings` | Local and the same CI run |
+| `cargo test --workspace` | Local (all tests) and the same CI run |
+| `cargo doc --workspace --no-deps` | Local and the same CI run |
+| `THIRD_PARTY_NOTICES.md` regeneration | CI notices job, same run |
+| `dx bundle --release --desktop --package-types nsis --features bundle` | Local and release run [43050860851](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/43050860851) |
+| Packaged `--smoke-test` | Local release binary and the release run |
+| Portable ZIP structure | Release run: `fruiterra-gc.exe`, `assets\`, README, LICENSE, notices |
+| SHA-256 generation | Release run: two artifact hashes in `SHA256SUMS.txt` |
+| Release candidate artifacts | Release run artifact `fruiterra-gc-1.0.0-windows-x64` (installer, portable ZIP, checksums) |
 
 ## 4. Manual intervention outside testing
 
