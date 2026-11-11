@@ -89,6 +89,37 @@ These are small, isolated additions that would be cheap to pull forward *after* 
 
 Each of these gets a design pass before implementation; none should be started until v1 has shipped and the protocol review checkpoint has passed.
 
+### C1. Overlay visual polish (requested 2026-11-11 — post-v1)
+
+A focused pass over the seven existing overlays so they look good and play nice
+in OBS. This is **not** a redesign: the current layouts, hierarchy and visual
+identity stay. The overlays must remain drop-in compatible with the existing
+protocol and the 1920×1080 canvas.
+
+| ID | Item | Scope |
+|---|---|---|
+| O1 | Social row fit | Fix the 6-caster `row-casters` social-row overflow (~14px with long handles) without changing the card layout. |
+| O2 | Long-name handling | 20+ character team names, tags, player names, pronouns and handles; prefer wrapping or ellipsis with no clipped glyphs. |
+| O3 | Spacing and alignment | Tighten inconsistent padding, baselines and vertical rhythm while keeping the existing composition. |
+| O4 | Safe areas | Keep content clear of the 1920×1080 edges and OBS scaling; no scrollbars or accidental overflow. |
+| O5 | Visual QA sweep | Re-run the full overlay checklist in OBS after the pass and record the result. |
+
+Guardrails:
+
+- Preserve the current visual design: same sections, hierarchy, colours and
+  typography roles. This is polish, not a new skin.
+- No protocol changes: same filenames, message types, `init` handling, DOM
+  contracts used by CSS, and `show` behaviour.
+- Keep the five `FGC Display*` faces and local-only assets.
+- Prefer CSS-only changes; keep JavaScript changes minimal and covered by the
+  static overlay tests.
+- Every layout change must be checked in OBS at 1920×1080 and reflected in
+  `docs/overlay-qa.md`.
+- Do not pull in backlog features such as a timer overlay, bracket overlay,
+  scenes or new broadcast types.
+- Update `docs/assets.md` §5 and the QA checklist if a behaviour or expected
+  layout changes.
+
 ### Protocol and server
 - Versioned protocol (`v2`) with a real full-state snapshot on connect, then typed per-section updates.
 - Optional diffs/patches for large payloads; message sequence numbers and acknowledgements.
@@ -101,6 +132,7 @@ Each of these gets a design pass before implementation; none should be started u
 - Server-side scene/preset switching and multiple simultaneous match outputs.
 
 ### Overlays and presentation
+- Overlay visual polish pass (see §C1): fit, spacing and long-name handling without changing the design or protocol.
 - Animate-in/out and show/hide API beyond `display` toggling; replay animations on demand.
 - Live preview panel inside the app (iframe/WebView) for each overlay.
 - Overlay theme/template system; scoreboard skins.

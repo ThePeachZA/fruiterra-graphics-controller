@@ -9,11 +9,11 @@ Windows broadcast control for Overwatch, with OBS-compatible HTML overlays.
 [![Licence](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
 > [!NOTE]
-> **Status: milestones M0–M8 complete.** The domain model, server, overlays and
-> the Overlay, Assets, Teams, Talent, Match Controller and Tournament views are
-> implemented. M9 (overlay/font compatibility pass) and M10 (packaging and
-> release) remain, so tagged installers are not published yet. The app is
-> usable from source today.
+> **Status: milestones M0–M10 implemented.** The domain model, server, overlays,
+> all seven views and the packaging/release workflow are in place. Tagged
+> installers are not published yet: the manual release gates in
+> [`docs/manual-qa.md`](docs/manual-qa.md) must pass before `v1.0.0` is tagged.
+> The app is usable from source today.
 
 ## Overview
 
@@ -79,6 +79,28 @@ third-party overlays still receive `matchTimer` ticks and actions.
 - For source builds: Rust stable (pinned by `rust-toolchain.toml`), the MSVC C++
   build tools and Dioxus CLI 0.7.10.
 - OBS Studio with one Browser Source per overlay.
+
+## Install
+
+Download the latest release from
+[GitHub Releases](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases):
+
+- **`fruiterra-gc-<version>-windows-x64-setup.exe`** — the normal install. It
+  creates a per-user Start Menu entry and uninstaller, and bootstraps WebView2
+  if it is missing.
+- **`fruiterra-gc-<version>-windows-x64-portable.zip`** — extract anywhere and
+  run `fruiterra-gc.exe`. Nothing is installed and no registry keys are written.
+  WebView2 must already be present.
+
+Releases are unsigned in v1, so Windows SmartScreen may warn on first run.
+Verify the download against `SHA256SUMS.txt` before running:
+
+```powershell
+Get-FileHash .\fruiterra-gc-<version>-windows-x64-setup.exe -Algorithm SHA256
+```
+
+The installer and portable ZIP are published with that checksum file on every
+tagged release.
 
 ## Quick start
 
@@ -154,6 +176,7 @@ and a backup of the previous save is kept as `app.json.bak`.
 | [`docs/implementation-plan.md`](docs/implementation-plan.md) | Milestones, tests and exit criteria |
 | [`docs/decisions.md`](docs/decisions.md) | Decision log |
 | [`docs/overlay-qa.md`](docs/overlay-qa.md) | Overlay QA checklist |
+| [`docs/manual-qa.md`](docs/manual-qa.md) | Manual QA and intervention register |
 
 ## Network and security
 
@@ -188,6 +211,17 @@ are not read.
 | Port already in use | Change the port in Settings or stop the process using it. |
 | Windows Firewall prompt in LAN mode | Allow access on private networks only. |
 | Overlay stays blank | Start the overlay server and check that the Browser Source URL matches the configured port. |
+
+## Fonts and licences
+
+The overlays use **Saira** and the control UI uses **Inter**. Both are licensed
+under the SIL Open Font License 1.1 and are bundled locally, so there are no
+PenPot or Google Fonts requests at runtime. The overlay families are exposed
+behind the neutral `FGC Display*` aliases; see [`docs/fonts.md`](docs/fonts.md).
+
+Apotek is a commercial typeface and is not redistributed. The full font,
+dependency and vendored-component notices are in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Licence
 

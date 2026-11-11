@@ -104,6 +104,7 @@ The installer output is discovered with `dx bundle --json-output` rather than a 
 | Lint | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Tests | `cargo test --workspace` |
 | Docs check | `cargo doc --workspace --no-deps` |
+| Notices check (separate job) | Regenerate `THIRD_PARTY_NOTICES.md` with `cargo-about` 0.9.3 and fail if it differs |
 | Bundle smoke (optional job) | `dx bundle --release` without publishing |
 
 - Runner: `windows-latest` only, matching the Windows-only v1 decision.
@@ -220,6 +221,15 @@ GitHub's generated notes are appended below this template, not used instead of i
 | `crates/app/assets/fonts/OFL.txt` | OFL text shipped beside the UI font |
 
 - The dependency inventory is generated with `cargo-about` and committed. CI regenerates it and fails if it differs, so a new dependency cannot ship without a notice.
+- Generation is driven by `about.toml` (accepted licence identifiers) and `about.hbs` (the notices template). Regenerate with:
+
+  ```powershell
+  cargo about generate --workspace --target x86_64-pc-windows-msvc --all-features about.hbs -o THIRD_PARTY_NOTICES.md
+  ```
+
+  `cargo-about` must be installed with its CLI feature:
+  `cargo install cargo-about --version 0.9.3 --locked --features cli`.
+- The workflow uses the same command for the tag check, so the committed file must be regenerated whenever `Cargo.lock` changes.
 - Apotek is **not** shipped. The only `Apotek` reference is the CSS fallback token.
 - Vendored component files keep their original copyright headers.
 

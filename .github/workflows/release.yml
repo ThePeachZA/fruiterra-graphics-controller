@@ -1,0 +1,207 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Build and publish Windows x64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.99.1"
+          components: rustfmt, clippy
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache cargo-about
+        id: about-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-about.exe
+          key: cargo-about-0.9.3-${{ runner.os }}
+
+      - name: Install cargo-about
+        if: steps.about-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-about --version 0.9.3 --locked --features cli
+
+      - name: Install Dioxus CLI
+        run: cargo install dioxus-cli --version 0.7.10 --locked
+
+      - name: Read workspace version
+        id: version
+        shell: pwsh
+        run: |
+          $metadata = cargo metadata --no-deps --format-version 1 | ConvertFrom-Json
+          $app = $metadata.packages | Where-Object { $_.name -eq 'fgc-app' } | Select-Object -First 1
+          if (-not $app) { throw "Could not find the fgc-app package in cargo metadata" }
+          "version=$($app.version)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Workspace version: $($app.version)"
+
+      - name: Verify tag matches workspace version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $expected = "v$env:VERSION"
+          if ($env:GITHUB_REF_NAME -ne $expected) {
+            throw "Tag $env:GITHUB_REF_NAME does not match workspace version $expected"
+          }
+          Write-Host "Tag $env:GITHUB_REF_NAME matches workspace version"
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace
+
+      - name: Check third-party notices
+        shell: pwsh
+        run: |
+          $generated = Join-Path $env:RUNNER_TEMP "THIRD_PARTY_NOTICES.md"
+          cargo about generate --workspace --target x86_64-pc-windows-msvc --all-features about.hbs -o $generated
+          if ($LASTEXITCODE -ne 0) { throw "cargo-about failed" }
+          $expected = (Get-FileHash THIRD_PARTY_NOTICES.md -Algorithm SHA256).Hash
+          $actual = (Get-FileHash $generated -Algorithm SHA256).Hash
+          if ($expected -ne $actual) {
+            throw "THIRD_PARTY_NOTICES.md is stale. Regenerate it with: cargo about generate --workspace --target x86_64-pc-windows-msvc --all-features about.hbs -o THIRD_PARTY_NOTICES.md"
+          }
+
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP "bundle.log"
+          $output = & dx bundle --release --desktop --package-types nsis --features bundle --json-output --out-dir target/release-artifacts 2>&1 | ForEach-Object { $_.ToString() }
+          $output | Set-Content -Path $log
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content $log -Tail 80
+            throw "dx bundle failed"
+          }
+          $line = $output | Where-Object { $_ -match 'BundleOutput' } | Select-Object -Last 1
+          if (-not $line) { throw "dx bundle did not report a BundleOutput record" }
+          $record = $line | ConvertFrom-Json
+          $payload = $record.json | ConvertFrom-Json
+          $installer = $payload.BundleOutput.bundles | Where-Object { $_ -like '*.exe' } | Select-Object -First 1
+          if (-not $installer -or -not (Test-Path $installer)) {
+            throw "The NSIS installer was not produced"
+          }
+          "installer=$installer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Installer: $installer"
+        id: bundle
+
+      - name: Stage release artifacts
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          INSTALLER: ${{ steps.bundle.outputs.installer }}
+        run: |
+          $dist = "dist"
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+          $installerName = "fruiterra-gc-$env:VERSION-windows-x64-setup.exe"
+          Copy-Item -LiteralPath $env:INSTALLER -Destination (Join-Path $dist $installerName)
+
+          $appDir = "target/dx/fruiterra-gc/release/windows/app"
+          if (-not (Test-Path (Join-Path $appDir "fruiterra-gc.exe"))) {
+            throw "The dx app output is missing fruiterra-gc.exe"
+          }
+
+          $portable = Join-Path $env:RUNNER_TEMP "portable"
+          if (Test-Path $portable) { Remove-Item -Recurse -Force $portable }
+          New-Item -ItemType Directory -Force -Path $portable | Out-Null
+          Copy-Item -Path (Join-Path $appDir "*") -Destination $portable -Recurse
+          Copy-Item -LiteralPath README.md, LICENSE, THIRD_PARTY_NOTICES.md -Destination $portable
+
+          $zipName = "fruiterra-gc-$env:VERSION-windows-x64-portable.zip"
+          $zipPath = Join-Path $dist $zipName
+          Compress-Archive -Path (Join-Path $portable "*") -DestinationPath $zipPath -CompressionLevel Optimal
+          if (-not (Test-Path $zipPath)) { throw "The portable ZIP was not created" }
+
+      - name: Smoke-test the packaged binary
+        shell: pwsh
+        run: |
+          $exe = "target/dx/fruiterra-gc/release/windows/app/fruiterra-gc.exe"
+          $process = Start-Process -FilePath $exe -ArgumentList "--smoke-test" -Wait -PassThru -NoNewWindow
+          if ($process.ExitCode -ne 0) {
+            throw "The packaged --smoke-test failed with exit code $($process.ExitCode)"
+          }
+          Write-Host "Packaged --smoke-test passed"
+
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          $lines = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          $lines | Set-Content -Path "dist/SHA256SUMS.txt" -Encoding ascii
+          Get-Content "dist/SHA256SUMS.txt"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fruiterra-gc-${{ steps.version.outputs.version }}-windows-x64
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Prepare release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $notes = Get-Content docs/release-notes-template.md -Raw
+          $notes = $notes.Replace("<version>", $env:VERSION)
+          $notes | Set-Content -Path "$env:RUNNER_TEMP/release-notes.md" -Encoding utf8
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: ${{ runner.temp }}/release-notes.md
+          generate_release_notes: true
+          files: |
+            dist/fruiterra-gc-${{ steps.version.outputs.version }}-windows-x64-setup.exe
+            dist/fruiterra-gc-${{ steps.version.outputs.version }}-windows-x64-portable.zip
+            dist/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+
+      # Code signing is out of scope for v1. When a certificate is available,
+      # store it as WINDOWS_CERT_PFX_BASE64 and WINDOWS_CERT_PASSWORD, then
+      # enable this step before the release is published.
+      #
+      # - name: Sign artifacts
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   shell: pwsh
+      #   env:
+      #     CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      #     CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      #     TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
+      #   run: |
+      #     $pfx = Join-Path $env:RUNNER_TEMP "cert.pfx"
+      #     [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CERT_PFX_BASE64))
+      #     signtool sign /fd SHA256 /f $pfx /p $env:CERT_PASSWORD /tr $env:TIMESTAMP_URL /td SHA256 `
+      #       dist/fruiterra-gc-${{ steps.version.outputs.version }}-windows-x64-setup.exe

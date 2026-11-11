@@ -163,6 +163,10 @@ For each of the seven files (`game-overlay`, `map-select`, `hero-bans`, `map-poo
 
 If an overlay is later found to depend on a protocol quirk not covered by `docs/protocol.md`, the fix goes into the protocol tests first, then the overlay.
 
+Post-v1 visual polish may change spacing and overflow handling, but not the
+overlay's visual identity, DOM contracts or protocol. The approved scope and
+guardrails are in `docs/backlog.md` §C1.
+
 ---
 
 ## 3. Per-file overlay overrides

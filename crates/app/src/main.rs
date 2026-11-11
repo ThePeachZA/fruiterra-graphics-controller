@@ -12,6 +12,7 @@ mod app;
 mod assets_io;
 mod components;
 mod server;
+mod smoke;
 mod state;
 mod status;
 mod theme;
@@ -27,10 +28,39 @@ use tracing_subscriber::EnvFilter;
 const ICON_PNG: &[u8] = include_bytes!("../assets/icons/icon.png");
 
 fn main() {
+    if std::env::args().any(|argument| argument == "--smoke-test") {
+        run_smoke_test();
+    }
+
     let _log_guard = init_logging();
     install_panic_hook();
     tracing::info!(version = fgc_core::VERSION, "starting application");
     launch();
+}
+
+/// Runs the hidden packaged smoke test and exits with a CI-friendly status.
+///
+/// This path deliberately avoids the normal file logger and app data so a
+/// packaged binary can be checked on a clean machine without creating state.
+fn run_smoke_test() -> ! {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .with_writer(std::io::stderr)
+        .with_ansi(false)
+        .init();
+
+    match smoke::run() {
+        Ok(()) => {
+            tracing::info!("packaged smoke test passed");
+            std::process::exit(0);
+        }
+        Err(error) => {
+            tracing::error!(%error, "packaged smoke test failed");
+            std::process::exit(1);
+        }
+    }
 }
 
 /// Initialises tracing, writing to a daily file when the log directory is

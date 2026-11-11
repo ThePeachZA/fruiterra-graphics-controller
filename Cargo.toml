@@ -14,7 +14,7 @@ edition = "2024"
 rust-version = "1.99"
 license = "MIT"
 authors = ["Fruiterra"]
-repository = "https://github.com/fruiterra/fruiterra-graphics-controller"
+repository = "https://github.com/ThePeachZA/fruiterra-graphics-controller"
 
 [workspace.dependencies]
 # Internal crates — one-way dependency chain: core → protocol → server → app.

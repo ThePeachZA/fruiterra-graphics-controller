@@ -2,7 +2,8 @@
 
 Manual release gate for the seven bundled overlays. Run at **1920×1080** in OBS with a loaded match, transparent background, and the overlay server running.
 
-Design reference: `docs/assets.md` §5.
+Design reference: `docs/assets.md` §5. The consolidated list of manual gates
+across all milestones is in `docs/manual-qa.md`.
 
 ## Per-overlay checks
 
