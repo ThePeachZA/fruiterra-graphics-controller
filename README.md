@@ -176,7 +176,7 @@ and a backup of the previous save is kept as `app.json.bak`.
 
 | Document | Contents |
 |---|---|
-| [`docs/wiki/Home.md`](docs/wiki/Home.md) | End-user guide (source for the GitHub wiki) |
+| [`docs/wiki/Home.md`](docs/wiki/Home.md) | End-user guide (also the source for the GitHub wiki) |
 | [`docs/architecture.md`](docs/architecture.md) | Crate boundaries and design decisions |
 | [`docs/data-model.md`](docs/data-model.md) | Persisted model and schema |
 | [`docs/protocol.md`](docs/protocol.md) | Overlay WebSocket contract |
