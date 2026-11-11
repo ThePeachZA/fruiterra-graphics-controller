@@ -207,11 +207,12 @@ pub fn MatchControllerView() -> Element {
                 }
             }
 
-            div { class: "fgc-tabs fgc-match__tabs", role: "tablist",
+            div { class: "fgc-tabs fgc-match__tabs",
                 for item in MatchTab::ALL {
                     button {
                         key: "{item.label()}",
                         r#type: "button",
+                        aria_pressed: tab() == item,
                         class: if tab() == item {
                             "fgc-tab fgc-tab--active"
                         } else {

@@ -270,13 +270,12 @@ fn TournamentDetail(
                 }
             }
 
-            div { class: "fgc-tabs", role: "tablist",
+            div { class: "fgc-tabs",
                 for item in TournamentTab::ALL {
                     button {
                         key: "{item.label()}",
                         r#type: "button",
-                        role: "tab",
-                        aria_selected: item == tab,
+                        aria_pressed: item == tab,
                         class: if item == tab {
                             "fgc-tab fgc-tab--active"
                         } else {
@@ -352,6 +351,7 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                     Field { label: "Name".to_owned(),
                         Input {
                             value: "{tournament.name}",
+                            aria_label: "Tournament name",
                             placeholder: "e.g. Autumn Invitational",
                             onchange: move |event: FormEvent| {
                                 store.set_tournament_name(&name_id, &event.value());
@@ -361,6 +361,7 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                     Field { label: "Format".to_owned(),
                         select {
                             class: "fgc-native-select",
+                            aria_label: "Format",
                             value: "{format_key(tournament.format)}",
                             onchange: move |event| {
                                 let format = format_from_key(&event.value());
@@ -374,6 +375,7 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                     Field { label: "First to".to_owned(),
                         select {
                             class: "fgc-native-select",
+                            aria_label: "First to",
                             value: "{tournament.default_first_to}",
                             onchange: move |event| {
                                 if let Ok(value) = event.value().parse::<u8>() {
@@ -388,6 +390,7 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                     Field { label: "Status".to_owned(),
                         select {
                             class: "fgc-native-select",
+                            aria_label: "Tournament status",
                             value: "{status_key(tournament.status)}",
                             onchange: move |event| {
                                 store.set_tournament_status(&status_id, status_from_key(&event.value()));
@@ -420,6 +423,7 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                     div { class: "fgc-tournament-add",
                         select {
                             class: "fgc-native-select",
+                            aria_label: "Team to add",
                             value: pending_team().map(|id| id.as_str().to_owned()).unwrap_or_default(),
                             onchange: move |event| {
                                 let value = event.value();
@@ -520,6 +524,7 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                         Field { label: "Groups".to_owned(),
                             select {
                                 class: "fgc-native-select",
+                                aria_label: "Groups",
                                 value: "{group_count()}",
                                 onchange: move |event| {
                                     if let Ok(value) = event.value().parse::<usize>() {
@@ -613,13 +618,12 @@ fn BoardTab(
             selected: None,
             ..board
         }),
-        Key::Enter => on_slot_click.call(address),
-        Key::Character(value) if value == " " => on_slot_click.call(address),
         Key::ArrowUp | Key::ArrowDown | Key::ArrowLeft | Key::ArrowRight => {
             if let Some(target) = adjacent_slot(&key_tournament, address, key) {
                 focus_slot(target);
             }
         }
+        // Enter and Space activate the native button, which calls `onclick`.
         _ => {}
     });
 
@@ -987,6 +991,7 @@ fn GroupsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                         Field { label: "Groups".to_owned(),
                             select {
                                 class: "fgc-native-select",
+                                aria_label: "Groups",
                                 value: "{group_count()}",
                                 onchange: move |event| {
                                     if let Ok(value) = event.value().parse::<usize>() {
@@ -1062,6 +1067,7 @@ fn GroupsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                         Field { label: "Qualifiers per group".to_owned(),
                             select {
                                 class: "fgc-native-select",
+                                aria_label: "Qualifiers per group",
                                 value: "{tournament.playoff_qualifiers}",
                                 onchange: {
                                     let id = tournament_id.clone();
@@ -1079,6 +1085,7 @@ fn GroupsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                         Field { label: "Playoff format".to_owned(),
                             select {
                                 class: "fgc-native-select",
+                                aria_label: "Playoff format",
                                 value: "{format_key(tournament.playoff_format)}",
                                 onchange: {
                                     let id = tournament_id.clone();
@@ -1132,6 +1139,7 @@ fn GroupPanel(
     let mut pending_team = use_signal(|| None::<TeamId>);
     let mut fixture_team1 = use_signal(|| None::<TeamId>);
     let mut fixture_team2 = use_signal(|| None::<TeamId>);
+    let mut confirming_delete = use_signal(|| false);
     let rename_group_id = group.id.clone();
     let delete_group_id = group.id.clone();
     let add_fixture_group_id = group.id.clone();
@@ -1178,13 +1186,33 @@ fn GroupPanel(
                         store.rename_tournament_group(&rename_id, &rename_group_id, &event.value());
                     },
                 }
-                Button {
-                    variant: ButtonVariant::Destructive,
-                    size: ButtonSize::Sm,
-                    onclick: move |_| {
-                        store.remove_tournament_group(&remove_id, &delete_group_id);
-                    },
-                    "Delete group"
+                if confirming_delete() {
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        size: ButtonSize::Sm,
+                        onclick: move |_| confirming_delete.set(false),
+                        "Cancel"
+                    }
+                    Button {
+                        variant: ButtonVariant::Destructive,
+                        size: ButtonSize::Sm,
+                        onclick: move |_| {
+                            store.remove_tournament_group(&remove_id, &delete_group_id);
+                        },
+                        "Delete group"
+                    }
+                } else {
+                    Button {
+                        variant: ButtonVariant::Destructive,
+                        size: ButtonSize::Sm,
+                        onclick: move |_| confirming_delete.set(true),
+                        "Delete group"
+                    }
+                }
+            }
+            if confirming_delete() {
+                p { class: "fgc-note",
+                    "Deleting this group also removes its {fixtures.len()} fixture(s) and results. This cannot be undone."
                 }
             }
 
@@ -1228,6 +1256,7 @@ fn GroupPanel(
                 div { class: "fgc-tournament-add",
                     select {
                         class: "fgc-native-select",
+                        aria_label: "Team to add",
                         value: pending_team().map(|id| id.as_str().to_owned()).unwrap_or_default(),
                         onchange: move |event| {
                             let value = event.value();
@@ -1259,18 +1288,18 @@ fn GroupPanel(
             if standings.is_empty() {
                 p { class: "fgc-note", "Standings appear once the group has teams." }
             } else {
-                table { class: "fgc-standings",
+                table { class: "fgc-standings", aria_label: "Group standings",
                     thead {
                         tr {
-                            th { "Team" }
-                            th { "P" }
-                            th { "W" }
-                            th { "L" }
-                            th { "D" }
-                            th { "PF" }
-                            th { "PA" }
-                            th { "Diff" }
-                            th { "Pts" }
+                            th { scope: "col", "Team" }
+                            th { scope: "col", title: "Played", "P" }
+                            th { scope: "col", title: "Won", "W" }
+                            th { scope: "col", title: "Lost", "L" }
+                            th { scope: "col", title: "Drawn", "D" }
+                            th { scope: "col", title: "Points for", "PF" }
+                            th { scope: "col", title: "Points against", "PA" }
+                            th { scope: "col", title: "Differential", "Diff" }
+                            th { scope: "col", title: "Points", "Pts" }
                         }
                     }
                     tbody {
@@ -1311,6 +1340,7 @@ fn GroupPanel(
                 div { class: "fgc-tournament-add",
                     select {
                         class: "fgc-native-select",
+                        aria_label: "Fixture team 1",
                         value: "{fixture_team1_value}",
                         onchange: move |event| {
                             let value = event.value();
@@ -1323,6 +1353,7 @@ fn GroupPanel(
                     }
                     select {
                         class: "fgc-native-select",
+                        aria_label: "Fixture team 2",
                         value: "{fixture_team2_value}",
                         onchange: move |event| {
                             let value = event.value();
@@ -1379,7 +1410,7 @@ fn GroupFixtureRow(tournament_id: TournamentId, fixture: GroupMatch, teams: Vec<
                 min: "0",
                 max: "99",
                 value: "{score1()}",
-                aria_label: "Score 1",
+                aria_label: "Score for {name1}",
                 oninput: move |event: FormEvent| score1.set(event.value()),
             }
             span { class: "fgc-fixture__dash", "–" }
@@ -1389,12 +1420,13 @@ fn GroupFixtureRow(tournament_id: TournamentId, fixture: GroupMatch, teams: Vec<
                 min: "0",
                 max: "99",
                 value: "{score2()}",
-                aria_label: "Score 2",
+                aria_label: "Score for {name2}",
                 oninput: move |event: FormEvent| score2.set(event.value()),
             }
             span { class: "fgc-fixture__team", "{name2}" }
             select {
                 class: "fgc-native-select fgc-fixture__status",
+                aria_label: "Match status",
                 value: "{match_status_key(status())}",
                 onchange: move |event| status.set(match_status_from_key(&event.value())),
                 for item in [BracketMatchStatus::Pending, BracketMatchStatus::Live, BracketMatchStatus::Completed] {
@@ -1582,6 +1614,7 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                     Field { label: "Qualifiers per group".to_owned(),
                         select {
                             class: "fgc-native-select",
+                            aria_label: "Qualifiers per group",
                             value: "{tournament.playoff_qualifiers}",
                             onchange: {
                                 let id = tournament_id.clone();
@@ -1599,6 +1632,7 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                     Field { label: "Format".to_owned(),
                         select {
                             class: "fgc-native-select",
+                            aria_label: "Playoff format",
                             value: "{format_key(tournament.playoff_format)}",
                             onchange: {
                                 let id = tournament_id.clone();
@@ -1621,6 +1655,7 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                     Field { label: "Champion".to_owned(),
                         select {
                             class: "fgc-native-select",
+                            aria_label: "Champion",
                             value: "{champion_value}",
                             onchange: move |event| {
                                 let value = event.value();
@@ -1775,6 +1810,7 @@ fn MatchDialog(
                 Field { label: "Slot 1".to_owned(),
                     select {
                         class: "fgc-native-select",
+                        aria_label: "Slot 1",
                         value: slot1.as_ref().map(|id| id.as_str().to_owned()).unwrap_or_default(),
                         onchange: {
                             let id = tournament_id.clone();
@@ -1795,6 +1831,7 @@ fn MatchDialog(
                 Field { label: "Slot 2".to_owned(),
                     select {
                         class: "fgc-native-select",
+                        aria_label: "Slot 2",
                         value: slot2.as_ref().map(|id| id.as_str().to_owned()).unwrap_or_default(),
                         onchange: {
                             let id = tournament_id.clone();
@@ -1824,6 +1861,7 @@ fn MatchDialog(
                         r#type: "number",
                         min: "0",
                         max: "99",
+                        aria_label: "Score 1",
                         value: "{score1()}",
                         oninput: move |event: FormEvent| score1.set(event.value()),
                     }
@@ -1833,6 +1871,7 @@ fn MatchDialog(
                         r#type: "number",
                         min: "0",
                         max: "99",
+                        aria_label: "Score 2",
                         value: "{score2()}",
                         oninput: move |event: FormEvent| score2.set(event.value()),
                     }
@@ -1840,6 +1879,7 @@ fn MatchDialog(
                 Field { label: "Status".to_owned(),
                     select {
                         class: "fgc-native-select",
+                        aria_label: "Match status",
                         value: "{match_status_key(status())}",
                         onchange: move |event| status.set(match_status_from_key(&event.value())),
                         for item in [BracketMatchStatus::Pending, BracketMatchStatus::Live, BracketMatchStatus::Completed] {
@@ -1850,6 +1890,7 @@ fn MatchDialog(
                 Field { label: "First to".to_owned(),
                     select {
                         class: "fgc-native-select",
+                        aria_label: "First to",
                         value: "{first_to()}",
                         onchange: {
                             let id = tournament_id.clone();
@@ -1871,6 +1912,7 @@ fn MatchDialog(
             Field { label: "Winner".to_owned(),
                 select {
                     class: "fgc-native-select",
+                    aria_label: "Winner",
                     value: "{override_value}",
                     onchange: {
                         let id = tournament_id.clone();
@@ -1907,6 +1949,7 @@ fn MatchDialog(
                     div { class: "fgc-link-row",
                         select {
                             class: "fgc-native-select",
+                            aria_label: "Winner target match",
                             value: "{next_target_value}",
                             onchange: {
                                 let id = tournament_id.clone();
@@ -1930,6 +1973,7 @@ fn MatchDialog(
                         }
                         select {
                             class: "fgc-native-select fgc-link-row__slot",
+                            aria_label: "Winner target slot",
                             value: "{next_slot()}",
                             onchange: {
                                 let id = tournament_id.clone();
@@ -1954,6 +1998,7 @@ fn MatchDialog(
                     div { class: "fgc-link-row",
                         select {
                             class: "fgc-native-select",
+                            aria_label: "Loser target match",
                             value: "{loser_target_value}",
                             onchange: {
                                 let id = tournament_id.clone();
@@ -1977,6 +2022,7 @@ fn MatchDialog(
                         }
                         select {
                             class: "fgc-native-select fgc-link-row__slot",
+                            aria_label: "Loser target slot",
                             value: "{loser_slot()}",
                             onchange: {
                                 let id = tournament_id.clone();

@@ -251,9 +251,10 @@ fn TeamDetail(
                     }
                 }
             }
-            div { class: "fgc-tabs", role: "tablist",
+            div { class: "fgc-tabs",
                 button {
                     r#type: "button",
+                    aria_pressed: section == TeamSection::Info,
                     class: if section == TeamSection::Info {
                         "fgc-tab fgc-tab--active"
                     } else {
@@ -264,6 +265,7 @@ fn TeamDetail(
                 }
                 button {
                     r#type: "button",
+                    aria_pressed: section == TeamSection::Players,
                     class: if section == TeamSection::Players {
                         "fgc-tab fgc-tab--active"
                     } else {

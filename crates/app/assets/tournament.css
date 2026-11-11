@@ -289,7 +289,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--fgc-space-4);
-    transform-origin: top left;
 }
 
 .fgc-bracket-section {
@@ -360,7 +359,7 @@
 
 .fgc-bracket-round__name:focus-visible {
     border-color: var(--fgc-accent);
-    outline: 2px solid var(--fgc-accent-soft);
+    outline: 2px solid var(--fgc-accent);
     outline-offset: 1px;
 }
 
@@ -448,7 +447,7 @@
 
 .fgc-bracket-slot:focus-visible {
     border-color: var(--fgc-accent);
-    outline: 2px solid var(--fgc-accent-soft);
+    outline: 2px solid var(--fgc-accent);
     outline-offset: 1px;
 }
 
@@ -469,7 +468,7 @@
     place-items: center;
     border-radius: 999px;
     background: rgb(141 153 173 / 14%);
-    color: var(--fgc-text-faint);
+    color: var(--fgc-text-muted);
     font-size: 0.6rem;
     font-weight: 700;
 }

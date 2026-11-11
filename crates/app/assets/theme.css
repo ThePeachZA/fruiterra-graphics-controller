@@ -23,7 +23,7 @@
     /* Text */
     --fgc-text: #eef2f8;
     --fgc-text-muted: #8d99ad;
-    --fgc-text-faint: #667188;
+    --fgc-text-faint: #7d899d;
 
     /* Brand */
     --fgc-accent: #ff7a1a;
@@ -114,6 +114,13 @@ textarea {
 
 a {
     color: var(--fgc-accent);
+}
+
+/* A visible brand focus ring for native controls. Component styles with a
+ * higher specificity keep their own focus treatment. */
+:where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--fgc-accent);
+    outline-offset: 1px;
 }
 
 ::selection {

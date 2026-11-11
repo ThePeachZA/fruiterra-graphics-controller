@@ -211,7 +211,7 @@
 
 .fgc-native-select:focus-visible {
     border-color: var(--fgc-accent);
-    outline: 2px solid var(--fgc-accent-soft);
+    outline: 2px solid var(--fgc-accent);
     outline-offset: 1px;
 }
 
