@@ -44,7 +44,15 @@ jobs:
         if: steps.about-cache.outputs.cache-hit != 'true'
         run: cargo install cargo-about --version 0.9.3 --locked --features cli
 
+      - name: Cache Dioxus CLI
+        id: dx-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/dx.exe
+          key: dioxus-cli-0.7.10-${{ runner.os }}
+
       - name: Install Dioxus CLI
+        if: steps.dx-cache.outputs.cache-hit != 'true'
         run: cargo install dioxus-cli --version 0.7.10 --locked
 
       - name: Read workspace version
