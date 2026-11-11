@@ -1,136 +1,195 @@
 # Fruiterra Graphics Controller
 
+<img src="crates/app/assets/icons/icon.png" alt="" width="80" align="right" />
+
 Windows broadcast control for Overwatch, with OBS-compatible HTML overlays.
 
-> **Status: pre-release scaffold (milestone M0).** The workspace, toolchain and
-> packaging pipeline are in place. The domain model, server, overlays and UI are
-> built in milestones M1–M10 as described in `docs/implementation-plan.md`.
-> Nothing in this repository is a usable broadcast tool yet.
+[![CI](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/workflows/ci.yml/badge.svg)](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/workflows/ci.yml)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078d4)](#requirements)
+[![Licence](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
-## What it is
+> [!NOTE]
+> **Status: milestones M0–M8 complete.** The domain model, server, overlays and
+> the Overlay, Assets, Teams, Talent, Match Controller and Tournament views are
+> implemented. M9 (overlay/font compatibility pass) and M10 (packaging and
+> release) remain, so tagged installers are not published yet. The app is
+> usable from source today.
 
-Fruiterra Graphics Controller is a Rust/Dioxus desktop application that manages
-teams, talent, matches, maps and tournaments, and serves seven plain-HTML
-overlays for OBS Browser Sources at **1920×1080**. It replaces the earlier
-Electron/React "OW Graphics Control" while keeping the existing overlay
-WebSocket protocol.
+## Overview
+
+Fruiterra Graphics Controller is a Rust/Dioxus desktop application for running
+an Overwatch broadcast. It manages teams, talent, matches, maps and tournaments,
+and serves seven plain-HTML overlays for OBS Browser Sources at **1920×1080**.
+
+It is a ground-up rebuild of the earlier Electron/React "OW Graphics Control"
+that keeps the existing overlay WebSocket protocol, so existing overlay HTML
+remains drop-in compatible. The control UI is Dioxus 0.7 with a WebView2
+frontend; the overlay server is Axum on Tokio.
+
+## Features
+
+- **Overlay server** — start, stop and restart the server from the app, copy
+  Browser Source URLs and watch the connected-client count.
+- **Teams and talent** — team colours, logos, records and rosters; player roles,
+  positions, portraits and featured heroes; caster, panel and interviewer
+  profiles. Deleting a team that is still referenced is blocked with a full
+  reference list.
+- **Match Controller** — seven tabs for match setup, map selection, hero bans,
+  talent assignment, map pool, timer and per-match configuration. Scores are
+  derived from completed maps or entered manually, and every change is
+  projected to the overlays immediately.
+- **Tournament** — single- and double-elimination brackets, round-robin groups
+  with fixtures and standings, ordered tiebreakers with head-to-head,
+  group-to-playoff generation, grand-final reset, automatic champion detection
+  and a fully editable bracket board with keyboard slot movement and 50–150%
+  zoom.
+- **Assets** — a content-addressed image library with bundled and imported
+  assets, deduplication by SHA-256, and project bundles for moving a setup
+  between machines.
+- **Settings** — overlay port, LAN access, asset URL mode, timer defaults,
+  display options and overlay-folder overrides.
+
+## Overlays
+
+All seven overlays are served from the overlay server and embedded in the
+executable.
+
+| Overlay | URL |
+|---|---|
+| Game overlay | `/overlays/game-overlay.html` |
+| Map select | `/overlays/map-select.html` |
+| Hero bans | `/overlays/hero-bans.html` |
+| Map pool | `/overlays/map-pool.html` |
+| Home team roster | `/overlays/team-roster-home.html` |
+| Away team roster | `/overlays/team-roster-away.html` |
+| Casters row | `/overlays/row-casters.html` |
+
+Add each one to OBS as a Browser Source at 1920×1080 with a transparent
+background. The default base URL is `http://127.0.0.1:3001`. A third-party
+overlay may pass `?port=<port>` when it connects from a different origin.
+
+The timer is **control-only** in v1: there is no bundled timer overlay, but
+third-party overlays still receive `matchTimer` ticks and actions.
 
 ## Requirements
 
 - Windows 10 or Windows 11, x64.
-- Microsoft Edge WebView2 runtime. The installer bootstraps it when missing.
-- OBS Studio with a Browser Source for each overlay.
-
-## Install
-
-Releases ship two artifacts:
-
-| Artifact | Use |
-|---|---|
-| `fruiterra-gc-<version>-windows-x64-setup.exe` | Normal installation: Start Menu entry, uninstaller and WebView2 bootstrapper. |
-| `fruiterra-gc-<version>-windows-x64-portable.zip` | Run from a folder; no install or registry writes. Requires WebView2 to be present. |
-
-Releases are **unsigned**. Windows SmartScreen may warn on first run. Verify the
-published `SHA256SUMS.txt` before running either artifact.
+- Microsoft Edge WebView2 runtime. The installer bootstraps it when missing; a
+  portable build expects it to be present.
+- For source builds: Rust stable (pinned by `rust-toolchain.toml`), the MSVC C++
+  build tools and Dioxus CLI 0.7.10.
+- OBS Studio with one Browser Source per overlay.
 
 ## Quick start
 
 1. Launch the application.
-2. Add teams, players, talent and assets.
+2. Add teams and players, then talent and assets.
 3. Create a match and set teams, maps, first-to and sides.
-4. Start the overlay server (default port **3001**).
-5. Add each overlay URL to OBS as a Browser Source at 1920×1080 with a
-   transparent background.
+4. Start the overlay server on the default port **3001**.
+5. Add the overlay URLs to OBS as Browser Sources at 1920×1080.
 
-## Overlay URLs
-
-```
-http://127.0.0.1:3001/overlays/game-overlay.html
-http://127.0.0.1:3001/overlays/map-select.html
-http://127.0.0.1:3001/overlays/hero-bans.html
-http://127.0.0.1:3001/overlays/map-pool.html
-http://127.0.0.1:3001/overlays/team-roster-home.html
-http://127.0.0.1:3001/overlays/team-roster-away.html
-http://127.0.0.1:3001/overlays/row-casters.html
-```
-
-The server port can be changed in Settings. A third-party overlay may pass
-`?port=<port>` when it connects from a different origin.
-
-## Migrating from the Electron app
-
-There is **no automatic import**. Teams, talent, matches and assets must be
-re-entered. The new data directory is:
-
-```
-%APPDATA%\Fruiterra\Fruiterra Graphics Controller\
-```
-
-## Timer
-
-The timer is **control-only** in v1. There is no bundled timer overlay.
-Third-party overlays still receive `matchTimer` ticks and actions.
-
-## Network and security
-
-- The server binds to localhost by default.
-- "Allow LAN access" binds `0.0.0.0` so other machines can load overlays.
-- CORS is `*` to match the original overlays.
-- There is **no authentication** in v1. Use LAN mode only on a trusted network.
-
-## Fonts and licences
-
-- Overlay font: **Saira** (OFL 1.1), served locally at stable `/assets/fonts/`
-  paths.
-- UI font: **Inter** (OFL 1.1), bundled locally.
-- No PenPot or Google Fonts requests at runtime. Apotek is not redistributed.
-- Application licence: **MIT** (see `LICENSE`).
-- Full dependency inventory: `THIRD_PARTY_NOTICES.md`.
+For a tournament, add entrants on the Tournament **Setup** tab, generate the
+bracket, then use **Board** to run results and **Groups** / **Settings** for
+round-robin and tiebreaker configuration.
 
 ## Build from source
 
-Requirements: Rust stable (pinned by `rust-toolchain.toml`), the MSVC C++
-build tools, and Dioxus CLI 0.7.10.
-
 ```powershell
 cargo install dioxus-cli --version 0.7.10 --locked
+
+# Development run (assets and hot reload are handled by dx)
+dx serve --desktop
+
+# Checks used by CI
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
+cargo doc --workspace --no-deps
 
-# Installer
+# Packaged debug run
+dx build --desktop --features bundle
+
+# Release installer and portable app output
 dx bundle --release --desktop --package-types nsis --features bundle
-
-# Portable app output (exe + assets folder)
 dx build --release --desktop --features bundle
 ```
 
 The portable build is the `dx` app output, not a plain `cargo build`: the UI
-assets are hashed and copied into `assets\` beside the executable. Keep that
-folder with `fruiterra-gc.exe`.
+assets are hashed and copied into an `assets\` folder beside the executable.
+Keep that folder with `fruiterra-gc.exe`.
 
-The workspace layout is described in `docs/architecture.md`; the milestone
-order and exit criteria are in `docs/implementation-plan.md`.
+## Workspace layout
+
+The dependency direction is one-way: `core` → `protocol` → `server` → `app`.
+
+| Crate | Responsibility |
+|---|---|
+| `fgc-core` | Domain model, validation and repair, migrations, persistence and the tournament engine. No async runtime, Axum or Dioxus. |
+| `fgc-protocol` | Wire DTOs, projection from the domain to overlay payloads, asset URL resolution and golden tests. No I/O. |
+| `fgc-server` | Axum HTTP/WebSocket server, embedded overlays and bundled assets. No Dioxus. |
+| `fgc-app` | Dioxus desktop shell, application state, views and the server runtime thread. |
+
+## Data and logs
+
+Application data, settings and the versioned `app.json` live under:
+
+```text
+%APPDATA%\Fruiterra\Fruiterra Graphics Controller\
+```
+
+Logs are written to the `logs\` subfolder. Imported assets are stored by hash,
+and a backup of the previous save is kept as `app.json.bak`.
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | Crate boundaries and design decisions |
+| [`docs/data-model.md`](docs/data-model.md) | Persisted model and schema |
+| [`docs/protocol.md`](docs/protocol.md) | Overlay WebSocket contract |
+| [`docs/tournament.md`](docs/tournament.md) | Tournament model, generation and repair rules |
+| [`docs/assets.md`](docs/assets.md) | Asset store, hashing and bundles |
+| [`docs/fonts.md`](docs/fonts.md) | Font choices and licences |
+| [`docs/build.md`](docs/build.md) | Packaging and release process |
+| [`docs/implementation-plan.md`](docs/implementation-plan.md) | Milestones, tests and exit criteria |
+| [`docs/decisions.md`](docs/decisions.md) | Decision log |
+| [`docs/overlay-qa.md`](docs/overlay-qa.md) | Overlay QA checklist |
+
+## Network and security
+
+- The server binds to localhost by default.
+- **Allow LAN connections** binds `0.0.0.0` so other machines can load
+  overlays.
+- CORS is `*` to match the original overlays.
+- There is **no authentication** in v1. Use LAN mode only on a trusted network.
+
+## Migrating from the Electron app
+
+There is no automatic import. Teams, talent, matches and assets must be
+re-entered. The new data directory is shown above; the old application's files
+are not read.
+
+## Known limitations
+
+- Windows x64 only.
+- No import from the old Electron application.
+- The timer is control-only; there is no bundled timer overlay.
+- No bracket overlay in v1.
+- Releases are unsigned, so Windows SmartScreen may warn on first run.
+- No undo/redo, presets, multiple scenes, HTTP/Stream Deck API, auto-update,
+  match history, custom points or multi-stage playoffs.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| SmartScreen warning | Expected for unsigned builds. Verify `SHA256SUMS.txt`, then choose "More info → Run anyway". |
-| "WebView2 not found" with the portable ZIP | Install the Evergreen WebView2 runtime, or use the installer. |
+| SmartScreen warning | Expected for unsigned builds. Verify the published SHA-256 checksum before running. |
+| "WebView2 not found" with a portable build | Install the Evergreen WebView2 runtime, or use the installer. |
 | Port already in use | Change the port in Settings or stop the process using it. |
 | Windows Firewall prompt in LAN mode | Allow access on private networks only. |
-
-## Known limitations
-
-- No import from the old Electron application; data must be re-entered.
-- The timer is control-only; there is no bundled timer overlay.
-- No code signing in v1.
-- Windows x64 only.
-- No bracket overlay in v1.
-- No undo/redo, presets, multiple scenes, HTTP/Stream Deck API, auto-update,
-  match history, custom points or multi-stage playoffs.
+| Overlay stays blank | Start the overlay server and check that the Browser Source URL matches the configured port. |
 
 ## Licence
 
-MIT. See `LICENSE`.
+Released under the MIT licence. See [`LICENSE`](LICENSE). Font and dependency
+licences are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
