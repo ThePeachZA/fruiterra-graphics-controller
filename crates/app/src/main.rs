@@ -34,8 +34,49 @@ fn main() {
 
     let _log_guard = init_logging();
     install_panic_hook();
+    if !claim_single_instance() {
+        tracing::info!("another instance is already running; exiting");
+        return;
+    }
     tracing::info!(version = fgc_core::VERSION, "starting application");
     launch();
+}
+
+/// Claims the single-instance mutex.
+///
+/// Returns `false` when another process already owns the named mutex, so the
+/// second launch exits instead of opening a second window and fighting over the
+/// overlay port. The mutex handle is intentionally kept until the process exits.
+#[cfg(target_os = "windows")]
+fn claim_single_instance() -> bool {
+    use std::ptr;
+
+    use windows_sys::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError};
+    use windows_sys::Win32::System::Threading::CreateMutexW;
+
+    // A local namespace mutex is per user session, which is what we want for a
+    // desktop app. The name is stable across launches.
+    let name: Vec<u16> = "Local\\FruiterraGraphicsController\0"
+        .encode_utf16()
+        .collect();
+
+    // SAFETY: `name` is a valid, null-terminated UTF-16 string and the security
+    // attributes pointer is null, which `CreateMutexW` accepts.
+    let handle = unsafe { CreateMutexW(ptr::null(), 0, name.as_ptr()) };
+    if handle.is_null() {
+        // The mutex could not be created. Do not block startup for this.
+        tracing::warn!("could not create the single-instance mutex");
+        return true;
+    }
+
+    // SAFETY: `GetLastError` reads the calling thread's last error code.
+    unsafe { GetLastError() != ERROR_ALREADY_EXISTS }
+}
+
+/// Claims the single-instance mutex on platforms without a Windows mutex.
+#[cfg(not(target_os = "windows"))]
+const fn claim_single_instance() -> bool {
+    true
 }
 
 /// Runs the hidden packaged smoke test and exits with a CI-friendly status.
