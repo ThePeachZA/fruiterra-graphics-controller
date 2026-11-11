@@ -116,11 +116,10 @@ A bye is a match with one empty slot marked `completed`, `winner = the present t
 
 ### 3.1 Team slots
 
-- Drag a team from the entrant list or from another slot onto a slot.
-- Dropping onto an occupied slot **swaps** the two teams.
-- Dropping a team onto empty space in a round appends a new match with that team in slot 1.
-- A drop sets `slotN_manual = true` for that slot.
-- Clearing a slot sets it to `None` and marks it manual, so auto-advance will not refill it.
+- Select a slot, then select another slot to **swap** the two teams. Clicking the selected slot again clears the selection.
+- A swap sets `slotN_manual = true` for both affected slots.
+- Slots can also be set or cleared from the match modal; a cleared slot is marked manual, so auto-advance will not refill it.
+- A swap that would put the same team on both sides of a match, or duplicate a team in the same match, is rejected.
 
 ### 3.2 Structure
 
@@ -158,10 +157,10 @@ Removing a match clears any links that pointed at it and any slots it had filled
 
 ### 3.6 Interaction mechanics
 
-- **Pointer-based drag** (pointerdown / pointermove / pointerup) with a floating ghost, not HTML5 drag-and-drop. WebView2's HTML5 DnD is inconsistent, and pointer events let us support touch and precise drop targets.
-- **Keyboard alternative:** focus a slot, press Enter to pick up, arrow keys to move, Enter to drop, Escape to cancel. Required for accessibility and for precision on large boards.
+- **Selection-based swap** (click/click or keyboard) instead of a pointer-drag ghost. WebView2 pointer capture is inconsistent, and selection gives precise targets on a dense board; keyboard parity is identical.
+- **Keyboard alternative:** focus a slot, press Enter (or Space) to select, move focus with the arrow keys, press Enter to swap, Escape to cancel. Required for accessibility and for precision on large boards.
 - **Board layout:** CSS grid, one column per round, horizontal scroll, zoom control (50–150%). Winners, losers and grand final are separate labelled sections.
-- **Drop targets** highlight on hover; invalid targets (same match, duplicate team in a single-elim section) are rejected with a toast.
+- The selected slot is highlighted; an invalid swap (same match, duplicate team) is rejected with a toast.
 
 ---
 
@@ -245,7 +244,7 @@ Validation: a completed match must have a winner; a winner must be one of the tw
 | T1 | Generate a valid single-elimination bracket for any team count, with byes to top seeds and standard seeding. |
 | T2 | Generate a valid double-elimination board: winners, losers, drop mapping and grand final. |
 | T3 | Generate round-robin fixtures per group and compute standings. |
-| T4 | Every generated slot, match, round and link is editable; teams can be dragged between slots with swap semantics. |
+| T4 | Every generated slot, match, round and link is editable; teams can be moved between slots with swap semantics. |
 | T5 | Auto-advance fills the next slot and loser slot on completion, and never overwrites a manually placed slot. |
 | T6 | Clearing or editing a result recursively clears the auto-filled downstream slots it produced. |
 | T7 | Grand-final reset honours `grand_finals_reset` and produces the correct champion; both can be overridden manually. |

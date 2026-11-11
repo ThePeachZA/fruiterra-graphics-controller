@@ -132,8 +132,16 @@ fn tournament_round_trips_without_standings() {
     );
 
     let loaded = migrate(value).expect("serialised state should load");
+    let standings = &loaded.tournaments[0].standings[&fgc_core::GroupId::from_raw("group-a")];
+    assert_eq!(
+        standings.len(),
+        2,
+        "standings must be recomputed from the group"
+    );
     assert!(
-        loaded.tournaments[0].standings.is_empty(),
+        standings
+            .iter()
+            .all(|row| row.played == 0 && row.points_for == 0),
         "standings must be recomputed, not restored"
     );
 }

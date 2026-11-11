@@ -87,6 +87,7 @@ impl Destination {
                 | Self::Talent
                 | Self::Teams
                 | Self::MatchController
+                | Self::Tournament
                 | Self::Assets
         )
     }
@@ -134,6 +135,7 @@ mod tests {
                 Destination::Talent,
                 Destination::Teams,
                 Destination::MatchController,
+                Destination::Tournament,
                 Destination::Assets
             ]
         );

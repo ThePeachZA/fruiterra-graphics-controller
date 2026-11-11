@@ -290,6 +290,21 @@ The exact module split can change during implementation, but the crate boundarie
 
 **Exit criterion:** T1–T14 pass; a 32-team double-elimination board is usable at 1080p.
 
+**Implementation notes**
+
+- All tournament rules live in `fgc-core::tournament`. It owns entrant/seed normalisation, single- and double-elimination generation, round-robin groups and fixtures, standings, ordered tiebreakers (including the head-to-head mini-table), playoff generation, slot/link editing, auto-advance, grand-final reset, champion derivation and repair. `AppStore` exposes one mutation per operation and routes every edit through `mutate`, so validation, catalogue rebuild, dirty marking and overlay reprojection happen on each change.
+- `refresh` is the single derived-state pass: it recomputes standings, fills structural byes, propagates winners and losers into non-manual downstream slots, resets completed matches with no valid winner, syncs the grand-final reset match, and recomputes the champion unless it was manually overridden. It is idempotent, so calling it after generation or repair converges to the same board.
+- `validate_and_repair` calls `repair_tournament` before `refresh`. Repairs cover duplicate seeds, completed matches without a winner, dangling or cyclic links, champion not in the entrant list, and group fixtures whose teams are outside the group. Each repair is logged through the existing `RepairKind` reporting path rather than failing the load.
+- `Tournament.standings` is `#[serde(skip)]`; load and migration recompute it from `group_matches`, so stale derived data can never be restored.
+- The UI is the Tournament destination with a tournament sidebar and four tabs: **Setup** (name, format, first-to, status, grand-final reset, entrants/seeds, generation), **Board** (winners, losers and grand-final sections, round/match editing, slot swapping, match modal), **Groups** (groups, teams, fixtures, standings, playoff generation) and **Settings** (tiebreaker order, playoff qualifiers/format, champion override).
+- The board uses click-to-swap plus the keyboard pick-up/drop flow (Enter or Space picks up, Enter drops, Escape cancels, arrows move focus) instead of a pointer-drag ghost. This keeps swap semantics and keyboard parity while avoiding WebView2 pointer-capture inconsistencies; a drag ghost remains an optional enhancement. Zoom is a CSS `zoom` of 50–150%, so the whole board scales without relayout.
+- Every generated match, round, slot and link remains editable: rounds can be added, removed and renamed, matches can be added, removed and reordered, and the match modal edits slots, scores, status, first-to, winner override, winner/loser links, reset and delete. Removing a match or round clears dependent links after confirmation.
+- The match modal rejects a completed match without a winner, rejects a winner that is not in either slot, and rejects self/cyclic links. Errors are shown inline with `role="alert"`.
+- Tournament edits that would leave a team referenced are handled by the existing Teams deletion guard; the tournament itself stores entrants, bracket slots/winners, group membership and the champion, all of which the guard clears on the explicit "remove references and delete" path.
+- Interaction details follow the shared app conventions: tab buttons expose `aria-selected`, bracket slots expose `aria-pressed`, icon-only buttons carry `aria-label` and `title`, and destructive actions require a second confirmation.
+- Styling is isolated in `crates/app/assets/tournament.css` and registered with the other destination stylesheets in `app.rs`.
+- The M8 suite in `crates/core/tests/tournament.rs` has 25 tests covering T1–T14: generation for 2–32 entrants in every format, byes and seeding, double-elimination drop mapping and reset, propagation and manual overrides, recursive clearing, tiebreaker order and head-to-head, playoff seeding, board editing and cycle rejection, and the repair table from `docs/tournament.md` §6.
+
 ---
 
 ### M9 — Overlays, fonts and compatibility

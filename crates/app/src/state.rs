@@ -13,14 +13,29 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 use fgc_core::{
-    AppState, Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin, AssetStore, IntervieweeRef,
-    JsonStore, Match, MatchStatus, MemoryStore, Player, PlayerId, Position, Role, Scoring, Side,
-    Store, Talent, TalentId, TalentRef, TalentSlot, Team, TeamId, TeamReference, TeamSide,
-    TimerAlignment, TimerMode, UnusedAssets, clear_talent_references, derived_scores, insert_map,
-    move_map as move_map_slot, move_map_pool as move_map_pool_slot, new_match,
-    recalculate_loser_picks, referenced_hashes, remove_map, remove_team_references,
-    reset_hero_bans, reset_maps, set_first_ban_team, set_hero_ban, set_map_name, set_map_scores,
-    toggle_map_pool, validate_and_repair,
+    AppState, Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin, AssetStore, BracketFormat,
+    BracketMatchStatus, BracketSection, BracketSlot, DEFAULT_TIEBREAKERS, GroupId, IntervieweeRef,
+    JsonStore, LinkError, LinkKind, Match, MatchId, MatchLink, MatchStatus, MemoryStore, Player,
+    PlayerId, Position, Role, Scoring, Side, SlotError, Store, Talent, TalentId, TalentRef,
+    TalentSlot, Team, TeamId, TeamReference, TeamSide, Tiebreaker, TimerAlignment, TimerMode,
+    Tournament, TournamentId, TournamentStatus, UnusedAssets, add_entrant as core_add_entrant,
+    add_group_fixture as core_add_group_fixture, add_match as core_add_match,
+    add_round as core_add_round, clear_talent_references, create_group as core_create_group,
+    derived_scores, generate_double_elimination as core_generate_double_elimination,
+    generate_playoff as core_generate_playoff, generate_round_robin as core_generate_round_robin,
+    generate_single_elimination as core_generate_single_elimination, insert_map,
+    match_mut as core_match_mut, move_map as move_map_slot, move_map_pool as move_map_pool_slot,
+    move_match as core_move_match, new_match, new_tournament, recalculate_loser_picks,
+    referenced_hashes, refresh as core_refresh_tournament, remove_entrant as core_remove_entrant,
+    remove_group as core_remove_group, remove_group_fixture as core_remove_group_fixture,
+    remove_map, remove_match as core_remove_match, remove_round as core_remove_round,
+    remove_team_references, rename_group as core_rename_group, rename_round as core_rename_round,
+    reset_bracket_match as core_reset_bracket_match, reset_hero_bans, reset_maps,
+    set_bracket_result as core_set_bracket_result, set_bracket_winner as core_set_bracket_winner,
+    set_first_ban_team, set_group_result as core_set_group_result,
+    set_group_teams as core_set_group_teams, set_hero_ban, set_link as core_set_link, set_map_name,
+    set_map_scores, set_slot as core_set_slot, swap_slots as core_swap_slots, toggle_map_pool,
+    validate_and_repair,
 };
 use fgc_protocol::{AssetCatalog, data_url_for};
 use fgc_server::{AssetMode, Outbound, ServerConfig};
@@ -603,6 +618,518 @@ impl AppStore {
             clear_talent_references(state, id);
             state.talents.retain(|talent| &talent.id != id);
         });
+    }
+
+    // -----------------------------------------------------------------------
+    // Tournaments
+    // -----------------------------------------------------------------------
+
+    /// Applies an edit to one tournament.
+    fn with_tournament(&self, id: &TournamentId, update: impl FnOnce(&mut Tournament)) {
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                update(tournament);
+            }
+        });
+    }
+
+    /// Creates a tournament with the documented defaults.
+    pub fn create_tournament(
+        &self,
+        name: impl Into<String>,
+        format: BracketFormat,
+    ) -> TournamentId {
+        let tournament = new_tournament(name, format);
+        let id = tournament.id.clone();
+        self.mutate(move |state| state.tournaments.push(tournament));
+        id
+    }
+
+    /// Deletes a tournament.
+    pub fn delete_tournament(&self, id: &TournamentId) {
+        self.mutate(|state| state.tournaments.retain(|tournament| &tournament.id != id));
+    }
+
+    /// Adds a team to the entrant list.
+    pub fn add_tournament_entrant(&self, id: &TournamentId, team_id: TeamId) {
+        self.with_tournament(id, |tournament| {
+            core_add_entrant(tournament, team_id);
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Removes a team from the entrant list and normalises the seeds.
+    pub fn remove_tournament_entrant(&self, id: &TournamentId, team_id: &TeamId) {
+        self.with_tournament(id, |tournament| {
+            core_remove_entrant(tournament, team_id);
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Moves an entrant to another seed position.
+    pub fn move_tournament_entrant(&self, id: &TournamentId, from: usize, to: usize) {
+        self.with_tournament(id, |tournament| {
+            if from >= tournament.entrants.len() || to >= tournament.entrants.len() || from == to {
+                return;
+            }
+            let entrant = tournament.entrants.remove(from);
+            tournament.entrants.insert(to, entrant);
+            for (index, entrant) in tournament.entrants.iter_mut().enumerate() {
+                entrant.seed = u32::try_from(index + 1).unwrap_or(u32::MAX);
+            }
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Generates the bracket for the tournament's selected format.
+    pub fn generate_tournament_bracket(&self, id: &TournamentId) {
+        self.with_tournament(id, |tournament| {
+            match tournament.format {
+                BracketFormat::SingleElim => core_generate_single_elimination(tournament),
+                BracketFormat::DoubleElim => core_generate_double_elimination(tournament),
+                BracketFormat::RoundRobin => core_generate_round_robin(tournament, 1),
+            }
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Splits the entrants into groups and generates round-robin fixtures.
+    pub fn generate_tournament_round_robin(&self, id: &TournamentId, group_count: usize) {
+        self.with_tournament(id, |tournament| {
+            core_generate_round_robin(tournament, group_count);
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Generates a playoff bracket from the group standings.
+    ///
+    /// # Errors
+    ///
+    /// Returns the generator's message when there are no groups or too few
+    /// qualifiers.
+    pub fn generate_tournament_playoff(&self, id: &TournamentId) -> Result<(), String> {
+        let mut result = Err("Tournament not found.".to_owned());
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_generate_playoff(tournament);
+            }
+        });
+        result
+    }
+
+    /// Renames a tournament.
+    pub fn set_tournament_name(&self, id: &TournamentId, name: &str) {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            return;
+        }
+        let name = trimmed.to_owned();
+        self.with_tournament(id, |tournament| tournament.name = name);
+    }
+
+    /// Changes the selected bracket format.
+    pub fn set_tournament_format(&self, id: &TournamentId, format: BracketFormat) {
+        self.with_tournament(id, |tournament| tournament.format = format);
+    }
+
+    /// Changes the default first-to target for new matches.
+    pub fn set_tournament_default_first_to(&self, id: &TournamentId, first_to: u8) {
+        self.with_tournament(id, |tournament| {
+            tournament.default_first_to = first_to.clamp(1, 4);
+        });
+    }
+
+    /// Enables or disables the grand-final reset.
+    pub fn set_tournament_grand_finals_reset(&self, id: &TournamentId, enabled: bool) {
+        self.with_tournament(id, |tournament| {
+            tournament.grand_finals_reset = enabled;
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Replaces the ordered tiebreaker list.
+    pub fn set_tournament_tiebreakers(&self, id: &TournamentId, tiebreakers: Vec<Tiebreaker>) {
+        let tiebreakers = if tiebreakers.is_empty() {
+            DEFAULT_TIEBREAKERS.to_vec()
+        } else {
+            tiebreakers
+        };
+        self.with_tournament(id, |tournament| {
+            tournament.tiebreakers = tiebreakers;
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Restores the default tiebreaker order.
+    pub fn reset_tournament_tiebreakers(&self, id: &TournamentId) {
+        self.with_tournament(id, |tournament| {
+            tournament.tiebreakers = DEFAULT_TIEBREAKERS.to_vec();
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Sets how many teams advance from each group.
+    pub fn set_tournament_playoff_qualifiers(&self, id: &TournamentId, qualifiers: u8) {
+        self.with_tournament(id, |tournament| {
+            tournament.playoff_qualifiers = qualifiers.max(1);
+        });
+    }
+
+    /// Changes the playoff bracket format.
+    pub fn set_tournament_playoff_format(&self, id: &TournamentId, format: BracketFormat) {
+        self.with_tournament(id, |tournament| tournament.playoff_format = format);
+    }
+
+    /// Manually overrides the tournament lifecycle state.
+    pub fn set_tournament_status(&self, id: &TournamentId, status: TournamentStatus) {
+        self.with_tournament(id, |tournament| tournament.status = status);
+    }
+
+    /// Sets or clears a manual champion override.
+    ///
+    /// A champion that is not an entrant is ignored; clearing the override
+    /// falls back to the derived champion.
+    pub fn set_tournament_champion(&self, id: &TournamentId, champion: Option<TeamId>) {
+        self.with_tournament(id, |tournament| {
+            match champion {
+                Some(team)
+                    if tournament
+                        .entrants
+                        .iter()
+                        .any(|entrant| entrant.team_id == team) =>
+                {
+                    tournament.champion = Some(team);
+                    tournament.champion_manual = true;
+                }
+                Some(_) => {}
+                None => {
+                    tournament.champion = None;
+                    tournament.champion_manual = false;
+                }
+            }
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Assigns or clears one bracket slot by hand.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`SlotError`] when the match is missing, the slot number is
+    /// invalid or the same team would occupy both sides.
+    pub fn set_tournament_slot(
+        &self,
+        id: &TournamentId,
+        address: BracketSlot,
+        team: Option<TeamId>,
+    ) -> Result<(), SlotError> {
+        let mut result = Err(SlotError::NotFound);
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_set_slot(tournament, address, team);
+            }
+        });
+        result
+    }
+
+    /// Swaps two bracket slots.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`SlotError`] when either slot is missing or the swap would
+    /// put the same team on both sides of a match.
+    pub fn swap_tournament_slots(
+        &self,
+        id: &TournamentId,
+        left: BracketSlot,
+        right: BracketSlot,
+    ) -> Result<(), SlotError> {
+        let mut result = Err(SlotError::NotFound);
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_swap_slots(tournament, left, right);
+            }
+        });
+        result
+    }
+
+    /// Appends an empty match to a round.
+    pub fn add_tournament_match(
+        &self,
+        id: &TournamentId,
+        section: BracketSection,
+        round: usize,
+    ) -> Option<MatchId> {
+        let mut result = None;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_add_match(tournament, section, round);
+            }
+        });
+        result
+    }
+
+    /// Removes a match and clears every link that pointed at it.
+    pub fn remove_tournament_match(&self, id: &TournamentId, match_id: &MatchId) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_remove_match(tournament, match_id);
+            }
+        });
+        result
+    }
+
+    /// Appends an empty round to a section and returns its index.
+    pub fn add_tournament_round(&self, id: &TournamentId, section: BracketSection) -> usize {
+        let mut result = 0;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_add_round(tournament, section);
+            }
+        });
+        result
+    }
+
+    /// Removes a round and its matches.
+    pub fn remove_tournament_round(
+        &self,
+        id: &TournamentId,
+        section: BracketSection,
+        round: usize,
+    ) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_remove_round(tournament, section, round);
+            }
+        });
+        result
+    }
+
+    /// Renames a round.
+    pub fn rename_tournament_round(
+        &self,
+        id: &TournamentId,
+        section: BracketSection,
+        round: usize,
+        name: &str,
+    ) -> bool {
+        let name = name.to_owned();
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_rename_round(tournament, section, round, name);
+            }
+        });
+        result
+    }
+
+    /// Moves a match within its round.
+    pub fn move_tournament_match(
+        &self,
+        id: &TournamentId,
+        section: BracketSection,
+        round: usize,
+        from: usize,
+        to: usize,
+    ) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_move_match(tournament, section, round, from, to);
+            }
+        });
+        result
+    }
+
+    /// Sets or clears a winner or loser link.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`LinkError`] when the link is dangling, points at the match
+    /// itself or would create a cycle.
+    pub fn set_tournament_link(
+        &self,
+        id: &TournamentId,
+        match_id: &MatchId,
+        kind: LinkKind,
+        link: Option<MatchLink>,
+    ) -> Result<(), LinkError> {
+        let mut result = Err(LinkError::NotFound);
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_set_link(tournament, match_id, kind, link);
+            }
+        });
+        result
+    }
+
+    /// Sets a bracket match's scores and status, deriving the winner.
+    pub fn set_tournament_result(
+        &self,
+        id: &TournamentId,
+        match_id: &MatchId,
+        score1: u16,
+        score2: u16,
+        status: BracketMatchStatus,
+    ) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_set_bracket_result(tournament, match_id, score1, score2, status);
+            }
+        });
+        result
+    }
+
+    /// Sets or clears a manual winner override.
+    pub fn set_tournament_winner(
+        &self,
+        id: &TournamentId,
+        match_id: &MatchId,
+        winner: Option<TeamId>,
+    ) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_set_bracket_winner(tournament, match_id, winner);
+            }
+        });
+        result
+    }
+
+    /// Clears a bracket match's result and its downstream auto-fills.
+    pub fn reset_tournament_match(&self, id: &TournamentId, match_id: &MatchId) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_reset_bracket_match(tournament, match_id);
+            }
+        });
+        result
+    }
+
+    /// Changes one match's first-to override.
+    pub fn set_tournament_match_first_to(
+        &self,
+        id: &TournamentId,
+        match_id: &MatchId,
+        first_to: u8,
+    ) {
+        self.with_tournament(id, |tournament| {
+            if let Some(game) = core_match_mut(tournament, match_id) {
+                game.first_to = first_to.clamp(1, 4);
+            }
+            core_refresh_tournament(tournament);
+        });
+    }
+
+    /// Creates a group and generates its fixtures.
+    pub fn create_tournament_group(
+        &self,
+        id: &TournamentId,
+        name: &str,
+        teams: Vec<TeamId>,
+    ) -> Option<GroupId> {
+        let name = name.to_owned();
+        let mut result = None;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = Some(core_create_group(tournament, name, teams));
+            }
+        });
+        result
+    }
+
+    /// Removes a group and all of its fixtures.
+    pub fn remove_tournament_group(&self, id: &TournamentId, group_id: &GroupId) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_remove_group(tournament, group_id);
+            }
+        });
+        result
+    }
+
+    /// Renames a group.
+    pub fn rename_tournament_group(
+        &self,
+        id: &TournamentId,
+        group_id: &GroupId,
+        name: &str,
+    ) -> bool {
+        let name = name.to_owned();
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_rename_group(tournament, group_id, name);
+            }
+        });
+        result
+    }
+
+    /// Replaces a group's team list and regenerates its fixtures.
+    pub fn set_tournament_group_teams(
+        &self,
+        id: &TournamentId,
+        group_id: &GroupId,
+        teams: Vec<TeamId>,
+    ) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_set_group_teams(tournament, group_id, teams);
+            }
+        });
+        result
+    }
+
+    /// Adds a group fixture by hand.
+    pub fn add_tournament_group_fixture(
+        &self,
+        id: &TournamentId,
+        group_id: &GroupId,
+        team1: TeamId,
+        team2: TeamId,
+    ) -> Option<MatchId> {
+        let mut result = None;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_add_group_fixture(tournament, group_id, team1, team2);
+            }
+        });
+        result
+    }
+
+    /// Removes a group fixture by hand.
+    pub fn remove_tournament_group_fixture(&self, id: &TournamentId, fixture_id: &MatchId) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_remove_group_fixture(tournament, fixture_id);
+            }
+        });
+        result
+    }
+
+    /// Sets a group fixture's scores and status.
+    pub fn set_tournament_group_result(
+        &self,
+        id: &TournamentId,
+        fixture_id: &MatchId,
+        score1: u16,
+        score2: u16,
+        status: BracketMatchStatus,
+    ) -> bool {
+        let mut result = false;
+        self.mutate(|state| {
+            if let Some(tournament) = state.tournaments.iter_mut().find(|t| &t.id == id) {
+                result = core_set_group_result(tournament, fixture_id, score1, score2, status);
+            }
+        });
+        result
     }
 
     /// Renames a user asset. Bundled assets are read-only.

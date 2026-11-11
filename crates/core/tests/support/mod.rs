@@ -6,8 +6,8 @@ use fgc_core::{
     AppState, Asset, AssetCategory, AssetId, AssetOrigin, BracketFormat, BracketMatch,
     BracketMatchStatus, Entrant, Group, GroupId, GroupMatch, MapHeroBans, MapSlot, Match, MatchId,
     MatchStatus, MatchTalent, Player, PlayerId, Position, Role, Round, Scoring, Side, SocialLink,
-    SocialPlatform, Talent, TalentId, Team, TeamId, TeamSide, Tiebreaker, Tournament, TournamentId,
-    TournamentStatus,
+    SocialPlatform, Standing, Talent, TalentId, Team, TeamId, TeamSide, Tiebreaker, Tournament,
+    TournamentId, TournamentStatus,
 };
 
 pub const HASH_A: &str = "3fa1c9d2e4b5a6978877665544332211ffeeddccbbaa99887766554433221100";
@@ -126,7 +126,7 @@ pub fn group(id: &str) -> Group {
     Group {
         id: GroupId::from_raw(id),
         name: "Group A".to_owned(),
-        team_ids: vec![TeamId::from_raw("team-a")],
+        team_ids: vec![TeamId::from_raw("team-a"), TeamId::from_raw("team-b")],
     }
 }
 
@@ -141,6 +141,29 @@ pub fn group_match(id: &str) -> GroupMatch {
         status: BracketMatchStatus::Pending,
         first_to: 3,
     }
+}
+
+fn standing(team: &str) -> Standing {
+    Standing {
+        team_id: TeamId::from_raw(team),
+        played: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        points_for: 0,
+        points_against: 0,
+        map_differential: 0,
+        points: 0,
+    }
+}
+
+pub fn standings() -> BTreeMap<GroupId, Vec<Standing>> {
+    let mut standings = BTreeMap::new();
+    standings.insert(
+        GroupId::from_raw("group-a"),
+        vec![standing("team-a"), standing("team-b")],
+    );
+    standings
 }
 
 pub fn tournament(id: &str) -> Tournament {
@@ -160,7 +183,7 @@ pub fn tournament(id: &str) -> Tournament {
         grand_final: Vec::new(),
         groups: vec![group("group-a")],
         group_matches: vec![group_match("group-match-a")],
-        standings: BTreeMap::new(),
+        standings: standings(),
         tiebreakers: vec![
             Tiebreaker::Wins,
             Tiebreaker::HeadToHead,

@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     AppState, AssetId, GroupId, MatchId, PlayerId, TalentId, TeamId, TournamentId,
-    is_allowed_extension, is_valid_hash,
+    TournamentRepairKind, is_allowed_extension, is_valid_hash, repair_tournament,
 };
 
 /// The kind of repair applied while loading user data.
@@ -20,6 +20,18 @@ pub enum RepairKind {
     AssetHashRejected,
     /// An asset with an unsupported extension was removed from the library.
     AssetExtensionRejected,
+    /// A tournament entrant had a duplicate or missing seed.
+    TournamentDuplicateSeed,
+    /// A completed bracket match had no valid winner and was reset.
+    BracketCompletedWithoutWinner,
+    /// A bracket link pointed at a missing match, itself or an invalid slot.
+    BracketLinkDangling,
+    /// Bracket links formed a cycle and were broken.
+    BracketLinkCycle,
+    /// A group fixture referenced a team outside its group.
+    GroupTeamOutsideGroup,
+    /// The tournament champion was not an entrant.
+    ChampionNotEntrant,
 }
 
 /// A single repair applied to loaded state.
@@ -112,6 +124,20 @@ pub fn validate_and_repair(state: &mut AppState) -> Vec<Repair> {
 
         for game in &mut tournament.group_matches {
             clamp_first_to(&mut game.first_to, "groupMatch.firstTo", &mut repairs);
+        }
+
+        for repair in repair_tournament(tournament) {
+            let kind = match repair.kind {
+                TournamentRepairKind::DuplicateSeed => RepairKind::TournamentDuplicateSeed,
+                TournamentRepairKind::CompletedWithoutWinner => {
+                    RepairKind::BracketCompletedWithoutWinner
+                }
+                TournamentRepairKind::DanglingLink => RepairKind::BracketLinkDangling,
+                TournamentRepairKind::LinkCycle => RepairKind::BracketLinkCycle,
+                TournamentRepairKind::GroupTeamOutsideGroup => RepairKind::GroupTeamOutsideGroup,
+                TournamentRepairKind::ChampionNotEntrant => RepairKind::ChampionNotEntrant,
+            };
+            repairs.push(Repair::new(kind, repair.message));
         }
     }
 

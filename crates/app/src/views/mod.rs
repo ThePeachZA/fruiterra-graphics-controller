@@ -1,8 +1,8 @@
 //! Destination views rendered inside the application shell.
 //!
 //! Milestone M4 implements the Overlay and Settings destinations, M5 adds
-//! Assets, and M6 adds Talent and Teams. The remaining two render
-//! [`placeholder::PlaceholderView`] until their milestones land.
+//! Assets, M6 adds Talent and Teams, M7 adds Match Controller and M8 adds
+//! Tournaments. Every destination now renders a real view.
 
 pub mod assets;
 pub mod match_controller;

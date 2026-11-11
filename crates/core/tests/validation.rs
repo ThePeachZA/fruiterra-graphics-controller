@@ -40,6 +40,10 @@ fn duplicate_ids_are_regenerated() {
         support::group_match("group-match-dup"),
         support::group_match("group-match-dup"),
     ];
+    let group_id = first.groups[0].id.clone();
+    for fixture in &mut first.group_matches {
+        fixture.group = group_id.clone();
+    }
 
     let repairs = validate_and_repair(&mut state);
     assert_eq!(

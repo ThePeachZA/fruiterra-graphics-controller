@@ -14,6 +14,7 @@ mod model;
 mod paths;
 mod references;
 mod store;
+mod tournament;
 mod validation;
 
 pub use asset_store::{
@@ -36,6 +37,7 @@ pub use references::{
     TeamReference, clear_talent_references, remove_team_references, team_references,
 };
 pub use store::{JsonStore, MemoryStore, Store};
+pub use tournament::*;
 pub use validation::{Repair, RepairKind, validate_and_repair};
 
 /// User-facing application name.
