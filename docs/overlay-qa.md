@@ -24,6 +24,43 @@ Design reference: `docs/assets.md` §5.
 | 14 | `row-casters` order and social icons are correct | ☐ |
 | 15 | A third-party timer overlay receives `matchTimer` ticks and actions | ☐ |
 
+## Automated pre-check
+
+Recorded on **2026-11-11** before the manual OBS pass. This is a regression
+smoke test, not a substitute for the OBS sign-off below.
+
+- **Environment:** Windows, WebView2 (Chromium) driven by the OpenCode browser
+  tools against the bundled overlays served from `http://127.0.0.1:3001`.
+  Seeded state: 2 teams with rosters, 4 talent, 8 map assets, 8 hero assets, a
+  map pool, 5 maps with scores and picks, hero bans and a live match.
+- **Static tests:** `cargo test -p fgc-server --test overlays` passes. The tests
+  assert that every overlay is embedded, subscribes to its expected message
+  types, contains no external URL (only the SVG `xmlns`), declares exactly the
+  five `FGC Display*` faces, and that all five Saira WOFF2 files plus `OFL.txt`
+  are embedded and valid.
+- **Canvas:** all seven overlays reported `.overlay` at 1920×1080 and
+  `body.scrollWidth/Height` at 1920×1080 with `meta viewport width=1920`.
+- **Initial render:** every overlay painted its `init` content on first load
+  (game overlay score and subtitle, map select picks, hero bans order, grouped
+  map pool, both rosters, caster order and social icons).
+- **Fonts:** each overlay requested the Saira faces it uses from
+  `/assets/fonts/saira-*.woff2`; no font or image request 404ed. Accented,
+  Cyrillic and CJK names rendered in the roster DOM (SØREN, ДМИТРИЙ ВОЛКОВ,
+  王小明).
+- **Network:** no requests left `127.0.0.1:3001`; only the overlay WebSocket and
+  local `/assets/...` URLs were used.
+- **Live update:** editing the match subtitle in Match Controller changed
+  `/state` and the game overlay without a reload.
+- **`show`:** `updateOverlay({ type: 'show', visible: false/true })` toggled
+  `.overlay` between `none` and `block` in all seven overlays.
+- **Reconnect:** after the server was restarted, `/health` reported
+  `overlays: 1` for the focused tab and `overlays: 7` after reloading all tabs;
+  the focused overlay repainted from the replayed cache.
+- **Known observation:** a 6-caster `row-casters` layout clips the social row by
+  about 14px with long handles. The same clipping occurs with a `sans-serif`
+  fallback, so it is pre-existing layout behaviour rather than a Saira
+  regression; no CSS was changed in the font port.
+
 ## Files covered
 
 - `game-overlay.html`

@@ -28,7 +28,8 @@ mod ws;
 
 pub use config::{AssetMode, ServerConfig};
 pub use embed::{
-    BundledAsset, bundled_asset_bytes, bundled_asset_bytes_by_hash, bundled_assets, bundled_catalog,
+    BundledAsset, bundled_asset_bytes, bundled_asset_bytes_by_hash, bundled_assets,
+    bundled_catalog, embedded_font, embedded_overlay,
 };
 pub use error::ServerError;
 pub use handle::{Outbound, ServerHandle, ServerStatus, StatusWatcher};
