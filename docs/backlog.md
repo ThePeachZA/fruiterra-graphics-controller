@@ -21,6 +21,7 @@ These are defects that currently make a shipped feature fail, risk data loss, or
 | C11 | Safe path handling | Constrain file operations to the app-data/assets roots. Asset requests accept only a 64-character lowercase hex hash and an allow-listed extension; overlay overrides reject `..`, separators and non-`.html` names. See `docs/assets.md` §1.4 and §3. |
 | C12 | Remove dead/incorrect state | `Match.scoreA/scoreB` writes, unused `matches[]`, `substitutions[]`, `SET_CHAMPION`, `rounds`, NDI fields: remove or wire up. No user-facing behaviour change. |
 | C13 | Timer overlay decision | The timer broadcasts `matchTimer` but no overlay consumes it. Either ship a compatible timer overlay in v1 or explicitly mark the timer as control-only. |
+| C14 | Map game-mode links | Map assets have a `gameMode` field, but the Assets view can only import and rename; there is no control to link a map to a bundled game mode. User-imported maps therefore group under **Other** on the map-pool overlay. Found during manual QA on 2026-11-12. |
 
 ### Font specifics (C1)
 
@@ -74,6 +75,7 @@ These are small, isolated additions that would be cheap to pull forward *after* 
 | B3 | Overlay health/reconnect indicator | Surface connected client count and last broadcast time. |
 | B4 | Basic hotkeys | Score +/-, next map, show/hide — high value during a live show. |
 | B5 | Timer overlay | Makes the existing Timer tab actually usable on stream. |
+| B6 | Bulk asset import | The importer opens one file per dialog. Add a multi-select import for the chosen category, with the same validation, hashing and dedupe as the single-file path. Requested 2026-11-12 during QA fixture setup. |
 
 ## C. Post-v1 improvements (option 3 backlog)
 

@@ -95,6 +95,17 @@ The exact pictures do not matter. File names do: use names such as
 Create this project once on the test PC. Reuse it for every test unless a test
 says otherwise.
 
+The fixture can be built by hand with the steps below, or generated from the
+imported asset library after §3.4:
+
+```powershell
+cargo run -p fgc-core --example qa_fixture
+```
+
+The generator keeps the imported assets, replaces the teams, talent, match and
+tournaments, and refuses to write a state that needs repair. The manual steps
+remain the reference for what the fixture contains.
+
 ### 3.1 Teams
 
 Create four teams on **Teams → + New team**:
@@ -224,7 +235,7 @@ Create one more tournament named `Board Stress`:
 - **Format:** Single elimination
 - **First to:** 3
 
-Create 24 additional teams, `Stress 1` to `Stress 24`, with any tag, so the
+Create 22 additional teams, `Stress 1` to `Stress 22`, with any tag, so the
 project has 32 teams in total. Add all 32 teams as entrants and generate the
 bracket.
 
@@ -261,7 +272,7 @@ when not visible** turned off.
 | Game overlay | Score `2 - 1`; tags `NWS` and `WXM`; title `Grand Final`; subtitle `Upper Bracket`; current map `Ilios`; first-to `3`; side indicator matches Attack / Defend. |
 | Map select | Five maps in order; `Ilios` chosen by NWS; `Nepal` chosen by WXM; `King's Row` chosen by NWS; scores match the fixture. |
 | Hero bans | Three map rows; first-ban order matches the fixture; Ana/Kiriko, Winston/Tracer, Sojourn/Lucio. |
-| Map pool | Ilios, Nepal, King's Row, Dorado, Antarctic Peninsula, in that order, grouped by mode. |
+| Map pool | The same five maps, grouped by mode: Control (Ilios, Nepal, Antarctic Peninsula), Escort (Dorado), Hybrid (King's Row). |
 | Home roster | Northwind Sentinels players in roster order, with roles, portraits and heroes. |
 | Away roster | 王小明战队 players in roster order, with roles, portraits and heroes. |
 | Casters row | Arc, Priya, Marco, Sam in assignment order, with the correct platform icons and handles. |
