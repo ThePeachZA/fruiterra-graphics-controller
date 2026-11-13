@@ -10,7 +10,7 @@
       font-weight: 300;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-300.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-300.woff2') format('woff2');
     }
 
     @font-face {
@@ -18,7 +18,7 @@
       font-weight: 400;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-400.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-400.woff2') format('woff2');
     }
 
     @font-face {
@@ -26,7 +26,7 @@
       font-weight: 500;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-500.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-500.woff2') format('woff2');
     }
 
     @font-face {
@@ -34,7 +34,7 @@
       font-weight: 600;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-600.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-600.woff2') format('woff2');
     }
 
     @font-face {
@@ -42,7 +42,7 @@
       font-weight: 900;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-900.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-900.woff2') format('woff2');
     }
 
     * {
@@ -242,6 +242,8 @@
     }
 
     .ban-hero-name-text {
+      display: block;
+      width: 100%;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 36px;
       color: #090909;
@@ -269,10 +271,13 @@
     }
 
     .map-info-name {
+      display: block;
+      width: 100%;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 36px;
       color: #fff;
       text-transform: uppercase;
+      text-align: center;
     }
 
     /* === ICON VISIBILITY === */
@@ -356,6 +361,46 @@
   </div>
 
   <script>
+    // Shrink text until it fits on one line, then ellipsize at the floor size.
+    function fitText(target, maxSize, minSize) {
+      if (!target) return;
+      target.style.whiteSpace = 'nowrap';
+      target.style.overflow = 'hidden';
+      target.style.textOverflow = 'ellipsis';
+
+      const style = getComputedStyle(target);
+      const available = target.clientWidth
+        - parseFloat(style.paddingLeft)
+        - parseFloat(style.paddingRight);
+      if (!(available > 0)) return;
+
+      // Ancestors animate with a transform, so convert the measured range
+      // back into layout pixels before comparing it with the layout width.
+      const measure = () => {
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const scale = target.offsetWidth
+          ? target.getBoundingClientRect().width / target.offsetWidth
+          : 1;
+        return scale > 0 ? range.getBoundingClientRect().width / scale : 0;
+      };
+
+      let size = maxSize;
+      target.style.fontSize = `${size}px`;
+      while (size > minSize && measure() > available) {
+        size -= 1;
+        target.style.fontSize = `${size}px`;
+      }
+    }
+
+    function fitHeroBanText() {
+      fitText(el.homeName, 36, 20);
+      fitText(el.awayName, 36, 20);
+      fitText(el.homeBanHero, 36, 20);
+      fitText(el.awayBanHero, 36, 20);
+      fitText(el.mapName, 36, 18);
+    }
+
     const el = {
       header: document.getElementById('header'),
       heroBansSection: document.getElementById('hero-bans-section'),
@@ -546,6 +591,8 @@
           el.mapName.textContent = d.maps[currentMapIndex]?.name || 'TBD';
         }
 
+        document.fonts.ready.then(fitHeroBanText);
+
         if (!animationsTriggered) {
           triggerAnimations();
           animationsTriggered = true;
@@ -561,6 +608,7 @@
       }
     }
 
+    document.fonts.ready.then(fitHeroBanText);
     connect();
   </script>
 </body>

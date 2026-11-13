@@ -36,8 +36,8 @@ Update the status and add a row to the sign-off log when an item is completed.
 
 | ID | Gate | Milestone | What to do | Status |
 |---|---|---|---|---|
-| R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | Pending |
-| R2 | Offline font check | M9 | Disconnect the network, restart OBS and confirm every overlay still renders Saira from `/assets/fonts/`. | Pending |
+| R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | Fail — 2026-11-12, 1.0.0. Fixes implemented; re-run pending. Findings in §2.1. |
+| R2 | Offline font check | M9 | Disconnect the network, restart OBS and confirm every overlay still renders the active overlay font (Archivo) from `/assets/fonts/`. | Pending |
 | R3 | Drop-in overlay compatibility | M2/M9 | Point an original pre-rebuild overlay HTML at the new server. Confirm `init` paints immediately and live messages still update it. | Pending |
 | R4 | Third-party timer overlay | M7/M9 | Connect a timer overlay and confirm `matchTimer` ticks and start/pause/reset actions arrive. | Pending |
 | R5 | Clean-VM installer | M10 | Install, launch, start the server, load one overlay in OBS, close and uninstall on a clean VM. Confirm no installer or shortcut leftovers. | Pending |
@@ -45,6 +45,30 @@ Update the status and add a row to the sign-off log when an item is completed.
 | R7 | SmartScreen and checksum | M10 | Run the unsigned installer from a downloaded copy. Confirm the warning is expected and `SHA256SUMS.txt` verifies both artifacts. | Pending |
 | R8 | WebView2 bootstrap | M10 | On a VM without WebView2, confirm the installer installs the runtime. Confirm the portable build fails with a clear message instead. | Pending |
 | R9 | Tagged release publish | M10 | After R1–R8, tag `v1.0.0`. Confirm the workflow publishes the installer, portable ZIP, checksums and release notes. | Pending |
+
+## 2.1 R1 findings (2026-11-12)
+
+First OBS pass on the fixture. Result: **Fail**. Root cause confirmed by
+measuring the served overlays at 1920×1080.
+
+| ID | Overlay | Finding | Cause | Disposition |
+|---|---|---|---|---|
+| R1-1 | Game overlay | Hero-ban strips render empty on both sides | `heroIcons` only includes heroes with an `icon` link; imported heroes have none, so the map is empty and the overlay draws nothing | **Fixed** — `heroIcons` falls back to the hero's own art or `portrait` link, and skips another hero's icon; quirks test added |
+| R1-2 | Game overlay | `NORTHWIND SENTINELS` wraps to two lines and overflows the 55px bar | Name box is 293px wide with 30px text and no fitting rule | **Fixed** — single-line box with `fitText()`; fixture name now renders at 21px, `scrollWidth == clientWidth` |
+| R1-3 | Game overlay | Team logos sit tight in the 75px box | Background fills the whole box | **Fixed** — `padding: 6px` + `background-origin: content-box` |
+| R1-4 | Map select | Second line of `ANTARCTIC PENINSULA` is left-aligned, so the card looks off-centre | The name shrinks to content for one line but fills 208px for two, and inherits left alignment | **Fixed** — name, type and chosen-by are centred; name `line-height: 1.15` |
+| R1-5 | Map select | Overlay appears off-centre | Canvas is exactly 1920×1080 and the maps row is centred; the enlarged current card shifts the visual weight | **Expected** — no change; measured canvas and row centre |
+| R1-6 | Map select | Watermark looks stretched | Text measures 367.6px + 80px padding; no transform or letter-spacing is applied | **Expected** — font metrics, no change |
+| R1-7 | Hero bans | Shows only map 1 bans | The overlay is current-map only by design | **Expected** — runbook expectation corrected |
+| R1-8 | Casters | Handle renders as `@@arc` | Overlay prepends `@` to a stored handle that already includes it | **Fixed** — `@` is added only when missing; fixture shows `@arc`, `@priya`, `@marco`, `@sam` |
+| R1-9 | Map pool | Pool is visible immediately, then fades a second time at 1.2s | A second render sets inline `opacity: 1` before the delayed animation class lands | **Fixed** — CSS-driven reveal; no inline opacity; delays 800ms/1200ms, `fill: forwards` |
+| R1-10 | Rosters | Long player names wrap and change card height; substitutes differ | Player name has no fitting rule and the info block is not fixed height | **Fixed** — shared `fitText()`; core info block fixed at 106px; `ДМИТРИЙ ВОЛКОВ` shrinks to 25px; long sub name ellipsizes at 14px |
+| R1-11 | All | Saira does not read like Apotek | Font substitution decision from M9 | **Trial** — all seven overlays now load Archivo; Saira retained for A/B review (`docs/fonts.md`); M9-5 re-run |
+| R1-12 | All | Long names need a hard limit, not just visual fitting | Raised during the pass; fitting alone leaves unbounded input | **Fixed** — team 32, player 24, talent 24 characters; `maxlength` in the UI, `RepairKind::NameTooLong` on load |
+
+Design changes raised during the pass that are **not** v1 fixes (map-mode icons
+on map select, hero-ban redesign, merged Map Selection/Hero Bans tab, caster
+camera/audio integration) are tracked in `docs/backlog.md`.
 
 ## 3. Milestone register
 
@@ -148,8 +172,8 @@ Update the status and add a row to the sign-off log when an item is completed.
 | M9-2 | Offline font check. | Covered by R2. | Pending |
 | M9-3 | Original overlay drop-in compatibility. | Covered by R3. | Pending |
 | M9-4 | Third-party timer overlay. | Covered by R4. | Pending |
-| M9-5 | Saira vs Archivo/Barlow visual review at 1920×1080 (`docs/fonts.md`). | Design judgment; only needed if Saira is questioned. | Pending |
-| M9-6 | Tabular numerals, all-caps cap height/letter-spacing, roster layout, hero-ban and map-pool fit, 20+ character names, transparent background. | Visual judgment in OBS. | Pending |
+| M9-5 | Archivo vs Saira visual review at 1920×1080 (`docs/fonts.md`); Barlow remains an untried third option. | Design judgment after R1 rejected Saira. | Pending |
+| M9-6 | Tabular numerals, all-caps cap height/letter-spacing, roster layout, hero-ban and map-pool fit, names at the 32/24-character limits, transparent background. | Visual judgment in OBS. | Pending |
 | M9-7 | A 6-caster `row-casters` layout clips the social row by about 14px with long handles. | Observed in the WebView2 pre-check; the same clipping occurs with a `sans-serif` fallback. Tracked in the overlay polish backlog. | Known |
 | M9-8 | Font licence appears in the README/notices and the bundled `OFL.txt` files ship beside the fonts. | Content check; partly done. | Partial |
 
@@ -192,7 +216,7 @@ These checks passed locally and in CI; they do not replace the human gates above
 | Clean-VM sign-off | Tester | Required before tagging `v1.0.0`. |
 | SmartScreen acceptance | Maintainer | Unsigned v1; documented warning and checksums. |
 | GitHub tag and release | Maintainer | Only after R1–R8 pass. |
-| Font design review (Saira vs Archivo/Barlow) | Maintainer/designer | Optional; a five-file swap, no CSS change. |
+| Font design review (Archivo vs Saira) | Maintainer/designer | Archivo is wired in as the R1 trial; a revert is a five-file `src:` swap plus the test prefix, no layout CSS change. |
 | Overlay visual polish | Maintainer/designer | Backlogged; must preserve the current visual design and protocol. See `docs/backlog.md` §C. |
 | Code signing certificate | Maintainer | Out of scope for v1; the workflow keeps a commented signing step. |
 

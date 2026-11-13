@@ -349,15 +349,37 @@ impl<'a> Projector<'a> {
     }
 
     fn hero_icons(&self) -> BTreeMap<String, String> {
+        let icon_ids: BTreeSet<&AssetId> = self
+            .catalog
+            .in_category(AssetCategory::Hero)
+            .filter_map(|asset| asset.icon.as_ref())
+            .collect();
+
         let mut icons = BTreeMap::new();
         for asset in self.catalog.in_category(AssetCategory::Hero) {
-            if let Some(icon) = asset.icon.as_ref().and_then(|id| self.catalog.get(id))
-                && let Some(url) = self.resolver.url(icon)
-            {
+            // An asset linked as another hero's icon is not itself a hero entry.
+            if icon_ids.contains(&asset.id) {
+                continue;
+            }
+            if let Some(url) = self.hero_icon_url(asset) {
                 icons.insert(asset.name.clone(), url);
             }
         }
         icons
+    }
+
+    /// Resolves the small icon for a hero asset.
+    ///
+    /// Prefers an explicit `icon` link, then the large art (portrait override or
+    /// the asset's own file). Imported heroes usually have no icon link, so
+    /// without this fallback the overlay would draw an empty ban strip.
+    fn hero_icon_url(&self, asset: &fgc_core::Asset) -> Option<String> {
+        asset
+            .icon
+            .as_ref()
+            .and_then(|id| self.catalog.get(id))
+            .and_then(|icon| self.resolver.url(icon))
+            .or_else(|| self.hero_art_url(asset))
     }
 
     fn hero_portraits(&self, match_state: &Match) -> BTreeMap<String, String> {

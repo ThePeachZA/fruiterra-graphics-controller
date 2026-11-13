@@ -34,7 +34,7 @@
 
 ### Fonts / external dependencies
 **Finding:** Apotek is a commercial typeface by Kerns & Cairns (Adobe Fonts / Type Network). The OTFs in the repo cannot be redistributed or self-hosted without an appropriate licence.
-**Decision: Saira confirmed** (OFL 1.1, Omnibus-Type) — 9 weights, 7 widths, variable, 885 glyphs, free for commercial use, self-hosting and embedding.
+**Decision: Saira confirmed** (OFL 1.1, Omnibus-Type) — 9 weights, 7 widths, variable, 885 glyphs, free for commercial use, self-hosting and embedding. *(Superseded by the R1 Archivo trial at the end of this file.)*
 - Map Light/Regular/Medium/SemiBold/Black to Saira 300/400/500/600/900.
 - Bundle WOFF2 files + `OFL.txt`; serve from `/assets/fonts/`.
 - Bundle Inter (OFL) locally for the control UI; remove the Google Fonts import.
@@ -243,7 +243,7 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - No shared CSS/JS modules in v1; duplication is accepted to keep each overlay independently replaceable.
 
 ### Q2 — Font packaging
-**Decision: five static Saira WOFF2 files (300/400/500/600/900) plus `OFL.txt`.**
+**Decision: five static Saira WOFF2 files (300/400/500/600/900) plus `OFL.txt`.** *(R1 switched the active files to Archivo; the packaging decision is unchanged.)*
 - Served from stable `/assets/fonts/` paths.
 - No subsetting, so accented names render; scripts Saira does not cover fall back to the system sans.
 
@@ -405,3 +405,14 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - **Notices.** `THIRD_PARTY_NOTICES.md` is generated from `about.toml` and `about.hbs` with `cargo-about` 0.9.3 (CLI feature). CI regenerates it and fails if the committed file differs.
 - **Local release candidate.** `dx bundle --release --desktop --package-types nsis --features bundle` produced the NSIS installer and the `dx` app output; the packaged binary passed `--smoke-test`. The portable ZIP was staged and checked locally (exe, `assets\`, README, LICENSE, notices) and the two artifact hashes were generated.
 - **CI release candidate.** Manual dispatch run `43050860851` passed every step and uploaded `fruiterra-gc-1.0.0-windows-x64` (installer, portable ZIP, checksums). Tag-only steps were skipped as designed. CI run `43050843933` passed the main checks and the new notices job.
+
+## R1 - Overlay fixes after the first OBS pass (implemented, re-run pending)
+
+**Status: fixes implemented and measured in WebView2; the OBS re-run is the remaining gate.** The first OBS pass failed with eleven findings; root causes and dispositions are recorded in `docs/manual-qa.md` §2.1.
+
+- **Hero art fallback.** `heroIcons` now uses the linked icon when present, falls back to the hero's own art or `portrait` link, and skips an asset that is already another hero's icon. Imported heroes without an icon link therefore render in the game overlay's ban strips. Locked by `crates/protocol/tests/quirks.rs`.
+- **One fitting rule.** All seven overlays share an inline `fitText(el, maxSize, minSize)` helper: shrink to a floor, then ellipsize on one line. It measures in scale-normalised layout pixels so the 0.9 transform animation on some headers cannot fool it, and re-fits on `document.fonts.ready` after each render.
+- **Name limits.** `MAX_TEAM_NAME_CHARS = 32`, `MAX_PLAYER_NAME_CHARS = 24`, `MAX_TALENT_NAME_CHARS = 24`. `validate_and_repair` truncates overlong names with `RepairKind::NameTooLong`; the Teams and Talent inputs enforce `maxlength`. Long names still shrink before truncating, so 32 characters can render in full where the box allows.
+- **Layout fixes.** Game overlay name box is single-line with ellipsis and inset logo art; map-select names/types/chosen-by are centred; map-pool reveal is CSS-driven (no inline opacity writes or second fade); roster info blocks are a fixed 106px with fixed line heights; caster handles get one `@`; hero-ban and map-pool text use block widths and a lower fit floor.
+- **Archivo trial.** The R1 finding that Saira does not read like Apotek is addressed by switching all seven overlays to five static Archivo WOFF2 files (300/400/500/600/900). Saira files and `OFL.txt` stay beside them for the A/B comparison; `OFL-Archivo.txt` is added. The overlay test pins `FONT_PREFIX = "archivo"`, so reverting is a one-line change plus the `@font-face` `src:` URLs.
+- **Not defects.** The map-select canvas is exactly 1920×1080 and the maps row is centred (the enlarged current card shifts visual weight); the watermark has no transform or letter-spacing (the apparent stretch is font metrics); hero bans are current-map only by design.

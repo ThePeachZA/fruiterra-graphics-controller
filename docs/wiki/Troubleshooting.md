@@ -42,7 +42,7 @@
 |---|---|
 | There is no timer on screen | The timer is control-only in version 1. There is no bundled timer overlay. Third-party overlays receive the timer messages. |
 | The timer runs but nothing changes in OBS | Check that your third-party overlay subscribes to `matchTimer`. The bundled overlays do not display it. |
-| Overlay text looks different from older graphics | Version 1 uses Saira behind the `FGC Display*` family names. The layout is unchanged; the typeface is not Apotek. |
+| Overlay text looks different from older graphics | Version 1 uses Archivo behind the `FGC Display*` family names. The layout is unchanged; the typeface is not Apotek. |
 
 ## Getting help
 

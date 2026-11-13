@@ -10,7 +10,7 @@
       font-weight: 300;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-300.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-300.woff2') format('woff2');
     }
 
     @font-face {
@@ -18,7 +18,7 @@
       font-weight: 400;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-400.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-400.woff2') format('woff2');
     }
 
     @font-face {
@@ -26,7 +26,7 @@
       font-weight: 500;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-500.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-500.woff2') format('woff2');
     }
 
     @font-face {
@@ -34,7 +34,7 @@
       font-weight: 600;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-600.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-600.woff2') format('woff2');
     }
 
     @font-face {
@@ -42,7 +42,7 @@
       font-weight: 900;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-900.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-900.woff2') format('woff2');
     }
 
     * {
@@ -111,11 +111,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 8px;
     }
 
     /* Talent Name */
     .talent-name {
+      width: 100%;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 48px;
       color: #090909;
@@ -127,7 +128,7 @@
     .talent-subtext {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
     /* Social Icon */
@@ -189,6 +190,44 @@
       })[character]);
     }
 
+    // Shrink text until it fits on one line, then ellipsize at the floor size.
+    function fitText(target, maxSize, minSize) {
+      if (!target) return;
+      target.style.whiteSpace = 'nowrap';
+      target.style.overflow = 'hidden';
+      target.style.textOverflow = 'ellipsis';
+
+      const style = getComputedStyle(target);
+      const available = target.clientWidth
+        - parseFloat(style.paddingLeft)
+        - parseFloat(style.paddingRight);
+      if (!(available > 0)) return;
+
+      // Ancestors animate with a transform, so convert the measured range
+      // back into layout pixels before comparing it with the layout width.
+      const measure = () => {
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const scale = target.offsetWidth
+          ? target.getBoundingClientRect().width / target.offsetWidth
+          : 1;
+        return scale > 0 ? range.getBoundingClientRect().width / scale : 0;
+      };
+
+      let size = maxSize;
+      target.style.fontSize = `${size}px`;
+      while (size > minSize && measure() > available) {
+        size -= 1;
+        target.style.fontSize = `${size}px`;
+      }
+    }
+
+    function fitCasterNames() {
+      el.castersContainer.querySelectorAll('.talent-name').forEach((name) => {
+        fitText(name, 48, 24);
+      });
+    }
+
     const el = {
       castersContainer: document.getElementById('casters-container'),
       overlay: document.querySelector('.overlay')
@@ -231,8 +270,9 @@
       const socialIcon = caster.socialMedia?.platform 
         ? `<div class="social-icon">${getSocialIcon(caster.socialMedia.platform)}</div>`
         : '';
-      const socialHandle = caster.socialMedia?.handle 
-        ? `<span class="social-handle">@${escapeHtml(caster.socialMedia.handle)}</span>`
+      const handle = String(caster.socialMedia?.handle ?? '').trim();
+      const socialHandle = handle
+        ? `<span class="social-handle">${escapeHtml(handle.startsWith('@') ? handle : `@${handle}`)}</span>`
         : '';
       const separator = (socialIcon || socialHandle) && caster.pronouns 
         ? '<span class="separator">|</span>' 
@@ -280,6 +320,7 @@
       });
 
       el.castersContainer.classList.toggle('single-caster', casters.length === 1);
+      document.fonts.ready.then(fitCasterNames);
     }
 
     function connect() {
@@ -316,6 +357,7 @@
       }
     }
 
+    document.fonts.ready.then(fitCasterNames);
     connect();
   </script>
 </body>

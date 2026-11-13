@@ -104,7 +104,10 @@ cargo run -p fgc-core --example qa_fixture
 
 The generator keeps the imported assets, replaces the teams, talent, match and
 tournaments, and refuses to write a state that needs repair. The manual steps
-remain the reference for what the fixture contains.
+remain the reference for what the fixture contains. The long names sit at the
+hard input limits (32 characters for a team, 24 for a player or talent), so the
+same fixture exercises both fitting and the limit itself. Back up
+`app.json` before regenerating; the generator overwrites the live file.
 
 ### 3.1 Teams
 
@@ -114,7 +117,7 @@ Create four teams on **Teams → + New team**:
 |---|---|---|---|---|
 | A | `Northwind Sentinels` | `NWS` | `12-3` | Background `#1f6feb`, text `#ffffff`, logo background `#090909` |
 | B | `王小明战队` | `WXM` | `9-6` | Background `#d29922`, text `#111111`, logo background `#090909` |
-| C | `Long Team Name That Should Never Overflow The Scoreboard` | `LONG` | `0-0` | Any |
+| C | `Long Team Name That Overflows` | `LONG` | `0-0` | Any |
 | D | `ДМИТРИЙ ВОЛКОВ` | `ДВ` | `3-1` | Any |
 
 Use `logo-a.png` for A and B. Use any logo for C and D.
@@ -130,7 +133,7 @@ Team A:
 | `SØREN` | Tank | Core | `he/him` |
 | `ДМИТРИЙ ВОЛКОВ` | Damage | Core | `they/them` |
 | `王小明` | Support | Core | `he/him` |
-| `Longplayer Name That Should Not Overflow` | Damage | Sub | `she/her` |
+| `Longplayer Name Overflow` | Damage | Sub | `she/her` |
 
 Team B:
 
@@ -269,14 +272,14 @@ when not visible** turned off.
 
 | Overlay | Expected |
 |---|---|
-| Game overlay | Score `2 - 1`; tags `NWS` and `WXM`; title `Grand Final`; subtitle `Upper Bracket`; current map `Ilios`; first-to `3`; side indicator matches Attack / Defend. |
-| Map select | Five maps in order; `Ilios` chosen by NWS; `Nepal` chosen by WXM; `King's Row` chosen by NWS; scores match the fixture. |
-| Hero bans | Three map rows; first-ban order matches the fixture; Ana/Kiriko, Winston/Tracer, Sojourn/Lucio. |
-| Map pool | The same five maps, grouped by mode: Control (Ilios, Nepal, Antarctic Peninsula), Escort (Dorado), Hybrid (King's Row). |
-| Home roster | Northwind Sentinels players in roster order, with roles, portraits and heroes. |
-| Away roster | 王小明战队 players in roster order, with roles, portraits and heroes. |
-| Casters row | Arc, Priya, Marco, Sam in assignment order, with the correct platform icons and handles. |
-| All seven | No clipping at 1920×1080; transparent background; Saira renders; long names ellipsize or fit without overflowing the canvas. |
+| Game overlay | Score `2 - 1`; tags `NWS` and `WXM`; title `Grand Final`; subtitle `Upper Bracket`; current map `Ilios`; first-to `3`; side indicator matches Attack / Defend. Both ban strips show hero art (imported heroes have no icon link, so this exercises the fallback). `NORTHWIND SENTINELS` fits on one line; `王小明战队` fits on one line. |
+| Map select | Five maps in order; `Ilios` chosen by NWS; `Nepal` chosen by WXM; `King's Row` chosen by NWS; scores match the fixture. Map name, type and chosen-by are centred on every card, including a wrapped long name. |
+| Hero bans | One row for the current map (`Ilios`); first ban by NWS; Ana and Kiriko shown with the `1st ban` / `2nd ban` labels and their art. |
+| Map pool | The same five maps, grouped by mode: Control (Ilios, Nepal, Antarctic Peninsula), Escort (Dorado), Hybrid (King's Row). The header and pool fade in once, in that order; the pool does not flash fully visible first. |
+| Home roster | Northwind Sentinels players in roster order, with roles, portraits and heroes. `ДМИТРИЙ ВОЛКОВ` shrinks to fit; the `Longplayer Name Overflow` sub line ellipsizes; every core card keeps the same height. |
+| Away roster | 王小明战队 players in roster order, with roles, portraits and heroes; the same card heights as the home roster. |
+| Casters row | Arc, Priya, Marco, Sam in assignment order, with the correct platform icons and handles. Each handle shows exactly one `@` (`@arc`, not `@@arc`). |
+| All seven | No clipping at 1920×1080; transparent background; Archivo renders; long names shrink and then ellipsize without overflowing the canvas or changing card heights. |
 | All seven | No network request leaves `127.0.0.1:3001`. Only the overlay WebSocket and local `/assets/...` URLs load. |
 | All seven | After 10 minutes, all seven remain connected and no visible lag appears when editing the match. |
 
@@ -311,7 +314,7 @@ when not visible** turned off.
 
 **Pass:**
 
-- All seven overlays still render Saira.
+- All seven overlays still render Archivo (the active overlay font).
 - No font request fails.
 - No overlay shows a system-font fallback for Latin text.
 - The app UI still renders Inter.

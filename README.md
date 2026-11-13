@@ -226,10 +226,11 @@ directory is shown above; the old spreadsheets are not read or modified.
 
 ## Fonts and licences
 
-The overlays use **Saira** and the control UI uses **Inter**. Both are licensed
-under the SIL Open Font License 1.1 and are bundled locally, so neither the
-overlays nor the UI make runtime font requests. The overlay families are
-exposed behind the neutral `FGC Display*` aliases; see
+The overlays use **Archivo** and the control UI uses **Inter**. Both are
+licensed under the SIL Open Font License 1.1 and are bundled locally, so neither
+the overlays nor the UI make runtime font requests. **Saira** remains bundled
+while the two overlay fonts are compared. The overlay families are exposed
+behind the neutral `FGC Display*` aliases; see
 [`docs/fonts.md`](docs/fonts.md).
 
 Apotek is a commercial typeface and is not redistributed. The full font,

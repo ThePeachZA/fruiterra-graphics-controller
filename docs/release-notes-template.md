@@ -6,7 +6,7 @@ Windows 10/11 x64. Unsigned build — SmartScreen may warn; verify SHA-256 below
 - First Rust/Dioxus release. The earlier Google Sheets-based workflow is
   replaced by a native Windows desktop app with the same OBS-compatible
   overlays.
-- Bundled Saira overlay fonts and Inter UI fonts; no runtime font downloads.
+- Bundled Archivo overlay fonts and Inter UI fonts; no runtime font downloads.
 - Tournament boards: single and double elimination, round robin groups and
   playoffs, with editable slots and automatic advancement.
 - Local, versioned JSON storage with a backup file and repair on load.

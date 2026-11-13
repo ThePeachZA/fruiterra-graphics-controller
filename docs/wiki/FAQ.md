@@ -62,9 +62,10 @@ the app there and select **Import project…**.
 
 ### Why do the overlays use a different font?
 
-Version 1 bundles Saira under the neutral `FGC Display*` family names. It is
+Version 1 bundles Archivo under the neutral `FGC Display*` family names. It is
 licensed for redistribution and served locally, so there are no runtime font
-downloads. The layout and protocol are unchanged.
+downloads. The layout and protocol are unchanged. The typeface is not Apotek,
+and Saira remains bundled while the final font choice is reviewed.
 
 ### Can I add custom points, match history or multi-stage playoffs?
 

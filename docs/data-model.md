@@ -320,6 +320,9 @@ pub struct Settings {
 | Two assets share a hash | Allowed; identical bytes are stored once and both metadata entries remain valid |
 | Unknown enum values | Rejected with a field path in the error |
 | Unknown JSON fields | Top-level `AppState` keys are preserved in a `#[serde(flatten)] extra` map; nested unknown fields are ignored |
+| Team name longer than 32 characters | Truncated to 32 characters, logged as `RepairKind::NameTooLong` |
+| Player name longer than 24 characters | Truncated to 24 characters, logged as `RepairKind::NameTooLong` |
+| Talent name longer than 24 characters | Truncated to 24 characters, logged as `RepairKind::NameTooLong` |
 
 Import/export uses the same validator, so a hand-edited file cannot crash the app (C8).
 

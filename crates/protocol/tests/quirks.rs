@@ -131,6 +131,35 @@ fn hero_icon_and_portrait_keys_are_case_sensitive() {
 }
 
 #[test]
+fn hero_icons_fall_back_to_art_without_an_icon_link() {
+    let (state, mut catalog, resolver) = full_parts();
+    let mut assets = catalog.assets().to_vec();
+    assets.push(Asset {
+        id: AssetId::from_raw("asset-hero-imported"),
+        name: "Imported".to_owned(),
+        category: AssetCategory::Hero,
+        hash: support::hash(0x1a),
+        ext: "png".to_owned(),
+        origin: AssetOrigin::User,
+        original_filename: None,
+        added_at: None,
+        icon: None,
+        portrait: None,
+        game_mode: None,
+    });
+    catalog = AssetCatalog::new(assets);
+
+    let projector = Projector::new(&state, &catalog, &resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+
+    let value = scoreboard_value(&projector, match_state);
+    let icons = value["heroIcons"].as_object().expect("heroIcons");
+
+    let expected = format!("http://127.0.0.1:3001/assets/{}.png", support::hash(0x1a));
+    assert_eq!(icons["Imported"], expected);
+}
+
+#[test]
 fn map_pool_data_groups_and_orders_modes() {
     let (state, catalog, resolver) = full_parts();
     let projector = Projector::new(&state, &catalog, &resolver);

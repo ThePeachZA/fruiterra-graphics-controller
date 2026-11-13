@@ -2,8 +2,8 @@
 
 use dioxus::prelude::*;
 use fgc_core::{
-    Asset as CoreAsset, AssetCategory, Player, PlayerId, Position, Role, Team, TeamId,
-    TeamReference,
+    Asset as CoreAsset, AssetCategory, MAX_PLAYER_NAME_CHARS, MAX_TEAM_NAME_CHARS, Player,
+    PlayerId, Position, Role, Team, TeamId, TeamReference,
 };
 
 use crate::components::asset_picker::{AssetPicker, AssetThumb, find_asset, library_assets};
@@ -311,6 +311,7 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
                     Input {
                         value: "{team.name}",
                         aria_label: "Team name",
+                        maxlength: MAX_TEAM_NAME_CHARS,
                         oninput: move |event: FormEvent| {
                             let value = event.value();
                             store.update_team(&name_id, move |team| team.name = value);
@@ -573,6 +574,7 @@ fn PlayerEditor(
                 Input {
                     value: "{player.name}",
                     aria_label: "Player name",
+                    maxlength: MAX_PLAYER_NAME_CHARS,
                     oninput: move |event: FormEvent| {
                         let value = event.value();
                         store.update_player(&name_team, &name_player, move |player| player.name = value);

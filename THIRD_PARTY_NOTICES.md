@@ -7,13 +7,23 @@ the committed copy is stale.
 
 ## Fonts
 
+### Archivo
+
+- Copyright 2020 The Archivo Project Authors (https://github.com/Omnibus-Type/Archivo).
+- Licence: SIL Open Font License 1.1 (OFL-1.1).
+- Shipped as five WOFF2 files at weights 300, 400, 500, 600 and 900 under
+  `crates/server/assets/fonts/`, with `OFL-Archivo.txt` beside them.
+- The active font for the HTML overlays, behind the neutral `FGC Display*`
+  family aliases.
+
 ### Saira
 
 - Copyright 2016 The Saira Project Authors (https://github.com/Omnibus-Type/Saira).
 - Licence: SIL Open Font License 1.1 (OFL-1.1).
 - Shipped as five WOFF2 files at weights 300, 400, 500, 600 and 900 under
   `crates/server/assets/fonts/`, with `OFL.txt` beside them.
-- Used by the HTML overlays behind the neutral `FGC Display*` family aliases.
+- Retained as the fallback overlay font for the A/B comparison; the same
+  `FGC Display*` aliases point at it if the trial is reverted.
 
 ### Inter
 

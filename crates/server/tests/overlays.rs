@@ -66,6 +66,12 @@ const OVERLAYS: [OverlaySpec; 7] = [
     },
 ];
 
+/// Bundled font files are named `<prefix>-<weight>.woff2`.
+///
+/// The trial font is Archivo; switching back to Saira only changes this value
+/// and the `@font-face` blocks.
+const FONT_PREFIX: &str = "archivo";
+
 const FONTS: [(&str, &str); 5] = [
     ("300", "FGC Display Light"),
     ("400", "FGC Display"),
@@ -126,8 +132,8 @@ fn overlays_have_no_external_network_references() {
 #[test]
 fn bundled_fonts_are_woff2_and_referenced_by_every_overlay() {
     for (weight, alias) in FONTS {
-        let name = format!("saira-{weight}.woff2");
-        let bytes = embedded_font(&name).expect("Saira font should be embedded");
+        let name = format!("{FONT_PREFIX}-{weight}.woff2");
+        let bytes = embedded_font(&name).expect("display font should be embedded");
         assert!(
             bytes.starts_with(b"wOF2"),
             "{name} should be a valid WOFF2 file"
@@ -148,11 +154,13 @@ fn bundled_fonts_are_woff2_and_referenced_by_every_overlay() {
         }
     }
 
-    let licence = embedded_font("OFL.txt").expect("Saira licence should be embedded");
-    assert!(
-        String::from_utf8_lossy(&licence).contains("SIL Open Font License"),
-        "the bundled font licence should be the OFL"
-    );
+    for licence_name in ["OFL.txt", "OFL-Archivo.txt"] {
+        let licence = embedded_font(licence_name).expect("font licence should be embedded");
+        assert!(
+            String::from_utf8_lossy(&licence).contains("SIL Open Font License"),
+            "the bundled font licence {licence_name} should be the OFL"
+        );
+    }
 }
 
 #[test]

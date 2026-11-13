@@ -1,6 +1,6 @@
 # Assets, fonts and overlays — Phase 5
 
-Status: **approved**. Implements Q1 (minimal-diff overlay port), Q2 (five static Saira WOFF2 files), Q3 (new hashed asset store), Q4 (per-file overlay override), Q5 (hash everything except fonts), Q6 (metadata in `app.json` + GC).
+Status: **approved**. Implements Q1 (minimal-diff overlay port), Q2 (five static WOFF2 files — Archivo active, Saira retained for comparison), Q3 (new hashed asset store), Q4 (per-file overlay override), Q5 (hash everything except fonts), Q6 (metadata in `app.json` + GC).
 
 This supersedes the Phase 2 asset path scheme: `Asset.relative_path` and `Asset.source` are replaced by `hash`, `ext` and `origin`, and served URLs become `/assets/<sha256>.<ext>`. Wire payload shapes are unchanged apart from the URL strings.
 
@@ -189,13 +189,19 @@ guardrails are in `docs/backlog.md` §C1.
 
 ```
 crates/server/assets/fonts/
-├─ saira-300.woff2
+├─ archivo-300.woff2          # active overlay font (R1 trial)
+├─ archivo-400.woff2
+├─ archivo-500.woff2
+├─ archivo-600.woff2
+├─ archivo-900.woff2
+├─ OFL-Archivo.txt
+├─ saira-300.woff2            # fallback, retained for the A/B comparison
 ├─ saira-400.woff2
 ├─ saira-500.woff2
 ├─ saira-600.woff2
 ├─ saira-900.woff2
-├─ OFL.txt
-└─ inter/                    # UI only, bundled by the app crate
+├─ OFL.txt                    # Saira licence
+└─ inter/                     # UI only, bundled by the app crate
    ├─ inter-400.woff2
    ├─ inter-500.woff2
    ├─ inter-600.woff2
@@ -208,15 +214,15 @@ Each overlay declares the same five faces:
 
 ```css
 @font-face { font-family: 'FGC Display Light';    font-weight: 300; font-style: normal; font-display: swap;
-             src: url('/assets/fonts/saira-300.woff2') format('woff2'); }
+             src: url('/assets/fonts/archivo-300.woff2') format('woff2'); }
 @font-face { font-family: 'FGC Display';          font-weight: 400; font-style: normal; font-display: swap;
-             src: url('/assets/fonts/saira-400.woff2') format('woff2'); }
+             src: url('/assets/fonts/archivo-400.woff2') format('woff2'); }
 @font-face { font-family: 'FGC Display Medium';   font-weight: 500; font-style: normal; font-display: swap;
-             src: url('/assets/fonts/saira-500.woff2') format('woff2'); }
+             src: url('/assets/fonts/archivo-500.woff2') format('woff2'); }
 @font-face { font-family: 'FGC Display SemiBold'; font-weight: 600; font-style: normal; font-display: swap;
-             src: url('/assets/fonts/saira-600.woff2') format('woff2'); }
+             src: url('/assets/fonts/archivo-600.woff2') format('woff2'); }
 @font-face { font-family: 'FGC Display Black';    font-weight: 900; font-style: normal; font-display: swap;
-             src: url('/assets/fonts/saira-900.woff2') format('woff2'); }
+             src: url('/assets/fonts/archivo-900.woff2') format('woff2'); }
 ```
 
 Mapping used when editing the CSS:
@@ -230,12 +236,23 @@ Mapping used when editing the CSS:
 | `'Apotek Black'` | `'FGC Display Black'` |
 
 - Fallback stack: `'FGC Display', 'Apotek', sans-serif`.
-- Review checkpoint: swapping Saira for Archivo or Barlow means replacing the five WOFF2 files only. No CSS change.
-- No subsetting: accented Latin renders from Saira; scripts Saira does not cover (CJK, Arabic, etc.) fall back to the system sans. This must be verified with a mixed-script player name.
+- Review checkpoint: the R1 pass rejected Saira as too unlike Apotek. All seven
+  overlays now load Archivo; Saira stays beside it for an A/B comparison.
+  Switching either way means replacing the five WOFF2 files and their `src:`
+  URLs, plus the `FONT_PREFIX` constant in `crates/server/tests/overlays.rs`.
+  No layout CSS changes.
+- No subsetting: accented Latin renders from Archivo; scripts Archivo does not
+  cover (CJK, Arabic, etc.) fall back to the system sans. This is verified with
+  the Cyrillic and CJK fixture names.
+- The overlays also apply a shared `fitText()` helper: long names shrink to a
+  floor and then ellipsize on one line. Team names are capped at 32 characters
+  and player/talent names at 24 in the app.
 
 ### 4.3 Licensing
 
-- Saira and Inter are OFL 1.1. `OFL.txt` ships beside each set and is listed in `THIRD_PARTY_NOTICES.md`.
+- Archivo, Saira and Inter are OFL 1.1. `OFL-Archivo.txt` and `OFL.txt` ship
+  beside the overlay fonts, `inter/OFL.txt` beside the UI font, and all three
+  are listed in `THIRD_PARTY_NOTICES.md`.
 - The original Apotek OTFs are **removed from the repository**; they are not redistributable.
 - The CSS fallback name `'Apotek'` remains only as a font-family fallback token, not as a shipped font.
 
@@ -249,7 +266,7 @@ Run at 1920×1080 in OBS with a loaded match:
 |---|---|
 | 1 | Overlay renders on first load from `init` (no blank frame until the next change) |
 | 2 | No network requests to `design.penpot.app` or Google Fonts |
-| 3 | Text renders in Saira at the correct weight |
+| 3 | Text renders in the active overlay font (Archivo) at the correct weight |
 | 4 | Long team names, tags and player names do not overflow |
 | 5 | Accented names render correctly; a CJK name falls back cleanly |
 | 6 | Logos, portraits and map images load from `/assets/<hash>` |
@@ -279,5 +296,5 @@ The checklist lives in `docs/overlay-qa.md` and is completed for every release. 
 | AS6 | Export/import round-trips a project with relative blobs on another machine. |
 | AS7 | All seven overlays load with zero external network requests. |
 | AS8 | A per-file override changes one overlay and leaves the other six untouched. |
-| AS9 | Font swap (Saira → Archivo/Barlow) requires only replacing five files. |
+| AS9 | Font swap (Archivo ↔ Saira, or Barlow) requires only replacing five WOFF2 files, five `src:` URLs and the test prefix. |
 | AS10 | The QA checklist passes for all seven overlays at 1920×1080. |

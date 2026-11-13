@@ -19,7 +19,7 @@ fgc/
 │  ├─ server/                  # fgc-server
 │  │  ├─ src/{lib,routes,ws,state,embed,overrides,error}.rs
 │  │  ├─ overlays/             # 7 HTML files (embedded)
-│  │  └─ assets/               # Saira, Inter, icons, maps, manifest.json (embedded)
+│  │  └─ assets/               # Archivo/Saira, Inter, icons, maps, manifest.json (embedded)
 │  └─ app/                     # fgc-app  (bin: fruiterra-gc)
 │     ├─ src/{main,app,state,server,status,theme}.rs
 │     ├─ src/views/            # seven destination views
@@ -286,7 +286,7 @@ Vendored component files keep their upstream MIT/Apache-2.0 headers, and `THIRD_
 - Vendored component CSS modules are registered through `#[css_module]` and bundled by `dx`.
 - Class naming: `fgc-<block>__<element>--<modifier>`; no CSS modules for app styles, no Tailwind, no Node.
 - Dark theme only in v1; light theme is a backlog item.
-- UI font: Inter (OFL) bundled locally with `@font-face`. Overlay font: Saira (OFL), served by the server.
+- UI font: Inter (OFL) bundled locally with `@font-face`. Overlay font: Archivo (OFL), served by the server; Saira stays bundled for the A/B comparison.
 
 ---
 

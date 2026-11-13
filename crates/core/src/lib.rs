@@ -38,7 +38,10 @@ pub use references::{
 };
 pub use store::{JsonStore, MemoryStore, Store};
 pub use tournament::*;
-pub use validation::{Repair, RepairKind, validate_and_repair};
+pub use validation::{
+    MAX_PLAYER_NAME_CHARS, MAX_TALENT_NAME_CHARS, MAX_TEAM_NAME_CHARS, Repair, RepairKind,
+    validate_and_repair,
+};
 
 /// User-facing application name.
 pub const APP_NAME: &str = "Fruiterra Graphics Controller";

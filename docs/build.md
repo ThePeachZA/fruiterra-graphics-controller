@@ -172,7 +172,7 @@ This validates the packaged binary, embedded overlays, embedded assets and the s
 6. **Migrating from the Google Sheets workflow** - **no automatic import**: teams, talent, matches and assets must be re-entered. This is stated plainly, not buried.
 7. **Timer** - control-only in v1; there is no bundled timer overlay. Third-party timer overlays still receive `matchTimer`.
 8. **Network and security** - localhost by default; "Allow LAN access" binds `0.0.0.0`; CORS is `*`; there is no authentication in v1.
-9. **Fonts and licences** - Saira and Inter are OFL 1.1; local only; no runtime font requests.
+9. **Fonts and licences** - Archivo (overlay), Saira (retained fallback) and Inter (UI) are OFL 1.1; local only; no runtime font requests.
 10. **Build from source** — Rust stable, `dioxus-cli` 0.7.10, `cargo test`, `dx bundle`.
 11. **Troubleshooting** — SmartScreen, WebView2 missing, port already in use, firewall prompt on LAN mode.
 12. **Known limitations** - no import from the earlier Google Sheets workflow, timer control-only, no code signing, Windows-only, bracket overlay post-v1.
@@ -216,7 +216,7 @@ GitHub's generated notes are appended below this template, not used instead of i
 | File | Contents |
 |---|---|
 | `LICENSE` | MIT licence, carried over from the original project |
-| `THIRD_PARTY_NOTICES.md` | Saira and Inter (OFL 1.1, with the full OFL text), vendored Dioxus components (upstream MIT/Apache-2.0 headers and pinned revision), and a generated inventory of Rust dependency licences |
+| `THIRD_PARTY_NOTICES.md` | Archivo, Saira and Inter (OFL 1.1, with the full OFL text), vendored Dioxus components (upstream MIT/Apache-2.0 headers and pinned revision), and a generated inventory of Rust dependency licences |
 | `crates/server/assets/fonts/OFL.txt` | OFL text shipped beside the overlay fonts |
 | `crates/app/assets/fonts/OFL.txt` | OFL text shipped beside the UI font |
 

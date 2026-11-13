@@ -198,7 +198,7 @@ fn build_teams(state: &AppState) -> Result<Vec<Team>> {
             Some(winston),
         ),
         player(
-            "Longplayer Name That Should Not Overflow",
+            "Longplayer Name Overflow",
             Role::Damage,
             Position::Sub,
             "she/her",
@@ -251,7 +251,7 @@ fn build_teams(state: &AppState) -> Result<Vec<Team>> {
     ];
 
     let long = team(
-        "Long Team Name That Should Never Overflow The Scoreboard",
+        "Long Team Name That Overflows",
         "LONG",
         Some("0-0"),
         "#2ea043",

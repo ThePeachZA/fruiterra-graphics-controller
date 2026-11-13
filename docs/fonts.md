@@ -25,31 +25,56 @@ Apotek is a commercial typeface by **Kerns & Cairns** (distributed via Adobe Fon
 | **Rajdhani** | OFL 1.1 | 300–700, condensed techno | Very "esports" | Good, but dated/techy and limited weights | Not recommended as the primary face |
 | **Chakra Petch** | OFL 1.1 | 6 weights, squared techno | Futuristic | Good for titles, less so for body | Not recommended as the primary face |
 
-## Decision: Saira (confirmed)
+## Decision: Archivo trial (Saira retained for comparison)
 
-- **Licence:** SIL Open Font License 1.1 — commercial use, embedding, self-hosting, subsetting and modification are allowed; derivatives stay OFL; the font cannot be sold by itself.
-- **Why:** it is a robust, squared grotesque with a huge weight/width system. It reads as technical and competitive without being a sci-fi cliché, and it holds up in all caps at 1920×1080. The width axis lets us tighten long team names without switching families.
-- **Source:** Google Fonts / Omnibus-Type (`github.com/Omnibus-Type/Saira`). Ship `OFL.txt` alongside the font files.
+The first OBS pass (R1) found that Saira does not read like Apotek. **Archivo**
+is now wired into all seven overlays as a trial; Saira remains in the repository
+so the same overlays can be compared without a rebuild.
+
+- **Licence:** SIL Open Font License 1.1 — commercial use, embedding,
+  self-hosting, subsetting and modification are allowed; derivatives stay OFL;
+  the font cannot be sold by itself.
+- **Why Archivo:** it is a neutral American grotesque with a high-impact all-caps
+  cut. It sits closer to Apotek's broad, unornamented caps than Saira's squared,
+  technical character, and it holds up at broadcast sizes without looking like a
+  sci-fi display face.
+- **Source:** Google Fonts / Omnibus-Type for Saira, Google Fonts / Omnibus-Type
+  for Archivo. `OFL.txt` (Saira) and `OFL-Archivo.txt` ship beside the files.
+
+Saira was the M9 choice and remains the fallback if Archivo does not win the
+comparison: a robust squared grotesque with a huge weight/width system, strong
+all-caps, and a width axis for long names. Its files and licence stay in the
+repository until the trial is accepted or reverted.
 
 ### Weight mapping
 
-| Existing family | Saira weight |
-|---|---|
-| `Apotek Light` | Saira Light 300 |
-| `Apotek` (regular) | Saira Regular 400 |
-| `Apotek Medium` | Saira Medium 500 |
-| `Apotek Semibold` | Saira SemiBold 600 |
-| `Apotek Black` | Saira Black 900 |
+| Existing family | Archivo weight (current) | Saira weight (fallback) |
+|---|---|---|
+| `Apotek Light` | Archivo Light 300 | Saira Light 300 |
+| `Apotek` (regular) | Archivo Regular 400 | Saira Regular 400 |
+| `Apotek Medium` | Archivo Medium 500 | Saira Medium 500 |
+| `Apotek Semibold` | Archivo SemiBold 600 | Saira SemiBold 600 |
+| `Apotek Black` | Archivo Black 900 | Saira Black 900 |
 
-Use static WOFF2 instances (300/400/500/600/900) for predictable rendering in WebView2/OBS, or a single variable WOFF2 with `font-weight: 100 900` and `font-stretch: 50% 125%`. Static files are simpler to reason about and avoid variable-font edge cases in older WebView2 builds; bundle both only if needed.
+Use static WOFF2 instances (300/400/500/600/900) for predictable rendering in
+WebView2/OBS. Static files are simpler to reason about and avoid variable-font
+edge cases in older WebView2 builds; bundle a variable file only if needed.
 
 ### CSS migration
 
-1. Inline the five `@font-face` rules in each overlay, pointing at stable `/assets/fonts/saira-<weight>.woff2` paths. No shared `fonts.css` in v1, so each overlay remains independently replaceable.
-2. Rename the families to neutral aliases: `FGC Display Light`, `FGC Display`, `FGC Display Medium`, `FGC Display SemiBold`, `FGC Display Black`.
-3. Update every `font-family` declaration to the matching alias. Fallback stack: `'FGC Display', 'Apotek', sans-serif`.
-4. For user-supplied overlay overrides, document the family names. Existing copies that still reference `Apotek` fall back to Saira only if an `Apotek` alias rule is added; v1 does not ship that alias.
-5. Swapping Saira for Archivo or Barlow later means replacing the five WOFF2 files only; no CSS change.
+1. Inline the five `@font-face` rules in each overlay, pointing at stable
+   `/assets/fonts/archivo-<weight>.woff2` paths. No shared `fonts.css` in v1, so
+   each overlay remains independently replaceable.
+2. Rename the families to neutral aliases: `FGC Display Light`, `FGC Display`,
+   `FGC Display Medium`, `FGC Display SemiBold`, `FGC Display Black`.
+3. Update every `font-family` declaration to the matching alias. Fallback stack:
+   `'FGC Display', 'Apotek', sans-serif`.
+4. For user-supplied overlay overrides, document the family names. Existing
+   copies that still reference `Apotek` fall back to Archivo only if an `Apotek`
+   alias rule is added; v1 does not ship that alias.
+5. Reverting to Saira, or trying Barlow, means replacing the five WOFF2 files
+   and the `@font-face` `src:` URLs only; the family aliases and all layout CSS
+   stay unchanged.
 
 See `docs/assets.md` §4 for the exact `@font-face` block and file list.
 
@@ -60,7 +85,9 @@ Bundle **Inter** (OFL) locally for the control panel and remove the Google Fonts
 ## Visual QA checklist
 
 - [ ] All 7 overlays at 1920×1080, transparent background, in OBS.
-- [ ] Long team names and tags: no overflow or clipping; test 20+ character names.
+- [ ] Long team names and tags: no overflow or clipping; test names up to the
+      32-character team / 24-character player limits. Text shrinks to a floor,
+      then ellipsizes; it never wraps.
 - [ ] Scores and map numbers: tabular numerals line up (`font-feature-settings: "tnum"`).
 - [ ] All-caps headings: cap height and letter-spacing match the current design closely.
 - [ ] Rosters: player names, roles, pronouns; portrait layouts unaffected.
@@ -71,8 +98,18 @@ Bundle **Inter** (OFL) locally for the control panel and remove the Google Fonts
 
 ## Review checkpoint
 
-Once the rebuilt overlay HTML is rendering in OBS, compare **Saira**, **Archivo** and **Barlow** side by side at 1920×1080. Keep all three specimen sheets and licence files in the repo so the comparison is reproducible. If Saira does not fit, switching is a five-file WOFF2 swap; the neutral aliases mean no CSS change.
+Run the same seven overlays with **Archivo** (current) and **Saira** (fallback)
+side by side at 1920×1080 in OBS, using the same fixture. Keep both sets of WOFF2
+files and licence files in the repo so the comparison is reproducible. The
+overlay test in `crates/server/tests/overlays.rs` pins the active prefix
+(`FONT_PREFIX`), so reverting is a one-line change plus the `@font-face` `src:`
+URLs; the neutral aliases mean no layout CSS change. **Barlow** remains an
+untried third option.
 
 ## Fallback plan
 
-If Saira does not fit visually after the QA pass, try **Archivo** (neutral, professional) or **Barlow** (sportier, more condensed). The migration is the same: swap the five WOFF2 files and keep the family aliases. Do not ship Apotek unless a redistribution licence is purchased.
+If Archivo does not win the comparison, revert to **Saira** (already bundled) or
+try **Barlow** (sportier, more condensed). Either migration is the same: swap the
+five WOFF2 files, update the five `@font-face` `src:` URLs and the
+`FONT_PREFIX` test constant, and keep the family aliases. Do not ship Apotek
+unless a redistribution licence is purchased.

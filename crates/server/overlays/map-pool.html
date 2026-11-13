@@ -10,7 +10,7 @@
       font-weight: 300;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-300.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-300.woff2') format('woff2');
     }
 
     @font-face {
@@ -18,7 +18,7 @@
       font-weight: 400;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-400.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-400.woff2') format('woff2');
     }
 
     @font-face {
@@ -26,7 +26,7 @@
       font-weight: 500;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-500.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-500.woff2') format('woff2');
     }
 
     @font-face {
@@ -34,7 +34,7 @@
       font-weight: 600;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-600.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-600.woff2') format('woff2');
     }
 
     @font-face {
@@ -42,7 +42,7 @@
       font-weight: 900;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-900.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-900.woff2') format('woff2');
     }
 
     * {
@@ -96,6 +96,7 @@
       color: #fff;
       text-transform: uppercase;
       letter-spacing: 4px;
+      opacity: 0;
       line-height: 1;
     }
 
@@ -106,10 +107,15 @@
       align-items: stretch;
       column-gap: 25px;
       overflow: hidden;
+      opacity: 0;
+    }
+
+    .animate-header {
+      animation: fadeSlideDown 1.2s cubic-bezier(0.3, 1, 0.4, 1) 0.8s forwards;
     }
 
     .animate-container {
-      animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
     }
 
     /* === MAP COLUMN === */
@@ -216,6 +222,8 @@
     }
 
     .map-name-text {
+      display: block;
+      width: 100%;
       font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
       font-size: 18px;
       color: #fff;
@@ -239,8 +247,8 @@
 <body>
   <div class="overlay">
     <div class="main-container">
-      <h1 class="map-pool-header" style="opacity: 0;">Map Pool</h1>
-      <div class="map-pool-container" id="map-pool" style="opacity: 0;">
+      <h1 class="map-pool-header">Map Pool</h1>
+      <div class="map-pool-container" id="map-pool">
         <!-- Map columns will be dynamically created -->
       </div>
     </div>
@@ -258,6 +266,44 @@
       })[character]);
     }
 
+    // Shrink text until it fits on one line, then ellipsize at the floor size.
+    function fitText(target, maxSize, minSize) {
+      if (!target) return;
+      target.style.whiteSpace = 'nowrap';
+      target.style.overflow = 'hidden';
+      target.style.textOverflow = 'ellipsis';
+
+      const style = getComputedStyle(target);
+      const available = target.clientWidth
+        - parseFloat(style.paddingLeft)
+        - parseFloat(style.paddingRight);
+      if (!(available > 0)) return;
+
+      // Ancestors animate with a transform, so convert the measured range
+      // back into layout pixels before comparing it with the layout width.
+      const measure = () => {
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const scale = target.offsetWidth
+          ? target.getBoundingClientRect().width / target.offsetWidth
+          : 1;
+        return scale > 0 ? range.getBoundingClientRect().width / scale : 0;
+      };
+
+      let size = maxSize;
+      target.style.fontSize = `${size}px`;
+      while (size > minSize && measure() > available) {
+        size -= 1;
+        target.style.fontSize = `${size}px`;
+      }
+    }
+
+    function fitMapNames() {
+      el.mapPool.querySelectorAll('.map-name-text').forEach((name) => {
+        fitText(name, 18, 11);
+      });
+    }
+
     const el = {
       mapPool: document.getElementById('map-pool'),
       overlay: document.querySelector('.overlay'),
@@ -270,11 +316,8 @@
     let animationsTriggered = false;
 
     function triggerAnimations() {
-      el.header.style.animation = 'fadeSlideDown 1.2s cubic-bezier(0.3, 1, 0.4, 1) 0.8s both';
-
-      setTimeout(() => {
-        el.mapPool.classList.add('animate-container');
-      }, 1200);
+      el.header.classList.add('animate-header');
+      el.mapPool.classList.add('animate-container');
     }
 
     function preloadImages(urls) {
@@ -389,13 +432,12 @@
         }
       }
 
+      document.fonts.ready.then(fitMapNames);
       isRendering = false;
 
       if (!animationsTriggered) {
         triggerAnimations();
         animationsTriggered = true;
-      } else {
-        el.mapPool.style.opacity = '1';
       }
     }
 
@@ -447,6 +489,7 @@
       }
     }
 
+    document.fonts.ready.then(fitMapNames);
     connect();
   </script>
 </body>

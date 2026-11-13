@@ -10,7 +10,7 @@
       font-weight: 300;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-300.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-300.woff2') format('woff2');
     }
 
     @font-face {
@@ -18,7 +18,7 @@
       font-weight: 400;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-400.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-400.woff2') format('woff2');
     }
 
     @font-face {
@@ -26,7 +26,7 @@
       font-weight: 500;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-500.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-500.woff2') format('woff2');
     }
 
     @font-face {
@@ -34,7 +34,7 @@
       font-weight: 600;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-600.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-600.woff2') format('woff2');
     }
 
     @font-face {
@@ -42,7 +42,7 @@
       font-weight: 900;
       font-style: normal;
       font-display: swap;
-      src: url('/assets/fonts/saira-900.woff2') format('woff2');
+      src: url('/assets/fonts/archivo-900.woff2') format('woff2');
     }
 
     * {
@@ -244,12 +244,15 @@
 
     .team-bar__name {
       flex: 1;
+      min-width: 0;
       font-size: 30px;
       font-weight: 500;
+      line-height: 55px;
       color: #090909;
       text-transform: uppercase;
-      display: flex;
-      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       padding: 0 15px;
     }
 
@@ -280,6 +283,8 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
+      background-origin: content-box;
+      padding: 6px;
       background-color: var(--team-logo-bg, #eee);
       flex-shrink: 0;
       opacity: 0;
@@ -575,6 +580,43 @@
       })[character]);
     }
 
+    // Shrink text until it fits on one line, then ellipsize at the floor size.
+    function fitText(target, maxSize, minSize) {
+      if (!target) return;
+      target.style.whiteSpace = 'nowrap';
+      target.style.overflow = 'hidden';
+      target.style.textOverflow = 'ellipsis';
+
+      const style = getComputedStyle(target);
+      const available = target.clientWidth
+        - parseFloat(style.paddingLeft)
+        - parseFloat(style.paddingRight);
+      if (!(available > 0)) return;
+
+      // Ancestors animate with a transform, so convert the measured range
+      // back into layout pixels before comparing it with the layout width.
+      const measure = () => {
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const scale = target.offsetWidth
+          ? target.getBoundingClientRect().width / target.offsetWidth
+          : 1;
+        return scale > 0 ? range.getBoundingClientRect().width / scale : 0;
+      };
+
+      let size = maxSize;
+      target.style.fontSize = `${size}px`;
+      while (size > minSize && measure() > available) {
+        size -= 1;
+        target.style.fontSize = `${size}px`;
+      }
+    }
+
+    function fitTeamNames() {
+      fitText(el.homeName, 30, 18);
+      fitText(el.awayName, 30, 18);
+    }
+
     const el = {
       title: document.getElementById('title'),
       subtitle: document.getElementById('subtitle'),
@@ -818,6 +860,7 @@
           if (d.teamB.name) el.awayName.textContent = d.teamB.name;
           if (d.teamB.logoUrl) el.awayLogo.style.backgroundImage = `url(${d.teamB.logoUrl})`;
         }
+        document.fonts.ready.then(fitTeamNames);
 
         // Swap sides - swap the left positions and flex order
         if (d.swapSides) {
@@ -942,6 +985,7 @@
       }
     }
 
+    document.fonts.ready.then(fitTeamNames);
     connect();
   </script>
 </body>

@@ -5,6 +5,13 @@ use crate::{
     TournamentRepairKind, is_allowed_extension, is_valid_hash, repair_tournament,
 };
 
+/// Longest team name the overlays can render without truncation.
+pub const MAX_TEAM_NAME_CHARS: usize = 32;
+/// Longest player name the overlays can render without truncation.
+pub const MAX_PLAYER_NAME_CHARS: usize = 24;
+/// Longest talent name the overlays can render without truncation.
+pub const MAX_TALENT_NAME_CHARS: usize = 24;
+
 /// The kind of repair applied while loading user data.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RepairKind {
@@ -32,6 +39,8 @@ pub enum RepairKind {
     GroupTeamOutsideGroup,
     /// The tournament champion was not an entrant.
     ChampionNotEntrant,
+    /// A team, player or talent name exceeded the display limit.
+    NameTooLong,
 }
 
 /// A single repair applied to loaded state.
@@ -57,6 +66,7 @@ pub fn validate_and_repair(state: &mut AppState) -> Vec<Repair> {
     let mut repairs = Vec::new();
 
     dedupe_state_ids(state, &mut repairs);
+    clamp_names(state, &mut repairs);
 
     if let Some(current) = state.current_match.as_mut() {
         if current.team_a.is_some() && current.team_a == current.team_b {
@@ -150,6 +160,50 @@ pub fn validate_and_repair(state: &mut AppState) -> Vec<Repair> {
     }
 
     repairs
+}
+
+fn clamp_names(state: &mut AppState, repairs: &mut Vec<Repair>) {
+    for team in &mut state.teams {
+        clamp_name(
+            &mut team.name,
+            MAX_TEAM_NAME_CHARS,
+            "team",
+            team.id.as_str(),
+            repairs,
+        );
+        for player in &mut team.players {
+            clamp_name(
+                &mut player.name,
+                MAX_PLAYER_NAME_CHARS,
+                "player",
+                player.id.as_str(),
+                repairs,
+            );
+        }
+    }
+
+    for talent in &mut state.talents {
+        clamp_name(
+            &mut talent.display_name,
+            MAX_TALENT_NAME_CHARS,
+            "talent",
+            talent.id.as_str(),
+            repairs,
+        );
+    }
+}
+
+fn clamp_name(value: &mut String, max: usize, label: &str, id: &str, repairs: &mut Vec<Repair>) {
+    if value.chars().count() <= max {
+        return;
+    }
+
+    let truncated = value.chars().take(max).collect::<String>();
+    repairs.push(Repair::new(
+        RepairKind::NameTooLong,
+        format!("{label} {id} name was longer than {max} characters and was truncated"),
+    ));
+    *value = truncated.trim_end().to_owned();
 }
 
 fn clamp_first_to(value: &mut u8, field: &str, repairs: &mut Vec<Repair>) {
@@ -287,6 +341,42 @@ fn dedupe_ids<T>(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn overlong_names_are_truncated_to_the_display_limits() {
+        let team_name = "T".repeat(MAX_TEAM_NAME_CHARS + 5);
+        let player_name = "P".repeat(MAX_PLAYER_NAME_CHARS + 5);
+        let talent_name = "C".repeat(MAX_TALENT_NAME_CHARS + 5);
+
+        let mut state: AppState = serde_json::from_value(json!({
+            "teams": [{
+                "id": "team-1",
+                "name": team_name,
+                "players": [{ "id": "player-1", "name": player_name }]
+            }],
+            "talents": [{ "id": "talent-1", "displayName": talent_name }]
+        }))
+        .expect("valid fixture");
+
+        let repairs = validate_and_repair(&mut state);
+
+        assert_eq!(state.teams[0].name.chars().count(), MAX_TEAM_NAME_CHARS);
+        assert_eq!(
+            state.teams[0].players[0].name.chars().count(),
+            MAX_PLAYER_NAME_CHARS
+        );
+        assert_eq!(
+            state.talents[0].display_name.chars().count(),
+            MAX_TALENT_NAME_CHARS
+        );
+        assert_eq!(
+            repairs
+                .iter()
+                .filter(|repair| repair.kind == RepairKind::NameTooLong)
+                .count(),
+            3
+        );
+    }
 
     #[test]
     fn duplicate_player_and_talent_ids_are_regenerated() {

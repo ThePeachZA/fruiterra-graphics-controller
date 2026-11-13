@@ -8,7 +8,7 @@ These are defects that currently make a shipped feature fail, risk data loss, or
 
 | ID | Fix | Detail |
 |---|---|---|
-| C1 | Local fonts | Replace all `https://design.penpot.app/...` `@font-face` URLs with locally served OFL fonts. Replace the Google Fonts `Inter` import in the UI with a bundled or system font. No runtime network dependency for fonts. Apotek is commercial (Kerns & Cairns) and cannot be redistributed; replace it with **Saira** (OFL 1.1, confirmed), behind neutral `FGC Display*` aliases. Review Archivo/Barlow once the overlays render. See `docs/assets.md` §4. |
+| C1 | Local fonts | Replace all `https://design.penpot.app/...` `@font-face` URLs with locally served OFL fonts. Replace the Google Fonts `Inter` import in the UI with a bundled or system font. No runtime network dependency for fonts. Apotek is commercial (Kerns & Cairns) and cannot be redistributed; **Archivo** (OFL 1.1) is now the active overlay font behind neutral `FGC Display*` aliases, with **Saira** retained for the A/B review. See `docs/assets.md` §4 and `docs/fonts.md`. |
 | C2 | `currentMapIndex` off-by-one | Overlays tab “Force Update” sends `currentMapIndex + 1`; Match Controller sends the raw index. Standardise on the raw index (overlay adds 1 for display). |
 | C3 | Stale asset caches | Team logo and player caches are never invalidated. Fixed structurally in `docs/assets.md`: assets are content-addressed, so a changed image gets a new hash and URL; the overlay cannot show a stale cached file. |
 | C4 | Port source of truth | One configured port (default 3001), shared by Settings and Overlays; restart on change; clear error on bind failure; no silent fallback. |
@@ -37,7 +37,7 @@ Current remote mappings in the overlays (for reference):
 | `Apotek Semibold` | `1ba1930f-...` (same as Medium — never a real semibold) | `ApotekSemibold.otf` |
 | `Apotek Black` | `937c3a15-8a62-408b-9be9-2f4404f76f30` | `Apotek_Black.otf` |
 
-Recommended replacement: **Saira** (OFL 1.1), bundled as WOFF2 at weights 300/400/500/600/900, served from `/assets/fonts/`. Include `OFL.txt`. Use neutral `FGC Display*` aliases with a fallback stack (`'FGC Display', 'Apotek', sans-serif`). UI: bundle Inter (OFL) locally.
+Recommended replacement: **Archivo** (OFL 1.1) as the R1 trial, with **Saira** (OFL 1.1) retained for comparison. Both are bundled as WOFF2 at weights 300/400/500/600/900, served from `/assets/fonts/`, with `OFL-Archivo.txt` and `OFL.txt`. Use neutral `FGC Display*` aliases with a fallback stack (`'FGC Display', 'Apotek', sans-serif`). UI: bundle Inter (OFL) locally.
 
 ## A2. v1 Tournament completion (agreed — generated board + full manual editing)
 
@@ -101,7 +101,7 @@ protocol and the 1920×1080 canvas.
 | ID | Item | Scope |
 |---|---|---|
 | O1 | Social row fit | Fix the 6-caster `row-casters` social-row overflow (~14px with long handles) without changing the card layout. |
-| O2 | Long-name handling | 20+ character team names, tags, player names, pronouns and handles; prefer wrapping or ellipsis with no clipped glyphs. |
+| O2 | Long-name handling | The R1 fix already shrinks then ellipsizes team, player, talent, map and hero names on one line, with 32/24-character input limits. Remaining polish: tags, pronouns and handles, and any multiline treatment if the design ever wants it. |
 | O3 | Spacing and alignment | Tighten inconsistent padding, baselines and vertical rhythm while keeping the existing composition. |
 | O4 | Safe areas | Keep content clear of the 1920×1080 edges and OBS scaling; no scrollbars or accidental overflow. |
 | O5 | Visual QA sweep | Re-run the full overlay checklist in OBS after the pass and record the result. |
@@ -121,6 +121,18 @@ Guardrails:
   scenes or new broadcast types.
 - Update `docs/assets.md` §5 and the QA checklist if a behaviour or expected
   layout changes.
+
+### C2. Control and overlay requests raised during R1 (2026-11-12 — post-v1)
+
+None of these are v1 fixes; they are recorded so the R1 pass does not turn into
+scope creep.
+
+| ID | Item | Scope sketch |
+|---|---|---|
+| D1 | Hero-ban redesign | Revisit the current-map-only hero-ban overlay and the Match Controller's ban editing together. Keep the wire message and 1920×1080 canvas; this is a design pass, not a protocol change. |
+| D2 | Merged Map Selection / Hero Bans tab | The two Match Controller tabs edit closely related data. Merge them into one map-centric editor, keeping the existing per-map fields and validation. |
+| D3 | Map-mode icons on map select | The map-select overlay currently shows only the map name. Add the bundled game-mode icon/name where the asset has a game-mode link (see C14). |
+| D4 | Caster camera and audio via VDO Ninja | Embed or link caster camera feeds in the control UI and/or an overlay. Requires a capture/transport decision (VDO Ninja URL or WebRTC), a new UI surface and a privacy/consent note; not a protocol-only change. |
 
 ### Protocol and server
 - Versioned protocol (`v2`) with a real full-state snapshot on connect, then typed per-section updates.
@@ -185,7 +197,7 @@ Guardrails:
 
 ## D. Review checkpoints
 
-- **Font review (after overlay HTML is rendering):** compare Saira against Archivo and Barlow in situ at 1920×1080. Decision can change with a five-file swap.
+- **Font review (after the R1 re-run):** compare Archivo (current) against Saira in situ at 1920×1080, using the same fixture. Barlow remains untried. A decision either way is a five-file WOFF2 and `src:` swap plus the test prefix; no layout CSS change.
 - **Protocol review (after v1 ships):** decide whether to introduce a versioned v2 protocol; v1 stays byte-compatible.
 - **Tournament overlay review (after v1 tournament completion):** decide whether to pull the bracket overlay forward from the post-v1 list.
 

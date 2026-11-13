@@ -5,7 +5,10 @@
 //! assignment that used them.
 
 use dioxus::prelude::*;
-use fgc_core::{Asset as CoreAsset, AssetCategory, SocialLink, SocialPlatform, Talent, TalentId};
+use fgc_core::{
+    Asset as CoreAsset, AssetCategory, MAX_TALENT_NAME_CHARS, SocialLink, SocialPlatform, Talent,
+    TalentId,
+};
 
 use crate::components::asset_picker::{AssetPicker, AssetThumb, find_asset, library_assets};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
@@ -220,6 +223,7 @@ fn TalentEditor(talent: Talent, on_request_delete: EventHandler<Talent>) -> Elem
                         value: "{talent.display_name}",
                         aria_label: "Talent display name",
                         placeholder: "Enter display name",
+                        maxlength: MAX_TALENT_NAME_CHARS,
                         oninput: move |event: FormEvent| {
                             let value = event.value();
                             store.update_talent(&display_id, move |talent| talent.display_name = value);

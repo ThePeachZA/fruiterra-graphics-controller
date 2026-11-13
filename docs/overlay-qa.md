@@ -11,8 +11,8 @@ across all milestones is in `docs/manual-qa.md`.
 |---|---|---|
 | 1 | Overlay renders on first load from `init` (no blank frame until the next change) | ☐ |
 | 2 | No network requests to `design.penpot.app` or Google Fonts | ☐ |
-| 3 | Text renders in Saira at the correct weight | ☐ |
-| 4 | Long team names, tags and player names do not overflow | ☐ |
+| 3 | Text renders in the active overlay font (Archivo) at the correct weight | ☐ |
+| 4 | Long team names, tags and player names do not overflow; text shrinks, then ellipsizes, and card heights stay fixed | ☐ |
 | 5 | Accented names render correctly; a CJK name falls back cleanly | ☐ |
 | 6 | Logos, portraits and map images load from `/assets/<hash>` | ☐ |
 | 7 | Replacing an image updates the overlay immediately (new hash, no stale cache) | ☐ |
@@ -37,17 +37,18 @@ smoke test, not a substitute for the OBS sign-off below.
 - **Static tests:** `cargo test -p fgc-server --test overlays` passes. The tests
   assert that every overlay is embedded, subscribes to its expected message
   types, contains no external URL (only the SVG `xmlns`), declares exactly the
-  five `FGC Display*` faces, and that all five Saira WOFF2 files plus `OFL.txt`
-  are embedded and valid.
+  five `FGC Display*` faces, and that all five active overlay WOFF2 files
+  (Archivo) plus the Archivo and Saira OFL texts are embedded and valid.
 - **Canvas:** all seven overlays reported `.overlay` at 1920×1080 and
   `body.scrollWidth/Height` at 1920×1080 with `meta viewport width=1920`.
 - **Initial render:** every overlay painted its `init` content on first load
   (game overlay score and subtitle, map select picks, hero bans order, grouped
   map pool, both rosters, caster order and social icons).
-- **Fonts:** each overlay requested the Saira faces it uses from
-  `/assets/fonts/saira-*.woff2`; no font or image request 404ed. Accented,
+- **Fonts:** each overlay requested the Archivo faces it uses from
+  `/assets/fonts/archivo-*.woff2`; no font or image request 404ed. Accented,
   Cyrillic and CJK names rendered in the roster DOM (SØREN, ДМИТРИЙ ВОЛКОВ,
-  王小明).
+  王小明). Archivo loads with `document.fonts.check` true for the used faces;
+  Saira remains bundled for the A/B comparison.
 - **Network:** no requests left `127.0.0.1:3001`; only the overlay WebSocket and
   local `/assets/...` URLs were used.
 - **Live update:** editing the match subtitle in Match Controller changed
@@ -59,7 +60,7 @@ smoke test, not a substitute for the OBS sign-off below.
   the focused overlay repainted from the replayed cache.
 - **Known observation:** a 6-caster `row-casters` layout clips the social row by
   about 14px with long handles. The same clipping occurs with a `sans-serif`
-  fallback, so it is pre-existing layout behaviour rather than a Saira
+  fallback, so it is pre-existing layout behaviour rather than a font
   regression; no CSS was changed in the font port.
 
 ## Files covered

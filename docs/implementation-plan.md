@@ -50,7 +50,7 @@ fgc/
 │  │  ├─ overlays/                # seven HTML files
 │  │  └─ assets/
 │  │     ├─ bundled/              # maps, heroes, icons, modes, roles, sides, logos
-│  │     ├─ fonts/                # Saira 300/400/500/600/900 + OFL.txt
+│  │     ├─ fonts/                # Archivo 300/400/500/600/900 (+ Saira fallback) + OFL texts
 │  │     └─ manifest.json
 │  └─ app/
 │     ├─ Cargo.toml
@@ -312,7 +312,7 @@ The exact module split can change during implementation, but the crate boundarie
 **Deliverables**
 
 - Seven overlay HTML files ported with minimal diff: only `@font-face` and family names change.
-- Five Saira WOFF2 files, `OFL.txt`, Inter for the UI.
+- Five Archivo WOFF2 files (Saira retained for comparison), both OFL texts, Inter for the UI.
 - All assets served from `/assets/<hash>.<ext>`; fonts from stable paths.
 - `show` supported server-side but not sent.
 - Overlay QA checklist completed at 1920×1080.
