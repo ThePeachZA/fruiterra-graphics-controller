@@ -63,6 +63,17 @@ impl AssetCatalog {
             .filter(move |asset| asset.category == category)
     }
 
+    /// Returns true when `id` is linked as another asset's icon.
+    ///
+    /// Linked icons are hidden from hero pickers and ban lists so an icon
+    /// never appears as a selectable hero.
+    #[must_use]
+    pub fn is_linked_icon(&self, id: &AssetId) -> bool {
+        self.assets
+            .iter()
+            .any(|asset| asset.icon.as_ref() == Some(id))
+    }
+
     /// Number of assets in the catalogue.
     #[must_use]
     pub fn len(&self) -> usize {

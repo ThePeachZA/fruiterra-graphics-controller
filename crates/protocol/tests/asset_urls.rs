@@ -171,6 +171,15 @@ fn catalogue_in_category_preserves_insertion_order() {
 }
 
 #[test]
+fn catalogue_reports_linked_icons() {
+    let catalog = support::fixture_catalog();
+
+    assert!(catalog.is_linked_icon(&AssetId::from_raw("asset-ana-icon")));
+    assert!(!catalog.is_linked_icon(&AssetId::from_raw("asset-ana")));
+    assert!(!catalog.is_linked_icon(&AssetId::from_raw("missing")));
+}
+
+#[test]
 fn catalogue_len_and_is_empty() {
     let empty = AssetCatalog::default();
     assert!(empty.is_empty());

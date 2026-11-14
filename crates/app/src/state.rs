@@ -1151,6 +1151,44 @@ impl AppStore {
         });
     }
 
+    /// Links a hero asset to the image used for its ban-strip icon.
+    ///
+    /// Passing `None` clears the link, so the hero falls back to its own art.
+    /// Bundled assets are read-only and cannot be edited.
+    pub fn set_asset_icon(&self, id: AssetId, icon: Option<AssetId>) {
+        self.set_asset_link(id, |asset, value| asset.icon = value, icon);
+    }
+
+    /// Links a map asset to the game-mode image used for grouping.
+    ///
+    /// Passing `None` clears the link and moves the map back to **Other**.
+    pub fn set_asset_game_mode(&self, id: AssetId, game_mode: Option<AssetId>) {
+        self.set_asset_link(id, |asset, value| asset.game_mode = value, game_mode);
+    }
+
+    /// Applies one optional asset link to a user asset.
+    fn set_asset_link(
+        &self,
+        id: AssetId,
+        set: impl FnOnce(&mut CoreAsset, Option<AssetId>),
+        value: Option<AssetId>,
+    ) {
+        if !self.state.peek().assets.iter().any(|asset| asset.id == id) {
+            self.report_error("Bundled assets cannot be edited.");
+            return;
+        }
+        if value.as_ref() == Some(&id) {
+            self.report_error("An asset cannot link to itself.");
+            return;
+        }
+
+        self.mutate(|state| {
+            if let Some(asset) = state.assets.iter_mut().find(|asset| asset.id == id) {
+                set(asset, value);
+            }
+        });
+    }
+
     /// Deletes a user asset and clears every reference to it.
     ///
     /// The blob itself becomes eligible for garbage collection once the

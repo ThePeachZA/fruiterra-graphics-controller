@@ -32,11 +32,30 @@ Update the status and add a row to the sign-off log when an item is completed.
 | 100%, 125% and 150% display scaling | UI legibility and clipping |
 | Standard (non-admin) Windows account | Per-user NSIS install and uninstall |
 
+### 1.1 Recorded test environment (2026-11-14)
+
+The machine used for the R1 re-run and the local release checks:
+
+| Item | Value |
+|---|---|
+| OS | Windows 11 Pro, version 10.0.26200, build 26200 |
+| CPU / RAM | AMD Ryzen 9 5900X, 32 GB |
+| Display | 1440p at 180 Hz, 100% scaling |
+| OBS Studio | 31.0.4 |
+| WebView2 runtime | 157.0.4341.57 (registered under `HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients`; Microsoft Edge itself is not installed) |
+
+Other environments in the table above (clean VM, no-WebView2 VM, second LAN
+PC, offline network, non-admin account) still need to be provided for R5–R8.
+
+App-UI checks (A-series) must run on a `dx build --desktop` executable. A plain
+`cargo build` binary is not usable for UI checks: without the `dx` asset pass the
+window renders unstyled and dialogs lay out in document flow.
+
 ## 2. Release-blocking gates
 
 | ID | Gate | Milestone | What to do | Status |
 |---|---|---|---|---|
-| R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | Fail — 2026-11-12, 1.0.0. Fixes implemented; re-run pending. Findings in §2.1. |
+| R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | **Pass with notes** — 2026-11-14 re-run on the 1.0.0 fixture; no disconnects or flickers. Notes in §2.2. Formal OBS sign-off table still to be signed. |
 | R2 | Offline font check | M9 | Disconnect the network, restart OBS and confirm every overlay still renders the active overlay font (Archivo) from `/assets/fonts/`. | Pending |
 | R3 | Drop-in overlay compatibility | M2/M9 | Point an original pre-rebuild overlay HTML at the new server. Confirm `init` paints immediately and live messages still update it. | Pending |
 | R4 | Third-party timer overlay | M7/M9 | Connect a timer overlay and confirm `matchTimer` ticks and start/pause/reset actions arrive. | Pending |
@@ -69,6 +88,36 @@ measuring the served overlays at 1920×1080.
 Design changes raised during the pass that are **not** v1 fixes (map-mode icons
 on map select, hero-ban redesign, merged Map Selection/Hero Bans tab, caster
 camera/audio integration) are tracked in `docs/backlog.md`.
+
+### 2.2 R1 re-run (2026-11-14)
+
+Re-ran the full pass on the fixture in the environment recorded in §1.1 after
+the R1 fix batch (`0e1de62`). Result: **Pass with notes** on every overlay. All
+seven Browser Sources stayed connected for the 10-minute watch with no visible
+flicker or lag.
+
+| Overlay | Result | Notes |
+|---|---|---|
+| Game overlay | Pass | Ban strips render. Custom hero icons can now be linked in Assets (R1-15); the current fallback still shows hero art until an icon is linked. |
+| Map select | Pass | |
+| Hero bans | Pass | Current-map only, by design (R1-7). |
+| Map pool | Pass | Per-mode row animation requested for later; backlog D5. |
+| Home / away rosters | Pass | Player cards autofill request for later; backlog D6. |
+| Casters | Pass | Handles render with one `@`; YouTube, Instagram and TikTok icons now supported (R1-13). |
+| All seven | Pass | Corner fringing fixed (R1-14); the OBS animation caveat is recorded in the runbook. |
+
+| ID | Overlay | Finding | Cause | Disposition |
+|---|---|---|---|---|
+| R1-13 | Casters | No platform symbol for the YouTube and Instagram handles | `getSocialIcon()` only mapped `twitter` and `twitch`; an unmapped platform still reserved an empty 20px icon slot | **Fixed** — all five `SocialPlatform` variants have SVGs; an unmapped platform no longer leaves an empty slot |
+| R1-14 | All | Small light fringes at the corners of rounded image blocks | Square image layers inside a rounded, clipped card; Chromium anti-aliases the two shapes slightly differently | **Fixed** — `clip-path: inset(0 round 6px)` on the card plus a matching top radius on the image layer (rosters, casters, map pool) |
+| R1-15 | Game overlay | No way to use a custom hero icon in a ban strip | The Assets view could import and rename only; `Asset.icon` had no editor | **Fixed** — Hero assets get a **Ban icon…** link editor; linked icons are excluded from hero pickers and ban lists |
+| R1-16 | Map pool | No way to link an imported map to a game mode (C14) | Same gap; `Asset.game_mode` had no editor | **Fixed** — Map assets get a **Game mode…** link editor; unlinked maps stay under **Other** |
+
+OBS caveat: with **Shutdown source when not visible** off, OBS keeps the page
+loaded, so CSS entrance animations play once and do not replay when the scene
+becomes active again. Turn on **Refresh browser when scene becomes active** if
+the show needs the entrance animation on every scene entry. The runbook and the
+OBS wiki page now record this.
 
 ## 3. Milestone register
 

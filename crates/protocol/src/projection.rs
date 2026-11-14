@@ -394,8 +394,18 @@ impl<'a> Projector<'a> {
             })
             .collect();
 
+        let icon_ids: BTreeSet<&AssetId> = self
+            .catalog
+            .in_category(AssetCategory::Hero)
+            .filter_map(|asset| asset.icon.as_ref())
+            .collect();
+
         let mut portraits = BTreeMap::new();
         for asset in self.catalog.in_category(AssetCategory::Hero) {
+            // An asset linked as another hero's icon is not itself a hero entry.
+            if icon_ids.contains(&asset.id) {
+                continue;
+            }
             if !banned.contains(asset.name.as_str()) {
                 continue;
             }

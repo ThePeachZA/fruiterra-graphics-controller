@@ -29,9 +29,12 @@ The **Overlay** page lists the same URLs with a **Copy URL** button for each.
 5. Set **Custom frame rate** only if you have a reason to; the default is fine.
 6. Turn **off** **Shutdown source when not visible**. The overlay must stay
    connected to keep its state.
-7. Leave the background transparent. Do not add a colour source behind the
+7. If you want the entrance animations to replay every time the scene becomes
+   active, turn on **Refresh browser when scene becomes active**. With the
+   source kept loaded, OBS does not replay CSS animations on its own.
+8. Leave the background transparent. Do not add a colour source behind the
    overlay unless your scene needs one.
-8. Select **OK**, then check the source in the preview.
+9. Select **OK**, then check the source in the preview.
 
 Repeat for each overlay you use. There is no fixed limit on the number of
 Browser Sources; add one source per overlay file for each scene where it is

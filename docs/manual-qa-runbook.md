@@ -40,6 +40,10 @@ Update the status and add a row to the sign-off log in
 - `fruiterra-gc-<version>-windows-x64-portable.zip`
 - `SHA256SUMS.txt`
 - The same version built locally, if you are testing before the first tag.
+- For app-UI tests (A-series), a `dx build --desktop` executable from
+  `target\dx\fruiterra-gc\debug\windows\app\`. Do not use a plain `cargo build`
+  binary: it has no processed `assets\` folder, so the UI is unstyled and
+  dialogs do not overlay the window.
 
 ### Machines and accounts
 
@@ -259,6 +263,13 @@ Invitational`.
 Browser Sources at 1920×1080 with transparent backgrounds and **Shutdown source
 when not visible** turned off.
 
+> **Animation caveat:** with **Shutdown source when not visible** off, OBS keeps
+> the page loaded, so the CSS entrance animations play once and do not replay
+> when the scene becomes active again. Turn on **Refresh browser when scene
+> becomes active** if the show needs the entrance animation on every scene
+> entry. With that setting off, treat a non-replaying entrance animation as
+> expected rather than an R1 failure.
+
 **Steps:**
 
 1. Open each overlay URL in OBS and confirm it paints without a blank first
@@ -272,14 +283,14 @@ when not visible** turned off.
 
 | Overlay | Expected |
 |---|---|
-| Game overlay | Score `2 - 1`; tags `NWS` and `WXM`; title `Grand Final`; subtitle `Upper Bracket`; current map `Ilios`; first-to `3`; side indicator matches Attack / Defend. Both ban strips show hero art (imported heroes have no icon link, so this exercises the fallback). `NORTHWIND SENTINELS` fits on one line; `王小明战队` fits on one line. |
+| Game overlay | Score `2 - 1`; tags `NWS` and `WXM`; title `Grand Final`; subtitle `Upper Bracket`; current map `Ilios`; first-to `3`; side indicator matches Attack / Defend. Both ban strips show hero art (imported heroes have no icon link, so this exercises the fallback); link a custom icon in Assets to check the override. `NORTHWIND SENTINELS` fits on one line; `王小明战队` fits on one line. |
 | Map select | Five maps in order; `Ilios` chosen by NWS; `Nepal` chosen by WXM; `King's Row` chosen by NWS; scores match the fixture. Map name, type and chosen-by are centred on every card, including a wrapped long name. |
 | Hero bans | One row for the current map (`Ilios`); first ban by NWS; Ana and Kiriko shown with the `1st ban` / `2nd ban` labels and their art. |
 | Map pool | The same five maps, grouped by mode: Control (Ilios, Nepal, Antarctic Peninsula), Escort (Dorado), Hybrid (King's Row). The header and pool fade in once, in that order; the pool does not flash fully visible first. |
 | Home roster | Northwind Sentinels players in roster order, with roles, portraits and heroes. `ДМИТРИЙ ВОЛКОВ` shrinks to fit; the `Longplayer Name Overflow` sub line ellipsizes; every core card keeps the same height. |
 | Away roster | 王小明战队 players in roster order, with roles, portraits and heroes; the same card heights as the home roster. |
-| Casters row | Arc, Priya, Marco, Sam in assignment order, with the correct platform icons and handles. Each handle shows exactly one `@` (`@arc`, not `@@arc`). |
-| All seven | No clipping at 1920×1080; transparent background; Archivo renders; long names shrink and then ellipsize without overflowing the canvas or changing card heights. |
+| Casters row | Arc, Priya, Marco, Sam in assignment order, with the correct platform icons (Twitch, Twitter/X, YouTube, Instagram) and handles. Each handle shows exactly one `@` (`@arc`, not `@@arc`). |
+| All seven | No clipping at 1920×1080; transparent background; Archivo renders; long names shrink and then ellipsize without overflowing the canvas or changing card heights. Rounded image blocks show no light fringing at the corners. |
 | All seven | No network request leaves `127.0.0.1:3001`. Only the overlay WebSocket and local `/assets/...` URLs load. |
 | All seven | After 10 minutes, all seven remain connected and no visible lag appears when editing the match. |
 
@@ -1095,6 +1106,12 @@ failure.
    responsive and the image appears.
 5. **Deduplication:** import the same file twice. Confirm the library still has
    one copy.
+6. **Links:** on a Hero asset, select **Ban icon…** and pick another Hero image.
+   Confirm the game overlay ban strip for that hero uses the chosen image and
+   that the chosen image no longer appears in hero pickers or the Match
+   Controller ban lists. Select **Use hero art** and confirm the strip returns
+   to the hero's own art. Repeat on a Map asset with **Game mode…** and **No
+   game mode**.
 
 **Pass:**
 
@@ -1104,6 +1121,10 @@ failure.
   readable reason.
 - A near-limit image imports without freezing.
 - Duplicate bytes are stored once.
+- A ban icon replaces the strip art, is hidden from hero pickers, and **Use
+  hero art** restores the fallback.
+- A game-mode link regroups the map on the map-pool overlay, and **No game
+  mode** moves it back to **Other**.
 
 **Fail:**
 
@@ -1111,6 +1132,8 @@ failure.
 - A rejected import still changes the library.
 - A duplicate creates a second asset.
 - The error message does not say what is wrong.
+- A link dialog closes without applying or clearing the link.
+- A linked icon still appears as a selectable hero.
 
 **Evidence:** Screenshots of each result and the library count.
 

@@ -6,13 +6,57 @@
 //! collection reclaim the bytes after the next save.
 
 use dioxus::prelude::*;
-use fgc_core::{Asset as CoreAsset, AssetCategory, AssetOrigin};
+use fgc_core::{Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin};
 
+use crate::components::asset_picker::AssetThumb;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::input::Input;
 use crate::components::{Field, Panel};
 use crate::state::AppStore;
+
+/// An optional link that can be edited from the asset library.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AssetLinkField {
+    /// The small icon a hero shows in ban strips.
+    Icon,
+    /// The bundled game-mode image a map groups under.
+    GameMode,
+}
+
+impl AssetLinkField {
+    const fn title(self) -> &'static str {
+        match self {
+            Self::Icon => "Choose a ban icon",
+            Self::GameMode => "Choose a game mode",
+        }
+    }
+
+    const fn description(self) -> &'static str {
+        match self {
+            Self::Icon => {
+                "Hero-category images only. The chosen image replaces the hero art in the game overlay's ban strip and is hidden from hero pickers, so it never appears as a selectable hero."
+            }
+            Self::GameMode => {
+                "Game-mode images only. The chosen mode groups this map on the map-pool overlay."
+            }
+        }
+    }
+
+    const fn category(self) -> AssetCategory {
+        match self {
+            Self::Icon => AssetCategory::Hero,
+            Self::GameMode => AssetCategory::GameMode,
+        }
+    }
+
+    const fn clear_label(self) -> &'static str {
+        match self {
+            Self::Icon => "Use hero art",
+            Self::GameMode => "No game mode",
+        }
+    }
+}
 
 /// The asset library with filtering, import, preview and bundle controls.
 #[component]
@@ -32,6 +76,8 @@ pub fn AssetsView() -> Element {
     let mut url_text = use_signal(String::new);
     let mut url_error = use_signal(|| None::<String>);
     let mut confirm_import = use_signal(|| false);
+    let mut link_target = use_signal(|| None::<CoreAsset>);
+    let mut link_field = use_signal(|| None::<AssetLinkField>);
 
     let user_assets = state.read().assets.clone();
     let bundled = fgc_server::bundled_catalog();
@@ -59,6 +105,23 @@ pub fn AssetsView() -> Element {
         })
         .cloned()
         .collect();
+
+    let link_target_asset = link_target();
+    let link_field_value = link_field();
+    let link_candidates: Vec<CoreAsset> = match (link_target_asset.as_ref(), link_field_value) {
+        (Some(target), Some(field)) => all_assets
+            .iter()
+            .filter(|asset| asset.category == field.category() && asset.id != target.id)
+            .cloned()
+            .collect(),
+        _ => Vec::new(),
+    };
+    let current_link: Option<AssetId> = match (link_target_asset.as_ref(), link_field_value) {
+        (Some(target), Some(AssetLinkField::Icon)) => target.icon.clone(),
+        (Some(target), Some(AssetLinkField::GameMode)) => target.game_mode.clone(),
+        _ => None,
+    };
+    let link_target_id: Option<AssetId> = link_target_asset.as_ref().map(|asset| asset.id.clone());
 
     let preview_url = use_resource(move || {
         let asset = preview();
@@ -180,6 +243,10 @@ pub fn AssetsView() -> Element {
                                     rename_target.set(Some(asset));
                                 },
                                 on_delete: move |asset: CoreAsset| delete_target.set(Some(asset)),
+                                on_link: move |(asset, field): (CoreAsset, AssetLinkField)| {
+                                    link_target.set(Some(asset));
+                                    link_field.set(Some(field));
+                                },
                             }
                         }
                     }
@@ -276,6 +343,93 @@ pub fn AssetsView() -> Element {
         }
 
         Dialog {
+            open: link_field_value.is_some(),
+            on_open_change: move |open: bool| if !open {
+                link_target.set(None);
+                link_field.set(None);
+            },
+            if let (Some(asset), Some(field)) = (link_target_asset.clone(), link_field_value) {
+                DialogTitle { "{field.title()}" }
+                DialogDescription { "{field.description()}" }
+                p { class: "fgc-note", "Linking: {asset.name}" }
+                if current_link.is_some() {
+                    div { class: "fgc-actions",
+                        Button {
+                            variant: ButtonVariant::Ghost,
+                            size: ButtonSize::Sm,
+                            onclick: {
+                                let target_id = link_target_id.clone();
+                                move |_| {
+                                    let Some(target_id) = target_id.clone() else { return; };
+                                    match field {
+                                        AssetLinkField::Icon => store.set_asset_icon(target_id, None),
+                                        AssetLinkField::GameMode => store.set_asset_game_mode(target_id, None),
+                                    }
+                                    link_target.set(None);
+                                    link_field.set(None);
+                                }
+                            },
+                            "{field.clear_label()}"
+                        }
+                    }
+                }
+                if link_candidates.is_empty() {
+                    div { class: "fgc-asset-empty",
+                        p { class: "fgc-asset-empty__title", "No images in this category." }
+                        p { class: "fgc-note", "Import one in the {field.category().label()} category first." }
+                    }
+                } else {
+                    div { class: "fgc-asset-picker__grid",
+                        for candidate in link_candidates.iter().cloned() {
+                            button {
+                                key: "{candidate.id}",
+                                r#type: "button",
+                                aria_label: "{candidate.name}",
+                                class: if current_link.as_ref() == Some(&candidate.id) {
+                                    "fgc-asset-picker__item fgc-asset-picker__item--selected"
+                                } else {
+                                    "fgc-asset-picker__item"
+                                },
+                                onclick: {
+                                    let id = candidate.id.clone();
+                                    let target_id = link_target_id.clone();
+                                    move |_| {
+                                        let Some(target_id) = target_id.clone() else { return; };
+                                        match field {
+                                            AssetLinkField::Icon => {
+                                                store.set_asset_icon(target_id, Some(id.clone()));
+                                            }
+                                            AssetLinkField::GameMode => {
+                                                store.set_asset_game_mode(target_id, Some(id.clone()));
+                                            }
+                                        }
+                                        link_target.set(None);
+                                        link_field.set(None);
+                                    }
+                                },
+                                AssetThumb {
+                                    asset: candidate.clone(),
+                                    class: "fgc-asset-picker__thumb".to_owned(),
+                                }
+                                span { class: "fgc-asset-picker__name", "{candidate.name}" }
+                            }
+                        }
+                    }
+                }
+                div { class: "fgc-dialog-actions",
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        onclick: move |_| {
+                            link_target.set(None);
+                            link_field.set(None);
+                        },
+                        "Close"
+                    }
+                }
+            }
+        }
+
+        Dialog {
             open: show_url_dialog(),
             on_open_change: move |open: bool| if !open { show_url_dialog.set(false) },
             DialogTitle { "Import from URL" }
@@ -353,6 +507,7 @@ fn AssetCard(
     on_preview: EventHandler<CoreAsset>,
     on_rename: EventHandler<CoreAsset>,
     on_delete: EventHandler<CoreAsset>,
+    on_link: EventHandler<(CoreAsset, AssetLinkField)>,
 ) -> Element {
     let store = use_context::<AppStore>();
     let thumb_asset = asset.clone();
@@ -364,6 +519,8 @@ fn AssetCard(
     let preview_asset = asset.clone();
     let rename_asset = asset.clone();
     let delete_asset = asset.clone();
+    let icon_asset = asset.clone();
+    let game_mode_asset = asset.clone();
     let bundled = asset.origin == AssetOrigin::Bundled;
     let extension = asset.ext.to_uppercase();
 
@@ -397,6 +554,22 @@ fn AssetCard(
             }
             if !bundled {
                 div { class: "fgc-asset-card__actions",
+                    if asset.category == AssetCategory::Hero {
+                        Button {
+                            variant: ButtonVariant::Ghost,
+                            size: ButtonSize::Sm,
+                            onclick: move |_| on_link.call((icon_asset.clone(), AssetLinkField::Icon)),
+                            "Ban icon…"
+                        }
+                    }
+                    if asset.category == AssetCategory::Map {
+                        Button {
+                            variant: ButtonVariant::Ghost,
+                            size: ButtonSize::Sm,
+                            onclick: move |_| on_link.call((game_mode_asset.clone(), AssetLinkField::GameMode)),
+                            "Game mode…"
+                        }
+                    }
                     Button {
                         variant: ButtonVariant::Ghost,
                         size: ButtonSize::Sm,

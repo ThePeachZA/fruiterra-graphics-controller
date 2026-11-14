@@ -114,6 +114,7 @@ pub fn AssetPicker(
                         button {
                             key: "{asset.id}",
                             r#type: "button",
+                            aria_label: "{asset.name}",
                             class: if is_selected {
                                 "fgc-asset-picker__item fgc-asset-picker__item--selected"
                             } else {

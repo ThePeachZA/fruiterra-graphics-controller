@@ -21,7 +21,7 @@ These are defects that currently make a shipped feature fail, risk data loss, or
 | C11 | Safe path handling | Constrain file operations to the app-data/assets roots. Asset requests accept only a 64-character lowercase hex hash and an allow-listed extension; overlay overrides reject `..`, separators and non-`.html` names. See `docs/assets.md` §1.4 and §3. |
 | C12 | Remove dead/incorrect state | `Match.scoreA/scoreB` writes, unused `matches[]`, `substitutions[]`, `SET_CHAMPION`, `rounds`, NDI fields: remove or wire up. No user-facing behaviour change. |
 | C13 | Timer overlay decision | The timer broadcasts `matchTimer` but no overlay consumes it. Either ship a compatible timer overlay in v1 or explicitly mark the timer as control-only. |
-| C14 | Map game-mode links | Map assets have a `gameMode` field, but the Assets view can only import and rename; there is no control to link a map to a bundled game mode. User-imported maps therefore group under **Other** on the map-pool overlay. Found during manual QA on 2026-11-12. |
+| C14 | Map game-mode links | **Fixed 2026-11-14** — Map assets now have a **Game mode…** link editor in Assets. Unlinked maps still group under **Other** on the map-pool overlay. Found during manual QA on 2026-11-12. |
 
 ### Font specifics (C1)
 
@@ -133,6 +133,9 @@ scope creep.
 | D2 | Merged Map Selection / Hero Bans tab | The two Match Controller tabs edit closely related data. Merge them into one map-centric editor, keeping the existing per-map fields and validation. |
 | D3 | Map-mode icons on map select | The map-select overlay currently shows only the map name. Add the bundled game-mode icon/name where the asset has a game-mode link (see C14). |
 | D4 | Caster camera and audio via VDO Ninja | Embed or link caster camera feeds in the control UI and/or an overlay. Requires a capture/transport decision (VDO Ninja URL or WebRTC), a new UI surface and a privacy/consent note; not a protocol-only change. |
+| D5 | Map-pool row animation | Animate each game-mode row asynchronously with a delayed left-to-right load instead of the current single pool reveal. CSS-only; keep the existing grouping and ordering. Requested 2026-11-14 during the R1 re-run. |
+| D6 | Roster card autofill | Size the core player cards so they always fill the 1500px container (the same width as the team-name bar) instead of a fixed 284px. Must keep every card the same width and height at any roster size. Requested 2026-11-14 during the R1 re-run. |
+| D7 | Hero-ban strip polish | The ban strips work and can use a linked custom icon, but the composition can be revisited alongside D1. No protocol change. Requested 2026-11-14 during the R1 re-run. |
 
 ### Protocol and server
 - Versioned protocol (`v2`) with a real full-state snapshot on connect, then typed per-section updates.

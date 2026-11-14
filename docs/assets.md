@@ -109,6 +109,13 @@ Allowed types: `png`, `jpg`/`jpeg`, `webp`, `gif`, `svg`. Max 20 MB per file. SV
 
 Bundled assets are read-only in the library: they cannot be renamed or deleted because they live inside the binary. Imported assets are read-only once stored as well; “replace” is expressed by pointing the team, player or setting at a different asset, never by mutating bytes in place.
 
+**Links.** Two category-specific links are editable from the library:
+
+- **Hero → Ban icon…** points a Hero asset at the small image the game overlay draws in a ban strip. The icon is itself a Hero-category image; once linked it is hidden from hero pickers and ban lists so it never appears as a selectable hero. Without a link the ban strip falls back to the hero's own art (or its `portrait` link).
+- **Map → Game mode…** points a Map asset at a bundled or imported game-mode image. Unlinked maps group under **Other** on the map-pool overlay.
+
+Links are metadata only; the linked image keeps its own content-addressed URL and is never copied or mutated.
+
 ### 1.6 Deletion and garbage collection
 
 - Deleting an asset removes its metadata. If no other asset shares its hash and it is not bundled, the blob becomes unreferenced.

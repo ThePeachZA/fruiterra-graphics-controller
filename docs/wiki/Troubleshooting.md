@@ -20,6 +20,7 @@
 | An overlay is blank | Check that the server is running, that the URL matches the **Base URL**, and that the port in the URL matches **Settings → Port**. |
 | An overlay stops updating | Confirm the Browser Source still points at the right URL. Restart the server once and let the source reconnect. |
 | The overlay disconnects when you change scenes | In the Browser Source properties, turn off **Shutdown source when not visible**. |
+| The entrance animation does not replay when a scene opens | Turn on **Refresh browser when scene becomes active**. With **Shutdown source when not visible** off, OBS keeps the page loaded and the animation only plays once. |
 | An overlay reconnects in a loop | The server is stopped or restarting. Start it and reload the Browser Source once. |
 | A second PC cannot load an overlay | Turn on **Allow LAN connections**, allow the firewall prompt for private networks, and use this PC's LAN IP instead of `127.0.0.1`. Both machines must be on the same network. |
 | The overlay shows old images | Content-addressed URLs change when the image changes. Reload the Browser Source once if OBS cached the old frame. |

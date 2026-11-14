@@ -85,7 +85,18 @@ dx bundle --release --desktop --package-types nsis --features bundle
 
 # Portable app output (exe + hashed assets), without building an installer
 dx build --release --desktop --features bundle
+
+# Development build for UI work and app QA
+dx build --desktop
+# launch target\dx\fruiterra-gc\debug\windows\app\fruiterra-gc.exe
 ```
+
+A plain `cargo build` binary is not runnable for UI work: `manganis` hashes,
+processes and copies the asset bundle only when the build runs through `dx`. The
+`cargo build` executable has no `assets\` folder beside it, so every `asset!` URL
+returns 404: the UI renders unstyled and CSS-module dialogs (for example the
+asset link dialogs) lay out in normal document flow instead of over the window.
+Use `dx build --desktop` or `dx serve` for anything that inspects the app UI.
 
 The installer output is discovered with `dx bundle --json-output` rather than a hard-coded path. The workflow parses `BundleOutput.bundles[]` and fails if the NSIS installer is missing. The portable payload is the `dx` app output directory `target\dx\fruiterra-gc\release\windows\app\` (`fruiterra-gc.exe` plus `assets\`); the same folder is available after `dx bundle`.
 

@@ -416,3 +416,13 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - **Layout fixes.** Game overlay name box is single-line with ellipsis and inset logo art; map-select names/types/chosen-by are centred; map-pool reveal is CSS-driven (no inline opacity writes or second fade); roster info blocks are a fixed 106px with fixed line heights; caster handles get one `@`; hero-ban and map-pool text use block widths and a lower fit floor.
 - **Archivo trial.** The R1 finding that Saira does not read like Apotek is addressed by switching all seven overlays to five static Archivo WOFF2 files (300/400/500/600/900). Saira files and `OFL.txt` stay beside them for the A/B comparison; `OFL-Archivo.txt` is added. The overlay test pins `FONT_PREFIX = "archivo"`, so reverting is a one-line change plus the `@font-face` `src:` URLs.
 - **Not defects.** The map-select canvas is exactly 1920×1080 and the maps row is centred (the enlarged current card shifts visual weight); the watermark has no transform or letter-spacing (the apparent stretch is font metrics); hero bans are current-map only by design.
+
+## R1 re-run - second OBS pass (2026-11-14)
+
+**Status: Pass with notes on every overlay; no disconnects or flickers during the 10-minute watch.** The full result and environment are recorded in `docs/manual-qa.md` §1.1 and §2.2.
+
+- **Caster platform icons.** `getSocialIcon()` now maps every `SocialPlatform` variant (`twitter`, `twitch`, `youtube`, `instagram`, `tiktok`). An unmapped platform no longer renders an empty 20px icon slot.
+- **Rounded-corner fringing.** Card containers add `clip-path: inset(0 round 6px)` and the image layer gets a matching top radius. Applied to both rosters, the casters row and the map pool; game overlay and map select already had the clip.
+- **Asset links in the UI.** Hero assets gain a **Ban icon…** editor for `Asset.icon`; map assets gain a **Game mode…** editor for `Asset.game_mode`. This closes the gap behind R1-15 and backlog C14. Linked icons are excluded from `heroIcons`, `heroPortraits`, the hero-ban datalist and the icon picker, so an icon never appears as a hero. `AssetCatalog::is_linked_icon` backs the filter and is covered by tests.
+- **OBS animation caveat.** With **Shutdown source when not visible** off, OBS keeps the page loaded and CSS entrance animations play only once. The runbook and wiki now tell the operator to enable **Refresh browser when scene becomes active** if the animation must replay on every scene entry.
+- **Backlog, not fixes.** Map-pool per-mode row animation (D5), roster card autofill (D6) and a hero-ban strip polish pass (D7) were requested during the pass and stay post-v1.

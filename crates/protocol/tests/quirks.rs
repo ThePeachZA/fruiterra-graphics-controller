@@ -131,6 +131,32 @@ fn hero_icon_and_portrait_keys_are_case_sensitive() {
 }
 
 #[test]
+fn linked_icons_are_not_listed_as_heroes() {
+    let (mut state, catalog, resolver) = full_parts();
+    // Ban the linked icon as well, so the portrait path is exercised too.
+    state
+        .current_match
+        .as_mut()
+        .expect("fixture match")
+        .hero_bans[0]
+        .team_b
+        .push("Ana Icon".to_owned());
+    let projector = Projector::new(&state, &catalog, &resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+
+    let value = scoreboard_value(&projector, match_state);
+    let icons = value["heroIcons"].as_object().expect("heroIcons");
+    let portraits = value["heroPortraits"].as_object().expect("heroPortraits");
+
+    // The fixture links "Ana Icon" as Ana's icon, so it must not appear as a
+    // hero in its own right.
+    assert!(icons.contains_key("Ana"));
+    assert!(!icons.contains_key("Ana Icon"));
+    assert!(portraits.contains_key("Ana"));
+    assert!(!portraits.contains_key("Ana Icon"));
+}
+
+#[test]
 fn hero_icons_fall_back_to_art_without_an_icon_link() {
     let (state, mut catalog, resolver) = full_parts();
     let mut assets = catalog.assets().to_vec();

@@ -47,6 +47,19 @@ image data and its URL do not change.
 - Use **Rename** to change only the display name.
 - Use **Delete** to remove an image you imported.
 
+## Link a ban icon or game mode
+
+Two links change how an imported image is used. Both buttons appear on the asset
+card of imported images only; bundled art is read-only.
+
+- **Hero → Ban icon…** chooses the small image the game overlay draws in a ban
+  strip. The linked image must be in the **Hero** category. Once linked it is
+  hidden from hero pickers and ban lists, so it never appears as a selectable
+  hero. Select **Use hero art** to remove the link and fall back to the hero's
+  own image.
+- **Map → Game mode…** groups a map under a game mode on the map-pool overlay.
+  Select **No game mode** to move it back to **Other**.
+
 ## Project bundles
 
 A project bundle moves a project and its referenced images to another machine.

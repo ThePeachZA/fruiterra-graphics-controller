@@ -706,6 +706,7 @@ fn HeroBansTab(match_state: Match) -> Element {
     let bans = match_state.hero_bans.clone();
     let heroes: Vec<String> = catalog
         .in_category(AssetCategory::Hero)
+        .filter(|asset| !catalog.is_linked_icon(&asset.id))
         .map(|asset| asset.name.clone())
         .collect();
 
