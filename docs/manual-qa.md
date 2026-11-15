@@ -154,6 +154,7 @@ Results are recorded here as each test completes.
 | ID | Test | Covers | Result | Evidence |
 |---|---|---|---|---|
 | A1 | Save, restart, corrupt save and newer schema | M1-1, M1-2, M1-4, M4-6 | **Pass** — 2026-11-15, run by the assistant at the repository owner's request | Subtitle edit reached `app.json` within two seconds (`"subtitle":"Save test"`, mtime 18:30:39). Restart preserved `Save test`, `Grand Final`, 32 teams, 4 talents, 20 assets and 3 tournaments. A corrupt `app.json` loaded `app.json.bak` and logged `state file was unreadable; loaded the backup`. With `app.json.bak` removed and `schemaVersion` raised to 2, the app showed `Could not load saved state: state schema version 2 is newer than the supported version 1` with a **Dismiss error** action, and the file hash `89C0F4FF99CB744B` was unchanged after closing. |
+| A2 | Logs | M1-3 | **Pass** — 2026-11-15, repository owner | `logs\fruiterra-gc.log.2026-11-15` exists, is plain ASCII text, and records every start (`INFO fruiterra_gc: starting application version="1.0.0"`) plus real events such as the A1 backup warning. Five daily files remain (2026-11-11 to 2026-11-15), under the seven-file cap; the cap itself is not yet exercised. |
 
 ## 3. Milestone register
 
@@ -170,7 +171,7 @@ Results are recorded here as each test completes.
 |---|---|---|---|
 | M1-1 | Corrupt `app.json` falls back to `app.json.bak` in the real app-data folder without losing the last good save. | Store tests use temp folders; real permissions and paths are not exercised. | Done — 2026-11-15, gate A1 (§2.4). |
 | M1-2 | A change made immediately before closing the app is saved on shutdown. | Requires the real 500 ms saver loop and window close. | Done — 2026-11-15, gate A1 (§2.4). |
-| M1-3 | Daily logs appear under `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\` and stop at seven files. | File-system side effect over several days. | Pending |
+| M1-3 | Daily logs appear under `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\` and stop at seven files. | File-system side effect over several days. | Done — 2026-11-15, gate A2 (§2.4). Cap not yet reached (five files). |
 | M1-4 | A newer `schemaVersion` is refused with a readable error when no usable backup exists, rather than silently overwriting data. | Requires editing the real save file and removing `app.json.bak`. | Done — 2026-11-15, gate A1 (§2.4). |
 
 ### M2 — Protocol and projection
@@ -310,4 +311,4 @@ These checks passed locally and in CI; they do not replace the human gates above
 | Date | Version | Environment | Items completed | Tester | Notes |
 |---|---|---|---|---|---|
 | 2026-11-15 | 1.0.0 | Windows 11 Pro 10.0.26200, OBS 31.0.4, WebView2 157.0.4341.57 | R1 (pass with notes), R2, R4 | Repository owner (ThePeachZA) | R1 re-run 2026-11-14 on the 1.0.0 fixture; rows 1–15 of `docs/overlay-qa.md` signed. R2 offline font check 2026-11-15: all seven overlays rendered Archivo with the network disconnected. R4 2026-11-15: third-party timer page received ticks and actions; count to target fixed in `e939e6b` and re-checked. |
-| 2026-11-15 | 1.0.0 | Windows 11 Pro 10.0.26200, `dx build --desktop` binary | A1 | Repository owner (ThePeachZA), run by the assistant at the owner's request | Save/restart, backup recovery and newer-schema refusal all passed; M1-1, M1-2, M1-4 and M4-6 moved to Done (§2.4). |
+| 2026-11-15 | 1.0.0 | Windows 11 Pro 10.0.26200, `dx build --desktop` binary | A1, A2 | Repository owner (ThePeachZA) | A1 save/restart, backup recovery and newer-schema refusal passed; M1-1, M1-2, M1-4 and M4-6 moved to Done. A2 logs passed: plain-text daily log, startup and events recorded, five daily files; M1-3 moved to Done. |
