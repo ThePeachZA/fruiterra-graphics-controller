@@ -109,12 +109,15 @@ pub fn MatchControllerView() -> Element {
                     if target.is_empty() {
                         0
                     } else {
-                        let script = format!(
-                            "Math.max(0, Math.floor((Date.parse({target:?}) - Date.now()) / 1000))"
-                        );
-                        match document::eval(&script).join::<i64>().await {
+                        match document::eval(&target_countdown_script(&target))
+                            .join::<i64>()
+                            .await
+                        {
                             Ok(seconds) => u32::try_from(seconds).unwrap_or(0),
-                            Err(_) => 0,
+                            Err(err) => {
+                                tracing::warn!(target = %target, %err, "timer target eval failed");
+                                0
+                            }
                         }
                     }
                 }
@@ -1168,6 +1171,9 @@ fn TimerTab(timer: Signal<TimerState>, target: Signal<String>) -> Element {
                             oninput: move |event: FormEvent| target.set(event.value()),
                         }
                     }
+                    p { class: "fgc-note",
+                        "The timer counts down to the target. Set a target before starting."
+                    }
                 }
 
                 div { class: "fgc-toggle-row",
@@ -1209,7 +1215,8 @@ fn TimerTab(timer: Signal<TimerState>, target: Signal<String>) -> Element {
                 div { class: "fgc-actions",
                     Button {
                         variant: ButtonVariant::Primary,
-                        disabled: current.running,
+                        disabled: current.running
+                            || (mode == TimerMode::Target && target.is_empty()),
                         onclick: move |_| {
                             let mut timer = timer;
                             let total_seconds = timer.peek().total_seconds;
@@ -1423,6 +1430,15 @@ fn format_clock(total: u32) -> String {
     format!("{hours:02}:{minutes:02}:{seconds:02}")
 }
 
+/// Builds the JavaScript that returns the whole seconds remaining until `target`.
+///
+/// Dioxus evaluates a script as an async function body, so the value must be
+/// returned explicitly: a trailing expression would yield `undefined` and the
+/// eval result would fail to deserialize.
+fn target_countdown_script(target: &str) -> String {
+    format!("return Math.max(0, Math.floor((Date.parse({target:?}) - Date.now()) / 1000));")
+}
+
 /// Parses a non-negative score, treating blank or invalid input as zero.
 fn parse_score(value: &str) -> u16 {
     value.trim().parse::<u16>().unwrap_or(0)
@@ -1490,5 +1506,16 @@ mod tests {
         assert_eq!(parse_score(""), 0);
         assert_eq!(parse_score("-1"), 0);
         assert_eq!(parse_u32("90"), 90);
+    }
+
+    #[test]
+    fn target_script_returns_a_number() {
+        // The desktop eval wrapper runs the script as an async function body, so
+        // the result must be returned; a trailing expression evaluates to
+        // `undefined` and the timer silently stops.
+        let script = target_countdown_script("2026-11-15T18:12");
+        assert!(script.starts_with("return "), "{script}");
+        assert!(script.contains("\"2026-11-15T18:12\""), "{script}");
+        assert!(script.contains("Date.parse"), "{script}");
     }
 }

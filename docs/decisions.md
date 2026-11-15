@@ -434,3 +434,13 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - **R2 offline font check.** The repository owner restarted OBS with the network disconnected and confirmed all seven overlays still rendered Archivo from `/assets/fonts/`. No external font request is needed, which is what the bundled-font design was for.
 - **R3 accepted as blocked.** No original pre-rebuild overlay HTML exists, so drop-in compatibility with an old file cannot be demonstrated. The wire contract is still covered by the M2 projection tests, `crates/protocol/tests/quirks.rs` and the server's `init`/`requestInit` smoke test, and the rebuilt overlays were validated in the R1 OBS pass. The maintainer accepts this gap for v1; the gate stays listed as Blocked rather than Done so the record is accurate.
 
+## R4 - Timer target fix (2026-11-15)
+
+**Status: fixed and verified on the desktop build; the R4 re-check is the remaining step.** Findings are recorded in `docs/manual-qa.md` §2.3.
+
+- **Root cause.** Count to target evaluated `Math.max(0, Math.floor((Date.parse(target) - Date.now()) / 1000))` through `document::eval`. Dioxus runs an eval script as an async function body, so a trailing expression evaluates to `undefined`, not a value. The `join::<i64>()` result therefore failed to deserialize, the error was discarded by `Err(_) => 0`, and the zero remaining time stopped the timer on the first tick. Count up and count down never used eval, which is why only target mode failed.
+- **Fix.** `target_countdown_script` builds the script with an explicit `return`, and an eval failure is logged at `warn` instead of being swallowed. A unit test asserts the script starts with `return ` and quotes the target.
+- **Guard.** **Start** is disabled while **Count to target** has no target, and the field carries a hint, so an empty target can no longer look like a broken timer.
+- **Not changed.** The timer remains control-only; no bundled timer overlay is added. The target is still view state and is not persisted, matching the existing rule that timer run state is not saved.
+
+

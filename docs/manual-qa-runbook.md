@@ -420,6 +420,10 @@ no external requests.
 6. Select **Reset**. Confirm the timer returns to its start value.
 7. Change **Mode**, **Alignment**, **Leading zeroes** and **Standalone timer**
    and confirm the payload reflects each change.
+8. Set **Mode** to **Count to target** with a target about two minutes in the
+   future, then **Start**. Confirm **Start** was disabled before a target was
+   set, that the app clock counts down to the target, and that the ticks carry
+   the remaining time.
 
 **Pass:**
 
@@ -427,12 +431,14 @@ no external requests.
 - Ticks arrive about once per second while running.
 - Start, pause and reset are visible in the payload.
 - Setting changes appear in later messages.
+- Count to target counts down and stops at zero when the target is reached.
 
 **Fail:**
 
 - No connection, no `init`, or no `matchTimer`.
 - Ticks stop while the timer is running.
 - Actions are missing or the payload does not change with the settings.
+- Count to target does not count down, or **Start** is enabled without a target.
 
 **Evidence:** Copy the page output into the test record.
 

@@ -60,7 +60,7 @@ window renders unstyled and dialogs lay out in document flow.
 | R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | **Pass with notes** — 2026-11-14 re-run on the 1.0.0 fixture; no disconnects or flickers. Notes in §2.2. Rows 1–14 signed in `docs/overlay-qa.md`; row 15 is covered by R4. |
 | R2 | Offline font check | M9 | Disconnect the network, restart OBS and confirm every overlay still renders the active overlay font (Archivo) from `/assets/fonts/`. | **Done** — 2026-11-15, repository owner. All seven overlays rendered correctly in Archivo with the network disconnected. |
 | R3 | Drop-in overlay compatibility | M2/M9 | Point an original pre-rebuild overlay HTML at the new server. Confirm `init` paints immediately and live messages still update it. | **Blocked** — 2026-11-15, repository owner: no original pre-rebuild overlay HTML exists to test with. The wire protocol is covered by the M2 projection and server tests; drop-in rendering with an old file cannot be demonstrated. |
-| R4 | Third-party timer overlay | M7/M9 | Connect a timer overlay and confirm `matchTimer` ticks and start/pause/reset actions arrive. | Pending |
+| R4 | Third-party timer overlay | M7/M9 | Connect a timer overlay and confirm `matchTimer` ticks and start/pause/reset actions arrive. | **Partial** — 2026-11-15, repository owner: count up, count down, start, pause, reset, alignment, leading zeroes and standalone passed. Count to target failed and is fixed (§2.3); re-check pending. |
 | R5 | Clean-VM installer | M10 | Install, launch, start the server, load one overlay in OBS, close and uninstall on a clean VM. Confirm no installer or shortcut leftovers. | Pending |
 | R6 | Portable ZIP | M10 | Extract on a machine with no install, run `fruiterra-gc.exe`, confirm the UI assets and all seven overlays load. | Pending |
 | R7 | SmartScreen and checksum | M10 | Run the unsigned installer from a downloaded copy. Confirm the warning is expected and `SHA256SUMS.txt` verifies both artifacts. | Pending |
@@ -120,6 +120,22 @@ loaded, so CSS entrance animations play once and do not replay when the scene
 becomes active again. Turn on **Refresh browser when scene becomes active** if
 the show needs the entrance animation on every scene entry. The runbook and the
 OBS wiki page now record this.
+
+### 2.3 R4 findings (2026-11-15)
+
+First third-party timer run. Count up, count down, start, pause, reset,
+alignment, leading zeroes and standalone all worked. **Count to target failed:**
+the timer stayed at `00:00:00` and never ticked.
+
+| ID | Area | Finding | Cause | Disposition |
+|---|---|---|---|---|
+| R4-1 | Timer | Count to target never runs; the app clock stays at `00:00:00` and no tick is broadcast | The countdown was evaluated with `document::eval` and a trailing expression. Dioxus runs a script as an async function body, so the script returned `undefined`; the result failed to deserialize into `i64`, the error was discarded, and the zero remaining time stopped the timer immediately | **Fixed** — the script is built by `target_countdown_script` and returns explicitly; an eval failure is logged instead of discarded; a unit test pins the `return` |
+| R4-2 | Timer | No feedback when Count to target has no target set | **Start** ran with an empty target, which computes zero and stops at once | **Fixed** — **Start** is disabled while Count to target has no target, and the field carries a short hint |
+
+Verified on the `dx build --desktop` binary: with a target four minutes ahead the
+clock counted down second by second (for example `69:03:17` → `69:03:13` for a
+later typed target), and **Start** was disabled until a target existed. No
+`timer target eval failed` warning appeared in the log.
 
 ## 3. Milestone register
 

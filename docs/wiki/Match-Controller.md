@@ -95,6 +95,11 @@ controls to reorder, and **Remove** to take a map out.
 The **Timer** panel shows the current value. Use **Start**, **Pause** and
 **Reset**.
 
+**Count to target** needs a target in the future. **Start** stays disabled until
+you set one, and the clock counts down to it; once the target passes the timer
+stops at `00:00:00`. The target is not saved, so set it again after switching
+away from the page or restarting the app.
+
 > [!NOTE]
 > The timer is control-only in version 1. There is no bundled timer overlay, but
 > third-party overlays receive the ticks and the start, pause and reset actions.
