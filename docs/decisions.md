@@ -426,3 +426,11 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - **Asset links in the UI.** Hero assets gain a **Ban icon…** editor for `Asset.icon`; map assets gain a **Game mode…** editor for `Asset.game_mode`. This closes the gap behind R1-15 and backlog C14. Linked icons are excluded from `heroIcons`, `heroPortraits`, the hero-ban datalist and the icon picker, so an icon never appears as a hero. `AssetCatalog::is_linked_icon` backs the filter and is covered by tests.
 - **OBS animation caveat.** With **Shutdown source when not visible** off, OBS keeps the page loaded and CSS entrance animations play only once. The runbook and wiki now tell the operator to enable **Refresh browser when scene becomes active** if the animation must replay on every scene entry.
 - **Backlog, not fixes.** Map-pool per-mode row animation (D5), roster card autofill (D6) and a hero-ban strip polish pass (D7) were requested during the pass and stay post-v1.
+
+## QA gates R2 and R3 (2026-11-15)
+
+**Status: R2 passed; R3 is blocked and accepted as such.** Both are recorded in `docs/manual-qa.md` §2 and the sign-off log.
+
+- **R2 offline font check.** The repository owner restarted OBS with the network disconnected and confirmed all seven overlays still rendered Archivo from `/assets/fonts/`. No external font request is needed, which is what the bundled-font design was for.
+- **R3 accepted as blocked.** No original pre-rebuild overlay HTML exists, so drop-in compatibility with an old file cannot be demonstrated. The wire contract is still covered by the M2 projection tests, `crates/protocol/tests/quirks.rs` and the server's `init`/`requestInit` smoke test, and the rebuilt overlays were validated in the R1 OBS pass. The maintainer accepts this gap for v1; the gate stays listed as Blocked rather than Done so the record is accurate.
+

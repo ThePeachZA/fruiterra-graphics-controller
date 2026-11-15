@@ -15,6 +15,8 @@ Status values:
 - **Pending** — not run, or no signed-off record exists.
 - **Partial** — an automated, WebView2 or UIAutomation smoke check passed, but
   the real-environment check remains.
+- **Blocked** — the test cannot be run because a required input or environment
+  does not exist. Record why in the status cell.
 - **Done** — run and recorded with a date/version.
 
 Update the status and add a row to the sign-off log when an item is completed.
@@ -57,13 +59,13 @@ window renders unstyled and dialogs lay out in document flow.
 |---|---|---|---|---|
 | R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | **Pass with notes** — 2026-11-14 re-run on the 1.0.0 fixture; no disconnects or flickers. Notes in §2.2. Rows 1–14 signed in `docs/overlay-qa.md`; row 15 is covered by R4. |
 | R2 | Offline font check | M9 | Disconnect the network, restart OBS and confirm every overlay still renders the active overlay font (Archivo) from `/assets/fonts/`. | **Done** — 2026-11-15, repository owner. All seven overlays rendered correctly in Archivo with the network disconnected. |
-| R3 | Drop-in overlay compatibility | M2/M9 | Point an original pre-rebuild overlay HTML at the new server. Confirm `init` paints immediately and live messages still update it. | Pending |
+| R3 | Drop-in overlay compatibility | M2/M9 | Point an original pre-rebuild overlay HTML at the new server. Confirm `init` paints immediately and live messages still update it. | **Blocked** — 2026-11-15, repository owner: no original pre-rebuild overlay HTML exists to test with. The wire protocol is covered by the M2 projection and server tests; drop-in rendering with an old file cannot be demonstrated. |
 | R4 | Third-party timer overlay | M7/M9 | Connect a timer overlay and confirm `matchTimer` ticks and start/pause/reset actions arrive. | Pending |
 | R5 | Clean-VM installer | M10 | Install, launch, start the server, load one overlay in OBS, close and uninstall on a clean VM. Confirm no installer or shortcut leftovers. | Pending |
 | R6 | Portable ZIP | M10 | Extract on a machine with no install, run `fruiterra-gc.exe`, confirm the UI assets and all seven overlays load. | Pending |
 | R7 | SmartScreen and checksum | M10 | Run the unsigned installer from a downloaded copy. Confirm the warning is expected and `SHA256SUMS.txt` verifies both artifacts. | Pending |
 | R8 | WebView2 bootstrap | M10 | On a VM without WebView2, confirm the installer installs the runtime. Confirm the portable build fails with a clear message instead. | Pending |
-| R9 | Tagged release publish | M10 | After R1–R8, tag `v1.0.0`. Confirm the workflow publishes the installer, portable ZIP, checksums and release notes. | Pending |
+| R9 | Tagged release publish | M10 | After R1–R8 (R3 accepted as Blocked), tag `v1.0.0`. Confirm the workflow publishes the installer, portable ZIP, checksums and release notes. | Pending |
 
 ## 2.1 R1 findings (2026-11-12)
 
