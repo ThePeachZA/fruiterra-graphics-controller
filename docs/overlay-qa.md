@@ -23,7 +23,7 @@ across all milestones is in `docs/manual-qa.md`.
 | 12 | `hero-bans` uses the correct current map and first-ban order | ☑ |
 | 13 | `team-roster-home` / `team-roster-away` show the correct side | ☑ |
 | 14 | `row-casters` order and social icons are correct | ☑ |
-| 15 | A third-party timer overlay receives `matchTimer` ticks and actions | ☐ |
+| 15 | A third-party timer overlay receives `matchTimer` ticks and actions | ☑ |
 
 ## Automated pre-check
 
@@ -82,6 +82,6 @@ smoke test, not a substitute for the OBS sign-off below.
 | Tester | Repository owner (ThePeachZA) |
 | OBS version | 31.0.4 |
 | WebView2 / CEF version | 157.0.4341.57 |
-| Notes | Rows 1–14 signed off after the R1 pass with notes on 2026-11-14 (§2.2 of `docs/manual-qa.md`) and the R2 offline font pass on 2026-11-15. Row 15 (timer) is a third-party overlay and is covered by gate R4. |
+| Notes | Rows 1–14 signed off after the R1 pass with notes on 2026-11-14 (§2.2 of `docs/manual-qa.md`); row 15 signed off after the R4 third-party timer pass on 2026-11-15. |
 
 No automated pixel rendering runs in CI; this checklist is the compatibility gate. Any failure blocks the release until fixed or explicitly accepted and recorded in the notes.

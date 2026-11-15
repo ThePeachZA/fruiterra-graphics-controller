@@ -60,7 +60,7 @@ window renders unstyled and dialogs lay out in document flow.
 | R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | **Pass with notes** — 2026-11-14 re-run on the 1.0.0 fixture; no disconnects or flickers. Notes in §2.2. Rows 1–14 signed in `docs/overlay-qa.md`; row 15 is covered by R4. |
 | R2 | Offline font check | M9 | Disconnect the network, restart OBS and confirm every overlay still renders the active overlay font (Archivo) from `/assets/fonts/`. | **Done** — 2026-11-15, repository owner. All seven overlays rendered correctly in Archivo with the network disconnected. |
 | R3 | Drop-in overlay compatibility | M2/M9 | Point an original pre-rebuild overlay HTML at the new server. Confirm `init` paints immediately and live messages still update it. | **Blocked** — 2026-11-15, repository owner: no original pre-rebuild overlay HTML exists to test with. The wire protocol is covered by the M2 projection and server tests; drop-in rendering with an old file cannot be demonstrated. |
-| R4 | Third-party timer overlay | M7/M9 | Connect a timer overlay and confirm `matchTimer` ticks and start/pause/reset actions arrive. | **Partial** — 2026-11-15, repository owner: count up, count down, start, pause, reset, alignment, leading zeroes and standalone passed. Count to target failed and is fixed (§2.3); re-check pending. |
+| R4 | Third-party timer overlay | M7/M9 | Connect a timer overlay and confirm `matchTimer` ticks and start/pause/reset actions arrive. | **Done** — 2026-11-15, repository owner. Count up, count down, count to target, start, pause, reset, alignment, leading zeroes and standalone all passed. R4-1 and R4-2 fixed in `e939e6b` (§2.3). |
 | R5 | Clean-VM installer | M10 | Install, launch, start the server, load one overlay in OBS, close and uninstall on a clean VM. Confirm no installer or shortcut leftovers. | Pending |
 | R6 | Portable ZIP | M10 | Extract on a machine with no install, run `fruiterra-gc.exe`, confirm the UI assets and all seven overlays load. | Pending |
 | R7 | SmartScreen and checksum | M10 | Run the unsigned installer from a downloaded copy. Confirm the warning is expected and `SHA256SUMS.txt` verifies both artifacts. | Pending |
@@ -137,6 +137,13 @@ clock counted down second by second (for example `69:03:17` → `69:03:13` for a
 later typed target), and **Start** was disabled until a target existed. No
 `timer target eval failed` warning appeared in the log.
 
+Re-check on 2026-11-15: **Pass**. The third-party page received `matchTimer`
+once per second while counting down to a target about five hours ahead
+(`"hours":5,"minutes":4,"seconds":26` → `19`), and the same run passed count up,
+count down, start, pause, reset, alignment, leading zeroes and standalone. One
+tick was delivered one second late (a `22` → `20` gap); the payload still carried
+the absolute remaining time, so nothing accumulated. Gate R4 is closed.
+
 ## 3. Milestone register
 
 ### M0 — Workspace and guardrails
@@ -212,7 +219,7 @@ later typed target), and **Start** was disabled until a target existed. No
 | ID | Check | Why manual | Status |
 |---|---|---|---|
 | M7-1 | All seven tabs work interactively and validation errors are shown inline. | Full UI pass. | Pending |
-| M7-2 | Timer start/pause/reset, count-up/count-down/target, settings persistence and one-second ticks behave correctly. | Requires a running clock and tab switching. | Pending |
+| M7-2 | Timer start/pause/reset, count-up/count-down/target, settings persistence and one-second ticks behave correctly. | Requires a running clock and tab switching. | Done — 2026-11-15, gate R4 (§2.3). |
 | M7-3 | Force Update and copy-URL work, and the URL matches the configured port. | Clipboard and live-server interaction. | Pending |
 | M7-4 | Map, hero-ban, map-pool and talent edits update the overlays live. | WebView2 harness covered a subtitle edit; the remaining tabs need OBS. | Partial |
 | M7-5 | Derived vs manual scores, draws ignored, first-to and side/swap/loser-pick rules behave as documented. | UI-level verification of tested rules. | Pending |
@@ -291,4 +298,4 @@ These checks passed locally and in CI; they do not replace the human gates above
 
 | Date | Version | Environment | Items completed | Tester | Notes |
 |---|---|---|---|---|---|
-| 2026-11-15 | 1.0.0 | Windows 11 Pro 10.0.26200, OBS 31.0.4, WebView2 157.0.4341.57 | R1 (pass with notes), R2 | Repository owner (ThePeachZA) | R1 re-run 2026-11-14 on the 1.0.0 fixture; rows 1–14 of `docs/overlay-qa.md` signed. R2 offline font check 2026-11-15: all seven overlays rendered Archivo with the network disconnected. Row 15 (timer) remains with R4. |
+| 2026-11-15 | 1.0.0 | Windows 11 Pro 10.0.26200, OBS 31.0.4, WebView2 157.0.4341.57 | R1 (pass with notes), R2, R4 | Repository owner (ThePeachZA) | R1 re-run 2026-11-14 on the 1.0.0 fixture; rows 1–15 of `docs/overlay-qa.md` signed. R2 offline font check 2026-11-15: all seven overlays rendered Archivo with the network disconnected. R4 2026-11-15: third-party timer page received ticks and actions; count to target fixed in `e939e6b` and re-checked. |
