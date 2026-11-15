@@ -443,4 +443,23 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - **Guard.** **Start** is disabled while **Count to target** has no target, and the field carries a hint, so an empty target can no longer look like a broken timer.
 - **Not changed.** The timer remains control-only; no bundled timer overlay is added. The target is still view state and is not persisted, matching the existing rule that timer run state is not saved.
 
+## Remote overlay access backlogged (2026-11-15)
+
+**Status: recorded as post-v1 backlog C3; nothing is implemented for v1.** Raised
+after the A3 pass, where an overlay served from a Tailscale origin only worked
+because the browser was on the host PC.
+
+- **Detect, do not bundle.** The app will drive the user's installed Tailscale
+  client instead of embedding it (tsnet is Go) or shipping a sidecar. The mode is
+  off by default and a missing client is a normal state.
+- **Origin-aware connection first.** The hardcoded `ws://localhost:<port>` is the
+  real blocker for any remote viewer. Replacing it with a same-origin resolver
+  while keeping `?port=`/`?host=` is a prerequisite and also improves LAN mode.
+- **Funnel is gated.** Public exposure needs an explicit confirmation, a token
+  and a documented teardown; it is not a default and does not persist across
+  launches.
+- **Not in v1.** No code, settings, protocol or packaging changes for this are
+  made before the v1 tag. Design details and open questions are in
+  `docs/backlog.md` C3.
+
 

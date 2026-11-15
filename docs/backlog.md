@@ -137,6 +137,80 @@ scope creep.
 | D6 | Roster card autofill | Size the core player cards so they always fill the 1500px container (the same width as the team-name bar) instead of a fixed 284px. Must keep every card the same width and height at any roster size. Requested 2026-11-14 during the R1 re-run. |
 | D7 | Hero-ban strip polish | The ban strips work and can use a linked custom icon, but the composition can be revisited alongside D1. No protocol change. Requested 2026-11-14 during the R1 re-run. |
 
+### C3. Remote overlay access - LAN, Tailscale and Funnel (requested 2026-11-15 - post-v1)
+
+**Goal.** One overlay server with four access scopes: this PC (default), the
+local network (the existing **Allow LAN connections**), a remote device over the
+user's own Tailscale tailnet, and optionally the public internet through Tailscale
+**Funnel**. Tailscale is detected, never bundled: the feature stays off until the
+user turns it on and the Tailscale client is installed.
+
+**What A3 proved (2026-11-15).** An overlay page served from a second origin
+connected to a non-default port and updated live. That run only worked because
+the browser was on the host PC: every overlay still dials
+`ws://localhost:<port>`, so a second device would dial its own localhost. Remote
+access therefore needs an origin-aware connection first (D8-1); the Tailscale
+plumbing is the easy part.
+
+| ID | Item | Scope sketch |
+|---|---|---|
+| D8-1 | Origin-aware overlay connection | Replace `ws://localhost:${port}` in all seven overlays with a resolver: same-origin `ws(s)://location.host` when the app served the page, `?host=`/`?port=` overrides for third-party pages, `wss` when the page is HTTPS. No message, filename or DOM change. |
+| D8-2 | Remote-access settings | **Settings -> Remote access**: Off / LAN / Tailscale / Funnel, a status line (client version, tailnet name, serve/funnel state), and copy/open links per overlay for the active scope. |
+| D8-3 | Tailscale detection | Find `tailscale.exe` (PATH, then `%ProgramFiles%\Tailscale`); read `tailscale status --json` (`BackendState`, `Self.DNSName`, `Self.Online`) and `tailscale version`. Show plain-text remedies for not installed, stopped or logged out. |
+| D8-4 | Serve lifecycle | On server start in Tailscale mode run `tailscale serve --bg --https=443 --set-path /fgc http://127.0.0.1:<port>`; remove only this app's config when the server stops, the mode changes or the app exits. Never run `tailscale serve reset`. |
+| D8-5 | Funnel (explicit opt-in) | The same path prefix through `tailscale funnel` on 443. Requires HTTPS certificates and Funnel permission in the ACL. Confirmation dialog naming the public exposure, plus an unguessable path token. Resets to off on every launch. |
+| D8-6 | URL generation | Tailscale/Funnel: `https://<dnsname>/fgc/overlays/<file>.html` (no `?port=`); LAN: `http://<lan-ip>:<port>/overlays/<file>.html`; local: unchanged. The token appears only in Funnel URLs. |
+| D8-7 | Docs and QA | Wiki page "Remote overlays" (setup, ACLs, firewall, teardown, troubleshooting); runbook tests for a second LAN PC, a tailnet device and a phone on cellular; evidence that teardown leaves `tailscale serve status` empty. |
+
+**Design notes.**
+
+- *Resolver (D8-1).* The whole feature rests on this change:
+
+  ```js
+  const q = new URLSearchParams(location.search);
+  const override = q.has('port') || q.has('host');
+  const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+  const target = override
+    ? `${q.get('host') || 'localhost'}:${q.get('port') || '3001'}`
+    : location.host;
+  const ws = new WebSocket(`${scheme}://${target}`);
+  ```
+
+  `?port=` keeps its current meaning (localhost:port), so A3 and third-party
+  pages do not change. App-served pages become origin-relative, which is what
+  makes LAN and proxied access work. `crates/server/tests/overlays.rs` should
+  assert the resolver and that no overlay still contains the literal
+  `ws://localhost`.
+- *Why shell out.* Tailscale's embedding library (tsnet) is Go, so a Rust app
+  would need a sidecar or a rewrite. Driving the installed client honours the
+  user's login, tailnet and ACLs, keeps the installer small and keeps the
+  feature optional. A missing client is a normal state, not an error.
+- *Security model.* Overlays are read-only: the server ignores inbound client
+  messages, so a remote viewer can read team names and scores but cannot change
+  state. In Tailscale mode the tailnet ACL is the access boundary. Funnel is
+  public, so it needs the warning, the token and a documented "turn it off when
+  the show ends" habit. Keep CORS as-is, do not log the token, and consider
+  serving only `/overlays/*` and `/assets/*` on the Funnel path (block `/state`).
+- *Failure modes to design for.* Client missing or too old; tailscaled stopped;
+  logged out; MagicDNS off; HTTPS certificates not enabled for the tailnet;
+  Funnel not permitted by the ACL; another app already serving 443 or `/fgc`;
+  the DNS name changing after a machine or tailnet rename; a stale serve config
+  left by a crash (reconcile at startup and offer **Stop remote access**).
+- *Phasing.* 1) D8-1 plus static tests; the feature is usable at that point with
+  a manually run `tailscale serve` (document it). 2) D8-2 to D8-4, UI and
+  lifecycle. 3) D8-5, token and Funnel. 4) D8-7, docs and QA.
+- *Open questions.* Can a normal GUI process run `tailscale serve` on Windows
+  without elevation (operator user)? Does `--set-path` plus `off` remove only
+  our path? Does the proxy pass WebSocket upgrades and `/assets/*` unchanged?
+  How slow is first-request certificate issuance? Which CEF/WebView2 versions
+  in OBS load `wss` from another machine cleanly?
+- *Out of scope.* Bundling Tailscale or headscale, ACL management, exit nodes,
+  TLS for plain LAN, per-overlay access control, several remote origins at once,
+  and any auth beyond the tailnet ACL and the Funnel token.
+
+Related: B2 (copy buttons for every overlay URL), B3 (connection status) and the
+"configurable bind address ... optional TLS" item under **Protocol and server**.
+
 ### Protocol and server
 - Versioned protocol (`v2`) with a real full-state snapshot on connect, then typed per-section updates.
 - Optional diffs/patches for large payloads; message sequence numbers and acknowledgements.
@@ -144,6 +218,7 @@ scope creep.
 - Per-overlay subscriptions so a client only receives the sections it renders.
 - Replace base64 data URLs with served asset URLs (or a hybrid), reducing frame size.
 - Configurable bind address (localhost vs LAN), CORS allow-list, optional token auth, optional TLS.
+- Remote overlay access over the user's Tailscale tailnet, optional Funnel, and origin-aware overlay URLs (see §C3).
 - Headless/server-only mode.
 - HTTP control API (score, show/hide, timer) for Stream Deck, Companion, Bitfocus, scripts.
 - Server-side scene/preset switching and multiple simultaneous match outputs.
