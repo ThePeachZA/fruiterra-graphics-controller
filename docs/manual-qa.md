@@ -144,6 +144,17 @@ count down, start, pause, reset, alignment, leading zeroes and standalone. One
 tick was delivered one second late (a `22` → `20` gap); the payload still carried
 the absolute remaining time, so nothing accumulated. Gate R4 is closed.
 
+### 2.4 App-UI test results (A-series)
+
+The A-series runbook is §5 of
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md). Tests run on this machine
+use the `dx build --desktop` executable and the recorded environment in §1.1.
+Results are recorded here as each test completes.
+
+| ID | Test | Covers | Result | Evidence |
+|---|---|---|---|---|
+| A1 | Save, restart, corrupt save and newer schema | M1-1, M1-2, M1-4, M4-6 | **Pass** — 2026-11-15, run by the assistant at the repository owner's request | Subtitle edit reached `app.json` within two seconds (`"subtitle":"Save test"`, mtime 18:30:39). Restart preserved `Save test`, `Grand Final`, 32 teams, 4 talents, 20 assets and 3 tournaments. A corrupt `app.json` loaded `app.json.bak` and logged `state file was unreadable; loaded the backup`. With `app.json.bak` removed and `schemaVersion` raised to 2, the app showed `Could not load saved state: state schema version 2 is newer than the supported version 1` with a **Dismiss error** action, and the file hash `89C0F4FF99CB744B` was unchanged after closing. |
+
 ## 3. Milestone register
 
 ### M0 — Workspace and guardrails
@@ -157,10 +168,10 @@ the absolute remaining time, so nothing accumulated. Gate R4 is closed.
 
 | ID | Check | Why manual | Status |
 |---|---|---|---|
-| M1-1 | Corrupt `app.json` falls back to `app.json.bak` in the real app-data folder without losing the last good save. | Store tests use temp folders; real permissions and paths are not exercised. | Pending |
-| M1-2 | A change made immediately before closing the app is saved on shutdown. | Requires the real 500 ms saver loop and window close. | Pending |
+| M1-1 | Corrupt `app.json` falls back to `app.json.bak` in the real app-data folder without losing the last good save. | Store tests use temp folders; real permissions and paths are not exercised. | Done — 2026-11-15, gate A1 (§2.4). |
+| M1-2 | A change made immediately before closing the app is saved on shutdown. | Requires the real 500 ms saver loop and window close. | Done — 2026-11-15, gate A1 (§2.4). |
 | M1-3 | Daily logs appear under `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\` and stop at seven files. | File-system side effect over several days. | Pending |
-| M1-4 | A newer `schemaVersion` is refused with a readable error when no usable backup exists, rather than silently overwriting data. | Requires editing the real save file and removing `app.json.bak`. | Pending |
+| M1-4 | A newer `schemaVersion` is refused with a readable error when no usable backup exists, rather than silently overwriting data. | Requires editing the real save file and removing `app.json.bak`. | Done — 2026-11-15, gate A1 (§2.4). |
 
 ### M2 — Protocol and projection
 
@@ -191,7 +202,7 @@ the absolute remaining time, so nothing accumulated. Gate R4 is closed.
 | M4-3 | Error toasts and inline errors are readable and do not leak internal paths. | Requires triggering real failures. | Pending |
 | M4-4 | Launching a second instance exits immediately instead of running a second window and server. | Needs two real process launches. | Pending |
 | M4-5 | Inter renders locally in the UI with no Google Fonts request. | Network inspection in the packaged app. | Partial |
-| M4-6 | State survives an app restart, including settings, teams, talent, match and tournament data. | Needs the real app-data directory. | Pending |
+| M4-6 | State survives an app restart, including settings, teams, talent, match and tournament data. | Needs the real app-data directory. | Done — 2026-11-15, gate A1 (§2.4). |
 
 ### M5 — Assets
 
@@ -299,3 +310,4 @@ These checks passed locally and in CI; they do not replace the human gates above
 | Date | Version | Environment | Items completed | Tester | Notes |
 |---|---|---|---|---|---|
 | 2026-11-15 | 1.0.0 | Windows 11 Pro 10.0.26200, OBS 31.0.4, WebView2 157.0.4341.57 | R1 (pass with notes), R2, R4 | Repository owner (ThePeachZA) | R1 re-run 2026-11-14 on the 1.0.0 fixture; rows 1–15 of `docs/overlay-qa.md` signed. R2 offline font check 2026-11-15: all seven overlays rendered Archivo with the network disconnected. R4 2026-11-15: third-party timer page received ticks and actions; count to target fixed in `e939e6b` and re-checked. |
+| 2026-11-15 | 1.0.0 | Windows 11 Pro 10.0.26200, `dx build --desktop` binary | A1 | Repository owner (ThePeachZA), run by the assistant at the owner's request | Save/restart, backup recovery and newer-schema refusal all passed; M1-1, M1-2, M1-4 and M4-6 moved to Done (§2.4). |
