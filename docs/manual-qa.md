@@ -55,8 +55,8 @@ window renders unstyled and dialogs lay out in document flow.
 
 | ID | Gate | Milestone | What to do | Status |
 |---|---|---|---|---|
-| R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | **Pass with notes** — 2026-11-14 re-run on the 1.0.0 fixture; no disconnects or flickers. Notes in §2.2. Formal OBS sign-off table still to be signed. |
-| R2 | Offline font check | M9 | Disconnect the network, restart OBS and confirm every overlay still renders the active overlay font (Archivo) from `/assets/fonts/`. | Pending |
+| R1 | OBS overlay pass | M9 | Complete all 15 rows in `docs/overlay-qa.md` with seven Browser Sources at 1920×1080 and a loaded match. Record OBS, WebView2/CEF and app versions. | **Pass with notes** — 2026-11-14 re-run on the 1.0.0 fixture; no disconnects or flickers. Notes in §2.2. Rows 1–14 signed in `docs/overlay-qa.md`; row 15 is covered by R4. |
+| R2 | Offline font check | M9 | Disconnect the network, restart OBS and confirm every overlay still renders the active overlay font (Archivo) from `/assets/fonts/`. | **Done** — 2026-11-15, repository owner. All seven overlays rendered correctly in Archivo with the network disconnected. |
 | R3 | Drop-in overlay compatibility | M2/M9 | Point an original pre-rebuild overlay HTML at the new server. Confirm `init` paints immediately and live messages still update it. | Pending |
 | R4 | Third-party timer overlay | M7/M9 | Connect a timer overlay and confirm `matchTimer` ticks and start/pause/reset actions arrive. | Pending |
 | R5 | Clean-VM installer | M10 | Install, launch, start the server, load one overlay in OBS, close and uninstall on a clean VM. Confirm no installer or shortcut leftovers. | Pending |
@@ -273,4 +273,4 @@ These checks passed locally and in CI; they do not replace the human gates above
 
 | Date | Version | Environment | Items completed | Tester | Notes |
 |---|---|---|---|---|---|
-| | | | | | |
+| 2026-11-15 | 1.0.0 | Windows 11 Pro 10.0.26200, OBS 31.0.4, WebView2 157.0.4341.57 | R1 (pass with notes), R2 | Repository owner (ThePeachZA) | R1 re-run 2026-11-14 on the 1.0.0 fixture; rows 1–14 of `docs/overlay-qa.md` signed. R2 offline font check 2026-11-15: all seven overlays rendered Archivo with the network disconnected. Row 15 (timer) remains with R4. |
