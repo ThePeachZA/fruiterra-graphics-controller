@@ -462,4 +462,24 @@ because the browser was on the host PC.
   made before the v1 tag. Design details and open questions are in
   `docs/backlog.md` C3.
 
+## Asset cleanup guarded against a failed load (2026-11-15)
+
+**Status: open v1 correctness item C15.** Found while recovering the test fixture.
+A PowerShell `Set-Content -Encoding utf8` wrote a BOM into both `app.json` and
+`app.json.bak`; serde rejected both, the app started on the empty default state,
+and the 20 user blobs were removed.
+
+- **Cause.** `clean_up_unused` and the post-save collector build the keep set from
+  the in-memory state plus `store.load().ok()`. With an unreadable store the
+  second half is `None` and the first half is empty, so the keep set is empty and
+  every blob is garbage. The startup collector is already skipped when the load
+  fails (`loaded == false`), but the **Clean up now** button and the saver path
+  are not.
+- **Guard.** Track whether the last load succeeded (the existing `Bootstrap::loaded`
+  is enough) and refuse both collectors while it is false, with a plain-language
+  notice. A successful import or an explicit user save that replaces the state
+  can re-enable cleanup.
+- **Not changed yet.** No code change is made in this QA pass; the item is
+  recorded for the v1 correctness sweep so the behaviour is not lost.
+
 

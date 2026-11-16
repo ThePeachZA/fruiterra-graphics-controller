@@ -22,6 +22,7 @@ These are defects that currently make a shipped feature fail, risk data loss, or
 | C12 | Remove dead/incorrect state | `Match.scoreA/scoreB` writes, unused `matches[]`, `substitutions[]`, `SET_CHAMPION`, `rounds`, NDI fields: remove or wire up. No user-facing behaviour change. |
 | C13 | Timer overlay decision | The timer broadcasts `matchTimer` but no overlay consumes it. Either ship a compatible timer overlay in v1 or explicitly mark the timer as control-only. |
 | C14 | Map game-mode links | **Fixed 2026-11-14** — Map assets now have a **Game mode…** link editor in Assets. Unlinked maps still group under **Other** on the map-pool overlay. Found during manual QA on 2026-11-12. |
+| C15 | Asset cleanup after a failed load | **Open — found 2026-11-15.** If `app.json` and `app.json.bak` are both unreadable, the app starts with the empty default state. The startup GC is skipped (`loaded == false`), but **Clean up now** and the post-save GC still build the keep set from the empty state plus `store.load().ok()`, which is `None` on the same error, so every user blob is deleted. Guard both paths on a successful load (or an explicit import) and show a notice instead of deleting. See `docs/decisions.md`. |
 
 ### Font specifics (C1)
 
