@@ -353,8 +353,17 @@
     }
 
     function connect() {
-      const port = new URLSearchParams(location.search).get('port') || '3001';
-      ws = new WebSocket(`ws://localhost:${port}`);
+      // Reach the server that served this page so a LAN or proxied client does
+      // not dial its own localhost. ?host= and ?port= still override the target
+      // for third-party pages.
+      const query = new URLSearchParams(location.search);
+      const host = query.get('host');
+      const port = query.get('port');
+      const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+      const target = host || port
+        ? `${host || 'localhost'}:${port || '3001'}`
+        : (location.host || 'localhost:3001');
+      ws = new WebSocket(`${scheme}://${target}`);
 
       ws.onopen = () => {
         ws.send(JSON.stringify({ type: 'requestInit' }));

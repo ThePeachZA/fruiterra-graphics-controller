@@ -95,8 +95,23 @@ fn overlays_are_embedded_and_subscribe_to_expected_messages() {
             spec.file
         );
         assert!(
-            text.contains("ws://localhost:"),
-            "{} should connect to the local overlay server",
+            text.contains("new WebSocket(`${scheme}://${target}`)"),
+            "{} should connect through the origin-aware resolver",
+            spec.file
+        );
+        assert!(
+            text.contains("location.host"),
+            "{} should fall back to the page origin",
+            spec.file
+        );
+        assert!(
+            text.contains("query.get('host')") && text.contains("query.get('port')"),
+            "{} should keep the ?host= and ?port= overrides",
+            spec.file
+        );
+        assert!(
+            !text.contains("ws://localhost:"),
+            "{} hardcodes localhost, so a remote client would dial itself",
             spec.file
         );
         for message_type in spec.message_types {
@@ -118,13 +133,15 @@ fn overlays_have_no_external_network_references() {
             "{} still references Penpot",
             spec.file
         );
-        for (index, _) in text.match_indices("http") {
-            let tail: String = text[index..].chars().take(80).collect();
-            assert!(
-                tail.starts_with("http://www.w3.org/2000/svg"),
-                "{} contains an external URL: {tail}",
-                spec.file
-            );
+        for scheme in ["http://", "https://"] {
+            for (index, _) in text.match_indices(scheme) {
+                let tail: String = text[index..].chars().take(80).collect();
+                assert!(
+                    tail.starts_with("http://www.w3.org/2000/svg"),
+                    "{} contains an external URL: {tail}",
+                    spec.file
+                );
+            }
         }
     }
 }
