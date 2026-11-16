@@ -69,9 +69,14 @@ The default is `3001`. Use a port between 1 and 65535.
 By default the server accepts connections from this PC only.
 
 1. Open **Settings** and turn on **Allow LAN connections**.
-2. Allow the Windows Firewall prompt for **private networks**.
+2. Allow the Windows Firewall prompt for **private networks**. The show network
+   must be set to **Private** in Windows, not **Public**.
 3. On the other machine, replace `127.0.0.1` in the overlay URL with this PC's
    local IP address, for example `http://192.168.1.20:3001/overlays/game-overlay.html`.
+
+If the other machine still cannot connect, add an inbound **TCP** rule for the
+app on the **Private** profile, limited to the **local subnet**. Do not open the
+port on public networks or to any remote address.
 
 > [!WARNING]
 > Version 1 has **no authentication**. Anyone who can reach the port can read

@@ -182,10 +182,10 @@ This validates the packaged binary, embedded overlays, embedded assets and the s
 5. **Overlay URLs** — the seven bundled files, the `?port=` parameter, and the default port 3001.
 6. **Migrating from the Google Sheets workflow** - **no automatic import**: teams, talent, matches and assets must be re-entered. This is stated plainly, not buried.
 7. **Timer** - control-only in v1; there is no bundled timer overlay. Third-party timer overlays still receive `matchTimer`.
-8. **Network and security** - localhost by default; "Allow LAN access" binds `0.0.0.0`; CORS is `*`; there is no authentication in v1.
+8. **Network and security** - localhost by default; "Allow LAN access" binds `0.0.0.0`; CORS is `*`; there is no authentication in v1. LAN access relies on a Windows Firewall rule scoped to the **Private** profile and the **local subnet**; the app never asks for a public-network rule.
 9. **Fonts and licences** - Archivo (overlay), Saira (retained fallback) and Inter (UI) are OFL 1.1; local only; no runtime font requests.
 10. **Build from source** — Rust stable, `dioxus-cli` 0.7.10, `cargo test`, `dx bundle`.
-11. **Troubleshooting** — SmartScreen, WebView2 missing, port already in use, firewall prompt on LAN mode.
+11. **Troubleshooting** — SmartScreen, WebView2 missing, port already in use, firewall rule on LAN mode.
 12. **Known limitations** - no import from the earlier Google Sheets workflow, timer control-only, no code signing, Windows-only, bracket overlay post-v1.
 13. **Licence** - MIT, stated in the font/licence section with a link to `LICENSE`; no separate top-level section.
 
@@ -293,6 +293,7 @@ GitHub's generated notes are appended below this template, not used instead of i
 9. Embedded WebView2 bootstrapper in the NSIS installer; portable ZIP requires WebView2.
 10. CI: fmt/clippy/test on every push and PR; tag `v*` publishes; manual dispatch builds artifacts only.
 11. No MSI in v1: the WiX path cannot embed the WebView2 bootstrapper. Revisit only with an explicit decision.
+12. LAN access: the inbound firewall rule is **TCP only**, **Private** profile, **LocalSubnet** remote address, attached to the app executable. The Ethernet/Wi-Fi network used for the show must be **Private**; a **Public** profile blocks LAN mode by design.
 
 ---
 

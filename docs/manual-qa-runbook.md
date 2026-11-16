@@ -770,7 +770,10 @@ excerpt.
 **Steps:**
 
 1. On the host PC, open **Settings** and turn on **Allow LAN connections**.
-2. Allow the Windows Firewall prompt for **private networks** only.
+2. Allow the Windows Firewall prompt for **private networks** only. If Windows
+   does not prompt, confirm the inbound rule is **TCP**, **Private** profile,
+   `RemoteAddress = LocalSubnet`, for the app executable. Remove any UDP rule or
+   any rule that allows `Public` or `Any` remote address.
 3. Note the host's LAN IP with `ipconfig`.
 4. On the second PC, open
    `http://<host-ip>:3001/overlays/game-overlay.html`.
@@ -781,7 +784,7 @@ excerpt.
 **Pass:**
 
 - The second PC loads the overlay and receives live updates.
-- Firewall access is limited to private networks.
+- Firewall access is limited to private networks and the local subnet.
 - Turning LAN mode off closes remote access.
 
 **Fail:**
@@ -789,7 +792,7 @@ excerpt.
 - The second PC cannot connect with LAN mode on and the firewall allowed.
 - The overlay loads but does not update.
 - LAN mode remains reachable after it is turned off.
-- The firewall rule is opened for public networks.
+- The firewall rule is opened for public networks or any remote address.
 
 **Evidence:** Host `ipconfig`, firewall prompt screenshot, remote overlay
 screenshot, and the result after turning LAN mode off.

@@ -194,7 +194,8 @@ and a backup of the previous save is kept as `app.json.bak`.
 
 - The server binds to localhost by default.
 - **Allow LAN connections** binds `0.0.0.0` so other machines can load
-  overlays.
+  overlays. Access relies on a Windows Firewall rule scoped to the **Private**
+  profile and the **local subnet**; set the show network to Private in Windows.
 - CORS is `*` to match the original overlays.
 - There is **no authentication** in v1. Use LAN mode only on a trusted network.
 
@@ -221,7 +222,7 @@ directory is shown above; the old spreadsheets are not read or modified.
 | SmartScreen warning | Expected for unsigned builds. Verify the published SHA-256 checksum before running. |
 | "WebView2 not found" with a portable build | Install the Evergreen WebView2 runtime, or use the installer. |
 | Port already in use | Change the port in Settings or stop the process using it. |
-| Windows Firewall prompt in LAN mode | Allow access on private networks only. |
+| Windows Firewall prompt in LAN mode | Allow access on private networks only, with the show network set to Private. Do not open the port to public networks. |
 | Overlay stays blank | Start the overlay server and check that the Browser Source URL matches the configured port. |
 
 ## Fonts and licences

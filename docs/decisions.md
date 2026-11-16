@@ -482,4 +482,48 @@ and the 20 user blobs were removed.
 - **Not changed yet.** No code change is made in this QA pass; the item is
   recorded for the v1 correctness sweep so the behaviour is not lost.
 
+## Origin-aware overlay connection pulled forward (2026-11-16)
 
+**Status: fixed in v1.** D8-1 was a post-v1 backlog item; the A5 LAN run showed
+it was a v1 blocker, so it was pulled forward before the tag.
+
+- **Problem.** LAN mode correctly bound `0.0.0.0`, but all seven overlays dialled
+  `ws://localhost:<port>`. A browser on a second PC therefore connected to its
+  own localhost, not the host PC. A3 had passed only because that browser ran on
+  the host machine.
+- **Fix.** Each overlay now resolves the socket from the page origin:
+  `ws(s)://location.host` when the app served the page, `?host=`/`?port=`
+  overrides for third-party pages, and `wss` when the page is HTTPS. The old
+  `ws://localhost` literal is gone.
+- **Compatibility.** No message, filename or DOM change. Existing third-party
+  pages that pass `?port=` behave as before; pages served from the app now follow
+  whatever host and port the viewer used.
+- **Tests.** `crates/server/tests/overlays.rs` asserts the resolver in all seven
+  files, checks `location.host` and both query overrides, rejects a
+  `ws://localhost` literal, and scans both `http://` and `https://` for external
+  URLs.
+- **Scope.** Only D8-1 moved. D8-2 to D8-7 (settings UI, Tailscale detection,
+  serve lifecycle, Funnel, URL generation, docs) remain post-v1 backlog.
+
+## A5 - LAN firewall hardening (2026-11-16)
+
+**Status: applied and verified with a second PC.** The A5 run needed a firewall
+rule that kept LAN mode usable without exposing the port beyond the show network.
+
+- **Network profile.** The Ethernet network used for the show is set to
+  **Private** in Windows. A **Public** profile is treated as untrusted and blocks
+  LAN mode by design; the wiki tells users to change it.
+- **One scoped rule.** Inbound **TCP** only, **Private** profile,
+  `RemoteAddress = LocalSubnet`, `Program` = `fruiterra-gc.exe`, action Allow,
+  enabled. No UDP, no `Any` remote address, no `Public` profile.
+- **What was removed.** Windows had auto-generated a TCP rule for the executable
+  on `Private, Public` with any remote address, plus a matching UDP rule. Both
+  were deleted; the UDP rule had already been removed during the run.
+- **Why not broader.** The overlay server has no authentication in v1, so the
+  blast radius is the subnet, not the internet. CORS remains `*` and is unchanged.
+- **Verification.** The second PC painted the live overlay and updated after a
+  score edit both before and after the rule change; turning **Allow LAN
+  connections** off returned the listener to `127.0.0.1:3001` and the LAN IP
+  stopped answering.
+- **Docs.** `docs/wiki/Overlays-in-OBS.md`, `docs/wiki/Troubleshooting.md` and
+  `docs/build.md` now state the Private profile and the TCP/LocalSubnet rule.

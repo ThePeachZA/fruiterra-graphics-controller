@@ -148,14 +148,15 @@ user turns it on and the Tailscale client is installed.
 
 **What A3 proved (2026-11-15).** An overlay page served from a second origin
 connected to a non-default port and updated live. That run only worked because
-the browser was on the host PC: every overlay still dials
-`ws://localhost:<port>`, so a second device would dial its own localhost. Remote
-access therefore needs an origin-aware connection first (D8-1); the Tailscale
-plumbing is the easy part.
+the browser was on the host PC: every overlay still dialled
+`ws://localhost:<port>`, so a second device would dial its own localhost. The
+origin-aware resolver was therefore pulled forward into v1 (D8-1, 2026-11-16) so
+LAN mode works on a real second device; the Tailscale plumbing remains the easy
+part.
 
 | ID | Item | Scope sketch |
 |---|---|---|
-| D8-1 | Origin-aware overlay connection | Replace `ws://localhost:${port}` in all seven overlays with a resolver: same-origin `ws(s)://location.host` when the app served the page, `?host=`/`?port=` overrides for third-party pages, `wss` when the page is HTTPS. No message, filename or DOM change. |
+| D8-1 | Origin-aware overlay connection | **Fixed 2026-11-16, pulled forward into v1** so LAN mode works on a second device. All seven overlays resolve `ws(s)://location.host` when the app served the page, keep `?host=`/`?port=` overrides for third-party pages, and use `wss` when the page is HTTPS. Static tests pin the resolver and reject a `ws://localhost` literal. No message, filename or DOM change. |
 | D8-2 | Remote-access settings | **Settings -> Remote access**: Off / LAN / Tailscale / Funnel, a status line (client version, tailnet name, serve/funnel state), and copy/open links per overlay for the active scope. |
 | D8-3 | Tailscale detection | Find `tailscale.exe` (PATH, then `%ProgramFiles%\Tailscale`); read `tailscale status --json` (`BackendState`, `Self.DNSName`, `Self.Online`) and `tailscale version`. Show plain-text remedies for not installed, stopped or logged out. |
 | D8-4 | Serve lifecycle | On server start in Tailscale mode run `tailscale serve --bg --https=443 --set-path /fgc http://127.0.0.1:<port>`; remove only this app's config when the server stops, the mode changes or the app exits. Never run `tailscale serve reset`. |
