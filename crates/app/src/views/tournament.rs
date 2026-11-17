@@ -2146,6 +2146,9 @@ fn MatchDialog(
                     }
                 }
             }
+            p { class: "fgc-note",
+                "A slot holds one team, so choosing a target slot replaces whichever match fed it before."
+            }
 
             if !error().is_empty() {
                 p { class: "fgc-field__error", role: "alert", "{error()}" }

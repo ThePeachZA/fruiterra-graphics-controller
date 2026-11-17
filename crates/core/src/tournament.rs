@@ -1586,6 +1586,26 @@ fn repair_links(tournament: &mut Tournament) {
         clear_link(tournament, &id, kind);
     }
 
+    // A slot can only hold one team, so keep the first link (in board order)
+    // that feeds each slot and drop any later duplicate.
+    let mut fed_slots: HashSet<(MatchId, u8)> = HashSet::new();
+    let mut duplicates: Vec<(MatchId, LinkKind)> = Vec::new();
+    for_each_match(tournament, |game| {
+        for (kind, link) in [
+            (LinkKind::Winner, &game.next),
+            (LinkKind::Loser, &game.loser_next),
+        ] {
+            if let Some(link) = link
+                && !fed_slots.insert((link.match_id.clone(), link.slot))
+            {
+                duplicates.push((game.id.clone(), kind));
+            }
+        }
+    });
+    for (id, kind) in duplicates {
+        clear_link(tournament, &id, kind);
+    }
+
     loop {
         let edges = link_edges(tournament);
         let mut colors: HashMap<MatchId, u8> = HashMap::new();
@@ -2140,6 +2160,29 @@ pub fn set_link(
         }
     }
 
+    if let Some(link) = &link {
+        // A slot can only hold one team, so only one match may feed it. Taking
+        // over a slot replaces whichever link previously pointed at it.
+        let mut displaced = Vec::new();
+        for_each_match(tournament, |game| {
+            for (other_kind, other) in [
+                (LinkKind::Winner, &game.next),
+                (LinkKind::Loser, &game.loser_next),
+            ] {
+                if (&game.id != match_id || other_kind != kind)
+                    && other.as_ref().is_some_and(|other| {
+                        other.match_id == link.match_id && other.slot == link.slot
+                    })
+                {
+                    displaced.push((game.id.clone(), other_kind));
+                }
+            }
+        });
+        for (id, other_kind) in displaced {
+            clear_link(tournament, &id, other_kind);
+        }
+    }
+
     let game = match_mut(tournament, match_id).ok_or(LinkError::NotFound)?;
     match kind {
         LinkKind::Winner => game.next = link,
@@ -2542,6 +2585,100 @@ mod tests {
         assert_eq!(final_game.status, BracketMatchStatus::Pending);
         assert!(final_game.slot1.is_none());
         assert_eq!(tournament.champion, None);
+    }
+
+    #[test]
+    fn linking_into_an_occupied_slot_takes_it_over_and_propagates() {
+        let mut tournament = tournament_with_teams(32, BracketFormat::SingleElim);
+        generate_single_elimination(&mut tournament);
+
+        let first = tournament.winners[0].matches[0].id.clone();
+        let quarterfinal_two = tournament.winners[2].matches[1].id.clone();
+        let semi = tournament.winners[3].matches[0].id.clone();
+        let final_id = tournament.winners[4].matches[0].id.clone();
+
+        let slot = BracketSlot {
+            section: BracketSection::Winners,
+            round: 0,
+            match_index: 0,
+            slot: 1,
+        };
+        set_slot(&mut tournament, slot, Some(team("team-1"))).expect("slot 1");
+        set_slot(
+            &mut tournament,
+            BracketSlot { slot: 2, ..slot },
+            Some(team("team-2")),
+        )
+        .expect("slot 2");
+        assert!(set_bracket_result(
+            &mut tournament,
+            &first,
+            2,
+            1,
+            BracketMatchStatus::Completed
+        ));
+
+        // Both target slots are already fed by the generated bracket, so the
+        // new links must replace those sources rather than fight with them.
+        assert_eq!(
+            set_link(
+                &mut tournament,
+                &first,
+                LinkKind::Winner,
+                Some(MatchLink {
+                    match_id: semi.clone(),
+                    slot: 2,
+                })
+            ),
+            Ok(())
+        );
+        assert_eq!(
+            set_link(
+                &mut tournament,
+                &first,
+                LinkKind::Loser,
+                Some(MatchLink {
+                    match_id: final_id.clone(),
+                    slot: 1,
+                })
+            ),
+            Ok(())
+        );
+
+        assert!(
+            find_match(&tournament, &quarterfinal_two)
+                .expect("quarterfinal two")
+                .next
+                .is_none()
+        );
+        assert!(find_match(&tournament, &semi).expect("semi").next.is_none());
+        assert_eq!(
+            find_match(&tournament, &semi).expect("semi").slot2,
+            Some(team("team-1"))
+        );
+        assert_eq!(
+            find_match(&tournament, &final_id).expect("final").slot1,
+            Some(team("team-2"))
+        );
+    }
+
+    #[test]
+    fn refresh_keeps_one_link_per_target_slot() {
+        let mut tournament = tournament_with_teams(4, BracketFormat::SingleElim);
+        generate_single_elimination(&mut tournament);
+        let final_id = tournament.winners[1].matches[0].id.clone();
+
+        // Corrupt the board by pointing both first-round matches at the same
+        // slot, as an older save file could.
+        tournament.winners[0].matches[0].next = Some(MatchLink {
+            match_id: final_id.clone(),
+            slot: 2,
+        });
+
+        refresh(&mut tournament);
+
+        assert!(tournament.winners[0].matches[0].next.is_some());
+        assert!(tournament.winners[0].matches[1].next.is_none());
     }
 
     #[test]

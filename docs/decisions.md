@@ -579,3 +579,31 @@ change re-rendered the option that now existed.
   select as well is harmless and keeps the attribute in the markup.
 - **Tests.** No automated test: the markup only runs inside wasm. The A22 re-run
   (first-render check of every affected picker) is the verification.
+
+## A25 - Bracket slots accept only one incoming link (2026-11-17)
+
+**Status: fixed during A25.** Setting a manual winner with valid `next` and
+`loser_next` targets left the target slots empty even after an explicit
+refresh. Links, scores, status and the manual winner persisted, so the data was
+saved correctly; only the propagated slots were wrong.
+
+- **Root cause.** `set_link` accepted a second link into an already-fed
+  `(match, slot)`. `propagate_once` walks every match in board order, so the
+  pending competing source wrote `None` into the slot after the completed
+  source had written its team. The result depended on iteration order, and
+  `fill_structural_byes` had the same ambiguity because it keys incoming links
+  by `(match, slot)` in a map.
+- **Fix.** `set_link` enforces one source per slot: when a link is set to an
+  already-fed target slot, the link that fed it before is cleared first. This
+  includes the same match's other link kind, so a winner and a loser can never
+  target the same slot. `repair_links` keeps the first link in board order and
+  clears later duplicates, so an older or hand-edited save self-heals on load.
+- **UI.** The match modal states that choosing a target slot replaces whichever
+  match fed it before.
+- **Tests.** `linking_into_an_occupied_slot_takes_it_over_and_propagates` and
+  `refresh_keeps_one_link_per_target_slot` in `crates/core/src/tournament.rs`.
+  The temporary A25 reproduction probe was deleted after the fix.
+- **No new repair kind.** The load-time dedupe runs inside `repair_links`
+  without a `TournamentRepairKind`, because a duplicated slot source is an
+  impossible state rather than a user-visible data problem; the board shows the
+  deterministic result.

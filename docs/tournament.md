@@ -130,6 +130,7 @@ Full board editing (Q4):
 - Rename rounds (e.g. `Upper Final`, `Lower Round 3`).
 - Reorder matches within a round by dragging.
 - Edit links in the match modal: `next` and `loser_next` target match + slot, or none.
+- A slot can only be fed by one link. Setting a link to an already-fed target slot takes that slot over: the link that fed it before is cleared, and the modal says so. This keeps every slot's source unambiguous.
 
 Removing a match clears any links that pointed at it and any slots it had filled, after a confirmation listing the affected matches.
 
@@ -220,6 +221,7 @@ Validation: a completed match must have a winner; a winner must be one of the tw
 | Same team twice in one single-elim bracket section | Warn, allow (manual boards can be intentionally odd) |
 | Same team on both sides of a match | Reject the drop |
 | `next` points at itself or forms a cycle | Reject the link edit |
+| A second link points at an already-fed slot | The new link takes over and the older link is cleared; load repair keeps the first link in board order |
 | `next` points at a removed match | Clear the link |
 | Completed match with no winner | Reset to Pending on load, log a repair |
 | Champion not present in the tournament | Clear `champion`, log a repair |

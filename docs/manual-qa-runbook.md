@@ -1408,7 +1408,8 @@ machines.
 1. Open the `Board Stress` tournament and select **Board**. Confirm the winners
    bracket has five rounds and 32 slots.
 2. Set zoom to 50%, 100% and 150%. Scroll in both directions.
-3. Confirm every match card is readable and the connectors still make sense.
+3. Confirm every match card is readable and the rounds read left to right as
+   columns, with the horizontal scroll reaching every round.
 4. Click one slot, then another. Confirm they swap.
 5. Click a slot twice. Confirm the selection cancels.
 6. Use **Tab** to focus a slot. Press **Enter**, use the arrow keys and press
@@ -1445,7 +1446,8 @@ machines.
 2. Set both slots, both scores, **Status**, **First to** and a manual
    **Winner**.
 3. Set **Winner advances to** and **Loser drops to** to specific matches and
-   slots.
+   slots. A slot can only be fed by one match, so a target slot that is already
+   fed takes over: the previous source link is cleared.
 4. Save and confirm the board reflects the result and the **Manual winner**
    badge.
 5. Reopen the match, clear the manual winner and confirm the score-derived
