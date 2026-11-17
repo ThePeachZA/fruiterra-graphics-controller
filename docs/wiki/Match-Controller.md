@@ -48,8 +48,9 @@ Each map has:
 - **Team A score** and **Team B score**
 - **↑**, **↓** and **Remove**
 
-**Reset all maps** clears every map slot immediately. There is no confirmation,
-so use it carefully.
+**Reset all maps** clears every map slot and every hero ban immediately, and
+removes the current map. A manual score override is kept. There is no
+confirmation, so use it carefully.
 
 ## Hero Bans
 
@@ -74,9 +75,13 @@ a **Custom name** and **Custom subtext**.
 
 ## Map Pool
 
-**Available maps** lists known maps grouped by game mode when map assets exist.
-Tick the maps to include. You can also type a **Custom map name** and select
-**Add**.
+**Available maps** lists every map that has a Map asset, grouped by game mode.
+Tick the maps to include.
+
+You can also type a **Custom map name** and select **Add**. A custom name is
+stored in the pool, but the map-pool overlay only shows maps that have a Map
+asset with exactly that name, so import the map image in Assets first if you
+want it on screen.
 
 **Pool order** is the order the map-pool overlay uses. Use the up and down
 controls to reorder, and **Remove** to take a map out.

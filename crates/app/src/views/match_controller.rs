@@ -950,10 +950,10 @@ fn MapPoolTab(match_state: Match) -> Element {
         div { class: "fgc-grid fgc-grid--two",
             Panel {
                 title: "Available maps".to_owned(),
-                description: "Select maps to include. Grouped by game mode when map assets exist.".to_owned(),
+                description: "Select maps to include. The map-pool overlay only shows maps that have a map asset.".to_owned(),
                 if groups.is_empty() {
                     p { class: "fgc-note",
-                        "No map assets are bundled yet. Add map images in Assets, or type a custom map name below."
+                        "No map assets are bundled yet. Add map images in Assets; the overlay only shows maps that have an asset."
                     }
                 } else {
                     for (mode, names) in groups.iter() {

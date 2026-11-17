@@ -1279,7 +1279,8 @@ machines.
 
 - Every control works and saves.
 - The destructive reset buttons clear their data immediately, as documented.
-- Invalid input is rejected inline with a readable message.
+- Invalid input follows the documented fallbacks: numeric scores clamp to `0`,
+  an empty map name is ignored, and **Start** is disabled until a target is set.
 - Switching tabs preserves the values.
 
 **Fail:**
@@ -1287,7 +1288,8 @@ machines.
 - A control does nothing or loses its value.
 - A reset button is described as confirmed when it is not, or behaves
   differently from the documented behaviour.
-- Invalid input is accepted or produces a crash.
+- Invalid input produces a crash, or is stored differently from the documented
+  fallback.
 - Tab switching resets data.
 
 **Evidence:** Notes per tab and screenshots of any validation error.
