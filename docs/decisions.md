@@ -607,3 +607,40 @@ saved correctly; only the propagated slots were wrong.
   without a `TournamentRepairKind`, because a duplicated slot source is an
   impossible state rather than a user-visible data problem; the board shows the
   deterministic result.
+
+## A26-1 - Head-to-head is re-evaluated inside every tie (2026-11-17)
+
+**Status: fixed during A26.** With **Head-to-head** first, a team that won the
+head-to-head fixture could still rank below its rival when both teams were
+level on league points.
+
+- **Root cause.** `sort_rows_recursive` split the tied rows by the current
+  criterion and then recursed with `criteria[index + 1..]`. For head-to-head
+  that is wrong: the mini-table is relative to the set of teams still tied, so
+  the next subgroup needs its own mini-table, not the previous one. The
+  top-level result carried into every subgroup and the head-to-head winner
+  could stay below its rival.
+- **Fix.** When the criterion is `Tiebreaker::HeadToHead`, recursion keeps
+  `&criteria[index..]` so head-to-head is recomputed for each subgroup. Every
+  other criterion is an absolute key and keeps `criteria[index + 1..]`.
+- **Semantics.** The tiebreaker list remains the full standings sort, not a
+  points-first list with tiebreakers after it. `Wins` is one point per win, so
+  the default order still breaks ties on points; moving another criterion
+  above `Wins` makes it more important than points.
+- **UI copy.** The tiebreaker panel and `docs/wiki/Tournament.md` now say the
+  list sorts the standings and that head-to-head compares the teams still
+  level, instead of implying that every criterion only runs after points.
+- **Tests.** `head_to_head_first_recomputes_the_mini_table_per_tie` in
+  `crates/core/src/tournament.rs`; the temporary A26 probe was deleted after
+  the fix.
+
+## A26-2 - Standings fall back to the team list for non-entrants (2026-11-17)
+
+**Status: fixed during A26.** A group could contain a team that was not a
+tournament entrant. Its standings row showed the raw GUID because the name
+lookup only checked `entrant_names`.
+
+- **Fix.** `crates/app/src/views/tournament.rs` falls back to the full `teams`
+  list, the same lookup the group member chips already use.
+- **No model change.** Group membership is not restricted to entrants, which
+  keeps the board editable after play starts.

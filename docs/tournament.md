@@ -188,8 +188,8 @@ Per team: `played`, `wins`, `losses`, `draws`, `points_for`, `points_against`, `
 - Configurable ordered list, persisted per tournament.
 - Available criteria: `Wins`, `HeadToHead`, `MapDifferential`, `MapsWon`, `PointsFor`, `PointsAgainst`, `Seed`.
 - Default order: `Wins → HeadToHead → MapDifferential → PointsFor → Seed`.
-- UI: drag to reorder in the tournament settings; a reset-to-default button.
-- `HeadToHead` compares only the tied teams' mutual results; if more than two are tied and the mini-table is still tied, the next criterion applies.
+- UI: up and down controls reorder the list in the tournament settings; a reset-to-default button.
+- `HeadToHead` compares only the tied teams' mutual results. It is re-evaluated inside every subgroup it creates, so the mini-table is rebuilt for each tie; if the mini-table is still tied, the next criterion applies.
 - If all criteria are exhausted, teams are ordered by seed, then name (stable, deterministic).
 
 ---

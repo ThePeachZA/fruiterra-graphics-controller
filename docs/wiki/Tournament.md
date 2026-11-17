@@ -114,10 +114,12 @@ explains what is missing.
 
 ### Tiebreakers
 
-Tiebreakers apply in order to teams level on league points. Available criteria:
+Tiebreakers apply in order and form the full standings sort. The default order
+starts with **Wins** (one point per win), so the later criteria break ties on
+points. Available criteria:
 
 - **Wins**
-- **Head-to-head** (compares the results between the tied teams)
+- **Head-to-head** (compares the results between the teams still level)
 - **Map differential**
 - **Maps won**
 - **Points for**

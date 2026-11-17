@@ -989,7 +989,14 @@ fn sort_rows_recursive(
             }
         }
 
-        let remaining = criteria.get(index + 1..).unwrap_or_default();
+        // Head-to-head is relative to the set of teams still tied, so it has to
+        // be recomputed inside every group it creates. Other criteria are
+        // absolute keys, so they only need to run once.
+        let remaining = if *criterion == Tiebreaker::HeadToHead {
+            &criteria[index..]
+        } else {
+            criteria.get(index + 1..).unwrap_or_default()
+        };
         let mut sorted = Vec::with_capacity(rows.len());
         for mut group_rows in groups {
             sort_rows_recursive(tournament, group, &mut group_rows, remaining);
@@ -2906,6 +2913,35 @@ mod tests {
         assert_eq!(standings[1].team_id, team("team-1"));
         assert_eq!(standings[0].wins, 2);
         assert_eq!(standings[1].wins, 2);
+    }
+
+    #[test]
+    fn head_to_head_first_recomputes_the_mini_table_per_tie() {
+        let mut tournament = tournament_with_teams(4, BracketFormat::RoundRobin);
+        generate_round_robin(&mut tournament, 1);
+
+        // Team 1 and team 4 draw, team 2 beats team 3, then team 4 beats
+        // team 2. Team 2 and team 4 are level on one win, and team 4 won the
+        // head-to-head, so team 4 must rank first when head-to-head leads the
+        // tiebreaker list.
+        complete_fixture(&mut tournament, &team("team-1"), &team("team-4"), 2, 2);
+        complete_fixture(&mut tournament, &team("team-2"), &team("team-3"), 5, 0);
+        complete_fixture(&mut tournament, &team("team-4"), &team("team-2"), 3, 1);
+
+        tournament.tiebreakers = vec![
+            Tiebreaker::HeadToHead,
+            Tiebreaker::Wins,
+            Tiebreaker::MapDifferential,
+            Tiebreaker::PointsFor,
+            Tiebreaker::Seed,
+        ];
+        refresh(&mut tournament);
+
+        let standings = &tournament.standings[&tournament.groups[0].id];
+        assert_eq!(standings[0].team_id, team("team-4"));
+        assert_eq!(standings[1].team_id, team("team-2"));
+        assert_eq!(standings[0].points, 1);
+        assert_eq!(standings[1].points, 1);
     }
 
     #[test]

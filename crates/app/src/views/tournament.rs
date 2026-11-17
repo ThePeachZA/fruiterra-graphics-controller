@@ -1339,7 +1339,7 @@ fn GroupPanel(
                     tbody {
                         for row in standings {
                             tr { key: "{row.team_id}",
-                                td { "{entrant_names.get(&row.team_id).cloned().unwrap_or_else(|| row.team_id.to_string())}" }
+                                td { "{entrant_names.get(&row.team_id).cloned().or_else(|| teams.iter().find(|team| team.id == row.team_id).map(|team| team.name.clone())).unwrap_or_else(|| row.team_id.to_string())}" }
                                 td { "{row.played}" }
                                 td { "{row.wins}" }
                                 td { "{row.losses}" }
@@ -1548,7 +1548,7 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
         div { class: "fgc-tournament-stack",
             Panel {
                 title: "Tiebreakers".to_owned(),
-                description: "Applied in order to teams level on league points. Head-to-head uses a mini-table.".to_owned(),
+                description: "Applied in order to sort the standings. Head-to-head compares the teams still level.".to_owned(),
                 ol { class: "fgc-tiebreakers",
                     for (index, item) in tiebreakers.iter().enumerate() {
                         {
