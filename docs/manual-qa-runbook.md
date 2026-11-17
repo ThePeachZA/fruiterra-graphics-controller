@@ -1115,8 +1115,9 @@ failure.
    rejected.
 4. **Large image:** import the large PNG under 20 MB. Confirm the UI stays
    responsive and the image appears.
-5. **Deduplication:** import the same file twice. Confirm the library still has
-   one copy.
+5. **Deduplication:** import the same file twice. Confirm the bytes are stored
+   once — no new file appears under `assets\blobs` — even though the library
+   lists a second entry.
 6. **Links:** on a Hero asset, select **Ban icon…** and pick another Hero image.
    Confirm the game overlay ban strip for that hero uses the chosen image and
    that the chosen image no longer appears in hero pickers or the Match
@@ -1141,7 +1142,7 @@ failure.
 
 - The app crashes, freezes or imports an unsafe SVG.
 - A rejected import still changes the library.
-- A duplicate creates a second asset.
+- A duplicate stores a second copy of the bytes.
 - The error message does not say what is wrong.
 - A link dialog closes without applying or clearing the link.
 - A linked icon still appears as a selectable hero.
