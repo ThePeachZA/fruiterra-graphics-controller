@@ -545,3 +545,37 @@ without parsing the document.
   override files.
 - **Docs.** The runbook A7 step and the wiki/assets wording now say **missing,
   empty or unreadable**, not "broken".
+
+## Dynamic select options must set `selected` (2026-11-17)
+
+**Status: fixed during A22.** Native `<select>` controls whose options come from
+a saved value showed the first option instead of the saved one on first render.
+It affected the Match Controller Team A/Team B, first-to and talent pickers, the
+Teams role/position pickers, the Talent social platform and most tournament
+pickers. Re-selecting the same value looked correct only because the user's
+change re-rendered the option that now existed.
+
+- **Root cause.** Dioxus 0.7 declares `select.value` as a volatile attribute
+  (`dioxus-html`), so the web interpreter always writes it, as a property
+  (`node.value = …`). Dynamic `<option>` children are created in later
+  mutations, so the write lands while the select has only its placeholder or no
+  options at all, and the browser discards it. Static options are part of the
+  same template as the select, so they exist when `value` is written and work.
+- **Fix.** Every dynamically generated `<option>` carries
+  `selected: <bool>`. The interpreter writes `option.selected` as a property
+  (`node.selected = truthy(value)`) once the option exists, which the browser
+  keeps. `initial_selected` is not a substitute: it writes `defaultSelected`,
+  which only matters for a reset.
+- **Scope.** Five views and roughly forty option sites: `assets.rs` (import
+  category), `match_controller.rs` (first-to, Team A, Team B, six talent slots,
+  interviewee), `teams.rs` (role, position), `talent.rs` (social platform) and
+  `tournament.rs` (format, default first-to, status, entrant pickers, group
+  count, qualifiers, add-team, fixture teams, tiebreaker, champion, bracket
+  slots, fixture and dialog status, dialog first-to, winner override, winner and
+  loser targets). Selects built from literal `<option>`s (Format, Status, Side
+  indicator, timer mode, slot numbers) are unchanged.
+- **Rule.** A `<select>` whose options are produced by a `for` loop or an
+  `if let` branch must set `selected` on each option. Keeping `value` on the
+  select as well is harmless and keeps the attribute in the markup.
+- **Tests.** No automated test: the markup only runs inside wasm. The A22 re-run
+  (first-render check of every affected picker) is the verification.

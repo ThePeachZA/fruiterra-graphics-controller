@@ -162,6 +162,27 @@ Results are recorded here as each test completes.
 | A7 | Per-file overlay override | M3-3 | **Pass** — 2026-11-17, run by the assistant at the repository owner's request | With the server running, `overlays\game-overlay.html` was replaced by a copy carrying a fixed `QA OVERRIDE` label. `/overlays/game-overlay.html` returned the marker (30,229 bytes) while `/overlays/map-select.html` did not, so only that file changed. An empty override and a non-UTF-8 override both fell back to the embedded page (30,069 bytes) and logged `overlay override is empty` / `overlay override is not valid UTF-8; falling back to the embedded file`; a file locked by another process also fell back (`os error 32`). A readable but malformed file was served as-is (62 bytes), matching the documented rule that a malformed override affects only that file. Deleting the override restored the embedded page. **A7-1:** the runbook expected malformed HTML to fall back, which the server cannot detect without parsing; added a guard for empty and non-UTF-8 overrides and corrected the runbook and wiki wording to **missing, empty or unreadable**. |
 | A10 | `show` hide and show | M3-7 | **Pass** — 2026-11-17, run by the assistant at the repository owner's request | Ran in the in-app Chromium browser (no Edge/Chrome devtools needed). On the game overlay, `.overlay` was `display: block` with `Grand Final` and `Northwind Sentinels` painted; `updateOverlay({ type: 'show', visible: false })` set it to `display: none` and `visible: false`; `visible: true` restored `display: block`. Repeated on `team-roster-home.html` with the same results. No console errors on either page. |
 | A14 | Second instance | M4-4 | **Pass** — 2026-11-17, run by the assistant at the repository owner's request | With the app open as pid 30868 and the server listening on `0.0.0.0:3001`, a second launch (pid 38824) exited on its own without opening a window. The process list stayed at one `fruiterra-gc.exe` (30868), the listener stayed on 30868, and the first instance kept running and serving. |
+| A22 | Force update, copy URL and live updates | M7-3, M7-4 | **Pass with notes** — 2026-11-17, run by the assistant at the repository owner's request | Steps 1–5 ran in the in-app Chromium browser on all five match overlays instead of OBS (R1 already covers OBS), with a `window.__calls` counter wrapping `updateOverlay`. A subtitle edit to `A22 LIVE CHECK` reached the game, roster and casters pages (6 messages each); **Force update** doubled every counter from 6 to 12 with no reload; the current map moved Ilios → Nepal and `map-card--current` followed; Map 1 **Chosen by** Team A → Team B changed `NWS'S PICK` → `WXM'S PICK`; the Map 2 Team B ban changed Tracer → Sojourn in the hero-bans `alt`; caster 1 → Priya repainted the casters row as `Priya, Priya, Marco, Sam`. Steps 6–7: **Config → Overlay URLs → Copy URL** on the game overlay put `http://127.0.0.1:3001/overlays/game-overlay.html` on the clipboard, matching the configured port and filename. **Note:** the run exposed saved values missing from dynamically generated `<select>` options; fixed in this pass (§2.5). |
+
+### 2.5 A22 findings (2026-11-17)
+
+The pass exposed one UI bug in saved-value selects. It did not affect the
+overlay checks; the control UI showed the wrong option until the user picked a
+value again.
+
+| ID | Area | Finding | Cause | Disposition |
+|---|---|---|---|---|
+| A22-1 | All views | A `<select>` whose saved value came from a list (Team A/Team B, first-to, talent slots, role, position, social platform, tournament format, status, groups, qualifiers, entrants, fixtures, bracket slots, links) showed its first option on first render instead of the saved one | `select.value` is a volatile attribute, so the interpreter writes it as a property before dynamic `<option>` children exist; the browser discards it | **Fixed** — every dynamically generated `<option>` now sets `selected: <bool>`, which is written after the option exists; static-option selects unchanged. Root cause and the rule are in `docs/decisions.md` |
+
+Re-checked on the `dx build --desktop` binary: Match Controller **Team A**
+`NWS — Northwind Sentinels` and **Team B** `WXM — 王小明战队`,
+first-to `3`, talent `Priya`, `Priya`, `Marco`, `Sam`, interviewee `Sam`; Teams
+role `damage` and position `sub`; Talent social platform `Instagram`; Tournament
+format `round robin` and `double elimination`, first-to `3`, status `Setup`,
+groups `2`, qualifiers `2`; bracket match dialog Slot 1 `Northwind Sentinels`,
+Slot 2 `Team 6`, status `Pending`, first-to `3`, winner `Derived from scores`,
+winner target `Winners bracket · Semifinal · M1`, loser target
+`Losers bracket · Lower Round 1 · M1`. Every control opened on the saved value.
 
 ## 3. Milestone register
 
@@ -239,8 +260,8 @@ Results are recorded here as each test completes.
 |---|---|---|---|
 | M7-1 | All seven tabs work interactively and validation errors are shown inline. | Full UI pass. | Pending |
 | M7-2 | Timer start/pause/reset, count-up/count-down/target, settings persistence and one-second ticks behave correctly. | Requires a running clock and tab switching. | Done — 2026-11-15, gate R4 (§2.3). |
-| M7-3 | Force Update and copy-URL work, and the URL matches the configured port. | Clipboard and live-server interaction. | Pending |
-| M7-4 | Map, hero-ban, map-pool and talent edits update the overlays live. | WebView2 harness covered a subtitle edit; the remaining tabs need OBS. | Partial |
+| M7-3 | Force Update and copy-URL work, and the URL matches the configured port. | Clipboard and live-server interaction. | Done — 2026-11-17, gate A22 (§2.4). |
+| M7-4 | Map, hero-ban, map-pool and talent edits update the overlays live. | WebView2 harness covered a subtitle edit; the remaining tabs need OBS. | Done — 2026-11-17, gate A22 (§2.4). Map selection, map pick, hero ban, caster and Force update repainted the in-app overlay pages. |
 | M7-5 | Derived vs manual scores, draws ignored, first-to and side/swap/loser-pick rules behave as documented. | UI-level verification of tested rules. | Pending |
 | M7-6 | The timer is clearly control-only and a third-party overlay receives ticks/actions. | Covered by R4. | Pending |
 
@@ -325,3 +346,4 @@ These checks passed locally and in CI; they do not replace the human gates above
 | 2026-11-17 | 1.0.0 | Windows 11 Pro 10.0.26200, `dx build --desktop` binary | A7 | Repository owner (ThePeachZA), run by the assistant | A7 per-file override passed. A marked `game-overlay.html` was served for that file only; the other six were unchanged. Empty, non-UTF-8 and locked overrides all fell back to the embedded page and logged a warning; a readable malformed file was served as-is; deleting the override restored the built-in. A7-1 fixed the runbook's "broken HTML" expectation by guarding empty and non-UTF-8 overrides and correcting the docs. M3-3 moved to Done. |
 | 2026-11-17 | 1.0.0 | Windows 11 Pro 10.0.26200, `dx build --desktop` binary | A14 | Repository owner (ThePeachZA), run by the assistant | A14 second instance passed. A second launch exited without a window, the process list stayed at one `fruiterra-gc.exe`, the single listener stayed on the first pid, and the first instance kept serving. M4-4 moved to Done. |
 | 2026-11-17 | 1.0.0 | Windows 11 Pro 10.0.26200, `dx build --desktop` binary; in-app Chromium browser | A10 | Repository owner (ThePeachZA), run by the assistant | A10 hide/show passed on the game overlay and `team-roster-home.html`: `visible: false` set `.overlay` to `display: none`, `visible: true` restored it, and neither page logged a console error. M3-7 moved to Done. |
+| 2026-11-17 | 1.0.0 | Windows 11 Pro 10.0.26200, `dx build --desktop` binary; in-app Chromium browser | A22 | Repository owner (ThePeachZA), run by the assistant | A22 live updates passed. Subtitle, current map, map pick, hero ban and caster edits repainted the in-app overlay pages without a reload, and **Force update** doubled every message counter. **Copy URL** put `http://127.0.0.1:3001/overlays/game-overlay.html` on the clipboard. The pass found A22-1 (saved values missing from dynamic select options), fixed by adding `selected` to each generated option; first render re-checked across Match Controller, Teams, Talent and Tournament. M7-3 and M7-4 moved to Done. |
