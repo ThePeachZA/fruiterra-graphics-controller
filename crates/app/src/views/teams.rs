@@ -9,6 +9,7 @@ use fgc_core::{
 use crate::components::asset_picker::{AssetPicker, AssetThumb, find_asset, library_assets};
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
+use crate::components::focus_element_later;
 use crate::components::input::Input;
 use crate::components::{Field, Panel};
 use crate::state::AppStore;
@@ -99,14 +100,23 @@ pub fn TeamsView() -> Element {
                         on_edit_player: move |id| {
                             editing_player_id.set(Some(id));
                             section.set(TeamSection::Players);
+                            focus_element_later("fgc-player-name");
                         },
                         on_add_player: move |team_id: TeamId| {
                             if let Some(id) = store.create_player(&team_id) {
                                 editing_player_id.set(Some(id));
                                 section.set(TeamSection::Players);
+                                focus_element_later("fgc-player-name");
                             }
                         },
-                        on_done_player: move |_| editing_player_id.set(None),
+                        on_done_player: move |_| {
+                            let card = editing_player_id()
+                                .map(|id| format!("fgc-player-card-{id}"));
+                            editing_player_id.set(None);
+                            if let Some(card) = card {
+                                focus_element_later(&card);
+                            }
+                        },
                         on_delete_player: move |id| player_delete_target.set(Some(id)),
                         on_delete_team: move |team: Team| {
                             delete_references.set(store.team_references(&team.id));
@@ -199,6 +209,7 @@ pub fn TeamsView() -> Element {
                                     store.delete_player(&team.id, &player_id);
                                     editing_player_id.set(None);
                                     player_delete_target.set(None);
+                                    focus_element_later("fgc-add-player");
                                 },
                                 "Delete player"
                             }
@@ -509,6 +520,7 @@ fn RosterPanel(
                     Button {
                         variant: ButtonVariant::Primary,
                         size: ButtonSize::Sm,
+                        id: "fgc-add-player",
                         onclick: move |_| on_add_player.call(()),
                         "+ Add player"
                     }
@@ -574,6 +586,7 @@ fn PlayerEditor(
                 Input {
                     value: "{player.name}",
                     aria_label: "Player name",
+                    id: "fgc-player-name",
                     maxlength: MAX_PLAYER_NAME_CHARS,
                     oninput: move |event: FormEvent| {
                         let value = event.value();
@@ -684,6 +697,7 @@ fn PlayerCard(
         button {
             r#type: "button",
             class: "fgc-player-card",
+            id: "fgc-player-card-{player_id}",
             onclick: move |_| on_edit.call(player_id.clone()),
             div { class: "fgc-player-card__avatar",
                 if let Some(asset) = portrait {

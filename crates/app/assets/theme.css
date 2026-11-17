@@ -123,6 +123,15 @@ a {
     outline-offset: 1px;
 }
 
+/* The vendored Input and Textarea components clear the outline on focus, which
+ * leaves keyboard users without a focus ring. Their classes are CSS-module
+ * hashes, so match the prefix instead of the generated name. */
+input[class^="dx-input"]:focus-visible,
+textarea[class^="dx-textarea"]:focus-visible {
+    outline: 2px solid var(--fgc-accent);
+    outline-offset: 1px;
+}
+
 ::selection {
     background: var(--fgc-accent-soft);
 }

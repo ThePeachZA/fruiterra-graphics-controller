@@ -16,6 +16,7 @@ use fgc_core::{
 
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
+use crate::components::focus_element_later;
 use crate::components::input::Input;
 use crate::components::switch::Switch;
 use crate::components::{Field, Panel, ToggleRow};
@@ -47,6 +48,15 @@ impl TournamentTab {
             Self::Board => "Board",
             Self::Groups => "Groups",
             Self::Settings => "Settings",
+        }
+    }
+
+    const fn key(self) -> &'static str {
+        match self {
+            Self::Setup => "setup",
+            Self::Board => "board",
+            Self::Groups => "groups",
+            Self::Settings => "settings",
         }
     }
 }
@@ -183,7 +193,13 @@ pub fn TournamentView() -> Element {
                 tournament: tournament.clone(),
                 match_id: match_id.clone(),
                 teams: teams.clone(),
-                on_close: move |_| match_dialog.set(None),
+                on_close: {
+                    let closed_id = match_id.clone();
+                    move |_| {
+                        match_dialog.set(None);
+                        focus_element_later(&format!("fgc-edit-match-{closed_id}"));
+                    }
+                },
             }
         }
 
@@ -274,6 +290,7 @@ fn TournamentDetail(
                 for item in TournamentTab::ALL {
                     button {
                         key: "{item.label()}",
+                        id: "fgc-tournament-tab-{item.key()}",
                         r#type: "button",
                         aria_pressed: item == tab,
                         class: if item == tab {
@@ -843,6 +860,8 @@ fn MatchCard(
     let seed2 = game.slot2.as_ref().and_then(|id| seeds.get(id).copied());
     let winner1 = game.winner.is_some() && game.winner == game.slot1;
     let winner2 = game.winner.is_some() && game.winner == game.slot2;
+    let aria1 = slot_aria_label(section, game.number, 1, &name1);
+    let aria2 = slot_aria_label(section, game.number, 2, &name2);
 
     let open_id = game.id.clone();
     let up_id = tournament_id.clone();
@@ -898,6 +917,7 @@ fn MatchCard(
                     Button {
                         variant: ButtonVariant::Outline,
                         size: ButtonSize::Sm,
+                        id: "fgc-edit-match-{open_id}",
                         onclick: move |_| on_open_match.call(open_id.clone()),
                         "Edit"
                     }
@@ -907,6 +927,7 @@ fn MatchCard(
                 address: slot1_address,
                 label: name1,
                 seed: seed1,
+                aria_label: aria1,
                 is_selected: selected == Some(slot1_address),
                 is_winner: winner1,
                 on_click: on_slot_click,
@@ -916,6 +937,7 @@ fn MatchCard(
                 address: slot2_address,
                 label: name2,
                 seed: seed2,
+                aria_label: aria2,
                 is_selected: selected == Some(slot2_address),
                 is_winner: winner2,
                 on_click: on_slot_click,
@@ -940,6 +962,7 @@ fn BracketSlotButton(
     address: BracketSlot,
     label: String,
     seed: Option<u32>,
+    aria_label: String,
     is_selected: bool,
     is_winner: bool,
     on_click: EventHandler<BracketSlot>,
@@ -961,6 +984,7 @@ fn BracketSlotButton(
             id: "{dom_id}",
             r#type: "button",
             class: "{class}",
+            aria_label: "{aria_label}",
             aria_pressed: is_selected,
             onclick: move |_| on_click.call(address),
             onkeydown: move |event: KeyboardEvent| on_key.call((address, event.key())),
@@ -1039,6 +1063,7 @@ fn GroupsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                         Button {
                             variant: ButtonVariant::Secondary,
                             size: ButtonSize::Sm,
+                            id: "fgc-add-group",
                             onclick: move |_| {
                                 store.create_tournament_group(&add_id, &next_group_name, Vec::new());
                             },
@@ -1169,6 +1194,8 @@ fn GroupPanel(
     let mut fixture_team1 = use_signal(|| None::<TeamId>);
     let mut fixture_team2 = use_signal(|| None::<TeamId>);
     let mut confirming_delete = use_signal(|| false);
+    let delete_trigger_id = format!("fgc-group-delete-{}", group.id);
+    let delete_cancel_id = format!("fgc-group-cancel-{}", group.id);
     let rename_group_id = group.id.clone();
     let delete_group_id = group.id.clone();
     let add_fixture_group_id = group.id.clone();
@@ -1208,6 +1235,16 @@ fn GroupPanel(
             title: group.name.clone(),
             description: "Round-robin group. Teams, fixtures and results can be changed at any time.".to_owned(),
             div { class: "fgc-group-header",
+                onkeydown: {
+                    let trigger = delete_trigger_id.clone();
+                    move |event: KeyboardEvent| {
+                        if event.key() == Key::Escape && confirming_delete() {
+                            event.stop_propagation();
+                            confirming_delete.set(false);
+                            focus_element_later(&trigger);
+                        }
+                    }
+                },
                 Input {
                     value: "{group.name}",
                     aria_label: "Group name",
@@ -1219,7 +1256,14 @@ fn GroupPanel(
                     Button {
                         variant: ButtonVariant::Outline,
                         size: ButtonSize::Sm,
-                        onclick: move |_| confirming_delete.set(false),
+                        id: "{delete_cancel_id}",
+                        onclick: {
+                            let trigger = delete_trigger_id.clone();
+                            move |_| {
+                                confirming_delete.set(false);
+                                focus_element_later(&trigger);
+                            }
+                        },
                         "Cancel"
                     }
                     Button {
@@ -1227,6 +1271,7 @@ fn GroupPanel(
                         size: ButtonSize::Sm,
                         onclick: move |_| {
                             store.remove_tournament_group(&remove_id, &delete_group_id);
+                            focus_element_later("fgc-add-group");
                         },
                         "Delete group"
                     }
@@ -1234,7 +1279,14 @@ fn GroupPanel(
                     Button {
                         variant: ButtonVariant::Destructive,
                         size: ButtonSize::Sm,
-                        onclick: move |_| confirming_delete.set(true),
+                        id: "{delete_trigger_id}",
+                        onclick: {
+                            let cancel = delete_cancel_id.clone();
+                            move |_| {
+                                confirming_delete.set(true);
+                                focus_element_later(&cancel);
+                            }
+                        },
                         "Delete group"
                     }
                 }
@@ -1799,6 +1851,8 @@ fn MatchDialog(
     let mut loser_slot = use_signal(|| game.loser_next.as_ref().map_or(1, |link| link.slot));
     let mut error = use_signal(String::new);
     let mut confirming_delete = use_signal(|| false);
+    let delete_trigger_id = format!("fgc-match-delete-{match_id}");
+    let delete_cancel_id = format!("fgc-match-delete-cancel-{match_id}");
 
     let mut options: Vec<(MatchId, String)> = Vec::new();
     let sections = [
@@ -2208,7 +2262,14 @@ fn MatchDialog(
                         Button {
                             variant: ButtonVariant::Outline,
                             size: ButtonSize::Sm,
-                            onclick: move |_| confirming_delete.set(false),
+                            id: "{delete_cancel_id}",
+                            onclick: {
+                                let trigger = delete_trigger_id.clone();
+                                move |_| {
+                                    confirming_delete.set(false);
+                                    focus_element_later(&trigger);
+                                }
+                            },
                             "Cancel"
                         }
                         Button {
@@ -2220,6 +2281,7 @@ fn MatchDialog(
                                 move |_| {
                                     store.remove_tournament_match(&id, &id_for_match);
                                     on_close.call(());
+                                    focus_element_later("fgc-tournament-tab-board");
                                 }
                             },
                             "Delete match"
@@ -2229,7 +2291,14 @@ fn MatchDialog(
                     Button {
                         variant: ButtonVariant::Destructive,
                         size: ButtonSize::Sm,
-                        onclick: move |_| confirming_delete.set(true),
+                        id: "{delete_trigger_id}",
+                        onclick: {
+                            let cancel = delete_cancel_id.clone();
+                            move |_| {
+                                confirming_delete.set(true);
+                                focus_element_later(&cancel);
+                            }
+                        },
                         "Delete match"
                     }
                 }
@@ -2320,6 +2389,15 @@ fn section_label(section: BracketSection) -> &'static str {
         BracketSection::Losers => "Losers bracket",
         BracketSection::GrandFinal => "Grand final",
     }
+}
+
+/// Accessible name for a bracket slot: the visible seed and team plus the
+/// section, match and slot, so the board is usable with a screen reader.
+fn slot_aria_label(section: BracketSection, match_number: u32, slot: u8, label: &str) -> String {
+    format!(
+        "{} · M{match_number} · slot {slot}: {label}",
+        section_label(section)
+    )
 }
 
 fn section_key(section: BracketSection) -> &'static str {
