@@ -150,7 +150,11 @@ pub fn AssetsView() -> Element {
                                 }
                             },
                             for category in AssetCategory::ALL {
-                                option { value: "{category.slug()}", "{category.label()}" }
+                                option {
+                                    value: "{category.slug()}",
+                                    selected: category == import_category(),
+                                    "{category.label()}"
+                                }
                             }
                         }
                     }

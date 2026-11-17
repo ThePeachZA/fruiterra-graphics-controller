@@ -368,7 +368,11 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                                 store.set_tournament_format(&format_id, format);
                             },
                             for format in [BracketFormat::SingleElim, BracketFormat::DoubleElim, BracketFormat::RoundRobin] {
-                                option { value: "{format_key(format)}", "{format_label(format)}" }
+                                option {
+                                    value: "{format_key(format)}",
+                                    selected: format == tournament.format,
+                                    "{format_label(format)}"
+                                }
                             }
                         }
                     }
@@ -383,7 +387,11 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                                 }
                             },
                             for value in 1..=4u8 {
-                                option { value: "{value}", "First to {value}" }
+                                option {
+                                    value: "{value}",
+                                    selected: value == tournament.default_first_to,
+                                    "First to {value}"
+                                }
                             }
                         }
                     }
@@ -396,7 +404,11 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                                 store.set_tournament_status(&status_id, status_from_key(&event.value()));
                             },
                             for status in [TournamentStatus::Setup, TournamentStatus::InProgress, TournamentStatus::Completed] {
-                                option { value: "{status_key(status)}", "{status_label(status)}" }
+                                option {
+                                    value: "{status_key(status)}",
+                                    selected: status == tournament.status,
+                                    "{status_label(status)}"
+                                }
                             }
                         }
                     }
@@ -431,7 +443,12 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                             },
                             option { value: "", "Select a team" }
                             for team in available.iter() {
-                                option { key: "{team.id}", value: "{team.id}", "{team.name}" }
+                                option {
+                                    key: "{team.id}",
+                                    value: "{team.id}",
+                                    selected: pending_team().as_ref() == Some(&team.id),
+                                    "{team.name}"
+                                }
                             }
                         }
                         Button {
@@ -532,7 +549,11 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                                     }
                                 },
                                 for value in 1..=max_groups {
-                                    option { value: "{value}", "{value}" }
+                                    option {
+                                        value: "{value}",
+                                        selected: value == group_count(),
+                                        "{value}"
+                                    }
                                 }
                             }
                         }
@@ -999,7 +1020,11 @@ fn GroupsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                                     }
                                 },
                                 for value in 1..=max_groups {
-                                    option { value: "{value}", "{value}" }
+                                    option {
+                                        value: "{value}",
+                                        selected: value == group_count(),
+                                        "{value}"
+                                    }
                                 }
                             }
                         }
@@ -1078,7 +1103,11 @@ fn GroupsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                                     }
                                 },
                                 for value in 1..=8u8 {
-                                    option { value: "{value}", "{value}" }
+                                    option {
+                                        value: "{value}",
+                                        selected: value == tournament.playoff_qualifiers,
+                                        "{value}"
+                                    }
                                 }
                             }
                         }
@@ -1264,7 +1293,12 @@ fn GroupPanel(
                         },
                         option { value: "", "Add team to group" }
                         for team in available.iter() {
-                            option { key: "{team.id}", value: "{team.id}", "{team.name}" }
+                            option {
+                                key: "{team.id}",
+                                value: "{team.id}",
+                                selected: pending_team().as_ref() == Some(&team.id),
+                                "{team.name}"
+                            }
                         }
                     }
                     Button {
@@ -1348,7 +1382,12 @@ fn GroupPanel(
                         },
                         option { value: "", "Team 1" }
                         for (id, name) in member_names.iter() {
-                            option { key: "{id}", value: "{id}", "{name}" }
+                            option {
+                                key: "{id}",
+                                value: "{id}",
+                                selected: id.as_str() == fixture_team1_value.as_str(),
+                                "{name}"
+                            }
                         }
                     }
                     select {
@@ -1361,7 +1400,12 @@ fn GroupPanel(
                         },
                         option { value: "", "Team 2" }
                         for (id, name) in member_names.iter() {
-                            option { key: "{id}", value: "{id}", "{name}" }
+                            option {
+                                key: "{id}",
+                                value: "{id}",
+                                selected: id.as_str() == fixture_team2_value.as_str(),
+                                "{name}"
+                            }
                         }
                     }
                     Button {
@@ -1430,7 +1474,11 @@ fn GroupFixtureRow(tournament_id: TournamentId, fixture: GroupMatch, teams: Vec<
                 value: "{match_status_key(status())}",
                 onchange: move |event| status.set(match_status_from_key(&event.value())),
                 for item in [BracketMatchStatus::Pending, BracketMatchStatus::Live, BracketMatchStatus::Completed] {
-                    option { value: "{match_status_key(item)}", "{match_status_label(item)}" }
+                    option {
+                        value: "{match_status_key(item)}",
+                        selected: item == status(),
+                        "{match_status_label(item)}"
+                    }
                 }
             }
             Button {
@@ -1574,7 +1622,12 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                             onchange: move |event| pending_tiebreaker.set(event.value()),
                             option { value: "", "Add criterion" }
                             for item in unused.iter() {
-                                option { key: "{tiebreaker_key(*item)}", value: "{tiebreaker_key(*item)}", "{tiebreaker_label(*item)}" }
+                                option {
+                                    key: "{tiebreaker_key(*item)}",
+                                    value: "{tiebreaker_key(*item)}",
+                                    selected: tiebreaker_key(*item) == pending_tiebreaker().as_str(),
+                                    "{tiebreaker_label(*item)}"
+                                }
                             }
                         }
                         Button {
@@ -1625,7 +1678,11 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                                 }
                             },
                             for value in 1..=8u8 {
-                                option { value: "{value}", "{value}" }
+                                option {
+                                    value: "{value}",
+                                    selected: value == tournament.playoff_qualifiers,
+                                    "{value}"
+                                }
                             }
                         }
                     }
@@ -1674,7 +1731,12 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                                         .find(|team| team.id == entrant.team_id)
                                         .map_or_else(|| entrant.team_id.to_string(), |team| team.name.clone());
                                     rsx! {
-                                        option { key: "{entrant.team_id}", value: "{entrant.team_id}", "{name}" }
+                                        option {
+                                            key: "{entrant.team_id}",
+                                            value: "{entrant.team_id}",
+                                            selected: tournament.champion.as_ref() == Some(&entrant.team_id),
+                                            "{name}"
+                                        }
                                     }
                                 }
                             }
@@ -1824,7 +1886,12 @@ fn MatchDialog(
                         },
                         option { value: "", "Empty" }
                         for team in teams.iter() {
-                            option { key: "{team.id}", value: "{team.id}", "{team.name}" }
+                            option {
+                                key: "{team.id}",
+                                value: "{team.id}",
+                                selected: slot1.as_ref() == Some(&team.id),
+                                "{team.name}"
+                            }
                         }
                     }
                 }
@@ -1849,7 +1916,12 @@ fn MatchDialog(
                         },
                         option { value: "", "Empty" }
                         for team in teams.iter() {
-                            option { key: "{team.id}", value: "{team.id}", "{team.name}" }
+                            option {
+                                key: "{team.id}",
+                                value: "{team.id}",
+                                selected: slot2.as_ref() == Some(&team.id),
+                                "{team.name}"
+                            }
                         }
                     }
                 }
@@ -1883,7 +1955,11 @@ fn MatchDialog(
                         value: "{match_status_key(status())}",
                         onchange: move |event| status.set(match_status_from_key(&event.value())),
                         for item in [BracketMatchStatus::Pending, BracketMatchStatus::Live, BracketMatchStatus::Completed] {
-                            option { value: "{match_status_key(item)}", "{match_status_label(item)}" }
+                            option {
+                                value: "{match_status_key(item)}",
+                                selected: item == status(),
+                                "{match_status_label(item)}"
+                            }
                         }
                     }
                 }
@@ -1903,7 +1979,11 @@ fn MatchDialog(
                             }
                         },
                         for value in 1..=4u8 {
-                            option { value: "{value}", "{value}" }
+                            option {
+                                value: "{value}",
+                                selected: value == first_to(),
+                                "{value}"
+                            }
                         }
                     }
                 }
@@ -1929,13 +2009,25 @@ fn MatchDialog(
                     if let Some(team) = game.slot1.as_ref() {
                         {
                             let name = team_option_name(&teams, Some(team));
-                            rsx! { option { value: "{team}", "Slot 1 · {name}" } }
+                            rsx! {
+                                option {
+                                    value: "{team}",
+                                    selected: team.as_str() == override_value.as_str(),
+                                    "Slot 1 · {name}"
+                                }
+                            }
                         }
                     }
                     if let Some(team) = game.slot2.as_ref() {
                         {
                             let name = team_option_name(&teams, Some(team));
-                            rsx! { option { value: "{team}", "Slot 2 · {name}" } }
+                            rsx! {
+                                option {
+                                    value: "{team}",
+                                    selected: team.as_str() == override_value.as_str(),
+                                    "Slot 2 · {name}"
+                                }
+                            }
                         }
                     }
                 }
@@ -1968,7 +2060,12 @@ fn MatchDialog(
                             },
                             option { value: "", "None" }
                             for (id, label) in options.iter() {
-                                option { key: "{id}", value: "{id}", "{label}" }
+                                option {
+                                    key: "{id}",
+                                    value: "{id}",
+                                    selected: id.as_str() == next_target_value.as_str(),
+                                    "{label}"
+                                }
                             }
                         }
                         select {
@@ -2017,7 +2114,12 @@ fn MatchDialog(
                             },
                             option { value: "", "None" }
                             for (id, label) in options.iter() {
-                                option { key: "{id}", value: "{id}", "{label}" }
+                                option {
+                                    key: "{id}",
+                                    value: "{id}",
+                                    selected: id.as_str() == loser_target_value.as_str(),
+                                    "{label}"
+                                }
                             }
                         }
                         select {

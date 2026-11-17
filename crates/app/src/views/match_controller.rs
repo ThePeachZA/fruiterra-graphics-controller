@@ -321,7 +321,11 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
                                 }
                             },
                             for value in 1..=4u8 {
-                                option { value: "{value}", "First to {value}" }
+                                option {
+                                    value: "{value}",
+                                    selected: value == match_state.first_to,
+                                    "First to {value}"
+                                }
                             }
                         }
                     }
@@ -398,7 +402,12 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
                             },
                             option { value: "", "Select team" }
                             for team in teams.iter() {
-                                option { key: "{team.id}", value: "{team.id}", "{team.tag} — {team.name}" }
+                                option {
+                                    key: "{team.id}",
+                                    value: "{team.id}",
+                                    selected: team.id.as_str() == team_a_value.as_str(),
+                                    "{team.tag} — {team.name}"
+                                }
                             }
                         }
                     }
@@ -427,7 +436,12 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
                             },
                             option { value: "", "Select team" }
                             for team in teams.iter() {
-                                option { key: "{team.id}", value: "{team.id}", "{team.tag} — {team.name}" }
+                                option {
+                                    key: "{team.id}",
+                                    value: "{team.id}",
+                                    selected: team.id.as_str() == team_b_value.as_str(),
+                                    "{team.tag} — {team.name}"
+                                }
                             }
                         }
                     }
@@ -848,6 +862,7 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                                             option {
                                                 key: "{talent.id}",
                                                 value: "{talent.id}",
+                                                selected: talent.id.as_str() == current.as_str(),
                                                 "{talent.display_name}"
                                             }
                                         }
@@ -882,6 +897,7 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                                 option {
                                     key: "{talent.id}",
                                     value: "{talent.id}",
+                                    selected: talent.id.as_str() == interviewee_talent.as_str(),
                                     "{talent.display_name}"
                                 }
                             }

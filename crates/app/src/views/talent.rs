@@ -280,7 +280,11 @@ fn TalentEditor(talent: Talent, on_request_delete: EventHandler<Talent>) -> Elem
                                 });
                             },
                             for option in SocialPlatform::ALL {
-                                option { value: "{option.slug()}", "{option.label()}" }
+                                option {
+                                    value: "{option.slug()}",
+                                    selected: option == platform,
+                                    "{option.label()}"
+                                }
                             }
                         }
                     }

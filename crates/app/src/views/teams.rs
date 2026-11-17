@@ -593,7 +593,11 @@ fn PlayerEditor(
                             }
                         },
                         for role in Role::ALL {
-                            option { value: "{role.slug()}", "{role.label()}" }
+                            option {
+                                value: "{role.slug()}",
+                                selected: role == player.role,
+                                "{role.label()}"
+                            }
                         }
                     }
                 }
@@ -608,7 +612,11 @@ fn PlayerEditor(
                             }
                         },
                         for position in Position::ALL {
-                            option { value: "{position.slug()}", "{position.label()}" }
+                            option {
+                                value: "{position.slug()}",
+                                selected: position == player.position,
+                                "{position.label()}"
+                            }
                         }
                     }
                 }
