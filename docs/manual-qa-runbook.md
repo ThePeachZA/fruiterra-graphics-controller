@@ -1079,7 +1079,7 @@ failure.
 
 **Steps:**
 
-1. Disconnect the network.
+1. Disconnect the network, or emulate offline in the WebView developer tools.
 2. Start the app.
 3. Open the developer tools for the WebView if available, or inspect the app's
    network activity with a proxy.
