@@ -107,8 +107,8 @@ You can override a single overlay file:
 3. Edit the copy.
 4. Reload the Browser Source in OBS.
 
-A missing or broken override falls back to the built-in file. The other six
-overlays are unaffected.
+A missing, empty or unreadable override falls back to the built-in file. The other
+six overlays are unaffected.
 
 The default folder is:
 

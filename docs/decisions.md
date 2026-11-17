@@ -257,7 +257,7 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 ### Q4 — Overlay overrides
 **Decision: per-file override.**
 - `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\overlays\<file>.html` is served instead of the embedded file when present.
-- A missing or broken override affects only that file.
+- A missing, empty or unreadable override falls back to the embedded file; a readable but malformed file affects only that file.
 
 ### Q5 — Hashed scope
 **Decision: hash everything except fonts.**
@@ -527,3 +527,21 @@ rule that kept LAN mode usable without exposing the port beyond the show network
   stopped answering.
 - **Docs.** `docs/wiki/Overlays-in-OBS.md`, `docs/wiki/Troubleshooting.md` and
   `docs/build.md` now state the Private profile and the TCP/LocalSubnet rule.
+
+## Overlay override guard (2026-11-17)
+
+**Status: fixed during A7.** The A7 run showed that a readable but empty
+override was served as a zero-byte page, leaving that OBS source blank. The
+runbook also expected malformed HTML to fall back, which the server cannot detect
+without parsing the document.
+
+- **Guard.** `read_override` now treats an empty file and a non-UTF-8 file as
+  missing: it logs a warning and serves the embedded overlay instead. A locked
+  or unreadable file already fell back through the I/O error path.
+- **Not changed.** A readable, valid-UTF-8 but malformed HTML file is still
+  served as-is. It affects only that one overlay, which is the documented
+  per-file rule; silently replacing hand-written HTML would be surprising.
+- **Tests.** `crates/server/src/overrides.rs` covers empty, non-UTF-8 and valid
+  override files.
+- **Docs.** The runbook A7 step and the wiki/assets wording now say **missing,
+  empty or unreadable**, not "broken".

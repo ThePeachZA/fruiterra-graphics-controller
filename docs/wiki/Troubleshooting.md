@@ -35,7 +35,7 @@
 | Tournament data looks wrong after a crash | The app repairs malformed tournament data on load. Check the match dialog and the **Settings** tab, then re-enter any result that was reset. |
 | An image import is rejected | The file must be PNG, JPEG, WebP, GIF or SVG and no larger than 20 MB. SVG files containing scripts or external references are rejected. |
 | A URL import fails | Check the address points directly at an image, that the host is reachable, and that the image is under 20 MB. |
-| An overlay override is ignored | The file must be in the **Overlays folder** with exactly the same filename as the bundled overlay. Reload the Browser Source. A broken override falls back to the built-in file. |
+| An overlay override is ignored | The file must be in the **Overlays folder** with exactly the same filename as the bundled overlay. Reload the Browser Source. A missing, empty or unreadable override falls back to the built-in file. |
 
 ## Timer and fonts
 

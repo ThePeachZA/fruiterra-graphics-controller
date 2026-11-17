@@ -183,7 +183,7 @@ guardrails are in `docs/backlog.md` §C1.
   1. Reject names containing `/`, `\`, `..`, or not ending in `.html`.
   2. If `<override-dir>/<file>` exists and is a regular file, serve it.
   3. Otherwise serve the embedded file.
-- A missing or broken override affects only that file.
+- A missing, empty or unreadable override falls back to the embedded file; a readable but malformed file is served as-is and affects only that file.
 - Overrides are plain HTML: users can tweak colours or layout for OBS without rebuilding.
 - A “Open overlays folder” button in Settings creates the directory and reveals it.
 - No override is provided for assets or fonts in v1.

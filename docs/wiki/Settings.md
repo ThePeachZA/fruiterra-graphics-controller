@@ -54,8 +54,8 @@ seven overlay HTML files.
 - Edit the copy.
 - Reload the Browser Source in OBS.
 
-A missing or broken override falls back to the embedded file. Only the overridden
-overlay changes.
+A missing, empty or unreadable override falls back to the embedded file. Only the
+overridden overlay changes.
 
 The default folder is:
 

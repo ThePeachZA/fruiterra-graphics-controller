@@ -839,21 +839,23 @@ screenshot, and the result after turning LAN mode off.
 3. Add a visible marker, for example a red `OVERRIDE` label in the HTML.
 4. Reload the game overlay in OBS. Confirm the marker appears.
 5. Confirm the other six overlays are unchanged.
-6. Replace the override with broken HTML and reload. Confirm the app falls back
-   to the built-in file.
+6. Replace the override with an empty file and reload. Confirm the app falls back
+   to the built-in file. If you can, repeat with the file locked by another
+   process; it should also fall back.
 7. Delete the override and reload.
 
 **Pass:**
 
 - Only the overridden overlay changes.
-- A broken override falls back without breaking the other six.
+- An empty or unreadable override falls back without breaking the other six.
 - Removing the override restores the built-in file.
 
 **Fail:**
 
 - No override is picked up.
 - All overlays change.
-- Broken HTML leaves the overlay blank instead of falling back.
+- An empty or unreadable override leaves the overlay blank instead of falling
+  back.
 - The app crashes.
 
 **Evidence:** Screenshots of the marker, the other overlays, and the fallback.
