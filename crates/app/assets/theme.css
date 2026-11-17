@@ -132,6 +132,15 @@ textarea[class^="dx-textarea"]:focus-visible {
     outline-offset: 1px;
 }
 
+/* The vendored Dialog centres a fixed-size box and never scrolls it, so a tall
+ * dialog (the tournament match editor) overflows a short window. Cap it to the
+ * viewport and let its contents scroll instead. The class is a CSS-module hash,
+ * so match the prefix; the backdrop shares it and is excluded by `role`. */
+[role="dialog"][class^="dx-dialog-"] {
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+}
+
 ::selection {
     background: var(--fgc-accent-soft);
 }

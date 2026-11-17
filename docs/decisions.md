@@ -665,3 +665,23 @@ destination stopped the once-per-second ticks and reset the in-app clock to
   while you visit another page and that only a restart clears the target; the
   M7 note in `docs/implementation-plan.md` and the A21 runbook step were
   updated.
+
+## A12-1 - Dialogs cap to the viewport and scroll (2026-11-18)
+
+**Status: fixed during A12.** At the 1040×680 minimum window the tournament
+**Edit match** dialog measured 684 px tall, so its top and bottom edges were
+clipped by 2 px each and nothing could scroll them into view.
+
+- **Root cause.** The vendored `.dx-dialog` is a fixed-size, vertically centred
+  box with no `max-height` and `overflow-y: visible`, so a dialog taller than
+  the window simply overflows.
+- **Fix.** `crates/app/assets/theme.css` caps
+  `[role="dialog"][class^="dx-dialog-"]` at `calc(100vh - 2rem)` and sets
+  `overflow-y: auto`. The class is a CSS-module hash, so the rule matches the
+  prefix; the backdrop shares the prefix but is excluded by `role`.
+- **Not changed.** The vendored dialog CSS is untouched, matching A11-1, and
+  the dialog keeps its centred position and width.
+- **Verified.** On a fresh `dx build --desktop` binary at 1040×680 the dialog
+  sits at 16 px margins, scrolls 36 px, and **Save result** stays reachable.
+  Every destination and the four dialogs were re-audited at 100%, 125%, 150%,
+  1280×720 and 1040×680 with no other overflow.

@@ -1014,6 +1014,11 @@ failure.
 
 **Evidence:** Screenshot of any problem with the scaling value recorded.
 
+> If the window is a fixed logical size, the same layout check can be
+> simulated with the WebView developer tools by setting the device scale
+> factor to 1.25 and 1.5 and shrinking the viewport to the size a scaled
+> screen leaves (for example 1280×720 for 1080p at 150%).
+
 ---
 
 ### A13 — Error toasts and inline errors
