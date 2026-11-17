@@ -55,6 +55,11 @@ Select **Delete team** in the team header.
   reference. You can cancel, or select **Remove references and delete** to clear
   those references and delete the team.
 
+Results that involve the team go with it: a match it won returns to Pending
+(the scores are kept), a match left with a single team becomes a bye, and group
+fixtures keep their place with an empty side and stop counting in the standings.
+A champion that is deleted is cleared.
+
 Deletion cannot be undone.
 
 ## Talent
