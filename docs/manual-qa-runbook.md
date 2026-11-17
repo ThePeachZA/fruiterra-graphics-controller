@@ -1308,7 +1308,8 @@ machines.
 3. Set **Mode** to Count to target with a target two minutes in the future and
    **Start**.
 4. Toggle **Leading zeroes** and **Standalone timer**.
-5. Switch to another tab and back. Confirm the timer keeps running.
+5. Switch to another tab and back, then visit another destination (for
+   example Teams) and return. Confirm the timer keeps running throughout.
 6. Close and reopen the app. Confirm the timer settings persist.
 
 **Pass:**
@@ -1324,7 +1325,7 @@ machines.
 - The clock drifts, stops or double-counts.
 - Count down passes zero or target mode is wrong.
 - A setting is ignored or lost.
-- The timer resets when switching tabs.
+- The timer resets or stops when switching tabs or destinations.
 
 **Evidence:** A short screen recording or timestamped notes.
 

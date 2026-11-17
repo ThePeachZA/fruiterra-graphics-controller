@@ -102,8 +102,8 @@ The **Timer** panel shows the current value. Use **Start**, **Pause** and
 
 **Count to target** needs a target in the future. **Start** stays disabled until
 you set one, and the clock counts down to it; once the target passes the timer
-stops at `00:00:00`. The target is not saved, so set it again after switching
-away from the page or restarting the app.
+stops at `00:00:00`. The clock keeps running while you visit another page. The
+target is not saved, so set it again after restarting the app.
 
 > [!NOTE]
 > The timer is control-only in version 1. There is no bundled timer overlay, but

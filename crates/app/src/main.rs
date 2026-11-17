@@ -16,6 +16,7 @@ mod smoke;
 mod state;
 mod status;
 mod theme;
+mod timer;
 mod views;
 
 use std::backtrace::Backtrace;

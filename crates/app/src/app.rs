@@ -7,6 +7,7 @@ use crate::components::toast::ToastProvider;
 use crate::state::AppStore;
 use crate::status::{status_text, status_tone};
 use crate::theme::Destination;
+use crate::timer::TimerController;
 use crate::views::DestinationView;
 
 const DX_THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");
@@ -57,6 +58,10 @@ const FONT_FACES: &str = r#"
 pub fn App() -> Element {
     let store = AppStore::use_store();
     use_context_provider(|| store);
+    // The timer lives above the destination switch so it keeps counting while
+    // the operator visits another destination.
+    let timer = TimerController::use_controller();
+    use_context_provider(|| timer);
     let mut destination = use_signal(|| Destination::Overlay);
 
     let font_faces = FONT_FACES

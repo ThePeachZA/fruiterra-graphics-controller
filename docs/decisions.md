@@ -644,3 +644,24 @@ lookup only checked `entrant_names`.
   list, the same lookup the group member chips already use.
 - **No model change.** Group membership is not restricted to entrants, which
   keeps the board editable after play starts.
+
+## A21-1 - The timer keeps running across destinations (2026-11-18)
+
+**Status: fixed during A21.** Starting the clock and then visiting another
+destination stopped the once-per-second ticks and reset the in-app clock to
+`00:00:00`, so a third-party timer page froze mid-count.
+
+- **Root cause.** `MatchControllerView` owned the `TimerState` signals and the
+  tick loop. Navigating away unmounted the view, which dropped the loop and the
+  signals with it.
+- **Fix.** `crates/app/src/timer.rs` now owns `TimerState`, the count-to-target
+  value and the tick loop as `TimerController`, provided once at the app root in
+  `crates/app/src/app.rs`. The Match Controller reads the controller from
+  context; the clock helpers and the two broadcast helpers moved with it.
+- **Behaviour.** The clock keeps counting and keeps broadcasting while the
+  operator visits any destination. Run state is still never persisted, and the
+  count-to-target value still clears on restart.
+- **Docs.** `docs/wiki/Match-Controller.md` now says the clock keeps running
+  while you visit another page and that only a restart clears the target; the
+  M7 note in `docs/implementation-plan.md` and the A21 runbook step were
+  updated.
