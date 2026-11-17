@@ -286,7 +286,7 @@ The scaling pass found one layout defect, at the smallest supported window.
 
 | ID | Check | Why manual | Status |
 |---|---|---|---|
-| M2-1 | An unmodified original overlay renders from the new server's `init` and live frames. | Covered by R3; needs the original HTML and OBS. | Pending |
+| M2-1 | An unmodified original overlay renders from the new server's `init` and live frames. | Covered by R3; needs the original HTML and OBS. | Blocked — no original overlay HTML survives (R3, §2.3). Covered instead by the M2 projection tests, `crates/protocol/tests/quirks.rs` and the server smoke test. |
 | M2-2 | `?port=<port>` connects a third-party overlay served from another origin. | Needs a second HTTP origin and a browser. | Done — 2026-11-15, gate A3 (§2.4). |
 | M2-3 | `data_url` asset mode inlines images for a third-party overlay. | Needs the Settings toggle and a real overlay. | Done — 2026-11-16, gate A4 (§2.4). |
 
@@ -343,7 +343,7 @@ The scaling pass found one layout defect, at the smallest supported window.
 | M7-3 | Force Update and copy-URL work, and the URL matches the configured port. | Clipboard and live-server interaction. | Done — 2026-11-17, gate A22 (§2.4). |
 | M7-4 | Map, hero-ban, map-pool and talent edits update the overlays live. | WebView2 harness covered a subtitle edit; the remaining tabs need OBS. | Done — 2026-11-17, gate A22 (§2.4). Map selection, map pick, hero ban, caster and Force update repainted the in-app overlay pages. |
 | M7-5 | Derived vs manual scores, draws ignored, first-to and side/swap/loser-pick rules behave as documented. | UI-level verification of tested rules. | Done — 2026-11-17, gate A23 (§2.4). Derived and manual scores, ignored draws, first-to, side indicator, loser picks and swap sides all matched `/state` and the overlay. |
-| M7-6 | The timer is clearly control-only and a third-party overlay receives ticks/actions. | Covered by R4. | Pending |
+| M7-6 | The timer is clearly control-only and a third-party overlay receives ticks/actions. | Covered by R4. | Done — 2026-11-15, gate R4 (§2.3); re-confirmed in A21 (§2.4), including ticks while another destination is shown. |
 
 ### M8 — Tournament
 
@@ -362,14 +362,14 @@ The scaling pass found one layout defect, at the smallest supported window.
 
 | ID | Check | Why manual | Status |
 |---|---|---|---|
-| M9-1 | Complete `docs/overlay-qa.md` in OBS. | Covered by R1. | Pending |
-| M9-2 | Offline font check. | Covered by R2. | Pending |
-| M9-3 | Original overlay drop-in compatibility. | Covered by R3. | Pending |
-| M9-4 | Third-party timer overlay. | Covered by R4. | Pending |
+| M9-1 | Complete `docs/overlay-qa.md` in OBS. | Covered by R1. | Done — 2026-11-15, gate R1 (§2.2). All 15 rows signed in OBS on 1.0.0. |
+| M9-2 | Offline font check. | Covered by R2. | Done — 2026-11-15, gate R2. All seven overlays rendered Archivo with the network disconnected. |
+| M9-3 | Original overlay drop-in compatibility. | Covered by R3. | Blocked — R3 accepted 2026-11-15 (§2.3): no original pre-rebuild overlay HTML survives. The wire contract is covered by the M2 projection tests, `crates/protocol/tests/quirks.rs` and the server smoke test. |
+| M9-4 | Third-party timer overlay. | Covered by R4. | Done — 2026-11-15, gate R4 (§2.3). A third-party timer page received ticks and start/pause/reset actions. |
 | M9-5 | Archivo vs Saira visual review at 1920×1080 (`docs/fonts.md`); Barlow remains an untried third option. | Design judgment after R1 rejected Saira. | Pending |
 | M9-6 | Tabular numerals, all-caps cap height/letter-spacing, roster layout, hero-ban and map-pool fit, names at the 32/24-character limits, transparent background. | Visual judgment in OBS. | Pending |
 | M9-7 | A 6-caster `row-casters` layout clips the social row by about 14px with long handles. | Observed in the WebView2 pre-check; the same clipping occurs with a `sans-serif` fallback. Tracked in the overlay polish backlog. | Known |
-| M9-8 | Font licence appears in the README/notices and the bundled `OFL.txt` files ship beside the fonts. | Content check; partly done. | Partial |
+| M9-8 | Font licence appears in the README/notices and the bundled `OFL.txt` files ship beside the fonts. | Content check; partly done. | Done — 2026-11-18. README §Fonts and licences names Archivo, Inter and Saira; `THIRD_PARTY_NOTICES.md` has an entry and licence text for each; `OFL.txt` ships beside the UI fonts and `OFL-Archivo.txt`/`OFL.txt` beside the overlay fonts. |
 
 ### M10 — Packaging and release
 
