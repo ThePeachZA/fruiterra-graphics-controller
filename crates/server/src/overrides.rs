@@ -61,13 +61,28 @@ pub fn split_asset_file(file: &str) -> Option<(&str, &str)> {
 /// Reads a per-file overlay override when one exists.
 ///
 /// The name is validated again here so a caller that forgets to check cannot
-/// escape the override directory.
+/// escape the override directory. An empty or non-UTF-8 file is treated as
+/// missing so a broken override cannot leave an overlay blank.
 #[must_use]
 pub fn read_override(dir: Option<&Path>, name: &str) -> Option<Vec<u8>> {
     let dir = dir?;
     let name = validate_overlay_name(name)?;
     let path = dir.join(name);
     match std::fs::read(&path) {
+        Ok(bytes) if bytes.is_empty() => {
+            tracing::warn!(
+                path = %path.display(),
+                "overlay override is empty; falling back to the embedded file"
+            );
+            None
+        }
+        Ok(bytes) if std::str::from_utf8(&bytes).is_err() => {
+            tracing::warn!(
+                path = %path.display(),
+                "overlay override is not valid UTF-8; falling back to the embedded file"
+            );
+            None
+        }
         Ok(bytes) => Some(bytes),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
         Err(error) => {
@@ -148,5 +163,23 @@ mod tests {
         );
         assert_eq!(read_override(Some(dir.path()), "secret.txt"), None);
         assert_eq!(read_override(Some(dir.path()), "../secret.txt"), None);
+    }
+
+    #[test]
+    fn empty_and_non_utf8_overrides_fall_back() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("game-overlay.html");
+
+        std::fs::write(&path, b"").expect("write");
+        assert_eq!(read_override(Some(dir.path()), "game-overlay.html"), None);
+
+        std::fs::write(&path, [0xff, 0xfe, 0x00]).expect("write");
+        assert_eq!(read_override(Some(dir.path()), "game-overlay.html"), None);
+
+        std::fs::write(&path, b"<!doctype html>").expect("write");
+        assert_eq!(
+            read_override(Some(dir.path()), "game-overlay.html"),
+            Some(b"<!doctype html>".to_vec())
+        );
     }
 }
