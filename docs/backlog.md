@@ -702,3 +702,17 @@ and M3-6 is Done.
   1920×1080: data-driven states, team colours, icon/mode links, long names,
   reconnect/`show`, offline Archivo and one-minute watch checks. M9-5 and M9-6
   are complete; appearance work is deferred.
+
+## U. Release gate R9 (2026-11-21)
+
+- **R9 — Pass.** After the A17 blocked acceptance, all changes were committed as
+  `c244d29` and pushed, and annotated tag `v1.0.0` was pushed against workspace
+  version `1.0.0`. Release run
+  [44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532)
+  passed every step. The
+  [v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0)
+  published the installer, portable ZIP and `SHA256SUMS.txt`; all three were
+  downloaded and the published checksums matched both artifacts. The release
+  notes matched the shipped template, contained no backlog claims and repeated
+  the known limitations. M10-1, M10-6 and M10-8 are Done, and `docs/build.md`
+  §7 items 1–12 are complete. R3, R5 and A17 retain their recorded acceptances.

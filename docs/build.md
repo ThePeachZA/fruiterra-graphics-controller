@@ -263,6 +263,13 @@ GitHub's generated notes are appended below this template, not used instead of i
 | 11 | `SHA256SUMS.txt` matches both artifacts. |
 | 12 | Tag version equals the workspace version. |
 
+**Status: items 1–12 complete on 2026-11-21.** Item 12 passed when annotated
+tag `v1.0.0` was pushed against workspace `1.0.0` and the tag check in
+[Release run 44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532)
+passed. Item 6 remains accepted with the R5 substitution (separate computer,
+not a clean VM). The published release and its verified checksums are recorded
+in `docs/manual-qa.md` §3.
+
 ---
 
 ## 8. Risks

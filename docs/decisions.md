@@ -1097,3 +1097,38 @@ blocked gate, not as a Pass: export, bundle layout and hash validation are fixed
 and assistant-verified, while the second-machine import remains unrun. The owner
 authorized committing all uncommitted changes, creating and pushing the
 `v1.0.0` tag, and then running R9.
+
+## Release execution and R9 closeout (2026-11-21)
+
+All uncommitted work was committed as `c244d29` (`feat: ship v1.0.0 broadcast
+controller`) and pushed to `main`. The annotated tag `v1.0.0` was created with
+message `Fruiterra Graphics Controller v1.0.0` and pushed; it points at
+`c244d29`. The workspace version is `1.0.0`, so the tag check passed.
+
+Tag push triggered [Release run
+44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532).
+Every step passed, including format, clippy, tests, third-party notices, the
+NSIS bundle, packaged smoke test, checksum generation and publication. The
+[v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0)
+contains the installer, portable ZIP and `SHA256SUMS.txt`. All three assets were
+downloaded; `Get-FileHash` matched the published checksums for installer
+`04d97d7f6dacc98f6e93068e1cf5ae693e701e9a298d8b92ca7c72788469ecf3` and
+portable ZIP
+`17693cd63254633397fb02216c283d31842695e34ecf195aae9b03306eb0433a`. The
+`SHA256SUMS.txt` asset itself hashes to
+`6f350b4185ee700173508aed28bcd260621a44b822b9fd8487ce9864e9d4f3f5`.
+
+The published notes were checked against the raw GitHub API body so console
+encoding could not alter the comparison. They match
+`docs/release-notes-template.md` with `<version>` replaced by `1.0.0`, plus the
+generated changelog, describe only shipped features and repeat the known
+limitations. R9 is **Pass**. The workflow rebuilt the published artifacts, so
+their hashes differ from the locally refreshed pre-tag artifacts used for R7;
+R9 verified the published set and no application code or overlay changed
+between the two sets.
+
+R1–R9 are now closed, and `docs/build.md` §7 items 1–12 are complete. R3 remains
+blocked-accepted, R5 used the owner-accepted computer substitution, and A17's
+second-machine import remains unrun but explicitly accepted for release. The tag
+stays on the release commit; the R9 evidence is recorded in a follow-up
+documentation-only commit.

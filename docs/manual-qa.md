@@ -67,7 +67,7 @@ window renders unstyled and dialogs lay out in document flow.
 | R6 | Portable ZIP | M10 | Extract on a machine with no install, run `fruiterra-gc.exe`, confirm the UI assets and all seven overlays load. | **Pass — owner 2026-11-20** | Exact answer: **“Pass.”** The ZIP extracted to `C:\Tools\FGC-Portable\` with all five required entries; the app ran with no install, loaded fonts/styles and all seven overlays, and created no install entry. |
 | R7 | SmartScreen and checksum | M10 | Run the unsigned installer from a downloaded copy. Confirm the warning is expected and `SHA256SUMS.txt` verifies both artifacts. | **Pass — owner 2026-11-20** | Exact answer: **“Pass.”** SmartScreen warned for the unsigned build, identified the app and allowed **Run anyway**; both downloaded artifacts matched `SHA256SUMS.txt` exactly. |
 | R8 | WebView2 bootstrap | M10 | On a VM without WebView2, confirm the installer installs the runtime. Confirm the portable build fails with a clear message instead. | **Pass — owner 2026-11-20** | Exact answer: **“Pass.”** The installer added WebView2 and the app launched; on a second clean snapshot without WebView2 the portable build failed with a clear install-WebView2-or-use-installer message and no silent crash. |
-| R9 | Tagged release publish | M10 | After R1–R8 (R3 accepted as Blocked), tag `v1.0.0`. Confirm the workflow publishes the installer, portable ZIP, checksums and release notes. | Pending |
+| R9 | Tagged release publish | M10 | After R1–R8 (R3 accepted as Blocked), tag `v1.0.0`. Confirm the workflow publishes the installer, portable ZIP, checksums and release notes. | **Pass — 2026-11-21.** Release run [44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532) passed every job; the [v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0) contains all three assets; downloaded checksums match; notes match the shipped template. |
 
 ## 2.1 R1 findings (2026-11-12)
 
@@ -493,8 +493,8 @@ additional owner recheck was required.
 
 | ID | Check | Why manual | Status |
 |---|---|---|---|
-| M0-1 | The NSIS installer opens with the approved display name and icon. | Installer UI is not rendered in CI. | Pending |
-| M0-2 | Unsigned binaries trigger the documented SmartScreen warning. | Requires a downloaded binary and a real desktop. | Pending |
+| M0-1 | The NSIS installer opens with the approved display name and icon. | Installer UI is not rendered in CI. | Done — R5 2026-11-20 confirmed product name, publisher and icon on a separate Windows computer. |
+| M0-2 | Unsigned binaries trigger the documented SmartScreen warning. | Requires a downloaded binary and a real desktop. | Done — R7 2026-11-20 confirmed the expected warning and **Run anyway** on a downloaded installer. |
 
 ### M1 — Core domain, store and migration
 
@@ -520,7 +520,7 @@ additional owner recheck was required.
 | M3-1 | `Allow LAN connections` binds `0.0.0.0` and a second PC can load an overlay after allowing Windows Firewall access on private networks. | Firewall and second-machine behaviour cannot run in CI. | Done — 2026-11-16, gate A5 (§2.4). |
 | M3-2 | A port already in use shows a clear bind error and does not silently fall back. | Requires occupying the port with another process. | Done — 2026-11-17, gate A6 (§2.4). |
 | M3-3 | A per-file override copied into `%APPDATA%\...\overlays\` changes only that overlay after an OBS reload. | Needs the real app-data folder and OBS cache behaviour. | Done — 2026-11-17, gate A7 (§2.4). |
-| M3-4 | Seven simultaneous Browser Sources connect and stay connected without visible lag. | OBS/CEF resource behaviour. | Pending |
+| M3-4 | Seven simultaneous Browser Sources connect and stay connected without visible lag. | OBS/CEF resource behaviour. | Done — R1 2026-11-15 ran all 15 rows with seven Browser Sources and no disconnects or flickers; A41 2026-11-20 re-checked all seven overlays in OBS. |
 | M3-5 | Restarting the server while OBS is open reconnects and repaints every source. | Partially covered by the WebView2 harness; OBS remains. | Done — 2026-11-20, gate A8 (§2.4; note recorded in §2.16). |
 | M3-6 | Replacing a referenced image shows the new hash immediately, with no stale OBS cache. | Content-addressed URLs are tested; OBS caching is not. | Done — 2026-11-20, gate A9 (§2.18). Stale logos now clear live in `game-overlay.html`; owner rechecked without OBS refresh/restart. |
 | M3-7 | `show` hides and shows each overlay when driven by a test page. | The app does not send `show`; needs the WebSocket test page. | Done — 2026-11-17, gate A10 (§2.4). |
@@ -580,7 +580,7 @@ additional owner recheck was required.
 | M8-6 | Playoff generation, grand-final reset and champion override work from the UI. | Full UI pass. | Done — 2026-11-17, gate A27 (§2.4). Qualifier seeding, champion override/derivation and the reset toggle (reset on creates a second final, off does not) behaved. |
 | M8-7 | Tournament data survives reload and malformed data is repaired rather than crashing. | Requires editing a real save file. | Done — 2026-11-17, gate A28 (§2.4). A group rename survived close/reopen; a completed grand final whose winner was outside both slots was reset to Pending on load with the repair logged and no crash. |
 | M8-8 | The Teams deletion guard handles tournament entrants, slots, groups and champions. | Cross-view destructive flow. | Done — 2026-11-17, gate A28 (§2.4). The dialog listed entrants, winners/losers brackets, grand final, champion, groups and group fixtures, and **Remove references and delete** left no dangling id and a valid bracket. |
-| M8-9 | Multi-stage generation keeps groups and playoff, persists `"multi-stage"`, handles seeding failure, and pushes fixtures to the overlays. | Full UI pass with saved-data checks. | Pending — gate A39 (§2.4). Multi-stage tab behaviour is included in A36. |
+| M8-9 | Multi-stage generation keeps groups and playoff, persists `"multi-stage"`, handles seeding failure, and pushes fixtures to the overlays. | Full UI pass with saved-data checks. | Done — A36 2026-11-20 confirmed multi-stage persistence and A39 items 1–11 accepted 2026-11-19, including the gated playoff, seeding-failure message and **Push to match**. |
 
 ### M9 — Overlays and fonts
 
@@ -590,8 +590,8 @@ additional owner recheck was required.
 | M9-2 | Offline font check. | Covered by R2. | Done — 2026-11-15, gate R2. All seven overlays rendered Archivo with the network disconnected. |
 | M9-3 | Original overlay drop-in compatibility. | Covered by R3. | Blocked — R3 accepted 2026-11-15 (§2.3): no original pre-rebuild overlay HTML survives. The wire contract is covered by the M2 projection tests, `crates/protocol/tests/quirks.rs` and the server smoke test. |
 | M9-4 | Third-party timer overlay. | Covered by R4. | Done — 2026-11-15, gate R4 (§2.3). A third-party timer page received ticks and start/pause/reset actions. |
-| M9-5 | Archivo vs Saira visual review at 1920×1080 (`docs/fonts.md`); Barlow remains an untried third option. | Design judgment after R1 rejected Saira. | Pending |
-| M9-6 | Tabular numerals, all-caps cap height/letter-spacing, roster layout, hero-ban and map-pool fit, names at the 32/24-character limits, transparent background. | Visual judgment in OBS. | Pending |
+| M9-5 | Archivo vs Saira visual review at 1920×1080 (`docs/fonts.md`); Barlow remains an untried third option. | Design judgment after R1 rejected Saira. | Done — Archivo selected after R1 rejected Saira; A41 Pass 2026-11-20 confirmed the shipped Archivo overlays at 1920×1080. Saira and Barlow remain untried deferred alternatives. |
+| M9-6 | Tabular numerals, all-caps cap height/letter-spacing, roster layout, hero-ban and map-pool fit, names at 32/24-character limits, transparent background. | Visual judgment in OBS. | Done — A41 Pass 2026-11-20 (§2.4). |
 | M9-7 | A 6-caster `row-casters` layout clips the social row by about 14px with long handles. | Observed in the WebView2 pre-check; the same clipping occurs with a `sans-serif` fallback. Tracked in the overlay polish backlog. | Known |
 | M9-8 | Font licence appears in the README/notices and the bundled `OFL.txt` files ship beside the fonts. | Content check; partly done. | Done — 2026-11-18. README §Fonts and licences names Archivo, Inter and Saira; `THIRD_PARTY_NOTICES.md` has an entry and licence text for each; `OFL.txt` ships beside the UI fonts and `OFL-Archivo.txt`/`OFL.txt` beside the overlay fonts. |
 | M9-9 | The seven bundled overlays render at 1920×1080 with their shipped geometry and protocol. | OBS visual judgment and reconnect behaviour. | Done — gate A41 Pass on 2026-11-20 (§2.4). |
@@ -600,14 +600,14 @@ additional owner recheck was required.
 
 | ID | Check | Why manual | Status |
 |---|---|---|---|
-| M10-1 | `docs/build.md` §7 release checklist items 1–12 are complete. | Mix of local commands and human gates. | Pending — current-tree items 1–5, 7–9 and 11 verified/accepted; item 6 Pass with note (R5 on a separate computer, not a clean VM) and item 10 Done after the editorial fix; only item 12 (tag version) remains until `v1.0.0` is tagged. |
+| M10-1 | `docs/build.md` §7 release checklist items 1–12 are complete. | Mix of local commands and human gates. | Done — R9 2026-11-21 closed §7 items 1–12. Item 6 remains accepted with the R5 note (separate computer, not a clean VM); item 12 passed when `v1.0.0` was tagged against workspace `1.0.0`. |
 | M10-2 | The packaged `--smoke-test` passes on the release binary. | Automated in CI; run locally too. | Done — fresh local release binary 2026-11-20 and CI release run [43050860851](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/43050860851) (2026-11-11). |
 | M10-3 | The installer creates the Start Menu folder, desktop shortcut, uninstall entry and correct icon. | Installer UI. | Partial — R5 2026-11-20 confirmed product name/icon, Start Menu entry and uninstall entry on a separate computer; the desktop shortcut was not separately recorded. |
 | M10-4 | Uninstall removes the install and shortcuts; confirm whether `%APPDATA%` user data is intentionally preserved. | Installer UI and data-retention policy. | Done — R5 2026-11-20 on a separate computer (not a clean VM): uninstall, shortcut removal and the data-retention result passed. |
 | M10-5 | The portable ZIP contains the executable, `assets\`, README, LICENSE and notices, and runs with no install. | Covered by R6. | Done — R6 Pass 2026-11-20 on a machine with no installed copy. |
-| M10-6 | The release workflow publishes both artifacts, checksums and notes on a tag, and only artifacts on manual dispatch. | Covered by R9. | Partial — manual dispatch produced the workflow artifact, installer, portable ZIP and checksums; tag publishing remains R9. |
+| M10-6 | The release workflow publishes both artifacts, checksums and notes on a tag, and only artifacts on manual dispatch. | Covered by R9. | Done — R9 2026-11-21 verified tag publishing in release run [44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532); earlier manual dispatch evidence is retained. |
 | M10-7 | `SHA256SUMS.txt` matches both artifacts. | Covered by R7. | Done — R7 Pass 2026-11-20; both downloaded artifacts matched exactly. |
-| M10-8 | The tag version equals the workspace version. | Workflow check; confirm on the first tag. | Pending |
+| M10-8 | The tag version equals the workspace version. | Workflow check; confirm on the first tag. | Done — R9 2026-11-21. Workspace is `1.0.0`, tag is `v1.0.0`, and the workflow step **Verify tag matches workspace version** passed. |
 | M10-9 | README and release notes match the shipped feature set and contain no backlog claims. | Editorial review. | Done — 2026-11-21. Removed the obsolete live-bracket "fully editable"/keyboard-movement claim and the release-note "Push to overlay"/editable-slots wording; both now describe the generation preview, **Push to match**, live result editing and the documented limitations. |
 
 ### Automated evidence (2026-11-11)
@@ -646,7 +646,7 @@ the historical evidence above for items 1–5, 9 and 10 of `docs/build.md` §7.
 | Local release artifacts | `dist\fruiterra-gc-1.0.0-windows-x64-setup.exe`, `dist\fruiterra-gc-1.0.0-windows-x64-portable.zip` and `dist\SHA256SUMS.txt` recreated from the current tree after the M10-9 editorial fix. |
 | Local checksums | Installer `1fc405cc639219c9b6f2eedf59cf08d269f0c480c520a705dbeafb9517a2e7e4`; portable ZIP `adcc84c41a84d6a316293d55430b6dc144b7081506be2bcebcc0d51f0a3bea83`. |
 | QA state | `app.json` remained at `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`. |
-| Tag | No `v1.0.0` tag created. |
+| Tag | Annotated `v1.0.0` tag created on commit `c244d29ef1980e5619f7fbeb1dd9c827ec7c81bb` and pushed to `origin`; workspace version is `1.0.0`. |
 
 R5 was accepted with a recorded deviation (separate computer, not a clean VM),
 R6 on a machine without an install, R7 after the browser-download/SmartScreen
@@ -660,14 +660,34 @@ Because README is packaged in the portable ZIP, both artifacts were rebuilt and
 code or overlay changed in that final refresh, so the R5–R8 results still apply
 to the shipped behaviour.
 
+### R9 evidence (2026-11-21)
+
+R9 was run after `main` and `v1.0.0` were pushed. The tagged commit is
+`c244d29ef1980e5619f7fbeb1dd9c827ec7c81bb`.
+
+| Check | Evidence |
+|---|---|
+| Workspace and tag | `Cargo.toml` version `1.0.0`; annotated tag `v1.0.0`; workflow step **Verify tag matches workspace version** passed. |
+| Workflow | [Release run 44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532) completed with `success`; the single job **Build and publish Windows x64** and every required step passed (the cached `cargo-about` install was skipped). |
+| Published release | [v1.0.0](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0), published 2026-11-20T22:45:43Z; not a draft or prerelease. |
+| Assets | All three expected files were published and downloaded: installer, portable ZIP and `SHA256SUMS.txt`. |
+| Published checksums | Installer `04d97d7f6dacc98f6e93068e1cf5ae693e701e9a298d8b92ca7c72788469ecf3`; portable ZIP `17693cd63254633397fb02216c283d31842695e34ecf195aae9b03306eb0433a`; `SHA256SUMS.txt` asset itself `6f350b4185ee700173508aed28bcd260621a44b822b9fd8487ce9864e9d4f3f5`. `Get-FileHash` on both downloaded artifacts matched the published `SHA256SUMS.txt` exactly. |
+| Release notes | The published body matches `docs/release-notes-template.md` with `<version>` replaced by `1.0.0`, plus GitHub's generated changelog. It describes only shipped features and repeats the known limitations. |
+| Notes excerpt | “Tournament boards: single and double elimination, round-robin groups, multi-stage group-to-playoff events and **Push to match**. Participants are arranged in the generation preview; live results and match details stay editable, with automatic advancement.” “Known issues: No import from the earlier Google Sheets workflow… The timer is control-only… LAN mode has no authentication… Bracket overlay is not included in v1… unsigned…” |
+
+The published artifacts were rebuilt by the workflow, so their hashes differ from
+the locally refreshed pre-tag artifacts recorded above. R7 verified the local
+set; R9 verified the published set. No application code or overlay changed
+between them.
+
 ## 4. Manual intervention outside testing
 
 | Item | Owner | Notes |
 |---|---|---|
 | OBS sign-off | Tester | The only gate the agent cannot substitute. |
-| Clean-VM sign-off | Tester | Required before tagging `v1.0.0`. |
-| SmartScreen acceptance | Maintainer | Unsigned v1; documented warning and checksums. |
-| GitHub tag and release | Maintainer | Only after R1–R8 pass. |
+| Clean-VM sign-off | Tester | R5 used a separate computer instead of a clean VM; the owner explicitly accepted that substitution. |
+| SmartScreen acceptance | Maintainer | R7 Pass; unsigned v1 with documented warning and checksums. |
+| GitHub tag and release | Maintainer | Completed 2026-11-21 after R1–R8 and the A17 blocked acceptance: tag `v1.0.0`, release run [44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532), [v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0). |
 | Font design review (Archivo vs Saira) | Maintainer/designer | Archivo is wired in as the R1 trial; a revert is a five-file `src:` swap plus the test prefix, no layout CSS change. |
 | Overlay visual review | Maintainer/designer | The seven bundled overlays ship unchanged apart from the scoped A8 and A9 functional fixes; OBS aesthetic/transparency/reconnect sign-off is A41. Appearance work is deferred to a separate session. |
 | Code signing certificate | Maintainer | Out of scope for v1; the workflow keeps a commented signing step. |
@@ -775,27 +795,31 @@ to the shipped behaviour.
 | 2026-11-20 | 1.0.0 (uncommitted final changes) | VM snapshot without WebView2; current installer and portable ZIP from `dist\` | R8 | Repository owner (ThePeachZA) | **Pass.** Exact answer: **“Pass.”** The installer added WebView2 and the app launched on the first snapshot; on a second clean snapshot without WebView2 the portable build failed with a clear message to install WebView2 or use the installer, with no silent crash. Installed-apps screenshots and the portable error message were recorded. |
 | 2026-11-21 | 1.0.0 (uncommitted final changes) | Windows 11 Pro 10.0.26200; OBS 31.0.4; WebView2 157.0.4341.57; R5 separate Windows computer; R6 WebView2/no-install machine; R7 browser download; R8 WebView2-free VM snapshots | Final pre-tag sign-off (R1–R8, A41, M10-9) | Repository owner (ThePeachZA) | R1–R8 are Pass or explicitly accepted; A41 Pass; all 15 overlay rows ticked; M10-9 Done. Current-tree fmt, clippy, tests, `dx build`, bundle/smoke test, notices, overlay diff restriction, QA hash and checksums all verified. Ready to tag `v1.0.0` after owner authorization; R9 must run after tagging. Recorded unresolved items: R3 blocked-accepted, R5 substituted environment, A17 second-machine import blocked-accepted on 2026-11-21. Owner authorized commit, tag and push in the same answer. |
 | 2026-11-21 | 1.0.0 (uncommitted final changes) | Current tree after the M10-9 editorial fix | Final artifact refresh | Assistant verification | README and release-note wording were corrected; both release artifacts and `dist\SHA256SUMS.txt` were rebuilt from the current tree, the packaged `--smoke-test` passed, and the new checksum comparison passed. Installer SHA-256 `1fc405cc639219c9b6f2eedf59cf08d269f0c480c520a705dbeafb9517a2e7e4`; portable ZIP SHA-256 `adcc84c41a84d6a316293d55430b6dc144b7081506be2bcebcc0d51f0a3bea83`. No application code or overlay changed after R5–R8. No tag created. |
+| 2026-11-21 | 1.0.0 (tagged `c244d29`) | GitHub Actions release run [44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532); published [v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0) | R9 | Assistant verification | **Pass.** Workspace `1.0.0` matched tag `v1.0.0`. Every workflow step passed and the release published the installer, portable ZIP and `SHA256SUMS.txt`. All three assets were downloaded; `Get-FileHash` matched the published checksums for installer `04d97d7f6dacc98f6e93068e1cf5ae693e701e9a298d8b92ca7c72788469ecf3` and portable ZIP `17693cd63254633397fb02216c283d31842695e34ecf195aae9b03306eb0433a`. Notes matched the shipped template, described only shipped features and repeated the known limitations. Release sign-off is complete. |
 
 ## 6. Final sign-off status (2026-11-21)
 
-**Status: ready to tag after explicit owner authorization. Final release
-sign-off is not complete until R9 runs after the tag.**
+**Status: complete. `v1.0.0` is tagged and published; all release gates R1–R9
+are closed.**
 
-- R1–R8 are satisfied: R1 Pass with notes, R2 Pass, R3 explicitly accepted as
-  Blocked, R4 Pass, R5 Pass with an accepted clean-VM substitution, and R6–R8
-  Pass.
+- R1–R9 are satisfied: R1 Pass with notes, R2 Pass, R3 explicitly accepted as
+  Blocked, R4 Pass, R5 Pass with an accepted clean-VM substitution, R6–R8 Pass,
+  and R9 Pass on the tagged release.
 - A41 Passes all seven overlays at 1920×1080; all 15 rows in
   `docs/overlay-qa.md` are ticked. Only `game-overlay.html` and
   `hero-bans.html` differ among the seven bundled overlays.
 - Final artifacts were rebuilt after the README-only editorial fix. No
   application code or overlay changed after R5–R8; the new `SHA256SUMS.txt`
-  comparison and packaged `--smoke-test` passed locally.
-- `docs/build.md` §7 items 1–11 are verified or explicitly accepted. Item 12
-  (tag version equals the workspace `1.0.0`) remains until `v1.0.0` is tagged.
+  comparison and packaged `--smoke-test` passed locally. The workflow rebuilt
+  the published artifacts from tag `c244d29`; R9 verified the published set
+  independently.
+- `docs/build.md` §7 items 1–12 are complete. Item 12 passed because the
+  workspace is `1.0.0` and the pushed tag is `v1.0.0`.
 - Accepted unresolved items: R3 has no original pre-rebuild overlay HTML to
   test; R5 used a separate computer instead of a clean VM; A17 export, bundle
   layout and hash validation are fixed and assistant-verified, but the
   second-machine import remains unrun. The owner explicitly accepted A17 as
   blocked-accepted for release on 2026-11-21.
-- The owner authorized commit, `v1.0.0` tag and push on 2026-11-21. R9 is the
-  tagged release publish gate and must run after `v1.0.0` is pushed.
+- Release record: commit `c244d29ef1980e5619f7fbeb1dd9c827ec7c81bb`; annotated
+  tag `v1.0.0`; [Release run 44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532);
+  [v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0).

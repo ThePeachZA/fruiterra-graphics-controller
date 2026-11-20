@@ -655,6 +655,18 @@ git push origin v1.0.0
 
 **Evidence:** Workflow URL, release URL, hash output and a notes excerpt.
 
+**Result: Pass — 2026-11-21.** Workspace `1.0.0` matched the pushed `v1.0.0`
+tag on commit `c244d29`. Release run
+[44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532)
+completed successfully, and the
+[v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0)
+published all three expected assets. Downloaded `SHA256SUMS.txt` matched the
+installer at `04d97d7f6dacc98f6e93068e1cf5ae693e701e9a298d8b92ca7c72788469ecf3`
+and the portable ZIP at
+`17693cd63254633397fb02216c283d31842695e34ecf195aae9b03306eb0433a`. The notes
+matched the shipped template, contained no backlog claims, and repeated the
+known limitations.
+
 ---
 
 ## 5. High-risk application tests
