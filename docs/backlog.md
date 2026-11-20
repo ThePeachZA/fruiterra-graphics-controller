@@ -760,7 +760,8 @@ Order and target pages, highest value first:
 7. `docs/wiki/Settings.md` — overlay network and override-folder fields.
    `images/settings-overlay-network.png`.
 
-Cap at seven images for v1 documentation. Revisit after D9 lands; if the custom
-overlay page still needs a visual, add one annotated example there rather than
-a generic screenshot. No app, protocol, server or bundled-overlay changes —
-screenshots show the shipped v1 UI as-is.
+Cap at seven images for the existing v1 guide. Revisit after D9 lands; if the
+custom-overlay page needs a visual, give it one annotated example in place of a
+lower-priority image above rather than simply adding an eighth. No app,
+protocol, server or bundled-overlay changes — screenshots show the shipped v1
+UI as-is.
