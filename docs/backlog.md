@@ -731,8 +731,9 @@ and M3-6 is Done.
 ## V. Wiki screenshots (requested 2026-11-21 - revisit later)
 
 Backlog ID: **D10** (docs/QA). A small, curated set of screenshots for wiki
-pages where a picture removes real ambiguity. Defer until D9 is implemented or
-a specific page proves hard to follow; no decorative imagery.
+pages where a picture removes real ambiguity. D9 is now implemented, but no
+images have been added yet; this stays on hold until screenshots are available.
+No decorative imagery.
 
 Before the first image is added:
 - Store files in `docs/wiki/images/` as compressed PNG. The `*.png` binary rule
@@ -740,8 +741,9 @@ Before the first image is added:
 - Reference them with relative Markdown, for example
   `![OBS Browser Source setup](images/obs-browser-source.png)`, with alt text
   and a short caption.
-- Update `scripts/publish-wiki.ps1` to sync `docs/wiki/images/` into the wiki
-  repo. Do not commit images directly to the wiki repo.
+- **Done 2026-11-21.** `scripts/publish-wiki.ps1` now syncs
+  `docs/wiki/images/` into the wiki repo. Do not commit images directly to the
+  wiki repo.
 
 Order and target pages, highest value first:
 1. `docs/wiki/Overlays-in-OBS.md` — OBS Browser Source properties showing a

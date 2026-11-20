@@ -1,4 +1,5 @@
 # Publishes docs/wiki to the GitHub wiki.
+# Also syncs docs/wiki/images/ into the wiki when that folder exists.
 #
 # The GitHub wiki repository only exists after the wiki is enabled and its first
 # page has been created in the GitHub web UI. Private repositories need a plan
@@ -49,6 +50,20 @@ repository public, upgrade the plan, or keep using docs/wiki in the repository.
 Get-ChildItem -Path $Source -Filter *.md -File | ForEach-Object {
     Copy-Item $_.FullName (Join-Path $WorkDir $_.Name) -Force
     Write-Host "Copied $($_.Name)"
+}
+
+$imageSource = Join-Path $Source "images"
+$imageDest = Join-Path $WorkDir "images"
+
+if (Test-Path $imageSource) {
+    if (Test-Path $imageDest) {
+        Remove-Item -Recurse -Force $imageDest
+    }
+    Copy-Item -Path $imageSource -Destination $WorkDir -Recurse -Force
+    Write-Host "Synced images from $imageSource"
+} elseif (Test-Path $imageDest) {
+    Remove-Item -Recurse -Force $imageDest
+    Write-Host "Removed stale images from the wiki"
 }
 
 git -C $WorkDir add -A
