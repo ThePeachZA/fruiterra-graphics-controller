@@ -730,9 +730,10 @@ and M3-6 is Done.
 
 ## V. Wiki screenshots (requested 2026-11-21 - revisit later)
 
-Backlog ID: **D10** (docs/QA). A small, curated set of screenshots for wiki
-pages where a picture removes real ambiguity. D9 is now implemented, but no
-images have been added yet; this stays on hold until screenshots are available.
+Backlog ID: **D10** (docs/QA, parked). A small, curated set of screenshots for
+wiki pages where a picture removes real ambiguity. D9 is now implemented, but
+owner review found the capture process/output unsatisfactory, so the
+2026-11-21 screenshots were deleted and nothing was published or committed.
 No decorative imagery.
 
 Before the first image is added:
