@@ -11,14 +11,14 @@ This document is the compatibility contract. Existing overlay HTML must render a
 | Item | Value |
 |---|---|
 | HTTP | `GET /overlays/<file>.html`, `GET /assets/<hash>.<ext>`, `GET /assets/fonts/<name>.woff2`, `GET /health`, `GET /state` |
-| WebSocket | Same origin/port, root path (`ws://<host>:<port>/`) |
+| WebSocket | Same origin/port, root path (`ws(s)://<host>[:<port>]/`); app-served pages use `location.host`, third-party pages may pass `?host=`/`?port=` |
 | Encoding | UTF-8 JSON, one object per frame |
 | Server → client | `{ "type": <string>, "data": <object> }` |
 | Client → server | `{ "type": "requestInit" }` (optional) |
 | Reconnect | Client-side; all seven overlays retry every 2 s |
-| Port | `?port=` query parameter on the overlay URL, default 3001 |
+| Port | `?port=` on the overlay URL, default 3001; `?host=` may override the host |
 
-`/state` returns the current keyed state map (same object sent in `init`). `health` returns `{ "status": "ok", "port": <port>, "overlays": <connected count>, "version": "<app version>" }`.
+`/state` returns the current keyed state map (same object sent in `init`). `/health` returns `{ "status": "ok", "port": <port>, "overlays": <connected count>, "version": "<app version>" }`.
 
 ---
 
@@ -287,7 +287,9 @@ These behaviours are locked by tests and are not wire changes:
 
 - Type names, envelope shape, `init` keyed map.
 - Field names, casing, nesting, nullability, and the quirks in §3.1.
-- `?port=` query parameter and `ws://localhost:<port>` connection pattern.
+- The origin-aware `ws(s)://location.host` connection (D8-1) and the
+  `?port=` / `?host=` overrides for third-party pages. `?port=` still means
+  `localhost:<port>`.
 - Overlay HTML file names and paths under `/overlays/`.
 - `show` semantics (`display: block/none`).
 

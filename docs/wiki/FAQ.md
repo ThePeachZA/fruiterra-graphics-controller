@@ -12,6 +12,13 @@ Yes. The seven bundled overlays are drop-in compatible with the previous
 protocol, and third-party overlays can connect with `?port=<port>`. If you edited
 an overlay, put your copy in the **Overlays folder** shown in Settings.
 
+### Can I write my own overlay?
+
+Yes. Your HTML can connect to the same feed as the bundled overlays. See
+[Custom overlays](Custom-Overlays) for the connection code, message types and
+scoreboard fields. Version 1 has no in-app variable inspector or script
+generator; those are separate post-v1 work.
+
 ### Is there a timer overlay?
 
 No. The timer is control-only in version 1. The app includes an always-on timer

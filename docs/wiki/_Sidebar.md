@@ -4,6 +4,7 @@
 - [Installation](Installation)
 - [Quick Start](Quick-Start)
 - [Overlays in OBS](Overlays-in-OBS)
+- [Custom overlays](Custom-Overlays)
 - [Teams and Talent](Teams-and-Talent)
 - [Match Controller](Match-Controller)
 - [Tournament](Tournament)

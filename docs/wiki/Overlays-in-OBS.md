@@ -85,7 +85,7 @@ port on public networks or to any remote address.
 > the overlay state and load the overlays. Use LAN mode only on a network you
 > trust, and turn it off when you are finished.
 
-## Third-party overlays
+## Third-party and custom overlays
 
 An overlay served from a different origin can pass the port explicitly:
 
@@ -93,11 +93,22 @@ An overlay served from a different origin can pass the port explicitly:
 http://other-host/overlay.html?port=3001
 ```
 
+Add `?host=<address>` when the app server is on another machine, for example:
+
+```text
+http://other-host/overlay.html?host=192.168.1.20&port=3001
+```
+
+A page served by the app uses its own origin automatically.
+
 Third-party overlays receive the same messages as the bundled ones. This
 includes `matchTimer` ticks and the start, pause and reset actions.
 
 The timer is **control-only** in version 1. There is no bundled timer overlay;
 use a third-party overlay if you need one on screen.
+
+For the WebSocket contract, message types, payload fields and a copyable
+listener, see [Custom overlays](Custom-Overlays).
 
 ## Replace one overlay without rebuilding
 
@@ -120,6 +131,7 @@ The default folder is:
 
 ## Related pages
 
+- [Custom overlays](Custom-Overlays)
 - [Settings](Settings)
 - [Match Controller](Match-Controller)
 - [Troubleshooting](Troubleshooting)

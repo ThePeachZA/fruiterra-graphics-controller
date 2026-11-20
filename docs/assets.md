@@ -166,7 +166,8 @@ For each of the seven files (`game-overlay`, `map-select`, `hero-bans`, `map-poo
 
 ### 2.2 What stays exactly the same
 
-- `?port=` query parameter and `ws://localhost:<port>` connection.
+- `?port=` query parameter and the origin-aware `ws(s)://location.host`
+  connection (`?host=`/`?port=` overrides for third-party pages).
 - Reconnect loop (2 s).
 - `init` handling, including `d.data || data`.
 - `show` handling (`display: block/none`).

@@ -41,6 +41,7 @@ protocol as before.
 | [Installation](Installation) | Installer, portable build, SmartScreen, checksums, uninstall |
 | [Quick Start](Quick-Start) | A first broadcast from an empty install |
 | [Overlays in OBS](Overlays-in-OBS) | The seven overlays, OBS settings, reconnect and overrides |
+| [Custom overlays](Custom-Overlays) | Writing your own overlay against the live feed |
 | [Teams and Talent](Teams-and-Talent) | Team identity, rosters, casters and deletion rules |
 | [Match Controller](Match-Controller) | Every match tab, from maps to config, plus the timer widget |
 | [Tournament](Tournament) | Brackets, groups, playoffs and the board |
