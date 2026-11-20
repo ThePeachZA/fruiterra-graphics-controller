@@ -189,6 +189,17 @@ part.
 Related: B2 (copy buttons for every overlay URL), B3 (connection status) and the
 "configurable bind address ... optional TLS" item under **Protocol and server**.
 
+### C4. Custom overlay author documentation (requested 2026-11-21 - post-v1)
+
+Owner request: document how someone can write their own overlay using the
+variables, script examples and data the app already exposes natively. There is
+no in-app variable/script inspector in v1; adding one is a separate feature
+request, not part of this item.
+
+| ID | Item | Scope sketch |
+|---|---|---|
+| D9 | Custom overlay author documentation | Docs only: add a wiki page for authors writing their own overlay HTML, linked from **Overlays in OBS**, **FAQ**, the Home guide table and `_Sidebar.md`. Reuse what already exists rather than inventing a new contract: `docs/protocol.md`, the seven bundled overlay scripts, the R4 timer test page in `docs/manual-qa-runbook.md`, the copyable Browser Source URLs and Settings values, and the `/state` and `/health` endpoints. Cover the origin-aware resolver (`ws(s)://location.host`, `?host=`/`?port=` overrides, 2 s reconnect, `requestInit`), the keyed `init` map and every emitted type (`scoreboard`, `gameOverlay`, `mapSelect`, `heroBans`, `teamRoster`, `casters`, `matchTimer`, top-level `show`), a copyable minimum listener, shared scoreboard field names and quirks, served vs inline asset URLs, OBS 1920×1080 setup, LAN/no-auth caveats and the per-file override folder. Reconcile the stale `ws://localhost` wording in `docs/protocol.md` §7 and `docs/assets.md` §2.2 with D8-1. No code, protocol, server, bundled-overlay or in-app inspector change. |
+
 ### Protocol and server
 - Versioned protocol (`v2`) with a real full-state snapshot on connect, then typed per-section updates.
 - Optional diffs/patches for large payloads; message sequence numbers and acknowledgements.
