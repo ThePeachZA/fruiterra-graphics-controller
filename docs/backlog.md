@@ -727,3 +727,40 @@ and M3-6 is Done.
   notes matched the shipped template, contained no backlog claims and repeated
   the known limitations. M10-1, M10-6 and M10-8 are Done, and `docs/build.md`
   §7 items 1–12 are complete. R3, R5 and A17 retain their recorded acceptances.
+
+## V. Wiki screenshots (requested 2026-11-21 - revisit later)
+
+Backlog ID: **D10** (docs/QA). A small, curated set of screenshots for wiki
+pages where a picture removes real ambiguity. Defer until D9 is implemented or
+a specific page proves hard to follow; no decorative imagery.
+
+Before the first image is added:
+- Store files in `docs/wiki/images/` as compressed PNG. The `*.png` binary rule
+  already exists in `.gitattributes`.
+- Reference them with relative Markdown, for example
+  `![OBS Browser Source setup](images/obs-browser-source.png)`, with alt text
+  and a short caption.
+- Update `scripts/publish-wiki.ps1` to sync `docs/wiki/images/` into the wiki
+  repo. Do not commit images directly to the wiki repo.
+
+Order and target pages, highest value first:
+1. `docs/wiki/Overlays-in-OBS.md` — OBS Browser Source properties showing a
+   copied URL and 1920×1080. `images/obs-browser-source.png`.
+2. `docs/wiki/Overlays-in-OBS.md` — the app's Overlay page with URLs revealed
+   and **Copy URL** visible. `images/app-overlay-urls.png`.
+3. `docs/wiki/Match-Controller.md` — the compact timer widget.
+   `images/match-timer-widget.png`.
+4. `docs/wiki/Match-Controller.md` — the maps/hero-bans tabs in an edited match.
+   `images/match-maps-bans.png`.
+5. `docs/wiki/Tournament.md` — the bracket board or the group-to-playoff
+   generation preview, whichever is clearer.
+   `images/tournament-bracket-board.png`.
+6. `docs/wiki/Assets.md` — import and project-bundle flow.
+   `images/assets-import-bundle.png`.
+7. `docs/wiki/Settings.md` — overlay network and override-folder fields.
+   `images/settings-overlay-network.png`.
+
+Cap at seven images for v1 documentation. Revisit after D9 lands; if the custom
+overlay page still needs a visual, add one annotated example there rather than
+a generic screenshot. No app, protocol, server or bundled-overlay changes —
+screenshots show the shipped v1 UI as-is.
