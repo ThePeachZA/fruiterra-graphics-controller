@@ -1,18 +1,18 @@
 # Tournament design — Phase 4
 
-Status: **approved**. Replaces the original WIP tournament with a generated-then-fully-editable board. Implements Q1–Q8.
+Status: **approved**. Replaces the original WIP tournament with a generation-preview workflow; structure is fixed after commit, while results and match details remain editable. Implements Q1–Q8.
 
 ---
 
 ## 1. Model
 
-The board is the source of truth. Generation only populates it; every slot and link remains editable afterwards.
+The bracket is the source of truth. Generation is previewed and committed as a whole; afterwards results and match details stay editable, but structure is fixed.
 
 ```rust
 pub struct Tournament {
     pub id: TournamentId,
     pub name: String,
-    pub format: BracketFormat,          // SingleElim | DoubleElim | RoundRobin
+    pub format: BracketFormat,          // SingleElim | DoubleElim | RoundRobin | MultiStage
     pub entrants: Vec<Entrant>,         // { team_id, seed }
     pub winners: Vec<Round>,
     pub losers: Vec<Round>,             // empty for single elim
@@ -82,7 +82,7 @@ pub enum Tiebreaker {
 
 ## 2. Generation (defaults, not rules)
 
-Generation produces a valid starting board. Everything it creates can be changed.
+Generation produces a valid starting bracket. It is previewed first, then committed in one save; results and match details can be changed afterwards, but the generated structure cannot.
 
 ### Single elimination
 
@@ -103,8 +103,41 @@ Generation produces a valid starting board. Everything it creates can be changed
 
 - Circle method per group; every team plays every other team once.
 - Groups are created manually or split evenly from the entrant list.
-- Standings computed from completed matches.
+- Standings are recomputed from completed fixtures. A fixture's effective winner
+  is the manual `winner` when `winner_manual` is true and the team is still in one
+  of the two slots, otherwise the higher score. Head-to-head ties use the same
+  effective winner.
+- A fixture's **First to** (1–4) and **Winner** override are editable in its
+  details dialog, matching the bracket editor. Choosing a winner marks the
+  fixture complete, survives later score edits, and is cleared by returning to
+  **Derived from scores**.
 - Optional playoff: top `playoff_qualifiers` per group advance into a generated single- or double-elim bracket with cross-group seeding (`A1 vs B2`, `B1 vs A2`). With one group, the top N seed straight in.
+
+### Multi-stage
+
+- `BracketFormat::MultiStage` serialises as `"multi-stage"` and shows
+  **Setup**, **Groups**, **Bracket** and **Settings** in that order.
+- `generate_multistage(group_count)` creates the groups and their fixtures only.
+  The playoff stays empty and the Bracket tab shows a locked state until the
+  group stage is complete.
+- `group_stage_complete()` checks that every expected round-robin pairing in
+  every group has a completed `GroupMatch`.
+- `set_group_result()` detects the incomplete → complete transition and calls
+  `generate_playoff()` once, seeding `playoff_qualifiers` per group with the
+  existing cross-group order (`A1 v B2`, `B1 v A2`). Later manual bracket edits
+  are preserved. `set_group_winner()` uses the same transition rule, so a manual
+  winner that completes the last fixture also seeds the playoff once. The result
+  is written even when seeding fails: `set_group_result()` swallows the error and
+  the group fixture dialog never reports it. `set_group_result_with_playoff()`
+  still returns `NotEnoughQualifiers` for callers that need the typed error, and
+  the **Bracket** tab reports why a playoff cannot be generated; the group result
+  editor does not.
+- `generate_playoff()` returns `GroupStageIncomplete` before the group stage is
+  finished. `generate_round_robin()` sets the format to round robin;
+  `generate_playoff()` leaves the format unchanged, so adding a playoff to a
+  round-robin event does not silently convert it to multi-stage.
+- Saved multi-stage events with a stale playoff while their groups are incomplete
+  are repaired by clearing the unresolved bracket and returning to `Setup`.
 
 ### Byes
 
@@ -114,25 +147,61 @@ A bye is a match with one empty slot marked `completed`, `winner = the present t
 
 ## 3. Editing
 
-### 3.1 Team slots
+### 3.1 Generation preview
 
-- Select a slot, then select another slot to **swap** the two teams. Clicking the selected slot again clears the selection.
-- A swap sets `slotN_manual = true` for both affected slots.
-- Slots can also be set or cleared from the match modal; a cleared slot is marked manual, so auto-advance will not refill it.
-- A swap that would put the same team on both sides of a match, or duplicate a team in the same match, is rejected.
+Every generation action opens a preview before anything is saved. **Groups**
+offers **Preview group stage** / **Preview round robin** from its heading action
+row, and **Bracket** offers **Preview … bracket** for elimination formats and
+**Preview playoff** for a round-robin event. Setup has no generation panel or
+button at all. For a multi-stage event the playoff preview/generate is on
+**Bracket**, never on **Groups**. Group generation creates two groups; there is
+no group-count selector in the preview and no manual **+ Group** action. The
+preview works on a clone of the tournament and shows only the details being
+committed:
+
+- group-stage previews show **Seeding** and **Group distribution**;
+- bracket and playoff previews show **Seeding** and **Bracket placements** using
+  the live traditional bracket cards and connectors.
+
+A multi-stage group-stage preview does not show a provisional bracket. The real
+playoff stays locked and is seeded from group standings after the last group
+fixture is complete.
+
+Pointer dragging is supported in the preview alone:
+
+- group chips move between groups and regenerate that preview's fixtures;
+- bracket slots swap only with another slot in the same section and round;
+- bracket seeds can be edited by number or reordered by their handles, which
+  regenerates the previewed placements;
+- an animated drag ghost follows the pointer and highlights the drop target.
+
+**Cancel** closes the preview without changing saved state and returns focus to
+the button that opened it. **Generate** commits the previewed tournament in one
+mutation. No generation result is written to `app.json` before **Generate**.
 
 ### 3.2 Structure
 
-Full board editing (Q4):
+Before generation, an event may be arranged by hand: groups, group teams and
+fixtures can be added and removed, and the bracket can receive rounds and
+matches. Once an event has groups, fixtures or a bracket, its structure is
+fixed: entrants, group membership, fixtures, rounds, matches and placements are
+no longer editable. Results and match details stay editable.
 
-- Add / remove matches in a round.
-- Add / remove rounds, with automatic renumbering.
-- Rename rounds (e.g. `Upper Final`, `Lower Round 3`).
-- Reorder matches within a round by dragging.
-- Edit links in the match modal: `next` and `loser_next` target match + slot, or none.
-- A slot can only be fed by one link. Setting a link to an already-fed target slot takes that slot over: the link that fed it before is cleared, and the modal says so. This keeps every slot's source unambiguous.
+There are no match move buttons and no drag/drop in the live Groups or Bracket
+views. Live bracket slots are read-only; a slot can be cleared from a match's
+details dialog, and a cleared slot is marked manual so auto-advance will not
+refill it. A swap or move that would put the same team on both sides of a match
+is rejected.
 
-Removing a match clears any links that pointed at it and any slots it had filled, after a confirmation listing the affected matches.
+**Regenerate** and **reset** are separate actions. Regenerate always opens a
+preview and commits only on **Generate**. Reset clears only the selected stage
+(groups or bracket) after a confirmation dialog; entrants and tiebreakers are
+kept, and a group reset also drops the playoff seeded from those standings.
+Groups and Bracket expose their own stage actions in one horizontal row beside
+the heading: `▷` Preview in accent orange, `↻` Regenerate in amber, `+` Add in
+green and `⌫` Reset in red. Each action keeps a visible label and matching
+`aria-label`/`title`; there is no stage-settings dropdown and no Setup
+**Generate** panel.
 
 ### 3.3 Results and auto-advance (Q3)
 
@@ -142,6 +211,14 @@ Removing a match clears any links that pointed at it and any slots it had filled
 - The loser is written into `loser_next.slot` under the same rule (double elim).
 - Clearing a result clears every downstream slot that this match filled and that is still auto (`!slotN_manual`), recursively.
 - Editing a score after completion re-runs the same propagation.
+- Group fixtures follow the same model: `score_winner()` derives the winner from
+  the higher score, and **Advanced settings → Winner** stores a manual override
+  in `GroupMatch.winner`/`winner_manual`. A manual winner survives later score
+  edits while both teams remain in the fixture, marks the fixture complete and
+  is reflected in standings and head-to-head. **First to** is a persisted 1–4
+  per-fixture override; the dialog's read-only **Effective winner** label shows
+  the winner actually in force. Group result edits never surface a playoff
+  seeding error.
 
 ### 3.4 Champion
 
@@ -158,21 +235,41 @@ Removing a match clears any links that pointed at it and any slots it had filled
 
 ### 3.6 Interaction mechanics
 
-- **Selection-based swap** (click/click or keyboard) instead of a pointer-drag ghost. WebView2 pointer capture is inconsistent, and selection gives precise targets on a dense board; keyboard parity is identical.
-- **Keyboard alternative:** focus a slot, press Enter (or Space) to select, move focus with the arrow keys, press Enter to swap, Escape to cancel. Required for accessibility and for precision on large boards.
-- **Board layout:** CSS grid, one column per round, horizontal scroll, zoom control (50–150%). Winners, losers and grand final are separate labelled sections.
-- The selected slot is highlighted; an invalid swap (same match, duplicate team) is rejected with a toast.
+- **Placements** are arranged in the generation preview, not on the live board. The live board has no slot selection, drag handles or match move buttons.
+- **Slot details** are available from each match's pencil/details dialog; completed results auto-advance the bracket under the normal rules.
+- **Board layout:** centred CSS grid, one column per round, horizontal scroll, zoom control (50–150%). Winners, losers and grand final are separate labelled sections.
+- Solid connectors follow each stored winner link, so lower-bracket rounds join
+  the correct next-round cards without crossing. Upper-bracket loser drops are
+  dotted stubs because they lead into the separate lower-bracket section.
+
+### 3.7 Push to match
+
+Group fixtures and bracket matches expose an icon-only ↗ **Push to match**
+action. Selecting it asks **Replace the current Match Controller match with this
+fixture?**; confirming loads that fixture into `AppState.current_match` through
+the normal `AppStore` mutation path, then forces a projection and broadcasts to
+the overlays. **Cancel** leaves the current match untouched.
+
+- Teams come from the fixture's two slots; empty slots stay empty.
+- Scores are stored as `Scoring::Manual { a, b }` so the pushed result is exact.
+- Status maps `Pending → Pre`, `Live → Live` and `Completed → Post`.
+- The action does not change the tournament board, and it does not create a new
+  saved match in the match library.
+- The tooltip and confirmation explicitly distinguish this from the planned
+  tournament graphic overlay, which is not part of v1.
 
 ---
 
 ## 4. Groups, standings and tiebreakers
 
-### 4.1 Editable after play starts (Q5)
+### 4.1 Group structure (Q5)
 
-- Add/remove groups, rename them, drag teams between groups.
-- Adding a team to a group regenerates missing fixtures; removing a team removes its unplayed fixtures and keeps played ones as records with an empty slot.
-- Group fixtures can be added, removed and edited by hand at any time.
-- Standings recompute after every change; played results are never silently discarded.
+- Group distribution is previewed before generation; teams can be moved in that preview only. Moving a team regenerates the preview's fixtures.
+- Before a group stage exists, groups, group teams and fixtures can be arranged by hand. After generation they are fixed; regenerate to change them.
+- Result and match details autosave from the fixture details dialog. Status is a
+  two-state toggle with only **Upcoming** and **Complete**; there is no results
+  Save button and no inline score/status editors in fixture rows.
+- Standings recompute after every result; played results are never silently discarded.
 
 ### 4.2 Standings
 
@@ -208,7 +305,7 @@ Fields:
 | Next match / slot | Editable link |
 | Loser next match / slot | Editable link (double elim) |
 | Reset | Clears scores, winner, status and auto-filled downstream slots |
-| Delete match | Removes it and clears dependent links (confirmation) |
+| Delete match | Hidden after generation; bracket match removal is not available in the live editor |
 
 Validation: a completed match must have a winner; a winner must be one of the two slots; scores cannot be negative. Errors appear inline, not as a global toast.
 
@@ -246,17 +343,18 @@ Validation: a completed match must have a winner; a winner must be one of the tw
 | T1 | Generate a valid single-elimination bracket for any team count, with byes to top seeds and standard seeding. |
 | T2 | Generate a valid double-elimination board: winners, losers, drop mapping and grand final. |
 | T3 | Generate round-robin fixtures per group and compute standings. |
-| T4 | Every generated slot, match, round and link is editable; teams can be moved between slots with swap semantics. |
+| T4 | Placements, matches, rounds and links are previewed and adjustable before generation; live results and match details stay editable. |
 | T5 | Auto-advance fills the next slot and loser slot on completion, and never overwrites a manually placed slot. |
 | T6 | Clearing or editing a result recursively clears the auto-filled downstream slots it produced. |
 | T7 | Grand-final reset honours `grand_finals_reset` and produces the correct champion; both can be overridden manually. |
 | T8 | Champion is set automatically from the final unless manually overridden. |
 | T9 | Round-robin tiebreakers are configurable, ordered, persisted and correctly applied, including head-to-head mini-tables. |
-| T10 | Optional playoff generation from group qualifiers, with cross-group seeding, then fully editable. |
+| T10 | Optional playoff generation from group qualifiers, with cross-group seeding and a preview before commit. |
 | T11 | Match modal supports scores, status, first-to, winner override, link editing and reset. |
 | T12 | Full persistence/restore; standings recomputed; malformed data repaired rather than crashing. |
 | T13 | Unit tests for generation, propagation, override, reset, tiebreakers and repair. |
-| T14 | Keyboard-accessible slot movement and a usable board at 1080p with 32 teams. |
+| T14 | Keyboard-accessible match details and a usable, centred board at 1080p with 32 teams. |
+| T15 | Multi-stage events keep groups and playoff brackets, restore `MultiStage` on seeding failure, and push selected fixtures to the current match. |
 
 ---
 
@@ -264,7 +362,7 @@ Validation: a completed match must have a winner; a winner must be one of the tw
 
 - Bracket overlay output (backlog P4).
 - Forfeits/disqualifications as a first-class result type (winner override covers the common case).
-- Multi-stage playoffs beyond one group stage + one playoff.
+- More than one group stage and one playoff in a single event.
 - Custom point values per win/draw/loss.
 - Match history and per-team tournament statistics.
 - Automatic import from external tournament sites.

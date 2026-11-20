@@ -199,7 +199,7 @@ fn first_to_is_clamped() {
 #[test]
 fn negative_scores_are_clamped_when_parsed() {
     let state = migrate(json!({
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "currentMatch": {
             "id": "match",
             "maps": [{
@@ -320,6 +320,6 @@ fn valid_state_is_unchanged() {
 
 #[test]
 fn invalid_document_reports_core_error() {
-    let error = migrate(json!({"schemaVersion": 1, "teams": "not a list"})).unwrap_err();
+    let error = migrate(json!({"schemaVersion": 2, "teams": "not a list"})).unwrap_err();
     assert!(matches!(error, CoreError::InvalidField { .. }));
 }

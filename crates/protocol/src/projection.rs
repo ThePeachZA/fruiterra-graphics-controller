@@ -65,6 +65,7 @@ impl<'a> Projector<'a> {
             .current_map
             .and_then(|index| match_state.maps.get(index));
         let casters = self.casters(match_state);
+        let show_hero_bans = self.state.settings.display.show_hero_bans;
 
         ScoreboardDto {
             team_a: team_a.map(|team| team_dto(team, logo_a.clone())),
@@ -84,14 +85,22 @@ impl<'a> Projector<'a> {
             swap_sides: match_state.swap_sides,
             loser_picks: match_state.loser_picks,
             game_mode_icons: self.game_mode_icons(),
-            hero_icons: self.hero_icons(),
+            hero_icons: if show_hero_bans {
+                self.hero_icons()
+            } else {
+                BTreeMap::new()
+            },
             hero_portraits: self.hero_portraits(match_state),
             side_icons: self.side_icons(),
             role_icons: self.role_icons(),
             team_a_players: self.players(team_a),
             team_b_players: self.players(team_b),
             maps: self.maps(match_state, team_a, team_b),
-            hero_bans: hero_bans(match_state),
+            hero_bans: if show_hero_bans {
+                hero_bans(match_state)
+            } else {
+                Vec::new()
+            },
             map_pool: match_state.map_pool.clone(),
             map_pool_data: self.map_pool_data(match_state, logo_a.as_deref(), logo_b.as_deref()),
             casters_data: casters.casters_data,
@@ -139,6 +148,7 @@ impl<'a> Projector<'a> {
                     .iter()
                     .find(|talent| talent.id == slot.talent_id)
                     .map(|talent| CasterDto {
+                        role: slot.role,
                         display_name: talent.display_name.clone(),
                         pronouns: talent.pronouns.clone(),
                         social_media: talent.social.clone(),
@@ -348,17 +358,51 @@ impl<'a> Projector<'a> {
         icons
     }
 
-    fn hero_icons(&self) -> BTreeMap<String, String> {
-        let icon_ids: BTreeSet<&AssetId> = self
-            .catalog
+    /// IDs of assets used as another hero's ban icon.
+    fn icon_asset_ids(&self) -> BTreeSet<&str> {
+        self.catalog
             .in_category(AssetCategory::Hero)
-            .filter_map(|asset| asset.icon.as_ref())
-            .collect();
+            .filter(|asset| asset.is_attachment())
+            .map(|asset| asset.id.as_str())
+            .chain(
+                self.catalog
+                    .in_category(AssetCategory::Hero)
+                    .filter_map(|asset| asset.icon.as_ref())
+                    .map(AssetId::as_str),
+            )
+            .collect()
+    }
+
+    /// Content identities that belong to a ban icon rather than hero art.
+    ///
+    /// A duplicate hero asset can carry the same bytes as an icon. Without
+    /// this set it wins the name-keyed portrait map and `hero-bans.html` shows
+    /// the small ban image instead of the hero's art.
+    fn icon_identities(&self) -> BTreeSet<(String, String)> {
+        let mut identities = BTreeSet::new();
+        for id in self.icon_asset_ids() {
+            if let Some(asset) = self
+                .catalog
+                .in_category(AssetCategory::Hero)
+                .find(|asset| asset.id.as_str() == id)
+            {
+                identities.insert((asset.hash.clone(), asset.ext.clone()));
+            }
+        }
+        identities
+    }
+
+    fn hero_icons(&self) -> BTreeMap<String, String> {
+        let icon_ids = self.icon_asset_ids();
+        let icon_identities = self.icon_identities();
 
         let mut icons = BTreeMap::new();
         for asset in self.catalog.in_category(AssetCategory::Hero) {
-            // An asset linked as another hero's icon is not itself a hero entry.
-            if icon_ids.contains(&asset.id) {
+            // Attached icons, legacy linked icons and duplicate icon files are
+            // not selectable heroes. The owning hero resolves the icon below.
+            if icon_ids.contains(asset.id.as_str())
+                || icon_identities.contains(&(asset.hash.clone(), asset.ext.clone()))
+            {
                 continue;
             }
             if let Some(url) = self.hero_icon_url(asset) {
@@ -394,16 +438,16 @@ impl<'a> Projector<'a> {
             })
             .collect();
 
-        let icon_ids: BTreeSet<&AssetId> = self
-            .catalog
-            .in_category(AssetCategory::Hero)
-            .filter_map(|asset| asset.icon.as_ref())
-            .collect();
+        let icon_ids = self.icon_asset_ids();
+        let icon_identities = self.icon_identities();
 
         let mut portraits = BTreeMap::new();
         for asset in self.catalog.in_category(AssetCategory::Hero) {
-            // An asset linked as another hero's icon is not itself a hero entry.
-            if icon_ids.contains(&asset.id) {
+            // Ban icons are for `game-overlay.html` only. Skip attached icons,
+            // legacy linked icons and duplicate files with the same bytes.
+            if icon_ids.contains(asset.id.as_str())
+                || icon_identities.contains(&(asset.hash.clone(), asset.ext.clone()))
+            {
                 continue;
             }
             if !banned.contains(asset.name.as_str()) {
@@ -494,7 +538,9 @@ fn team_dto(team: &Team, logo_url: Option<String>) -> TeamDto {
         tag: team.tag.clone(),
         record,
         color: team.color.clone(),
-        logo_bg_color: if team.aux_color.is_empty() {
+        logo_bg_color: if !team.logo_background {
+            team.color.clone()
+        } else if team.aux_color.is_empty() {
             "#090909".to_owned()
         } else {
             team.aux_color.clone()

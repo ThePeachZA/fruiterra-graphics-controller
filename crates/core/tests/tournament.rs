@@ -10,13 +10,15 @@ use std::collections::HashSet;
 use fgc_core::{
     AppState, BracketFormat, BracketMatch, BracketMatchStatus, BracketSection, BracketSlot,
     Entrant, LinkError, LinkKind, MatchId, MatchLink, PlayoffError, SlotError, TeamId, Tiebreaker,
-    Tournament, TournamentId, TournamentRepairKind, TournamentStatus, add_group_fixture, add_match,
-    add_round, generate_double_elimination, generate_playoff, generate_round_robin,
-    generate_single_elimination, match_address, match_mut, migrate, move_match, new_tournament,
-    refresh, remove_group, remove_group_fixture, remove_match, remove_round, rename_group,
-    rename_round, repair_tournament, reset_bracket_match, rounds, seeding_order,
-    set_bracket_result, set_bracket_winner, set_entrants, set_group_result, set_group_teams,
-    set_link, set_slot, swap_slots,
+    Tournament, TournamentId, TournamentRepairKind, TournamentStage, TournamentStatus,
+    add_group_fixture, add_match, add_round, create_group, effective_group_winner,
+    generate_double_elimination, generate_multistage, generate_playoff, generate_round_robin,
+    generate_single_elimination, group_stage_complete, match_address, match_mut, migrate,
+    move_match, new_tournament, project_playoff, refresh, remove_group, remove_group_fixture,
+    remove_match, remove_round, rename_group, rename_round, repair_tournament, reset_bracket_match,
+    reset_stage, rounds, seeding_order, set_bracket_result, set_bracket_winner, set_entrants,
+    set_group_first_to, set_group_result, set_group_result_with_playoff, set_group_teams,
+    set_group_winner, set_link, set_slot, swap_slots,
 };
 
 // ---------------------------------------------------------------------------
@@ -374,6 +376,243 @@ fn t3_round_robin_fixtures_and_standings_are_complete() {
 }
 
 #[test]
+fn t3_multistage_generates_groups_and_a_playoff() {
+    let mut tournament = tournament_with_teams(8, BracketFormat::MultiStage);
+
+    generate_multistage(&mut tournament, 2).expect("multi-stage generation should succeed");
+
+    assert_eq!(tournament.format, BracketFormat::MultiStage);
+    assert_eq!(tournament.groups.len(), 2);
+    assert_eq!(tournament.group_matches.len(), 12);
+    assert!(tournament.winners.is_empty());
+    assert!(tournament.losers.is_empty());
+    assert!(tournament.grand_final.is_empty());
+    assert!(!group_stage_complete(&tournament));
+
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    for (index, id) in fixtures.iter().enumerate() {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+        assert_eq!(tournament.winners.is_empty(), index + 1 < fixtures.len());
+    }
+    assert!(group_stage_complete(&tournament));
+    assert_eq!(tournament.winners.len(), 2);
+    assert!(tournament.losers.is_empty());
+    assert!(tournament.grand_final.is_empty());
+}
+
+#[test]
+fn project_playoff_shows_provisional_placements_without_changing_the_event() {
+    let mut tournament = tournament_with_teams(8, BracketFormat::MultiStage);
+    generate_multistage(&mut tournament, 2).expect("multi-stage generation should succeed");
+    let fixture_ids: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    let group_teams: Vec<Vec<TeamId>> = tournament
+        .groups
+        .iter()
+        .map(|group| group.team_ids.clone())
+        .collect();
+
+    project_playoff(&mut tournament).expect("projection should build a provisional bracket");
+
+    assert_eq!(tournament.format, BracketFormat::MultiStage);
+    assert!(!tournament.winners.is_empty());
+    assert!(!group_stage_complete(&tournament));
+    assert_eq!(
+        tournament
+            .group_matches
+            .iter()
+            .map(|fixture| fixture.id.clone())
+            .collect::<Vec<_>>(),
+        fixture_ids
+    );
+    assert_eq!(
+        tournament
+            .groups
+            .iter()
+            .map(|group| group.team_ids.clone())
+            .collect::<Vec<_>>(),
+        group_teams
+    );
+}
+
+#[test]
+fn t3_multistage_keeps_groups_when_the_playoff_cannot_be_seeded() {
+    let mut tournament = tournament_with_teams(1, BracketFormat::MultiStage);
+
+    generate_multistage(&mut tournament, 1).expect("groups should still be generated");
+    assert_eq!(
+        generate_playoff(&mut tournament),
+        Err(PlayoffError::GroupStageIncomplete)
+    );
+
+    assert_eq!(tournament.format, BracketFormat::MultiStage);
+    assert_eq!(tournament.groups.len(), 1);
+    assert!(tournament.group_matches.is_empty());
+    assert!(tournament.winners.is_empty());
+    assert!(!group_stage_complete(&tournament));
+}
+
+#[test]
+fn group_stage_complete_requires_groups_with_two_teams() {
+    let mut tournament = new_tournament("Groups", BracketFormat::RoundRobin);
+    assert!(!group_stage_complete(&tournament));
+
+    let empty_group = create_group(&mut tournament, "Empty", Vec::new());
+    assert!(!group_stage_complete(&tournament));
+
+    let single_group = create_group(&mut tournament, "Single", vec![team("team-1")]);
+    assert!(!group_stage_complete(&tournament));
+
+    // A finished pair cannot make groups with fewer than two teams complete.
+    let pair_group = create_group(
+        &mut tournament,
+        "Pair",
+        vec![team("team-1"), team("team-2")],
+    );
+    let fixture_id = tournament
+        .group_matches
+        .iter()
+        .find(|fixture| fixture.group == pair_group)
+        .map(|fixture| fixture.id.clone())
+        .expect("pair fixture");
+    assert!(set_group_result(
+        &mut tournament,
+        &fixture_id,
+        2,
+        0,
+        BracketMatchStatus::Completed
+    ));
+    assert!(!group_stage_complete(&tournament));
+
+    assert!(remove_group(&mut tournament, &empty_group));
+    assert!(remove_group(&mut tournament, &single_group));
+    assert!(group_stage_complete(&tournament));
+}
+
+#[test]
+fn group_stage_complete_requires_completed_expected_pairings() {
+    let mut tournament = tournament_with_teams(3, BracketFormat::RoundRobin);
+    generate_round_robin(&mut tournament, 1);
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    assert_eq!(fixtures.len(), 3);
+    assert!(!group_stage_complete(&tournament));
+
+    let first = &fixtures[0];
+    assert!(set_group_result(
+        &mut tournament,
+        first,
+        1,
+        0,
+        BracketMatchStatus::Live
+    ));
+    assert!(!group_stage_complete(&tournament));
+
+    assert!(set_group_result(
+        &mut tournament,
+        first,
+        2,
+        0,
+        BracketMatchStatus::Completed
+    ));
+    assert!(!group_stage_complete(&tournament));
+
+    for id in &fixtures[1..] {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+    }
+    assert!(group_stage_complete(&tournament));
+
+    // Manually added duplicates are not part of the expected pairings.
+    let group_id = tournament.groups[0].id.clone();
+    let teams = tournament.groups[0].team_ids.clone();
+    let extra = add_group_fixture(
+        &mut tournament,
+        &group_id,
+        teams[0].clone(),
+        teams[1].clone(),
+    )
+    .expect("manual duplicate fixture");
+    assert!(set_group_result(
+        &mut tournament,
+        &extra,
+        0,
+        0,
+        BracketMatchStatus::Pending
+    ));
+    assert!(group_stage_complete(&tournament));
+}
+
+#[test]
+fn group_stage_complete_rejects_completed_fixtures_with_empty_slots() {
+    let mut tournament = tournament_with_teams(2, BracketFormat::RoundRobin);
+    generate_round_robin(&mut tournament, 1);
+    let fixture_id = tournament.group_matches[0].id.clone();
+    assert!(set_group_result(
+        &mut tournament,
+        &fixture_id,
+        2,
+        0,
+        BracketMatchStatus::Completed
+    ));
+    assert!(group_stage_complete(&tournament));
+
+    let group_id = tournament.groups[0].id.clone();
+    let first_team = tournament.groups[0].team_ids[0].clone();
+    assert!(set_group_teams(
+        &mut tournament,
+        &group_id,
+        vec![first_team.clone()]
+    ));
+    let fixture = tournament
+        .group_matches
+        .iter()
+        .find(|fixture| fixture.id == fixture_id)
+        .expect("completed record");
+    assert!(fixture.team1.is_some() && fixture.team2.is_none());
+    assert!(!group_stage_complete(&tournament));
+
+    // Restoring membership generates a pending replacement for the lost pair.
+    assert!(set_group_teams(
+        &mut tournament,
+        &group_id,
+        vec![first_team, team("team-2")]
+    ));
+    assert_eq!(
+        tournament
+            .group_matches
+            .iter()
+            .filter(
+                |fixture| fixture.id != fixture_id && fixture.status == BracketMatchStatus::Pending
+            )
+            .count(),
+        1
+    );
+    assert!(!group_stage_complete(&tournament));
+}
+
+#[test]
 fn t3_standings_rank_by_wins_and_differential() {
     let mut tournament = tournament_with_teams(4, BracketFormat::RoundRobin);
     generate_round_robin(&mut tournament, 1);
@@ -394,6 +633,75 @@ fn t3_standings_rank_by_wins_and_differential() {
     assert_eq!(rows[0].points, 3);
     assert_eq!(rows[3].team_id, team("team-3"));
     assert_eq!(rows[3].losses, 3);
+}
+
+#[test]
+fn t3_group_winner_override_drives_standings_and_first_to_is_editable() {
+    let mut tournament = tournament_with_teams(4, BracketFormat::RoundRobin);
+    generate_round_robin(&mut tournament, 1);
+
+    let fixture_id = tournament.group_matches[0].id.clone();
+    let slot1 = tournament.group_matches[0]
+        .team1
+        .clone()
+        .expect("fixture has team 1");
+    let slot2 = tournament.group_matches[0]
+        .team2
+        .clone()
+        .expect("fixture has team 2");
+
+    assert!(set_group_first_to(&mut tournament, &fixture_id, 4));
+    assert_eq!(tournament.group_matches[0].first_to, 4);
+
+    assert!(set_group_winner(
+        &mut tournament,
+        &fixture_id,
+        Some(slot2.clone()),
+    ));
+    assert_eq!(
+        tournament.group_matches[0].status,
+        BracketMatchStatus::Completed
+    );
+    assert_eq!(
+        effective_group_winner(&tournament.group_matches[0]),
+        Some(&slot2)
+    );
+
+    set_group_result(
+        &mut tournament,
+        &fixture_id,
+        2,
+        0,
+        BracketMatchStatus::Completed,
+    );
+    assert_eq!(
+        effective_group_winner(&tournament.group_matches[0]),
+        Some(&slot2),
+        "a manual winner survives later score edits"
+    );
+
+    let rows = &tournament.standings[&tournament.groups[0].id];
+    let winner_row = rows
+        .iter()
+        .find(|row| row.team_id == slot2)
+        .expect("winner has a standing");
+    let loser_row = rows
+        .iter()
+        .find(|row| row.team_id == slot1)
+        .expect("loser has a standing");
+    assert_eq!((winner_row.wins, winner_row.losses), (1, 0));
+    assert_eq!((loser_row.wins, loser_row.losses), (0, 1));
+
+    assert!(set_group_winner(&mut tournament, &fixture_id, None));
+    assert_eq!(
+        effective_group_winner(&tournament.group_matches[0]),
+        Some(&slot1)
+    );
+    assert!(!set_group_winner(
+        &mut tournament,
+        &fixture_id,
+        Some(team("not-in-fixture")),
+    ));
 }
 
 // ---------------------------------------------------------------------------
@@ -935,12 +1243,232 @@ fn t10_playoff_requires_groups_and_two_qualifiers() {
     );
 
     generate_round_robin(&mut tournament, 1);
+    assert_eq!(
+        generate_playoff(&mut tournament),
+        Err(PlayoffError::GroupStageIncomplete)
+    );
+
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    for id in &fixtures {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+    }
     tournament.playoff_qualifiers = 1;
     // Only one team qualifies per group, so a single-group stage has one team.
     assert_eq!(
         generate_playoff(&mut tournament),
         Err(PlayoffError::NotEnoughQualifiers)
     );
+}
+
+#[test]
+fn multistage_final_group_result_seeds_playoff_once_and_keeps_manual_edits() {
+    let mut tournament = tournament_with_teams(8, BracketFormat::MultiStage);
+    generate_multistage(&mut tournament, 2).expect("groups");
+
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    for id in &fixtures[..fixtures.len() - 1] {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+        assert!(tournament.winners.is_empty());
+    }
+
+    let final_fixture = fixtures.last().expect("fixture").clone();
+    assert!(set_group_result(
+        &mut tournament,
+        &final_fixture,
+        2,
+        0,
+        BracketMatchStatus::Completed
+    ));
+    assert_eq!(tournament.winners.len(), 2);
+    let playoff_ids = match_ids(&tournament);
+
+    let left = slot(BracketSection::Winners, 0, 0, 1);
+    let right = slot(BracketSection::Winners, 0, 0, 2);
+    swap_slots(&mut tournament, left, right).expect("manual swap");
+    let manual_slot = fgc_core::find_slot_match(&tournament, left)
+        .expect("left")
+        .slot1
+        .clone();
+
+    // Changing an already-completed group result must not reseed or wipe edits.
+    assert!(set_group_result(
+        &mut tournament,
+        &fixtures[0],
+        3,
+        1,
+        BracketMatchStatus::Completed
+    ));
+    assert_eq!(match_ids(&tournament), playoff_ids);
+    assert_eq!(
+        fgc_core::find_slot_match(&tournament, left)
+            .expect("left")
+            .slot1,
+        manual_slot
+    );
+    assert!(
+        fgc_core::find_slot_match(&tournament, left)
+            .expect("left")
+            .slot1_manual
+    );
+
+    refresh(&mut tournament);
+    assert_eq!(match_ids(&tournament), playoff_ids);
+    assert_eq!(
+        fgc_core::find_slot_match(&tournament, left)
+            .expect("left")
+            .slot1,
+        manual_slot
+    );
+}
+
+#[test]
+fn multistage_manual_winner_completing_the_group_stage_seeds_the_playoff() {
+    let mut tournament = tournament_with_teams(8, BracketFormat::MultiStage);
+    generate_multistage(&mut tournament, 2).expect("groups");
+
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    for id in &fixtures[..fixtures.len() - 1] {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+        assert!(tournament.winners.is_empty());
+    }
+
+    let final_fixture = fixtures.last().expect("fixture").clone();
+    let winner = tournament
+        .group_matches
+        .last()
+        .expect("fixture")
+        .team1
+        .clone()
+        .expect("team");
+    assert!(set_group_winner(
+        &mut tournament,
+        &final_fixture,
+        Some(winner)
+    ));
+    assert_eq!(tournament.winners.len(), 2);
+}
+
+#[test]
+fn multistage_seeding_error_is_reported_on_final_result() {
+    let mut tournament = tournament_with_teams(4, BracketFormat::MultiStage);
+    tournament.playoff_qualifiers = 1;
+    generate_multistage(&mut tournament, 1).expect("groups");
+
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    for id in &fixtures[..fixtures.len() - 1] {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+    }
+    assert!(!group_stage_complete(&tournament));
+
+    let final_fixture = fixtures.last().expect("fixture").clone();
+    assert_eq!(
+        set_group_result_with_playoff(
+            &mut tournament,
+            &final_fixture,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ),
+        Err(PlayoffError::NotEnoughQualifiers)
+    );
+    assert!(group_stage_complete(&tournament));
+    assert_eq!(
+        tournament
+            .group_matches
+            .iter()
+            .filter(|fixture| fixture.status == BracketMatchStatus::Completed)
+            .count(),
+        fixtures.len()
+    );
+    assert!(tournament.winners.is_empty());
+}
+
+#[test]
+fn incomplete_multistage_clears_stale_playoff_without_touching_elimination_brackets() {
+    let mut tournament = tournament_with_teams(8, BracketFormat::MultiStage);
+    generate_multistage(&mut tournament, 2).expect("groups");
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    for id in &fixtures {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+    }
+    assert_eq!(tournament.winners.len(), 2);
+    tournament.status = TournamentStatus::InProgress;
+    tournament.champion = Some(team("team-1"));
+    tournament.champion_manual = true;
+
+    // Reopening a group fixture invalidates the seeded playoff.
+    assert!(set_group_result(
+        &mut tournament,
+        &fixtures[0],
+        0,
+        0,
+        BracketMatchStatus::Pending
+    ));
+    assert!(tournament.winners.is_empty());
+    assert!(tournament.losers.is_empty());
+    assert!(tournament.grand_final.is_empty());
+    assert_eq!(tournament.champion, None);
+    assert!(!tournament.champion_manual);
+    assert_eq!(tournament.status, TournamentStatus::Setup);
+
+    // Elimination formats keep their brackets on an ordinary refresh.
+    let mut single = tournament_with_teams(4, BracketFormat::SingleElim);
+    generate_single_elimination(&mut single);
+    let expected = match_ids(&single);
+    single.status = TournamentStatus::InProgress;
+    refresh(&mut single);
+    assert_eq!(match_ids(&single), expected);
+    assert_eq!(single.status, TournamentStatus::InProgress);
 }
 
 // ---------------------------------------------------------------------------
@@ -1377,4 +1905,82 @@ fn tournament_id_round_trips_through_persistence() {
     };
     let loaded = migrate(serde_json::to_value(&state).expect("serialise")).expect("migrate");
     assert_eq!(loaded.tournaments[0].id, id);
+}
+
+#[test]
+fn reset_groups_clears_the_generated_stage_and_derived_playoff() {
+    let mut tournament = tournament_with_teams(8, BracketFormat::MultiStage);
+    generate_multistage(&mut tournament, 2).expect("groups");
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    for id in &fixtures {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+    }
+    assert_eq!(tournament.winners.len(), 2);
+    tournament.status = TournamentStatus::InProgress;
+    tournament.champion = Some(team("team-1"));
+    tournament.champion_manual = true;
+    let entrants = tournament.entrants.clone();
+    let tiebreakers = tournament.tiebreakers.clone();
+
+    reset_stage(&mut tournament, TournamentStage::Groups);
+
+    assert!(tournament.groups.is_empty());
+    assert!(tournament.group_matches.is_empty());
+    assert!(tournament.standings.is_empty());
+    assert!(tournament.winners.is_empty());
+    assert!(tournament.losers.is_empty());
+    assert!(tournament.grand_final.is_empty());
+    assert_eq!(tournament.champion, None);
+    assert!(!tournament.champion_manual);
+    assert_eq!(tournament.status, TournamentStatus::Setup);
+    assert_eq!(tournament.entrants, entrants);
+    assert_eq!(tournament.tiebreakers, tiebreakers);
+}
+
+#[test]
+fn reset_bracket_keeps_groups_and_entrants() {
+    let mut tournament = tournament_with_teams(8, BracketFormat::MultiStage);
+    generate_multistage(&mut tournament, 2).expect("groups");
+    let fixtures: Vec<MatchId> = tournament
+        .group_matches
+        .iter()
+        .map(|fixture| fixture.id.clone())
+        .collect();
+    for id in &fixtures {
+        assert!(set_group_result(
+            &mut tournament,
+            id,
+            2,
+            0,
+            BracketMatchStatus::Completed
+        ));
+    }
+    assert_eq!(tournament.winners.len(), 2);
+    let group_count = tournament.groups.len();
+    let fixture_count = tournament.group_matches.len();
+    tournament.status = TournamentStatus::Completed;
+    tournament.champion = Some(team("team-1"));
+    tournament.champion_manual = true;
+
+    reset_stage(&mut tournament, TournamentStage::Bracket);
+
+    assert!(tournament.winners.is_empty());
+    assert!(tournament.losers.is_empty());
+    assert!(tournament.grand_final.is_empty());
+    assert_eq!(tournament.champion, None);
+    assert!(!tournament.champion_manual);
+    assert_eq!(tournament.status, TournamentStatus::Setup);
+    assert_eq!(tournament.groups.len(), group_count);
+    assert_eq!(tournament.group_matches.len(), fixture_count);
+    assert_eq!(tournament.entrants.len(), 8);
 }

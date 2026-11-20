@@ -23,13 +23,16 @@ pub struct TimerState {
     pub total_seconds: u32,
 }
 
-/// Timer signals shared by the root, the tick loop and the Timer tab.
+/// Timer signals shared by the root, the tick loop and the floating widget.
 #[derive(Clone, Copy)]
 pub struct TimerController {
-    /// Run state and the value shown on the Timer tab.
+    /// Run state and the value shown on the floating widget.
     pub state: Signal<TimerState>,
     /// Count-to-target value as typed into the `datetime-local` field.
     pub target: Signal<String>,
+    /// Configured count-down duration. Run state is kept separately so the
+    /// widget can reset back to the same duration after it has been stopped.
+    pub duration: Signal<u32>,
 }
 
 impl TimerController {
@@ -44,6 +47,7 @@ impl TimerController {
         let controller = Self {
             state: use_signal(TimerState::default),
             target: use_signal(String::new),
+            duration: use_signal(|| 0),
         };
 
         use_future(move || async move {
@@ -63,7 +67,7 @@ impl TimerController {
                 let next = match mode {
                     TimerMode::CountUp => current.total_seconds.saturating_add(1),
                     TimerMode::CountDown => current.total_seconds.saturating_sub(1),
-                    TimerMode::Target => {
+                    TimerMode::Target | TimerMode::Scheduled => {
                         let target = target.peek().clone();
                         if target.is_empty() {
                             0
@@ -82,7 +86,11 @@ impl TimerController {
                     }
                 };
 
-                if matches!(mode, TimerMode::CountDown | TimerMode::Target) && next == 0 {
+                if matches!(
+                    mode,
+                    TimerMode::CountDown | TimerMode::Target | TimerMode::Scheduled
+                ) && next == 0
+                {
                     timer.set(TimerState {
                         running: false,
                         total_seconds: 0,
@@ -120,6 +128,12 @@ pub fn join_time(hours: u32, minutes: u32, seconds: u32) -> u32 {
 pub fn format_clock(total: u32) -> String {
     let (hours, minutes, seconds) = split_time(total);
     format!("{hours:02}:{minutes:02}:{seconds:02}")
+}
+
+/// Parses a non-negative field value, treating blank or invalid input as zero.
+#[must_use]
+pub fn parse_non_negative(value: &str) -> u32 {
+    value.trim().parse::<u32>().unwrap_or(0)
 }
 
 /// Builds the JavaScript that returns the whole seconds remaining until `target`.

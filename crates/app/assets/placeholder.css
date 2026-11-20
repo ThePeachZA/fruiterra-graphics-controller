@@ -13,7 +13,7 @@
 }
 
 .fgc-placeholder__badge {
-    padding: 0.2rem 0.6rem;
+    padding: var(--fgc-space-1) var(--fgc-space-2);
     border: 1px solid rgb(255 122 26 / 35%);
     border-radius: var(--fgc-radius-pill);
     background: var(--fgc-accent-soft);

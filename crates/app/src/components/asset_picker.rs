@@ -12,7 +12,12 @@ use crate::state::AppStore;
 #[must_use]
 pub fn library_assets(user_assets: &[CoreAsset]) -> Vec<CoreAsset> {
     let mut assets = fgc_server::bundled_catalog();
-    assets.extend_from_slice(user_assets);
+    assets.extend(
+        user_assets
+            .iter()
+            .filter(|asset| !asset.is_attachment())
+            .cloned(),
+    );
     assets
 }
 
@@ -32,6 +37,7 @@ pub fn AssetPicker(
 ) -> Element {
     let store = use_context::<AppStore>();
     let state = store.state();
+    let catalog = store.catalog();
     let mut open = use_signal(|| false);
     let mut search = use_signal(String::new);
 
@@ -44,6 +50,7 @@ pub fn AssetPicker(
     let filtered: Vec<(CoreAsset, bool)> = assets
         .iter()
         .filter(|asset| asset.category == category)
+        .filter(|asset| category != AssetCategory::Hero || catalog.is_selectable_hero(asset))
         .filter(|asset| search_text.is_empty() || asset.name.to_lowercase().contains(&search_text))
         .map(|asset| {
             let is_selected = selected
@@ -55,6 +62,14 @@ pub fn AssetPicker(
 
     let category_label = category.label();
     let placeholder = format!("No {} selected", category_label.to_lowercase());
+    let quick_upload = move || {
+        store.import_assets_from_files_then(category, move |ids| {
+            if let Some(id) = ids.first() {
+                on_change.call(Some(id.clone()));
+                open.set(false);
+            }
+        });
+    };
 
     rsx! {
         div { class: "fgc-asset-picker",
@@ -78,6 +93,13 @@ pub fn AssetPicker(
                     onclick: move |_| open.set(true),
                     "Choose {category_label.to_lowercase()}…"
                 }
+                Button {
+                    variant: ButtonVariant::Ghost,
+                    size: ButtonSize::Sm,
+                    disabled: store.asset_busy(),
+                    onclick: move |_| quick_upload(),
+                    "Quick upload…"
+                }
                 if selected.is_some() {
                     Button {
                         variant: ButtonVariant::Ghost,
@@ -94,7 +116,7 @@ pub fn AssetPicker(
             on_open_change: move |is_open| open.set(is_open),
             DialogTitle { "Choose {label}" }
             DialogDescription {
-                "Images from the {category_label} category. Import more in Assets."
+                "Images from the {category_label} category. Quick upload adds a new image here without leaving this picker."
             }
             Input {
                 r#type: "search",
@@ -106,7 +128,7 @@ pub fn AssetPicker(
             if filtered.is_empty() {
                 div { class: "fgc-asset-picker__empty",
                     p { "No assets match." }
-                    p { class: "fgc-note", "Import images in the Assets destination first." }
+                    p { class: "fgc-note", "Quick upload adds one here, or import a batch in Assets." }
                 }
             } else {
                 div { class: "fgc-asset-picker__grid",
@@ -131,12 +153,18 @@ pub fn AssetPicker(
                                 asset: asset.clone(),
                                 class: "fgc-asset-picker__thumb".to_owned(),
                             }
-                            span { class: "fgc-asset-picker__name", "{asset.name}" }
+                            span { class: "fgc-asset-picker__name", title: "{asset.name}", "{asset.name}" }
                         }
                     }
                 }
             }
             div { class: "fgc-dialog-actions",
+                Button {
+                    variant: ButtonVariant::Ghost,
+                    disabled: store.asset_busy(),
+                    onclick: move |_| quick_upload(),
+                    "Quick upload…"
+                }
                 Button {
                     variant: ButtonVariant::Outline,
                     onclick: move |_| open.set(false),
@@ -149,25 +177,42 @@ pub fn AssetPicker(
 
 /// An image thumbnail resolved from the asset library.
 #[component]
-pub fn AssetThumb(asset: CoreAsset, #[props(default)] class: String) -> Element {
+pub fn AssetThumb(
+    asset: CoreAsset,
+    #[props(default)] class: String,
+    #[props(default)] placeholder_class: String,
+) -> Element {
     let store = use_context::<AppStore>();
-    let thumb_asset = asset.clone();
-    let thumbnail = use_resource(move || {
-        let asset = thumb_asset.clone();
+    let mut current = use_signal(|| asset.clone());
+    let changed = {
+        let current = current.peek();
+        current.clone() != asset
+    };
+    if changed {
+        current.set(asset.clone());
+    }
+    let url = use_resource(move || {
+        let asset = current.read().clone();
         async move { store.asset_data_url(asset).await }
     });
     let label = asset.category.label();
+    let placeholder = if placeholder_class.is_empty() {
+        format!("fgc-thumb-placeholder {}", class).trim().to_owned()
+    } else {
+        placeholder_class
+    };
 
     rsx! {
-        if let Some(url) = thumbnail().flatten() {
+        if let Some(Some(src)) = url() {
             img {
                 class: "{class}",
-                src: "{url}",
+                src: "{src}",
                 alt: "{asset.name}",
                 loading: "lazy",
+                decoding: "async",
             }
         } else {
-            div { class: "fgc-thumb-placeholder {class}", "{label}" }
+            div { class: "{placeholder}", "{label}" }
         }
     }
 }

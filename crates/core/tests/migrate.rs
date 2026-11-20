@@ -1,6 +1,6 @@
 mod support;
 
-use fgc_core::{AppState, CoreError, SCHEMA_VERSION, migrate};
+use fgc_core::{AppState, CoreError, SCHEMA_VERSION, TalentType, migrate};
 use serde_json::json;
 
 #[test]
@@ -40,7 +40,7 @@ fn invalid_schema_version_is_refused() {
 #[test]
 fn unknown_enum_reports_field_path() {
     let error = migrate(json!({
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "teams": [{
             "id": "team",
             "name": "Team",
@@ -67,7 +67,7 @@ fn unknown_enum_reports_field_path() {
 #[test]
 fn top_level_unknown_fields_are_preserved() {
     let state = migrate(json!({
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "futureField": {"enabled": true}
     }))
     .expect("unknown top-level fields should not fail");
@@ -88,7 +88,7 @@ fn top_level_unknown_fields_are_preserved() {
 #[test]
 fn nested_unknown_fields_are_ignored() {
     let state = migrate(json!({
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "teams": [{"id": "team", "name": "Team", "futureField": 1}]
     }))
     .expect("unknown nested fields should not fail");
@@ -104,6 +104,40 @@ fn sample_state_round_trips() {
     let loaded = migrate(value).expect("serialised state should load");
 
     assert_eq!(loaded, state);
+}
+
+#[test]
+fn schema_v1_moves_talent_types_into_assignment_roles() {
+    let state = support::sample_state();
+    let mut raw = serde_json::to_value(&state).expect("state should serialise");
+    raw["schemaVersion"] = json!(1);
+    raw["talents"][0]["type"] = json!("panelist");
+
+    let talent = raw["currentMatch"]["talent"]
+        .as_object_mut()
+        .expect("talent map");
+    talent.insert("caster1".to_owned(), json!({"talentId": "talent-a"}));
+    talent.insert("caster2".to_owned(), json!({"talentId": "unknown"}));
+    talent.insert("panel1".to_owned(), json!({"talentId": "talent-a"}));
+
+    let loaded = migrate(raw).expect("v1 state should migrate");
+    let assignments = &loaded.current_match.expect("fixture match").talent;
+
+    assert_eq!(
+        assignments.caster1.as_ref().expect("caster one").role,
+        TalentType::Analyst,
+        "legacy per-person type should win over the slot default"
+    );
+    assert_eq!(
+        assignments.caster2.as_ref().expect("caster two").role,
+        TalentType::Caster,
+        "unclassified talents should inherit the slot default"
+    );
+    assert_eq!(
+        assignments.panel1.as_ref().expect("panel one").role,
+        TalentType::Analyst,
+        "legacy panelist should normalise to analyst"
+    );
 }
 
 #[test]

@@ -19,6 +19,8 @@ default is `http://127.0.0.1:3001`.
 | Casters row | `<base>/overlays/row-casters.html` | The assigned casters, panel and their social handles |
 
 The **Overlay** page lists the same URLs with a **Copy URL** button for each.
+URLs are hidden by default; select **Show URLs** to reveal them and **Hide
+URLs** to hide them again.
 
 ## Add a Browser Source
 

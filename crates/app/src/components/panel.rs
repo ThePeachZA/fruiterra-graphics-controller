@@ -16,6 +16,9 @@ pub fn Panel(
     /// Optional supporting copy rendered under the heading.
     #[props(default)]
     description: Option<String>,
+    /// Optional actions rendered beside the heading.
+    #[props(default)]
+    actions: Option<Element>,
     #[props(extends = GlobalAttributes)] attributes: Vec<Attribute>,
     children: Element,
 ) -> Element {
@@ -27,11 +30,16 @@ pub fn Panel(
         section { ..merged,
             if has_header {
                 header { class: "fgc-panel__header",
-                    if let Some(title) = title {
-                        h2 { class: "fgc-panel__title", "{title}" }
+                    div { class: "fgc-panel__heading",
+                        if let Some(title) = title {
+                            h2 { class: "fgc-panel__title", "{title}" }
+                        }
+                        if let Some(description) = description {
+                            p { class: "fgc-panel__description", "{description}" }
+                        }
                     }
-                    if let Some(description) = description {
-                        p { class: "fgc-panel__description", "{description}" }
+                    if let Some(actions) = actions {
+                        div { class: "fgc-panel__actions", {actions} }
                     }
                 }
             }

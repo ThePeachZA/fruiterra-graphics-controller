@@ -22,8 +22,8 @@ use std::path::Path;
 use fgc_core::{
     AppState, AssetCategory, AssetId, BracketFormat, IntervieweeRef, JsonStore, MapHeroBans,
     MapSlot, Match, MatchStatus, MatchTalent, Player, PlayerId, Position, Role, Scoring, Side,
-    SocialLink, SocialPlatform, Store, Talent, TalentId, TalentRef, Team, TeamId, TeamSide,
-    TimerMode, empty_hero_bans, generate_double_elimination, generate_round_robin,
+    SocialLink, SocialPlatform, Store, Talent, TalentId, TalentRef, TalentType, Team, TeamId,
+    TeamSide, TimerMode, empty_hero_bans, generate_double_elimination, generate_round_robin,
     generate_single_elimination, new_match, new_tournament, set_entrants, sha256_hex,
     validate_and_repair,
 };
@@ -328,6 +328,7 @@ fn team(
         text_color: text_color.to_owned(),
         aux_color: "#090909".to_owned(),
         logo,
+        logo_background: false,
         players: Vec::new(),
     }
 }
@@ -426,11 +427,21 @@ fn build_match(state: &AppState) -> Result<Match> {
     current.loser_picks = true;
     current.show_player_portraits = true;
     current.talent = MatchTalent {
-        caster1: Some(TalentRef { talent_id: arc }),
-        caster2: Some(TalentRef { talent_id: priya }),
-        panel1: Some(TalentRef { talent_id: marco }),
+        caster1: Some(TalentRef {
+            talent_id: arc,
+            role: TalentType::Caster,
+        }),
+        caster2: Some(TalentRef {
+            talent_id: priya,
+            role: TalentType::Caster,
+        }),
+        panel1: Some(TalentRef {
+            talent_id: marco,
+            role: TalentType::Analyst,
+        }),
         panel2: Some(TalentRef {
             talent_id: sam.clone(),
+            role: TalentType::Analyst,
         }),
         panel3: None,
         interviewer: None,
@@ -473,6 +484,8 @@ fn map_slot(
     MapSlot {
         name: name.to_owned(),
         game_mode_name: mode.to_owned(),
+        game_mode_manual: false,
+        user_added: false,
         completed,
         score_a,
         score_b,

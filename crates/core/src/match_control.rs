@@ -2,15 +2,23 @@
 //!
 //! The original Electron controller kept the current match in React state and
 //! recalculated loser picks on every edit. These functions move that logic into
-//! the domain crate so the same rules are exercised without a UI: eight empty
-//! map slots by default, the first map picked by team A, and every later map
-//! picked by the loser of the most recent map (or the previous picker after a
-//! draw).
+//! the domain crate so the same rules are exercised without a UI: a default map
+//! count derived from first-to, the first map picked by team A, and every later
+//! map picked by the loser of the most recent map (or the previous picker after
+//! a draw).
 
-use crate::{MapHeroBans, MapSlot, Match, MatchId, MatchTalent, TalentRef, TeamSide};
+use crate::{MapHeroBans, MapSlot, Match, MatchId, MatchTalent, TalentRef, TalentType, TeamSide};
 
-/// Number of map slots created for a new match.
-pub const DEFAULT_MAP_SLOTS: usize = 8;
+/// First-to target used by a new match.
+pub const DEFAULT_FIRST_TO: u8 = 3;
+
+/// Returns the default map count for a first-to target.
+///
+/// A first-to target of `N` needs at most `2N - 1` maps to decide a winner.
+#[must_use]
+pub fn default_map_slots(first_to: u8) -> usize {
+    usize::from(first_to.clamp(1, 4).saturating_mul(2).saturating_sub(1))
+}
 
 /// Creates an empty map slot.
 #[must_use]
@@ -18,6 +26,8 @@ pub fn empty_map_slot() -> MapSlot {
     MapSlot {
         name: String::new(),
         game_mode_name: String::new(),
+        game_mode_manual: false,
+        user_added: false,
         completed: false,
         score_a: 0,
         score_b: 0,
@@ -42,12 +52,17 @@ pub fn new_match() -> Match {
         id: MatchId::new(),
         title: String::new(),
         subtitle: String::new(),
+        scheduled_at: None,
         team_a: None,
         team_b: None,
-        maps: (0..DEFAULT_MAP_SLOTS).map(|_| empty_map_slot()).collect(),
-        hero_bans: (0..DEFAULT_MAP_SLOTS).map(|_| empty_hero_bans()).collect(),
+        maps: (0..default_map_slots(DEFAULT_FIRST_TO))
+            .map(|_| empty_map_slot())
+            .collect(),
+        hero_bans: (0..default_map_slots(DEFAULT_FIRST_TO))
+            .map(|_| empty_hero_bans())
+            .collect(),
         map_pool: Vec::new(),
-        first_to: 3,
+        first_to: DEFAULT_FIRST_TO,
         status: crate::MatchStatus::Pre,
         current_map: None,
         swap_sides: false,
@@ -143,7 +158,16 @@ pub fn set_map_name(match_state: &mut Match, index: usize, name: &str, mode: &st
     } else {
         mode.to_owned()
     };
+    map.game_mode_manual = false;
     map.chosen_by = chosen_by;
+}
+
+/// Sets a hand-typed game mode, marking it as a manual override.
+pub fn set_map_mode(match_state: &mut Match, index: usize, mode: &str) {
+    if let Some(map) = match_state.maps.get_mut(index) {
+        map.game_mode_name = mode.to_owned();
+        map.game_mode_manual = true;
+    }
 }
 
 /// Updates one map's score and, with loser picks enabled, the next map's picker.
@@ -158,11 +182,76 @@ pub fn set_map_scores(match_state: &mut Match, index: usize, score_a: u16, score
     }
 }
 
-/// Replaces every map slot and hero-ban row with empty defaults.
+/// Replaces every map slot and hero-ban row with empty defaults for the current format.
 pub fn reset_maps(match_state: &mut Match) {
-    match_state.maps = (0..DEFAULT_MAP_SLOTS).map(|_| empty_map_slot()).collect();
-    match_state.hero_bans = (0..DEFAULT_MAP_SLOTS).map(|_| empty_hero_bans()).collect();
+    let slots = default_map_slots(match_state.first_to);
+    match_state.maps = (0..slots).map(|_| empty_map_slot()).collect();
+    match_state.hero_bans = (0..slots).map(|_| empty_hero_bans()).collect();
     match_state.current_map = None;
+}
+
+/// Adjusts the map list when the first-to target changes.
+///
+/// User-added slots are kept. Trailing slots are removed only when both the map
+/// and its hero-ban row are empty, so an entered tiebreaker is never discarded.
+/// A map with no name, no manually entered mode and no **+ Add map** marker is
+/// empty even when a derived game mode is present; derived modes are not user
+/// data.
+pub fn resize_maps_for_first_to(match_state: &mut Match) {
+    let desired = default_map_slots(match_state.first_to);
+    while match_state.maps.len() < desired {
+        match_state.maps.push(empty_map_slot());
+    }
+    pop_trailing_empty_maps(match_state, desired);
+    ensure_hero_bans(match_state);
+    clear_current_map_if_out_of_range(match_state);
+}
+
+/// Removes trailing empty map slots beyond the first-to format on load.
+///
+/// Unlike [`resize_maps_for_first_to`], this never adds slots back: a saved
+/// project may intentionally have fewer maps than the format default. Slots
+/// added with **+ Add map** are marked as user data and survive even when empty.
+pub fn trim_trailing_empty_maps_for_first_to(match_state: &mut Match) {
+    let desired = default_map_slots(match_state.first_to);
+    pop_trailing_empty_maps(match_state, desired);
+    ensure_hero_bans(match_state);
+    clear_current_map_if_out_of_range(match_state);
+}
+
+fn pop_trailing_empty_maps(match_state: &mut Match, desired: usize) {
+    while match_state.maps.len() > desired
+        && map_slot_is_empty(match_state.maps.last())
+        && match_state.hero_bans.last().is_none_or(hero_bans_are_empty)
+    {
+        match_state.maps.pop();
+        match_state.hero_bans.pop();
+    }
+}
+
+fn clear_current_map_if_out_of_range(match_state: &mut Match) {
+    if match_state
+        .current_map
+        .is_some_and(|index| index >= match_state.maps.len())
+    {
+        match_state.current_map = None;
+    }
+}
+
+fn map_slot_is_empty(map: Option<&MapSlot>) -> bool {
+    map.is_some_and(|map| {
+        map.name.trim().is_empty()
+            && !map.user_added
+            && !map.game_mode_manual
+            && !map.completed
+            && map.score_a == 0
+            && map.score_b == 0
+            && map.chosen_by.is_none()
+    })
+}
+
+fn hero_bans_are_empty(bans: &MapHeroBans) -> bool {
+    bans.first_ban_team.is_none() && bans.team_a.is_empty() && bans.team_b.is_empty()
 }
 
 /// Clears hero bans for every map slot.
@@ -178,10 +267,15 @@ pub fn ensure_hero_bans(match_state: &mut Match) {
 }
 
 /// Inserts an empty map and its hero-ban row at `index`.
+///
+/// The new slot is marked as user-added so load-time normalisation keeps it
+/// even before a name or mode is chosen.
 pub fn insert_map(match_state: &mut Match, index: usize) {
     let index = index.min(match_state.maps.len());
     let previous_len = match_state.maps.len();
-    match_state.maps.insert(index, empty_map_slot());
+    let mut added = empty_map_slot();
+    added.user_added = true;
+    match_state.maps.insert(index, added);
     match_state
         .hero_bans
         .resize_with(previous_len, empty_hero_bans);
@@ -350,10 +444,20 @@ impl TalentSlot {
         match self {
             Self::Caster1 => "Caster 1",
             Self::Caster2 => "Caster 2",
-            Self::Panel1 => "Panel 1",
-            Self::Panel2 => "Panel 2",
-            Self::Panel3 => "Panel 3",
+            Self::Panel1 => "Analyst 1",
+            Self::Panel2 => "Analyst 2",
+            Self::Panel3 => "Analyst 3",
             Self::Interviewer => "Interviewer",
+        }
+    }
+
+    /// Role used when an assignment is first created.
+    #[must_use]
+    pub const fn default_role(self) -> TalentType {
+        match self {
+            Self::Caster1 | Self::Caster2 => TalentType::Caster,
+            Self::Panel1 | Self::Panel2 | Self::Panel3 => TalentType::Analyst,
+            Self::Interviewer => TalentType::Interviewer,
         }
     }
 }
@@ -394,6 +498,8 @@ mod tests {
         MapSlot {
             name: name.to_owned(),
             game_mode_name: "Control".to_owned(),
+            game_mode_manual: false,
+            user_added: false,
             completed,
             score_a: a,
             score_b: b,
@@ -402,10 +508,14 @@ mod tests {
     }
 
     #[test]
-    fn a_new_match_has_eight_empty_maps_and_bans() {
+    fn a_new_match_has_format_sized_empty_maps_and_bans() {
         let match_state = new_match();
-        assert_eq!(match_state.maps.len(), DEFAULT_MAP_SLOTS);
-        assert_eq!(match_state.hero_bans.len(), DEFAULT_MAP_SLOTS);
+        assert_eq!(default_map_slots(1), 1);
+        assert_eq!(default_map_slots(2), 3);
+        assert_eq!(default_map_slots(3), 5);
+        assert_eq!(default_map_slots(4), 7);
+        assert_eq!(match_state.maps.len(), default_map_slots(3));
+        assert_eq!(match_state.hero_bans.len(), default_map_slots(3));
         assert!(match_state.maps.iter().all(|map| map.name.is_empty()));
         assert!(
             match_state
@@ -518,8 +628,8 @@ mod tests {
         match_state.current_map = Some(0);
 
         insert_map(&mut match_state, 1);
-        assert_eq!(match_state.maps.len(), 9);
-        assert_eq!(match_state.hero_bans.len(), 9);
+        assert_eq!(match_state.maps.len(), 6);
+        assert_eq!(match_state.hero_bans.len(), 6);
         assert_eq!(match_state.current_map, Some(0));
         assert_eq!(match_state.hero_bans[0].team_a, vec!["Tracer".to_owned()]);
 
@@ -529,8 +639,8 @@ mod tests {
         assert_eq!(match_state.current_map, Some(1));
 
         remove_map(&mut match_state, 1);
-        assert_eq!(match_state.maps.len(), 8);
-        assert_eq!(match_state.hero_bans.len(), 8);
+        assert_eq!(match_state.maps.len(), 5);
+        assert_eq!(match_state.hero_bans.len(), 5);
         assert_eq!(match_state.current_map, None);
         assert!(match_state.hero_bans[1].team_a.is_empty());
     }
@@ -547,9 +657,68 @@ mod tests {
         assert!(match_state.hero_bans[0].team_a.is_empty());
 
         reset_maps(&mut match_state);
-        assert_eq!(match_state.maps.len(), DEFAULT_MAP_SLOTS);
-        assert_eq!(match_state.hero_bans.len(), DEFAULT_MAP_SLOTS);
+        assert_eq!(match_state.maps.len(), default_map_slots(3));
+        assert_eq!(match_state.hero_bans.len(), default_map_slots(3));
         assert!(match_state.current_map.is_none());
+    }
+
+    #[test]
+    fn changing_first_to_adjusts_empty_maps_but_keeps_entered_tiebreakers() {
+        let mut match_state = new_match();
+        assert_eq!(match_state.maps.len(), 5);
+
+        match_state.first_to = 4;
+        resize_maps_for_first_to(&mut match_state);
+        assert_eq!(match_state.maps.len(), 7);
+        assert_eq!(match_state.hero_bans.len(), 7);
+
+        match_state.first_to = 1;
+        resize_maps_for_first_to(&mut match_state);
+        assert_eq!(match_state.maps.len(), 1);
+        assert_eq!(match_state.hero_bans.len(), 1);
+
+        insert_map(&mut match_state, 1);
+        match_state.maps[1].name = "Tiebreaker".to_owned();
+        resize_maps_for_first_to(&mut match_state);
+        assert_eq!(match_state.maps.len(), 2);
+        assert_eq!(match_state.maps[1].name, "Tiebreaker");
+    }
+
+    #[test]
+    fn trailing_derived_modes_do_not_create_tiebreakers() {
+        let mut match_state = new_match();
+        match_state.first_to = 1;
+        match_state.maps.truncate(2);
+        match_state.hero_bans.truncate(2);
+        match_state.maps[0].name = "Ilios".to_owned();
+        match_state.maps[1].game_mode_name = "Escort".to_owned();
+
+        resize_maps_for_first_to(&mut match_state);
+
+        assert_eq!(match_state.maps.len(), 1);
+        assert_eq!(match_state.maps[0].name, "Ilios");
+        assert_eq!(match_state.hero_bans.len(), 1);
+    }
+
+    #[test]
+    fn a_manual_mode_only_slot_is_user_data() {
+        let mut match_state = new_match();
+        match_state.first_to = 1;
+        match_state.maps.truncate(3);
+        match_state.hero_bans.truncate(3);
+        match_state.maps[0].name = "Ilios".to_owned();
+        match_state.maps[1].game_mode_name = "Escort".to_owned();
+        match_state.maps[2].game_mode_name = "Push".to_owned();
+        match_state.maps[2].game_mode_manual = true;
+
+        resize_maps_for_first_to(&mut match_state);
+
+        // The trailing manual slot survives. The earlier derived-only slot is
+        // kept too because removing it would shift the manual slot's position.
+        assert_eq!(match_state.maps.len(), 3);
+        assert_eq!(match_state.maps[2].game_mode_name, "Push");
+        assert!(match_state.maps[2].game_mode_manual);
+        assert_eq!(match_state.hero_bans.len(), 3);
     }
 
     #[test]
@@ -586,6 +755,7 @@ mod tests {
         let mut talent = MatchTalent::default();
         let reference = TalentRef {
             talent_id: crate::TalentId::from_raw("talent-1"),
+            role: TalentType::Caster,
         };
         talent.set_slot(TalentSlot::Caster1, Some(reference.clone()));
         assert_eq!(talent.slot(TalentSlot::Caster1), Some(&reference));

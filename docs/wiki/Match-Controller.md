@@ -8,15 +8,17 @@ button. Use **New match** in the toolbar to replace the current match with a
 fresh one; this happens immediately and cannot be undone. **Force update**
 re-sends the current state to every connected overlay.
 
-The seven tabs are:
+A timer widget sits above the status bar on every page. It shows the current
+clock, icon **Start**, **Pause** and **Stop** buttons, and a settings button
+that expands the timer settings popup. There is no separate Timer tab.
+
+The five tabs are:
 
 1. [Match](#match)
-2. [Map Selection](#map-selection)
-3. [Hero Bans](#hero-bans)
-4. [Talent](#talent)
-5. [Map Pool](#map-pool)
-6. [Timer](#timer)
-7. [Config](#config)
+2. [Maps & Bans](#maps--bans)
+3. [Talent](#talent)
+4. [Map Pool](#map-pool)
+5. [Config](#config)
 
 ## Match
 
@@ -24,104 +26,155 @@ The seven tabs are:
 |---|---|
 | **Title** | The main match title, for example `Grand Finals`. |
 | **Subtitle** | The second line, for example `Upper Bracket`. |
+| **Scheduled start** | Optional local date and time for the match. Saved with the match and shown in the match library. |
 | **Format** | **First to 1** through **First to 4**. |
 | **Status** | **Upcoming**, **Live** or **Complete**. |
 | **Side indicator** | **Neutral**, **Attack / Defend** or **Defend / Attack**. |
-| **Loser picks** | Each map after the first is picked by the previous map's loser. |
-| **Team A** / **Team B** | The two teams on the scoreboard. The swap button exchanges them. |
-| **Score** | The current score, either derived from completed maps or entered manually. |
-| **Manual score override** | Enter the score directly instead of deriving it. |
+| **Team A / Team B** | Choose the two teams from the roster. The tag shown on the map cards follows this choice. |
 
-## Map Selection
+**Swap sides** swaps Team A and Team B, including their scores, per-map picks
+and every completed map result.
 
-Select **+ Add map** for each map. The first map is picked by team A; later maps
-follow the loser of the previous map when **Loser picks** is enabled. The eighth
-slot is labelled **Tiebreaker**.
+**Scores** can be **Manual** or **Derived**. Derived scoring counts one point
+for each completed map that one team wins and the other does not; draws add no
+points. Turn manual scoring on to enter the score yourself. While manual scoring
+is on, the derived counters still show the result of the completed maps. Turn
+manual scoring off to return to the derived score.
 
-Each map has:
+### Match library
 
-- **Map name** — choose a known map or type your own.
-- **Game mode** — filled from the map asset when known; otherwise type it.
-- **Chosen by** — **None**, **Team A** or **Team B**.
-- **Current map** — marks the map shown by the game overlay.
-- **Complete** — includes the map in the derived score.
-- **Team A score** and **Team B score**
-- **↑**, **↓** and **Remove**
+The **Match library** panel saves snapshots of the current match so you can load
+them later. Each saved match keeps its map pool and scheduled start. The list is
+collapsed under **Saved matches (n)** by default; expand it to load or delete a
+saved match.
 
-**Reset all maps** clears every map slot and every hero ban immediately, and
-removes the current map. A manual score override is kept. There is no
-confirmation, so use it carefully.
+- **Save current** saves or updates the current match in the library.
+- **Load** makes a saved match the current match.
+- **Delete** removes a saved match from the library.
+- **Export…** saves the whole match library as a portable JSON file.
+- **Import…** adds matches from a match library file. Only new match IDs are
+  added; teams, talent and assets are not replaced.
 
-## Hero Bans
+Import accepts the current match-library format. Newer library formats are
+refused with an error.
 
-The overlays show one ban per team per map.
+## Maps & Bans
 
-For each map, choose:
+Each slot is a map card. The list is sized to the **Format** (for example, Best
+of 5 shows five slots). The first map is picked by Team A. When **Loser picks**
+is off, every later map is picked by Team B. When **Loser picks** is on, each
+map after the first is picked by the team that lost the previous map.
 
-- **First ban** — **Team A** or **Team B**
-- **Team A** — the hero banned by team A
-- **Team B** — the hero banned by team B
+**Loser picks** is configured on the [Config](#config) tab.
 
-**Reset all bans** clears every ban immediately. There is no confirmation, so
-use it carefully.
+> [!NOTE]
+> The cards follow the pick order. After Team A loses the previous map, the
+> **Picked by** label on the next card shows **TBD** until that map's result is
+> known, while the header text and the live `map-select` overlay already show the
+> picking team.
+
+On each card:
+
+- **Current map** marks the map that is in progress. The **Current** button on a
+  card selects it.
+- **Picked by** chooses Team A or Team B for that map, except the first map.
+- **Map** chooses the map from the custom **Map pool**. A map that is not in the
+  pool appears as **Custom**.
+- **Game mode** is the game mode for that map. It is filled from the map's
+  **Game mode** in Assets and shows **From map** when empty. A mode typed by
+  hand is kept until you choose a different map name, which re-derives it from
+  the map's current game mode.
+- **Swap** swaps the map and mode with the adjacent card.
+- **Reset** clears the map's pick, result, sides and bans.
+
+Set the result with **Completed**, **Not played** or **Draw**. A completed map
+needs a winner and, when a side layout is selected, the sides for both teams. A
+draw records the sides but awards no point and counts as no pick when **Loser
+picks** is on.
+
+**Reset all maps** clears every map card. The current scores, including a manual
+score, stay in place.
+
+When **Hero bans** is enabled on the [Config](#config) tab, each map card also
+shows a collapsible **Hero bans** section with the banned hero pickers for Team A
+and Team B. Bans for unplayed maps do not appear on the hero-bans overlay until
+that map is relevant.
 
 ## Talent
 
-Assign **Caster 1**, **Caster 2**, **Panel 1**, **Panel 2**, **Panel 3** and
-**Interviewer** from your talent library.
+**Match assignments** links the casters row, panel and interview to people in the
+Talent library:
 
-The **Interview** panel sets the **Interviewee** and, when no talent member fits,
-a **Custom name** and **Custom subtext**.
+| Slot | Overlay role |
+|---|---|
+| **Caster 1**, **Caster 2** | The two casters in the row |
+| **Panel 1** to **Panel 3** | Up to three panel members |
+| **Interviewee** | The person shown on the interview desk |
+
+Each person slot also has a **Role** select: **Caster**, **Host**, **Analyst**,
+**Interviewer** or **Other**. The role belongs to this match assignment, so the
+same person can be a host in one match and an analyst in another.
+
+**Interview details** adds the interview title and a short subject line. The
+**Current interviewee** field is separate text and is not the same as the
+**Interviewee** selection above it. Set the interviewee in both places if you
+use both.
 
 ## Map Pool
 
-**Available maps** lists every map that has a Map asset, grouped by game mode.
-Tick the maps to include.
+The pool is the list of maps offered in **Maps & Bans** and the order shown by
+the map-pool overlay.
 
-You can also type a **Custom map name** and select **Add**. A custom name is
-stored in the pool, but the map-pool overlay only shows maps that have a Map
-asset with exactly that name, so import the map image in Assets first if you
-want it on screen.
-
-**Pool order** is the order the map-pool overlay uses. Use the up and down
-controls to reorder, and **Remove** to take a map out.
+- **Reset** restores the pool to all bundled maps, grouped by game mode.
+- **Use empty pool** clears the list. With an empty pool, **Maps & Bans**
+  offers every map and the map-pool overlay shows **All maps**.
+- Drag a map by its handle, or use the up and down arrows, to change the order.
+- Select the remove control on a map to take it out of the pool.
 
 ## Timer
 
-**Timer settings** control the clock:
+The timer is **control-only**. The app sends timer updates to the overlay server,
+but it does not include a timer graphic. A third-party timer overlay can read the
+same `matchTimer` messages.
 
-- **Mode** — **Count up**, **Count down** or **Count to target**
-- **Alignment** — **Left**, **Centre** or **Right**
-- **Hours**, **Minutes**, **Seconds**
-- **Target date and time** for **Count to target**
-- **Leading zeroes**
-- **Standalone timer** — hide the timer surround
+The widget above the status bar is the only timer control. Select the sliders
+icon to expand these settings:
 
-The **Timer** panel shows the current value. Use **Start**, **Pause** and
-**Reset**.
+| Setting | Meaning |
+|---|---|
+| **Mode** | **Count up**, **Count down** or **Count to target** |
+| **Countdown hours / minutes / seconds** | The start value for count-down mode |
+| **Target date and time** | The time to count to in target mode |
+| **Alignment** | Left, centre or right on a third-party overlay |
+| **Leading zeroes** | Show `01:05:00` instead of `1:05:00` |
+| **Standalone timer** | Tell the overlay to treat the timer as its own element |
 
-**Count to target** needs a target in the future. **Start** stays disabled until
-you set one, and the clock counts down to it; once the target passes the timer
-stops at `00:00:00`. The clock keeps running while you visit another page. The
-target is not saved, so set it again after restarting the app.
-
-> [!NOTE]
-> The timer is control-only in version 1. There is no bundled timer overlay, but
-> third-party overlays receive the ticks and the start, pause and reset actions.
+The icon buttons **Start**, **Pause** and **Stop** control the clock. Stop
+returns it to zero, or to the count-down start. The clock keeps running while
+you visit another page. Only a restart clears the target value; timer settings
+persist and run state does not.
 
 ## Config
 
-- **Overlay appearance**
-  - **Team colours** — tint the overlays with each team's primary colour.
-  - **Player portraits** — show portraits on the roster overlays.
-- **Branding**
-  - **Tournament logo**
-  - **Watermark**
-- **Overlay URLs** — the same seven URLs shown on the Overlay page, each with a
-  **Copy URL** button.
+**Overlay appearance**
+
+- **Team colours** — colour the overlay with each team's colours. Turn it off
+  for a neutral look.
+- **Player portraits** — show or hide portraits on the roster overlays.
+- **Loser picks** — each map after the first is picked by the previous map's
+  loser.
+- **Hero bans** — show hero bans inside **Maps & Bans**.
+
+**Branding**
+
+- **Tournament logo** — an image from the Assets library.
+- **Watermark** — a second image, typically a corner mark.
+
+**Browser Source URLs** lists the URL for each overlay, with **Copy** and
+**Open** actions. **Force update** is in the toolbar at the top of the page.
 
 ## Related pages
 
 - [Teams and Talent](Teams-and-Talent)
+- [Assets](Assets)
 - [Overlays in OBS](Overlays-in-OBS)
-- [Tournament](Tournament)

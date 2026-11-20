@@ -181,6 +181,58 @@ fn bundled_fonts_are_woff2_and_referenced_by_every_overlay() {
 }
 
 #[test]
+fn hero_ban_icons_are_confined_to_the_game_overlay() {
+    let game = overlay_text("game-overlay.html");
+    let hero_bans = overlay_text("hero-bans.html");
+
+    assert!(
+        game.contains("heroIcons"),
+        "the game overlay should resolve hero ban icons"
+    );
+    assert!(
+        hero_bans.contains("heroPortraits"),
+        "the hero-bans overlay should resolve hero art"
+    );
+    assert!(
+        !hero_bans.contains("heroIcons"),
+        "the hero-bans overlay must not apply the small hero ban icons"
+    );
+}
+
+#[test]
+fn game_overlay_clears_stale_team_logos() {
+    let text = overlay_text("game-overlay.html");
+
+    assert!(
+        text.contains("el.homeLogo.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : 'none';"),
+        "a null team A logo must clear the live background"
+    );
+    assert!(
+        text.contains("el.awayLogo.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : 'none';"),
+        "a null team B logo must clear the live background"
+    );
+    assert!(
+        text.contains("} else if (d.teamA === null) {")
+            && text.contains("} else if (d.teamB === null) {"),
+        "unassigned teams must also clear their logo slots"
+    );
+}
+
+#[test]
+fn hero_bans_crops_portraits_inside_their_slots() {
+    let text = overlay_text("hero-bans.html");
+
+    assert!(
+        text.contains(".hero-ban-portrait {\n      flex: 1;\n      min-width: 0;\n      min-height: 0;\n      overflow: hidden;"),
+        "hero ban slots should clip images to their flex dimensions"
+    );
+    assert!(
+        text.contains("object-fit: cover"),
+        "hero ban portraits should be cropped rather than stretched"
+    );
+}
+
+#[test]
 fn every_overlay_declares_exactly_the_five_display_faces() {
     for spec in &OVERLAYS {
         let text = overlay_text(spec.file);

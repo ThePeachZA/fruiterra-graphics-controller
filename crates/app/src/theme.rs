@@ -1,8 +1,9 @@
 //! Navigation metadata and the visual theme identifiers.
 //!
-//! The seven destinations mirror the original Electron application. Keeping
-//! the labels and ordering in one place means the sidebar, the page headers
-//! and the placeholder views cannot drift apart.
+//! The seven destinations mirror the original application. The order follows
+//! real room workflow: run the match, check OBS, then maintain the people and
+//! images that feed the overlays. Settings and tournament admin come last.
+//! Keeping labels and ordering here means the shell cannot drift apart.
 
 /// One top-level destination in the application shell.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -26,13 +27,13 @@ pub enum Destination {
 impl Destination {
     /// Every destination in navigation order.
     pub const ALL: [Self; 7] = [
-        Self::Overlay,
-        Self::Settings,
-        Self::Talent,
-        Self::Teams,
         Self::MatchController,
-        Self::Tournament,
+        Self::Overlay,
+        Self::Teams,
+        Self::Talent,
         Self::Assets,
+        Self::Tournament,
+        Self::Settings,
     ];
 
     /// Sidebar label.
@@ -91,20 +92,6 @@ impl Destination {
                 | Self::Assets
         )
     }
-
-    /// Two-letter monogram used by the sidebar.
-    #[must_use]
-    pub const fn monogram(self) -> &'static str {
-        match self {
-            Self::Overlay => "OV",
-            Self::Settings => "ST",
-            Self::Talent => "TL",
-            Self::Teams => "TM",
-            Self::MatchController => "MC",
-            Self::Tournament => "TR",
-            Self::Assets => "AS",
-        }
-    }
 }
 
 #[cfg(test)]
@@ -121,6 +108,12 @@ mod tests {
     }
 
     #[test]
+    fn navigation_starts_with_the_match_and_ends_with_settings() {
+        assert_eq!(Destination::ALL[0], Destination::MatchController);
+        assert_eq!(Destination::ALL[6], Destination::Settings);
+    }
+
+    #[test]
     fn implemented_destinations_are_the_live_views() {
         let implemented: Vec<Destination> = Destination::ALL
             .iter()
@@ -130,13 +123,13 @@ mod tests {
         assert_eq!(
             implemented,
             vec![
-                Destination::Overlay,
-                Destination::Settings,
-                Destination::Talent,
-                Destination::Teams,
                 Destination::MatchController,
+                Destination::Overlay,
+                Destination::Teams,
+                Destination::Talent,
+                Destination::Assets,
                 Destination::Tournament,
-                Destination::Assets
+                Destination::Settings
             ]
         );
     }

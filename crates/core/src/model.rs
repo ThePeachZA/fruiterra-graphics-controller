@@ -369,6 +369,8 @@ pub enum BracketFormat {
     DoubleElim,
     /// Round robin.
     RoundRobin,
+    /// Group stage followed by an elimination bracket.
+    MultiStage,
 }
 
 /// Tournament lifecycle state.
@@ -426,8 +428,10 @@ pub enum TimerMode {
     CountUp,
     /// Count downwards.
     CountDown,
-    /// Count towards a target time.
+    /// Count towards a manually entered target time.
     Target,
+    /// Count down to the current match's scheduled start.
+    Scheduled,
 }
 
 /// Timer text alignment.
@@ -441,6 +445,73 @@ pub enum TimerAlignment {
     Center,
     /// Right aligned.
     Right,
+}
+
+/// On-air role selected for a talent assignment in Match Controller.
+///
+/// Roles are per assignment, not per person: the same talent can be a host in
+/// one match and an analyst in the next.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TalentType {
+    /// Play-by-play or colour commentary.
+    #[default]
+    Caster,
+    /// Show host.
+    Host,
+    /// Desk or analyst panel member.
+    #[serde(alias = "panelist")]
+    Analyst,
+    /// Interviewer.
+    Interviewer,
+    /// Anything else, including legacy observers and producers.
+    #[serde(alias = "observer")]
+    Other,
+}
+
+impl TalentType {
+    /// Every role in display order.
+    pub const ALL: [Self; 5] = [
+        Self::Caster,
+        Self::Host,
+        Self::Analyst,
+        Self::Interviewer,
+        Self::Other,
+    ];
+
+    /// Human-readable label.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Caster => "Caster",
+            Self::Host => "Host",
+            Self::Analyst => "Analyst",
+            Self::Interviewer => "Interviewer",
+            Self::Other => "Other",
+        }
+    }
+
+    /// Stable kebab-case slug matching the serde representation.
+    #[must_use]
+    pub const fn slug(self) -> &'static str {
+        match self {
+            Self::Caster => "caster",
+            Self::Host => "host",
+            Self::Analyst => "analyst",
+            Self::Interviewer => "interviewer",
+            Self::Other => "other",
+        }
+    }
+
+    /// Parses a slug produced by [`Self::slug`], including legacy aliases.
+    #[must_use]
+    pub fn from_slug(slug: &str) -> Option<Self> {
+        match slug {
+            "panelist" => Some(Self::Analyst),
+            "observer" => Some(Self::Other),
+            _ => Self::ALL.into_iter().find(|kind| kind.slug() == slug),
+        }
+    }
 }
 
 /// Social platform shown by the casters overlay.
@@ -530,6 +601,9 @@ pub struct Team {
     /// Logo asset.
     #[serde(default)]
     pub logo: Option<AssetId>,
+    /// Whether the logo sits on its own background colour.
+    #[serde(default)]
+    pub logo_background: bool,
     /// Roster.
     #[serde(default)]
     pub players: Vec<Player>,
@@ -573,6 +647,9 @@ pub struct Match {
     /// Match subtitle.
     #[serde(default)]
     pub subtitle: String,
+    /// Scheduled start, as entered in a `datetime-local` field.
+    #[serde(default)]
+    pub scheduled_at: Option<String>,
     /// Team A.
     #[serde(default)]
     pub team_a: Option<TeamId>,
@@ -624,9 +701,20 @@ pub struct MapSlot {
     /// Map name.
     #[serde(default)]
     pub name: String,
-    /// Free-text game mode, sent as the wire `type` field.
+    /// Game mode sent as the wire `type` field.
+    ///
+    /// Derived from the map's game-mode tag until the owner types a value.
     #[serde(default)]
     pub game_mode_name: String,
+    /// True when `game_mode_name` was typed and must survive tag changes.
+    #[serde(default)]
+    pub game_mode_manual: bool,
+    /// True when the slot was added explicitly with **+ Add map**.
+    ///
+    /// An empty user-added slot is still user data, so load-time normalisation
+    /// must not trim it even though it has no name or mode yet.
+    #[serde(default)]
+    pub user_added: bool,
     /// Whether the map is complete.
     #[serde(default)]
     pub completed: bool,
@@ -696,6 +784,9 @@ pub struct SocialLink {
 pub struct TalentRef {
     /// Talent identifier.
     pub talent_id: TalentId,
+    /// Role chosen for this match assignment.
+    #[serde(default)]
+    pub role: TalentType,
 }
 
 /// An interview subject, which may be a talent member or a custom name.
@@ -740,6 +831,36 @@ pub struct MatchTalent {
     pub interviewee: Option<IntervieweeRef>,
 }
 
+/// Role an attached image plays for its owner.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AssetAttachmentKind {
+    /// Small ban-strip image owned by a hero.
+    #[default]
+    HeroBanIcon,
+}
+
+/// Marks an asset as owned by another asset instead of listed in the library.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetAttachment {
+    /// Asset that owns this file.
+    pub owner: AssetId,
+    /// Role this file plays for the owner.
+    pub kind: AssetAttachmentKind,
+}
+
+impl AssetAttachment {
+    /// Creates a hero ban-icon attachment.
+    #[must_use]
+    pub const fn hero_ban_icon(owner: AssetId) -> Self {
+        Self {
+            owner,
+            kind: AssetAttachmentKind::HeroBanIcon,
+        }
+    }
+}
+
 /// Metadata for a content-addressed asset.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -772,6 +893,17 @@ pub struct Asset {
     /// Game-mode asset for a map.
     #[serde(default)]
     pub game_mode: Option<AssetId>,
+    /// Attached media owned by another asset, hidden from the library.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachment: Option<AssetAttachment>,
+}
+
+impl Asset {
+    /// True when this asset is an attachment owned by another asset.
+    #[must_use]
+    pub const fn is_attachment(&self) -> bool {
+        self.attachment.is_some()
+    }
 }
 
 /// A tournament, including the generated board and group stage.
@@ -958,6 +1090,12 @@ pub struct GroupMatch {
     /// First to this many map wins.
     #[serde(default = "default_first_to")]
     pub first_to: u8,
+    /// Manually chosen winner, when the score-derived winner is overridden.
+    #[serde(default)]
+    pub winner: Option<TeamId>,
+    /// Whether `winner` overrides the score-derived winner.
+    #[serde(default)]
+    pub winner_manual: bool,
 }
 
 /// A derived standings row.
@@ -1002,6 +1140,9 @@ pub struct OverlaySettings {
     /// Whether to bind on the LAN interface.
     #[serde(default)]
     pub allow_lan: bool,
+    /// Whether the server starts with the application.
+    #[serde(default)]
+    pub auto_start: bool,
 }
 
 impl Default for OverlaySettings {
@@ -1009,23 +1150,38 @@ impl Default for OverlaySettings {
         Self {
             port: default_port(),
             allow_lan: false,
+            auto_start: false,
         }
     }
 }
 
 /// Display settings.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DisplaySettings {
     /// Whether team colours are used.
     #[serde(default)]
     pub team_colors_enabled: bool,
+    /// Whether the Hero Bans section is shown in Map Selection.
+    #[serde(default = "default_true")]
+    pub show_hero_bans: bool,
     /// Tournament logo asset.
     #[serde(default)]
     pub tournament_logo: Option<AssetId>,
     /// Watermark logo asset.
     #[serde(default)]
     pub watermark_logo: Option<AssetId>,
+}
+
+impl Default for DisplaySettings {
+    fn default() -> Self {
+        Self {
+            team_colors_enabled: false,
+            show_hero_bans: true,
+            tournament_logo: None,
+            watermark_logo: None,
+        }
+    }
 }
 
 /// Timer settings.
@@ -1088,6 +1244,9 @@ pub struct AppState {
     /// Current match, if one is being prepared.
     #[serde(default)]
     pub current_match: Option<Match>,
+    /// Saved matches, including scheduled matches for a later overlay.
+    #[serde(default)]
+    pub matches: Vec<Match>,
     /// Tournaments.
     #[serde(default)]
     pub tournaments: Vec<Tournament>,
@@ -1109,6 +1268,7 @@ impl Default for AppState {
             teams: Vec::new(),
             talents: Vec::new(),
             current_match: None,
+            matches: Vec::new(),
             tournaments: Vec::new(),
             assets: Vec::new(),
             settings: Settings::default(),
@@ -1170,6 +1330,7 @@ fn default_tiebreakers() -> Vec<Tiebreaker> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::new_match;
 
     #[test]
     fn role_slugs_round_trip() {
@@ -1196,6 +1357,89 @@ mod tests {
             assert!(!platform.label().is_empty());
         }
         assert_eq!(SocialPlatform::from_slug("unknown"), None);
+    }
+
+    #[test]
+    fn talent_type_slugs_round_trip() {
+        for kind in TalentType::ALL {
+            assert_eq!(TalentType::from_slug(kind.slug()), Some(kind));
+            assert!(!kind.label().is_empty());
+            let json = serde_json::to_string(&kind).expect("serialise talent type");
+            assert_eq!(json, format!("\"{}\"", kind.slug()));
+        }
+        assert_eq!(TalentType::from_slug("unknown"), None);
+    }
+
+    #[test]
+    fn assignment_defaults_to_caster_when_role_is_missing() {
+        let assignment: TalentRef =
+            serde_json::from_str(r#"{"talentId":"talent-one"}"#).expect("load legacy assignment");
+        assert_eq!(assignment.role, TalentType::Caster);
+
+        let value = serde_json::to_value(&assignment).expect("serialise assignment");
+        assert_eq!(value["role"], "caster");
+    }
+
+    #[test]
+    fn new_schema_fields_have_documented_defaults() {
+        let overlay: OverlaySettings =
+            serde_json::from_str(r#"{"port":3001,"allowLan":false}"#).expect("overlay");
+        assert!(!overlay.auto_start);
+
+        let display: DisplaySettings = serde_json::from_str(r#"{}"#).expect("display");
+        assert!(display.show_hero_bans);
+
+        let team: Team = serde_json::from_str(r#"{"id":"team-one","name":"Team"}"#)
+            .expect("team without logo background");
+        assert!(!team.logo_background);
+
+        let current: Match = serde_json::from_str(r#"{"id":"match-one"}"#).expect("match");
+        assert_eq!(current.scheduled_at, None);
+
+        let state: AppState =
+            serde_json::from_value(serde_json::json!({"schemaVersion": 2})).expect("state");
+        assert!(state.matches.is_empty());
+    }
+
+    #[test]
+    fn scheduled_timer_mode_round_trips() {
+        let json = serde_json::to_string(&TimerMode::Scheduled).expect("serialise timer mode");
+        assert_eq!(json, "\"scheduled\"");
+        let mode: TimerMode = serde_json::from_str("\"scheduled\"").expect("load timer mode");
+        assert_eq!(mode, TimerMode::Scheduled);
+    }
+
+    #[test]
+    fn new_schema_fields_round_trip() {
+        let overlay = OverlaySettings {
+            auto_start: true,
+            ..OverlaySettings::default()
+        };
+        let json = serde_json::to_string(&overlay).expect("serialise overlay");
+        assert!(json.contains("\"autoStart\":true"));
+
+        let display = DisplaySettings {
+            show_hero_bans: false,
+            ..DisplaySettings::default()
+        };
+        let json = serde_json::to_string(&display).expect("serialise display");
+        assert!(json.contains("\"showHeroBans\":false"));
+
+        let mut team: Team =
+            serde_json::from_str(r#"{"id":"team-one","name":"Team"}"#).expect("team");
+        team.logo_background = true;
+        let json = serde_json::to_string(&team).expect("serialise team");
+        assert!(json.contains("\"logoBackground\":true"));
+
+        let mut current = new_match();
+        current.scheduled_at = Some("2026-11-21T18:00".to_owned());
+        let json = serde_json::to_string(&current).expect("serialise match");
+        assert!(json.contains("\"scheduledAt\":\"2026-11-21T18:00\""));
+
+        let mut state = AppState::default();
+        state.matches.push(current);
+        let json = serde_json::to_string(&state).expect("serialise state");
+        assert!(json.contains("\"matches\":["));
     }
 
     #[test]

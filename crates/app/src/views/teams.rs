@@ -11,7 +11,8 @@ use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::focus_element_later;
 use crate::components::input::Input;
-use crate::components::{Field, Panel};
+use crate::components::switch::Switch;
+use crate::components::{Field, Panel, ToggleRow};
 use crate::state::AppStore;
 
 /// The two sections of the selected team.
@@ -311,9 +312,11 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
     let tag_id = team.id.clone();
     let record_id = team.id.clone();
     let logo_id = team.id.clone();
+    let sample_id = team.id.clone();
     let color_id = team.id.clone();
     let text_color_id = team.id.clone();
     let aux_color_id = team.id.clone();
+    let background_id = team.id.clone();
 
     rsx! {
         div { class: "fgc-grid fgc-grid--two",
@@ -358,10 +361,36 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
                     label: "Team logo".to_owned(),
                     category: AssetCategory::Logo,
                     value: team.logo.clone(),
-                    on_change: move |id| store.update_team(&logo_id, move |team| team.logo = id),
+                    on_change: move |id: Option<fgc_core::AssetId>| {
+                        store.update_team(&logo_id, {
+                            let id = id.clone();
+                            move |team| team.logo = id
+                        });
+                        if let Some(id) = id {
+                            let store = store;
+                            let team_id = sample_id.clone();
+                            spawn(async move {
+                                let asset = {
+                                    let state = store.state();
+                                    state.read().assets.iter().find(|asset| asset.id == id).cloned()
+                                };
+                                let Some(asset) = asset else { return; };
+                                let Some(url) = store.asset_data_url(asset).await else { return; };
+                                if let Some((color, text)) =
+                                    crate::logo_colors::sample_logo(&url).await
+                                {
+                                    store.update_team(&team_id, move |team| {
+                                        team.color = color;
+                                        team.text_color = text;
+                                    });
+                                    store.notify("Colours sampled from the logo.");
+                                }
+                            });
+                        }
+                    },
                 }
                 p { class: "fgc-note",
-                    "Logos come from the Logo category in the asset library."
+                    "Logos come from the Logo category. Colours are sampled automatically when a logo is chosen; adjust them below if needed."
                 }
             }
             Panel { title: "Colours".to_owned(),
@@ -379,6 +408,24 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
                     label: "Logo background".to_owned(),
                     value: team.aux_color.clone(),
                     on_change: move |value| store.update_team(&aux_color_id, move |team| team.aux_color = value),
+                }
+                ToggleRow {
+                    title: "Separate logo background".to_owned(),
+                    hint: Some(
+                        if team.logo_background {
+                            "The logo sits on its own colour."
+                        } else {
+                            "The logo uses the normal background colour."
+                        }
+                        .to_owned(),
+                    ),
+                    Switch {
+                        checked: team.logo_background,
+                        aria_label: "Separate logo background",
+                        on_checked_change: move |checked| {
+                            store.update_team(&background_id, move |team| team.logo_background = checked);
+                        },
+                    }
                 }
             }
             Panel { title: "Preview".to_owned(),
@@ -414,9 +461,14 @@ fn TeamBadge(team: Team, logo: Option<CoreAsset>, #[props(default)] class: Strin
     } else {
         format!("fgc-team-badge {class}")
     };
+    let background = if team.logo_background {
+        team.aux_color.clone()
+    } else {
+        team.color.clone()
+    };
 
     rsx! {
-        div { class: "{badge_class}", style: "background: {team.aux_color};",
+        div { class: "{badge_class}", style: "background: {background};",
             if let Some(asset) = logo {
                 AssetThumb {
                     key: "{asset.id}",
@@ -506,6 +558,7 @@ fn RosterPanel(
                 key: "{player.id}",
                 team_id: team.id.clone(),
                 player,
+                assets: assets.clone(),
                 on_done: move |_| on_done_player.call(()),
                 on_request_delete: move |id| on_delete_player.call(id),
             }
@@ -559,6 +612,7 @@ fn RosterPanel(
 fn PlayerEditor(
     team_id: TeamId,
     player: Player,
+    assets: Vec<CoreAsset>,
     on_done: EventHandler<()>,
     on_request_delete: EventHandler<PlayerId>,
 ) -> Element {
@@ -661,6 +715,17 @@ fn PlayerEditor(
                     },
                 }
             }
+            Panel {
+                title: "Roster card preview".to_owned(),
+                description: "Exactly how this player appears in the roster list.".to_owned(),
+                div { class: "fgc-player-preview",
+                    PlayerCardBody {
+                        player: player.clone(),
+                        portrait: find_asset(&assets, player.portrait.as_ref()).cloned(),
+                        hero: find_asset(&assets, player.featured_hero.as_ref()).cloned(),
+                    }
+                }
+            }
             div { class: "fgc-actions",
                 Button {
                     variant: ButtonVariant::Primary,
@@ -686,6 +751,21 @@ fn PlayerCard(
     on_edit: EventHandler<PlayerId>,
 ) -> Element {
     let player_id = player.id.clone();
+
+    rsx! {
+        button {
+            r#type: "button",
+            class: "fgc-player-card",
+            id: "fgc-player-card-{player_id}",
+            onclick: move |_| on_edit.call(player_id.clone()),
+            PlayerCardBody { player, portrait, hero }
+        }
+    }
+}
+
+/// The shared visual body of a roster card, also used by the editor preview.
+#[component]
+fn PlayerCardBody(player: Player, portrait: Option<CoreAsset>, hero: Option<CoreAsset>) -> Element {
     let initial = player
         .name
         .chars()
@@ -694,38 +774,32 @@ fn PlayerCard(
         .unwrap_or_default();
 
     rsx! {
-        button {
-            r#type: "button",
-            class: "fgc-player-card",
-            id: "fgc-player-card-{player_id}",
-            onclick: move |_| on_edit.call(player_id.clone()),
-            div { class: "fgc-player-card__avatar",
-                if let Some(asset) = portrait {
-                    AssetThumb {
-                        key: "{asset.id}",
-                        asset,
-                        class: "fgc-player-card__portrait".to_owned(),
-                    }
-                } else {
-                    span { class: "fgc-player-card__initial", "{initial}" }
+        div { class: "fgc-player-card__avatar",
+            if let Some(asset) = portrait {
+                AssetThumb {
+                    key: "{asset.id}",
+                    asset,
+                    class: "fgc-player-card__portrait".to_owned(),
                 }
+            } else {
+                span { class: "fgc-player-card__initial", "{initial}" }
             }
-            div { class: "fgc-player-card__info",
-                span { class: "fgc-player-card__name", "{player.name}" }
-                span { class: "fgc-player-card__meta",
-                    "{player.role.label()} · {player.position.label()}"
-                }
-                if let Some(pronouns) = player.pronouns.clone() {
-                    span { class: "fgc-player-card__pronouns", "{pronouns}" }
-                }
+        }
+        div { class: "fgc-player-card__info",
+            span { class: "fgc-player-card__name", "{player.name}" }
+            span { class: "fgc-player-card__meta",
+                "{player.role.label()} · {player.position.label()}"
             }
-            if let Some(asset) = hero {
-                div { class: "fgc-player-card__hero",
-                    AssetThumb {
-                        key: "{asset.id}",
-                        asset,
-                        class: "fgc-player-card__hero-image".to_owned(),
-                    }
+            if let Some(pronouns) = player.pronouns.clone() {
+                span { class: "fgc-player-card__pronouns", "{pronouns}" }
+            }
+        }
+        if let Some(asset) = hero {
+            div { class: "fgc-player-card__hero",
+                AssetThumb {
+                    key: "{asset.id}",
+                    asset,
+                    class: "fgc-player-card__hero-image".to_owned(),
                 }
             }
         }

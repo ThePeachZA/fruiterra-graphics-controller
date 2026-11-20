@@ -22,6 +22,7 @@ pub fn OverlayView() -> Element {
     let running = matches!(&status, ServerStatus::Running { .. });
     let tone = status_tone(&status);
     let label = status_text(&status);
+    let urls_visible = store.urls_visible();
 
     rsx! {
         div { class: "fgc-view",
@@ -36,7 +37,14 @@ pub fn OverlayView() -> Element {
                         }
                     }
                     KeyValues {
-                        KeyValue { label: "Base URL".to_owned(), value: base_url.clone() }
+                        KeyValue {
+                            label: "Base URL".to_owned(),
+                            value: if urls_visible {
+                                base_url.clone()
+                            } else {
+                                "Hidden".to_owned()
+                            },
+                        }
                         KeyValue {
                             label: "Overlay files".to_owned(),
                             value: OVERLAY_FILES.len().to_string(),
@@ -70,9 +78,15 @@ pub fn OverlayView() -> Element {
                                 "Start server"
                             }
                         }
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            aria_pressed: urls_visible,
+                            onclick: move |_| store.set_urls_visible(!urls_visible),
+                            if urls_visible { "Hide URLs" } else { "Show URLs" }
+                        }
                     }
                     p { class: "fgc-note",
-                        "Port, LAN access and asset URL mode are configured in Settings."
+                        "URLs are hidden until you reveal them. Port, LAN access, asset URLs and auto-start are configured in Settings."
                     }
                 }
                 Panel {
@@ -91,16 +105,40 @@ pub fn OverlayView() -> Element {
                     }
                 }
             }
-            Panel {
-                title: "Browser sources".to_owned(),
-                description: "Copy a URL into an OBS Browser Source at 1920×1080.".to_owned(),
-                div { class: "fgc-source-list",
-                    for file in OVERLAY_FILES {
-                        SourceRow {
-                            key: "{file}",
-                            file: file.to_owned(),
-                            url: overlay_url(&base_url, file),
-                        }
+            OverlayUrls { base_url }
+        }
+    }
+}
+
+/// The seven Browser Source URLs, hidden until the operator reveals them.
+///
+/// The same component is used on Overlay and in Match Controller → Config so
+/// the visibility choice stays consistent and no URL leaks into either view.
+#[component]
+pub(crate) fn OverlayUrls(base_url: String) -> Element {
+    let store = use_context::<AppStore>();
+    let visible = store.urls_visible();
+
+    rsx! {
+        Panel {
+            title: "Browser sources".to_owned(),
+            description: "Copy a URL into an OBS Browser Source at 1920×1080.".to_owned(),
+            div { class: "fgc-actions",
+                Button {
+                    variant: ButtonVariant::Outline,
+                    size: ButtonSize::Sm,
+                    aria_pressed: visible,
+                    onclick: move |_| store.set_urls_visible(!visible),
+                    if visible { "Hide URLs" } else { "Show URLs" }
+                }
+            }
+            div { class: "fgc-source-list",
+                for file in OVERLAY_FILES {
+                    SourceRow {
+                        key: "{file}",
+                        file: file.to_owned(),
+                        url: overlay_url(&base_url, file),
+                        visible,
                     }
                 }
             }
@@ -110,7 +148,7 @@ pub fn OverlayView() -> Element {
 
 /// One overlay URL with a copy button.
 #[component]
-fn SourceRow(file: String, url: String) -> Element {
+fn SourceRow(file: String, url: String, visible: bool) -> Element {
     let toast = use_toast();
     let url_for_code = url.clone();
     let url_for_click = url.clone();
@@ -120,7 +158,11 @@ fn SourceRow(file: String, url: String) -> Element {
         div { class: "fgc-source",
             div { class: "fgc-source__meta",
                 p { class: "fgc-source__file", "{file}" }
-                code { class: "fgc-code", "{url_for_code}" }
+                if visible {
+                    code { class: "fgc-code", "{url_for_code}" }
+                } else {
+                    code { class: "fgc-code fgc-code--hidden", "URL hidden" }
+                }
             }
             Button {
                 variant: ButtonVariant::Outline,

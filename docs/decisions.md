@@ -73,7 +73,7 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 | 5 | **Windows-only v1.** WebView2, single bundle target, single CI runner. |
 | 6 | **Licence:** MIT, carried over from the original project. |
 
-**Out of scope for v1:** new features, protocol v2, macOS/Linux, auto-update/code signing, bracket overlay, drag/drop reseeding, forfeits, multi-stage playoffs.
+**Out of scope for v1:** new features, protocol v2, macOS/Linux, auto-update/code signing, bracket overlay, drag/drop reseeding and forfeits. Multi-stage playoffs were pulled forward into v1 (see the final pre-release decisions).
 
 ## Phase 2 — Data model and protocol
 
@@ -423,7 +423,7 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 
 - **Caster platform icons.** `getSocialIcon()` now maps every `SocialPlatform` variant (`twitter`, `twitch`, `youtube`, `instagram`, `tiktok`). An unmapped platform no longer renders an empty 20px icon slot.
 - **Rounded-corner fringing.** Card containers add `clip-path: inset(0 round 6px)` and the image layer gets a matching top radius. Applied to both rosters, the casters row and the map pool; game overlay and map select already had the clip.
-- **Asset links in the UI.** Hero assets gain a **Ban icon…** editor for `Asset.icon`; map assets gain a **Game mode…** editor for `Asset.game_mode`. This closes the gap behind R1-15 and backlog C14. Linked icons are excluded from `heroIcons`, `heroPortraits`, the hero-ban datalist and the icon picker, so an icon never appears as a hero. `AssetCatalog::is_linked_icon` backs the filter and is covered by tests.
+- **Asset links in the UI.** Hero assets gained a **Ban icon…** editor for `Asset.icon`; map assets gained a **Game mode…** editor for `Asset.game_mode`. This closed the gap behind R1-15 and backlog C14. Linked icons are excluded from `heroIcons`, `heroPortraits`, the hero-ban datalist and the icon picker, so an icon never appears as a hero. `AssetCatalog::is_linked_icon` backs the filter and is covered by tests. The hero editor was superseded by the A40 properties dialog; the map editor remains as the inline **Game mode** select.
 - **OBS animation caveat.** With **Shutdown source when not visible** off, OBS keeps the page loaded and CSS entrance animations play only once. The runbook and wiki now tell the operator to enable **Refresh browser when scene becomes active** if the animation must replay on every scene entry.
 - **Backlog, not fixes.** Map-pool per-mode row animation (D5), roster card autofill (D6) and a hero-ban strip polish pass (D7) were requested during the pass and stay post-v1.
 
@@ -685,3 +685,415 @@ clipped by 2 px each and nothing could scroll them into view.
   sits at 16 px margins, scrolls 36 px, and **Save result** stays reachable.
   Every destination and the four dialogs were re-audited at 100%, 125%, 150%,
   1280×720 and 1040×680 with no other overflow.
+
+## Pre-release UI touch-ups (2026-11-18)
+
+**Status: implemented in the app; documentation and manual QA follow-up in progress.** A 19-item pre-release sweep adjusted UI flows and a few persisted fields while keeping the overlay protocol and bundled overlay files drop-in compatible.
+
+- **Persisted defaults and schema fields.** `OverlaySettings.auto_start` defaults to `false`; `DisplaySettings.show_hero_bans` defaults to `true`; `Team.logo_background` defaults to `false`; `Match.scheduled_at` defaults to `None`; `AppState.matches` defaults to an empty list. Schema v2 removes the per-person `Talent.talent_type`; the on-air role now lives on each match talent assignment (see the final pre-release decisions below).
+- **Shell and navigation.** Sidebar order is **Match Controller, Overlay, Teams, Talent, Assets, Tournament, Settings**. Destinations use Lucide icons (`Gamepad2`, `MonitorPlay`, `UsersRound`, `Mic`, `Images`, `Trophy`, `Settings2`) instead of letter abbreviations.
+- **Overlay URLs and server startup.** Browser Source URLs are hidden by default on the Overlay page and revealed with **Show URLs**. Settings adds **Start server on launch**; when enabled, the app starts the overlay server during bootstrap if it is not already running.
+- **Teams and talent.** Choosing a team logo samples colours in the WebView2 canvas: the dominant non-neutral colour becomes the team background and a contrasting text colour is selected. **Separate logo background** is off by default; when off, the projected `logoBgColor` uses the team background colour. Teams show a player-card preview in the roster flow. Talent selection is edited per match assignment, where the on-air role is chosen from Caster, Host, Analyst, Interviewer or Other.
+- **Match Controller.** The page has five tabs: **Match, Maps & Bans, Talent, Map Pool, Config**. Map selection and hero bans are merged; hero ban pickers appear only when `settings.display.show_hero_bans` is enabled. **Loser picks** and **Hero bans** toggles live in Config. The Match tab includes an optional **Scheduled start** (`datetime-local`) and a **Match library** panel that can save/load snapshots, export the whole library, or import matches. Timer settings moved out of this view into the floating timer widget.
+- **Match library.** Export/import uses portable versioned JSON (`schema_version`, `matches`) written by `fgc_core::write_match_library` and read by `fgc_core::read_match_library`. Import clamps `first_to` to 1–4, drops duplicate IDs, refuses a newer schema (`CoreError::InvalidMatchLibrary`), and adds only matches whose IDs are not already present. Saved matches keep their map pools and scheduled times; importing does not replace teams, talent or assets.
+- **Timer.** Settings no longer contains timer controls. The app shell shows one floating timer widget on every destination; it is now the only timer control. It shares `TimerController` run state and broadcasts `TimerActionDto` start/pause/stop actions.
+- **Tournament.** Tabs are conditional by format: single/double elimination shows **Setup, Board, Settings**, round robin shows **Setup, Groups, Settings**, and multi-stage shows all four. Fixtures expose **Push to overlay**.
+- **Assets and pickers.** Asset import supports multiple files with per-file error reporting. Image pickers can upload directly into the relevant category and auto-select the newly created asset. Asset thumbnails use a cached data URL keyed by `hash:ext`, blob reads and base64 encoding run in `tokio::task::spawn_blocking`, and gallery cards reuse `AssetThumb` with fixed name/badge layout.
+- **Overlay compatibility.** Bundled overlays remain plain HTML at 1920×1080 and drop-in compatible. No overlay message shape or filename changed for these touch-ups.
+
+## Final pre-release timer, talent, tournament and asset decisions (2026-11-18)
+
+**Timer widget is the only control.** The Settings timer card and the Match
+Controller **Timer** tab are removed. `FloatingTimer` in `crates/app/src/app.rs`
+shows the clock plus icon Start, Pause and Stop actions, with an expandable
+settings popup for mode, countdown duration, target, alignment, leading zeroes
+and standalone mode. `TimerController` still owns run state at the app root, so
+the clock keeps ticking and broadcasting across destinations. Stop returns the
+display to the configured starting value rather than only pausing it.
+
+**Talent roles are per assignment, not per person.** `TalentType` is now
+`Caster`, `Host`, `Analyst`, `Interviewer` or `Other`. Each occupied slot in
+`MatchTalent` stores a `role`; the same talent can have different roles in
+different matches. `panelist` is accepted as an alias for `Analyst` and
+`observer` as an alias for `Other`. Persisted `schemaVersion` is 2 with
+`MIGRATIONS = [migrate_v0_to_v1, migrate_v1_to_v2]`; v2 removes `talents[].type`
+and gives every occupied assignment a default role based on its slot when no
+legacy person-level role exists. Wire DTO `castersData[].role` uses the same
+five slugs, and the fixture files were updated.
+
+**Multi-stage tournaments and Push to overlay.**
+`BracketFormat::MultiStage` serialises as `"multi-stage"`.
+`generate_multistage()` generates or keeps groups, seeds a playoff bracket from
+the configured qualifiers, and restores `MultiStage` if playoff generation
+fails. `generate_round_robin()` sets the format to round robin;
+`generate_playoff()` leaves the format unchanged. The UI shows **Setup, Board,
+Groups, Settings** for multi-stage events. **Push to overlay** loads the
+selected group fixture or bracket match into `AppState.current_match`, mapping
+`Pending/Live/Completed` to `Pre/Live/Post` and using manual scores.
+
+**Asset thumbnails.** `AssetThumb` resolves URLs through a `use_future` plus
+`Signal<Option<String>>`, caches by `hash:ext`, and renders images with
+`loading="lazy"` and `decoding="async"`. Picker and card names use `title`
+plus a two-line CSS clamp. Runtime verification in the built WebView2 app
+showed 34 thumbnails resolved to `data:image/png;base64,…`, all complete with
+non-zero natural width, and placeholders returned after navigating away and
+back before the async resolution completed. The 2026-11-18 "refresh only when
+the old derived text still matches" rule for map modes was replaced after the
+A40 owner finding; see the A40 section below.
+
+## Overlay appearance deferred (2026-11-19)
+
+An appearance pass was prepared for the seven overlays, but the owner asked for
+it to be reverted and handled in a new session. The shipped HTML files were
+restored byte-for-byte from the pre-change backups, and no pass-specific files
+or references remain in the pending v1 changes. The existing overlay protocol,
+geometry, fonts and filenames ship unchanged.
+
+## A40 — Asset properties, map modes and attached hero icons (2026-11-19)
+
+The owner failed A40 with this exact answer:
+
+> Fail at step 2: the maps don't respect the game mode in the selector. Note that it does update correctly in map pool. Further note, I'm still not happy with the current system of assigning map types, and by extension, hero ban icons, to a map / hero. In the old react application, we use to give a tag to a map to change it's mode, based on the existing mode icons that were imported. Basically like a properties or taxonomy approach.
+
+The chosen scope was **Tags + bug fix (Recommended)**. The map half passed the
+owner recheck with one wording change: remove “tag” from the visible label.
+
+The owner then rejected the inline hero ban-icon tag with this exact answer:
+
+> The game mode tag works fine (just maybe remove tag from the label. However, the hero icon doesn't necessarily work well, as it is showing two names for both images, as they are both uploaded as "hero" category. Maybe for heroes, we have the ability to open up an image properties, and upload a hero icon directly onto that page? Since the icon shouldn't get reused for any other hero. This also adds scalability in case we want to add other elements, like videos or animations down the line.
+
+**Game mode is an inline property.** `Asset.game_mode` drives Map Pool and map
+slots. Map cards show **Game mode**; Match Controller map slots show **Game
+mode** with the placeholder **From map**. `MapSlot.game_mode_manual`
+(`gameModeManual` on the wire, `#[serde(default)]`) is false for a derived mode
+and true after the owner types a value. `set_map_name()` re-derives from the
+selected map and clears the manual flag; `set_map_mode()` marks the value
+manual. `set_asset_game_mode()` refreshes non-manual slots in the current and
+saved matches. `AssetCatalog` remains the shared lookup.
+
+**Hero ban icons are attached media, not a second library hero.** Hero cards
+show **Properties…**. The dialog uploads a file directly and stores it as a
+Hero asset with `Asset.attachment = { owner, kind: "heroBanIcon" }`, while
+`Asset.icon` keeps pointing at that asset. Attached files are hidden from the
+library, hero pickers, ban lists and the `heroIcons`/`heroPortraits` overlay
+maps. Replacing or removing the icon deletes the previous attached asset;
+deleting the hero deletes all its attachments. Legacy linked library icons are
+unlinked but never deleted. `/state` and overlay filenames are unchanged.
+
+`AssetAttachment` and `AssetAttachmentKind` are additive
+(`#[serde(default)]`), so no schema version changed. The `kind` field is the
+extension point for future attached media such as animations or videos.
+
+Assistant verification passed for both the first tag implementation and the
+final properties rework on fresh `dx build --desktop` binaries with CDP 9222.
+The final pass confirmed that map slots follow **Game mode** while hand-typed
+modes survive until the map name changes, that attached hero icons stay hidden
+from the library, pickers and ban lists through upload, replace, remove, rename
+and hero deletion, and that dedupe and lazy thumbnail loading still work.
+`cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace` (53 tests) and `dx build --desktop` passed. QA state was
+restored from `app-before-a40.json`; the hash is
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` before and
+after checks. The owner recheck found the two issues below; both were fixed and
+the owner passed A40 on 2026-11-20.
+
+The rework exposed two `AlreadyBorrowed` panics in `AppStore`: `delete_asset()`
+and `set_asset_link()` each held a `state.peek()` borrow across `mutate()`. Both
+now copy the values they need and release the read borrow before mutating. The
+fix is internal-only; regression tests cover hero deletion and map game-mode
+edits through the store. Test-only constructors keep those tests independent of
+the running app's background tasks.
+
+**The owner's first A40 recheck answer was:**
+
+> Fail at step 5: Replacing ban icon did override the image, but the preview image did not update until closing and reopening the properties menu. Extra note: the properties button does not fit well on the card, and the text is being truncated, review the placement of the button. Everything else passed
+
+`AssetThumb` now resolves its data URL with `use_resource` against a signal that
+mirrors the current `asset` prop. The old `use_future` captured the first prop
+value and never reran, which is why only closing and reopening the dialog
+remounted it. The hero card action row wraps and gives **Properties…** its own
+full-width line; the measured label is no longer truncated. The same static
+checks, 53 app tests and `dx build --desktop` passed after the fixes. CDP
+confirmed the preview changed from image A to image B without closing the
+dialog, the card metrics at 1360×860, all thumbnails, and `/state`
+`gameOverlay.heroIcons.Sojourn` using the new attached hash. QA state was
+restored to hash
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`, with all
+23 user blobs present and temporary QA media removed. The owner then passed the
+recheck in `docs/manual-qa-runbook.md` §A40, so A40 is accepted.
+
+## A17 — Transactional bundle export and flat blob layout (2026-11-20)
+
+The owner failed A17 with this exact answer:
+
+> Fail: Error message "Something needs attention  Could not export the project: asset blob hash mismatch: expected 348188027503e8f22cbfe1bd20604fb09d48e7be21c349c9d1017ce3fb6d4383, got f31394496e59eb16785024dd57985adc8a0253c4755eb30eab91a774fb9c7a66"; no app.json or export.json available; images are copied though in /blobs/blobs/<>; How do I install the app when we haven't made a release yet or committed changes?
+
+Two code decisions followed. First, `export_bundle()` now validates all
+referenced blobs before it creates the bundle directory. This mirrors
+`import_bundle()` and prevents a partial export when one source blob is corrupt.
+Second, export and import call `blob_path(directory, …)` instead of
+`blob_path(directory.join("blobs"), …)`; `blob_path()` already adds `blobs`, so
+the old call produced `blobs/blobs/...`. The bundle format is now the documented
+`blobs/<prefix>/<hash>.<ext>`, with no compatibility shim because v1 has not
+shipped.
+
+The corrupt QA `Curro` blob was restored from the source with the expected hash;
+the fixture stayed at
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`. Tests cover
+both the no-partial-export rule and the flat layout. The install question is
+answered with the portable `dx build --desktop` folder copied to a second
+Windows account/VM; a real installer and tag remain blocked on the release
+gates. On recheck the owner answered **Blocked** because no second
+account/VM/installer was available, so second-machine import remains unrun and
+A17 is not a Pass. On 2026-11-21 the owner explicitly accepted that result for
+release with **“Accept A17; authorize tag”**; A17 is blocked-accepted.
+
+## A8 — Hero-bans icon scope and portrait cropping (2026-11-20)
+
+The owner passed A8 with this exact note:
+
+> Pass: note that hero ban images should only apply on game-overlay.html, not on hero-bans.html; hero-bans.html should also ensure to crop images to the correct dimensions to ensure there is no overflow
+
+The note overrides the earlier overlay freeze for `hero-bans.html` only; no
+other shipped overlay HTML file was touched. The change is intentionally narrow:
+projection controls which URLs each overlay receives, and `hero-bans.html`
+controls how its portraits are clipped.
+
+Ban icons are excluded by ID *and* content identity. `icon_asset_ids()` includes
+attached icons and legacy `hero.icon` links; `icon_identities()` adds their
+`(hash, ext)` pairs. Both `heroIcons` and `heroPortraits` skip those IDs and
+identities. This preserves the name-keyed wire contract while stopping a
+duplicate Hero record with the icon's bytes from winning the portraits map.
+`game-overlay.html` remains the only overlay that applies `heroIcons`;
+`hero-bans.html` reads `heroPortraits`.
+
+Cropping is handled in CSS so arbitrary user images cannot change the 1920×1080
+layout. Columns and portrait wrappers get `min-width: 0` / `min-height: 0`; the
+wrapper clips with `overflow: hidden`; the image is `display: block` and uses
+`object-fit: cover` with `object-position: center`. CDP injected a tall and a
+wide portrait, confirmed both filled only their slots with no document overflow,
+and confirmed the game overlay still used the separate ban icons. Tests
+`duplicate_icon_files_do_not_become_hero_portraits`,
+`hero_ban_icons_are_confined_to_the_game_overlay` and
+`hero_bans_crops_portraits_inside_their_slots` lock in the behaviour.
+
+## A9 — Clearing stale team logos (2026-11-20)
+
+The owner recheck found that `/state` was correct but the live OBS image was
+not: a fresh app launch with two logo-less teams still painted two old logos,
+and **Clear** left the old image until the OBS source was restarted. The cause
+was purely client-side. `game-overlay.html` assigned
+`homeLogo.style.backgroundImage` and `awayLogo.style.backgroundImage` only
+inside truthy `logoUrl` checks, so `null` never removed a background already
+present in the live DOM. A fresh OBS source had no stale background and worked,
+which matched the report.
+
+The owner approved a scoped override of the overlay freeze for
+`game-overlay.html` only. The fix assigns the background unconditionally: the
+URL when present, otherwise `none`. An explicit `null` team object also clears
+its slot; an absent team object in a partial frame is left alone to preserve
+compatibility with third-party senders. No other overlay HTML file was touched
+by this fix.
+
+A placeholder image containing the team's **TAG** or another abbreviation, for
+slots with no logo, was noted for the later overlay refresh. It is deliberately
+not bundled into this functional fix. The owner rechecked the fix without
+refreshing or restarting the OBS source and answered **“Pass.”** A9 is accepted
+and M3-6 is Done.
+
+## A32 follow-ups — projection, scheduled timer and map defaults (2026-11-20)
+
+A32 was accepted with five notes; none revoked the Pass. All five were
+implemented before `v1.0.0` and verified with CDP on a fresh `dx build --desktop`
+binary.
+
+- **Ban icons are now a projection concern.** When
+  `settings.display.show_hero_bans` is false, `Projector::scoreboard()` returns
+  empty `heroIcons` and `heroBans` for all five identical scoreboard messages,
+  while `heroPortraits` is unchanged. No overlay HTML was changed for this fix;
+  `hero-bans.html` and `game-overlay.html` remain the only two changed overlays
+  in the pending v1 changes, for their earlier A8/A9 fixes.
+- **Scheduled timer mode is additive.** `TimerMode::Scheduled` serialises as
+  `"scheduled"`. The floating widget reads the current match's `scheduled_at`
+  reactively, including when the mode or date changes at runtime, and reuses the
+  existing target-countdown tick loop. No second persisted copy of the date was
+  introduced.
+- **Map count follows the format.** `default_map_slots(first_to)` returns
+  1/3/5/7 for Ft1–Ft4 and drives new matches, resets and format changes.
+  `resize_maps_for_first_to()` keeps entered maps and user-added tiebreakers and
+  removes only trailing empty slots, so the **+ Add map** escape hatch remains.
+  A derived game mode on an unnamed slot is not user data and no longer leaves a
+  phantom tiebreaker behind; a manually entered mode or a named tiebreaker is
+  still preserved. Slots created with **+ Add map** carry the new
+  `userAdded` flag so an empty tiebreaker also survives validation and reload.
+  The owner's later report of phantom tiebreakers on startup was traced to
+  saved slots carrying derived modes on unnamed maps. On load,
+  `trim_trailing_empty_maps_for_first_to()` removes only those trailing empty
+  slots and records `RepairKind::MapCountNormalized`; it never pads a saved
+  project back up to the format count.
+- **Map fields use native selects.** Datalists were removed from map name and
+  game mode. Every option stays visible alongside **Custom…** and an imported
+  value entry; custom text inputs appear only when that option is selected.
+- **Field sizing is shared.** Map-slot selects and text inputs use the same
+  `2.75rem` border-box height as **Chosen by**. CDP measured name, mode,
+  chosen-by and score fields at 44 px.
+
+CDP also confirmed the scheduled countdown decreases each second, hero bans off
+projects zero icons/bans with portraits intact, New match gives five slots,
+Ft1/Ft2/Ft4/Ft3 give 1/3/7/5, and **+ Add map** grows 5→6. QA `app.json` was
+restored to hash
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+
+## Phantom tiebreakers on startup (2026-11-20)
+
+Before starting A33 the owner reported:
+
+> Before I get to this one, I see that First to 1 still generates a tiebreaker match. Also, when I started the app, there were 7 tiebreaker maps. Unknown if those were remnants after the update or if it was a bug. Please investigate. Once this is complete, reiterate the QA steps and we can continue
+
+The saved QA state had `firstTo: 1` but eight trailing map slots. The first two
+slots carried only derived game-mode names (`Push`, `Escort`) on unnamed maps.
+The old emptiness check counted a derived mode as user data, so format changes
+and earlier loads left those slots behind as phantom tiebreakers.
+
+The fix treats a slot with no name, no manually entered mode, no score, no
+completed flag and no chooser as empty even when a derived mode is present.
+Format changes use `resize_maps_for_first_to()`; loading uses the trim-only
+`trim_trailing_empty_maps_for_first_to()` so saved projects are not padded back
+up to the format default. Named tiebreakers and manually entered modes remain
+user data and are preserved. `RepairKind::MapCountNormalized` records the load
+repair.
+
+CDP verification on a fresh `dx build --desktop` binary:
+
+| Scenario | Result |
+|---|---|
+| QA `app.json` with `firstTo: 1` and eight legacy slots | Startup showed **1** map slot, not eight. |
+| Switch that match to Ft4 then Ft1 | **7** slots then **1** slot; no tiebreaker remained at Ft1. |
+| Forced legacy `firstTo: 1` state with eight slots and derived modes on two unnamed maps | Startup normalised to **1** slot. |
+| Forced `firstTo: 1` state with `Ilios`, a named `Tiebreaker`, and a manual-mode-only slot | All **3** slots survived with their names and modes. |
+
+QA `app.json` was restored again to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+
+## A33 + Add map note (2026-11-20)
+
+Owner answer: **“Pass. Note: new map button does not add a new map.”** The A33
+Pass stands; the note became A33-1 and was closed before v1.0.0.
+
+The **+ Add map** handler called `insert_map()` correctly, but
+`AppStore::mutate()` runs `validate_and_repair()` after every edit. An empty
+newly inserted slot had no user data, so the load-time map-count normalisation
+removed it in the same mutation. `MapSlot.user_added` (`userAdded` on the wire,
+`#[serde(default)]`) now records slots created by **+ Add map**.
+`empty_map_slot()` defaults it to `false`, `insert_map()` sets it to `true`, and
+`map_slot_is_empty()` treats marked slots as user data. Older files load with
+the flag set to `false`.
+
+CDP verification on a fresh `dx build --desktop` binary: restored QA state
+started with 1 slot; **+ Add map** grew it to 2; saved `app.json` contained
+`userAdded: true` on the new slot; both slots remained after an app restart.
+QA `app.json` was restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+
+## Owner acceptance A34 (2026-11-20)
+
+Owner answer: **“Pass.”** A34 is accepted. The per-match role editor, schema 2
+`panelist`/`observer` aliases and picker quick-upload flow all passed the
+runbook without notes. Touch-ups 12, 18 and the final talent-role change are
+accepted.
+
+## Owner acceptance A35 (2026-11-20)
+
+Owner answer: **“Pass.”** A35 is accepted. Multi-file import, per-file error
+reporting, thumbnail rendering and the rename/delete/link regression checks all
+passed the runbook without notes. Touch-ups 15, 16 and 17 are accepted.
+
+## Owner acceptance A36 (2026-11-20)
+
+Owner answer: **“Pass.”** A36 is accepted. Conditional tournament tabs, the
+multi-stage Groups + Board layout with the locked Board, format changes and
+reload persistence all passed the runbook without notes. Touch-up 14 and the
+final multi-stage change are accepted.
+
+## Owner acceptance A41 (2026-11-20)
+
+Owner answer: **“Pass.”** A41 is accepted. All seven bundled overlays passed the
+human OBS gate at 1920×1080, including data-driven states, colours, icon/mode
+links, long names, reconnect/`show`, offline fonts and the one-minute watch.
+M9-5 and M9-6 are complete; overlay appearance work remains deferred.
+
+## Current-tree release evidence refresh (2026-11-20)
+
+After the final A41 documentation edits, the full static/release gate set was
+re-run on the uncommitted `1.0.0` tree: format, clippy, all workspace tests,
+`dx build --desktop`, `git diff --check`, and the overlay diff restriction all
+passed. `THIRD_PARTY_NOTICES.md` regeneration matched the committed file. A
+fresh NSIS installer and release app output were built with `dx bundle`; the
+packaged `--smoke-test` passed; a portable ZIP and `dist\SHA256SUMS.txt` were
+generated locally. QA `app.json` remained at
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+
+This evidence closes `docs/build.md` §7 items 1–5 and 9 on the current tree and
+marks M9-9 Done. R5–R8 were subsequently accepted with the deviations recorded
+below; R9 remains after tagging. No tag was created.
+
+## Owner acceptance R5 (2026-11-20)
+
+Owner answer: **“Pass: note, I did not use a clean VM, as I didn't have one set
+up. I recorded it on a separate computer from where the build is taking
+place”.** R5 is accepted with that recorded deviation. The install, launch,
+server/overlay, uninstall and data-retention checks passed on a separate
+computer using the fresh installer in `dist\`. The clean-VM precondition was not
+met; the owner explicitly accepted the substitution by answering Pass. M10-4 is
+Done. M10-3 remains Partial because the desktop shortcut was not separately
+recorded.
+
+## Owner acceptance R6 (2026-11-20)
+
+Owner answer: **“Pass.”** R6 is accepted. The current portable ZIP ran from
+`C:\Tools\FGC-Portable\` on a machine with WebView2 and no installed copy: all
+five required entries were present, the UI loaded with fonts and styles, all
+seven overlays loaded in OBS, and no install entry was created. M10-5 is Done.
+
+## Owner acceptance R7 (2026-11-20)
+
+Owner answer: **“Pass.”** R7 is accepted. Both current artifacts were downloaded
+through a browser to a fresh folder; SmartScreen warned as expected for the
+unsigned build, identified the app and allowed **Run anyway**; and both
+`Get-FileHash` values matched `dist\SHA256SUMS.txt` exactly. M10-7 is Done.
+
+## Owner acceptance R8 (2026-11-20)
+
+Owner answer: **“Pass.”** R8 is accepted. On a VM without WebView2 the installer
+added the runtime and the app launched; on a second clean snapshot without
+WebView2 the portable build failed with a clear install-WebView2-or-use-installer
+message and no silent crash. R1–R8 are now Pass or explicitly accepted; R9 is
+after tagging.
+
+## Pre-tag sign-off closeout (2026-11-21)
+
+`README.md` and `docs/release-notes-template.md` were reviewed against the
+shipped source and wiki. The obsolete live-bracket "fully editable"/keyboard
+movement wording and the release-note "Push to overlay"/editable-slots wording
+were replaced with the shipped generation-preview, **Push to match**, live
+result editing and documented limitations. M10-9 and `docs/build.md` §7 item 10
+are Done; item 12 remains pending until the tag exists. Because README is
+packaged in the portable ZIP, both release artifacts and `dist\SHA256SUMS.txt`
+were rebuilt from the current tree; the packaged `--smoke-test` and new checksum
+comparison passed. No application code or overlay changed after R5–R8.
+
+A final pre-tag sign-off row was added to `docs/manual-qa.md`. R1–R8 are Pass or
+explicitly accepted, A41 Passes all seven overlays, all 15 overlay rows are
+ticked, and §7 items 1–11 are verified or accepted. R3 remains blocked-accepted,
+R5 used an owner-accepted separate computer instead of a clean VM, and A17's
+second-machine import remains unrun but was explicitly accepted as
+blocked-accepted on 2026-11-21. The owner authorized commit, tag and push in the
+same answer; R9 must run after `v1.0.0` is pushed.
+
+## Owner acceptance A17 and release authorization (2026-11-21)
+
+Owner answer: **“Accept A17; authorize tag”**. A17 is accepted for release as a
+blocked gate, not as a Pass: export, bundle layout and hash validation are fixed
+and assistant-verified, while the second-machine import remains unrun. The owner
+authorized committing all uncommitted changes, creating and pushing the
+`v1.0.0` tag, and then running R9.

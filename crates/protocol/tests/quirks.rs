@@ -76,6 +76,7 @@ fn casters_skip_slots_with_no_matching_talent() {
         .talent
         .caster1 = Some(fgc_core::TalentRef {
         talent_id: fgc_core::TalentId::from_raw("missing-talent"),
+        role: fgc_core::TalentType::Caster,
     });
     let projector = Projector::new(&state, &catalog, &resolver);
     let match_state = state.current_match.as_ref().expect("fixture match");
@@ -131,6 +132,31 @@ fn hero_icon_and_portrait_keys_are_case_sensitive() {
 }
 
 #[test]
+fn disabling_hero_bans_removes_icons_and_bans_from_every_scoreboard() {
+    let (mut state, catalog, resolver) = full_parts();
+    state.settings.display.show_hero_bans = false;
+    let projector = Projector::new(&state, &catalog, &resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+
+    for message in projector.scoreboard_messages(match_state) {
+        let value = serde_json::to_value(&message.data).expect("scoreboard JSON");
+        assert_eq!(
+            value["heroIcons"]
+                .as_object()
+                .map_or(0, |icons| icons.len()),
+            0
+        );
+        assert_eq!(value["heroBans"].as_array().map_or(0, Vec::len), 0);
+        assert!(
+            !value["heroPortraits"]
+                .as_object()
+                .expect("heroPortraits")
+                .is_empty()
+        );
+    }
+}
+
+#[test]
 fn linked_icons_are_not_listed_as_heroes() {
     let (mut state, catalog, resolver) = full_parts();
     // Ban the linked icon as well, so the portrait path is exercised too.
@@ -157,6 +183,32 @@ fn linked_icons_are_not_listed_as_heroes() {
 }
 
 #[test]
+fn duplicate_icon_files_do_not_become_hero_portraits() {
+    let (state, catalog, resolver) = full_parts();
+    let mut assets = catalog.assets().to_vec();
+    let icon = catalog
+        .get(&AssetId::from_raw("asset-ana-icon"))
+        .expect("linked icon");
+    let mut duplicate = icon.clone();
+    duplicate.id = AssetId::from_raw("asset-ana-icon-duplicate");
+    duplicate.name = "Ana".to_owned();
+    assets.push(duplicate);
+
+    let catalog = AssetCatalog::new(assets);
+    let projector = Projector::new(&state, &catalog, &resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+
+    let value = scoreboard_value(&projector, match_state);
+    let icons = value["heroIcons"].as_object().expect("heroIcons");
+    let portraits = value["heroPortraits"].as_object().expect("heroPortraits");
+
+    let icon_url = format!("http://127.0.0.1:3001/assets/{}.png", support::hash(0x17));
+    let art_url = format!("http://127.0.0.1:3001/assets/{}.png", support::hash(0x18));
+    assert_eq!(icons["Ana"], icon_url);
+    assert_eq!(portraits["Ana"], art_url);
+}
+
+#[test]
 fn hero_icons_fall_back_to_art_without_an_icon_link() {
     let (state, mut catalog, resolver) = full_parts();
     let mut assets = catalog.assets().to_vec();
@@ -172,6 +224,7 @@ fn hero_icons_fall_back_to_art_without_an_icon_link() {
         icon: None,
         portrait: None,
         game_mode: None,
+        attachment: None,
     });
     catalog = AssetCatalog::new(assets);
 
@@ -352,6 +405,18 @@ fn empty_aux_color_uses_the_original_default() {
 }
 
 #[test]
+fn logo_background_off_uses_the_normal_team_colour() {
+    let (mut state, catalog, resolver) = full_parts();
+    state.teams[0].logo_background = false;
+    let projector = Projector::new(&state, &catalog, &resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+
+    let value = scoreboard_value(&projector, match_state);
+
+    assert_eq!(value["teamA"]["logoBgColor"], "#ff0000");
+}
+
+#[test]
 fn pronouns_are_omitted_when_unset() {
     let (state, catalog, resolver) = full_parts();
     let projector = Projector::new(&state, &catalog, &resolver);
@@ -455,6 +520,7 @@ fn hero_art_prefers_a_portrait_link() {
         icon: None,
         portrait: Some(AssetId::from_raw("asset-portrait-a")),
         game_mode: None,
+        attachment: None,
     });
     catalog = AssetCatalog::new(assets);
 
@@ -480,6 +546,8 @@ fn derived_scores_count_wins_and_ignore_draws() {
         fgc_core::MapSlot {
             name: "One".to_owned(),
             game_mode_name: "Control".to_owned(),
+            game_mode_manual: false,
+            user_added: false,
             completed: true,
             score_a: 2,
             score_b: 1,
@@ -488,6 +556,8 @@ fn derived_scores_count_wins_and_ignore_draws() {
         fgc_core::MapSlot {
             name: "Two".to_owned(),
             game_mode_name: "Control".to_owned(),
+            game_mode_manual: false,
+            user_added: false,
             completed: true,
             score_a: 1,
             score_b: 1,
@@ -496,6 +566,8 @@ fn derived_scores_count_wins_and_ignore_draws() {
         fgc_core::MapSlot {
             name: "Three".to_owned(),
             game_mode_name: "Control".to_owned(),
+            game_mode_manual: false,
+            user_added: false,
             completed: false,
             score_a: 3,
             score_b: 0,
@@ -504,6 +576,8 @@ fn derived_scores_count_wins_and_ignore_draws() {
         fgc_core::MapSlot {
             name: "Four".to_owned(),
             game_mode_name: "Control".to_owned(),
+            game_mode_manual: false,
+            user_added: false,
             completed: true,
             score_a: 0,
             score_b: 2,
@@ -521,6 +595,8 @@ fn manual_scores_override_derived_scores() {
     match_state.maps = vec![fgc_core::MapSlot {
         name: "One".to_owned(),
         game_mode_name: "Control".to_owned(),
+        game_mode_manual: false,
+        user_added: false,
         completed: true,
         score_a: 2,
         score_b: 1,

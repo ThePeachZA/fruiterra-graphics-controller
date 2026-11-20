@@ -3,6 +3,7 @@
     "casters": {
       "castersData": [
         {
+          "role": "caster",
           "displayName": "Caster One",
           "portraitUrl": "http://127.0.0.1:3001/assets/1515151515151515151515151515151515151515151515151515151515151515.png",
           "pronouns": "he/him",
@@ -12,6 +13,7 @@
           }
         },
         {
+          "role": "caster",
           "displayName": "Caster Two",
           "portraitUrl": null
         }
@@ -20,6 +22,7 @@
     "gameOverlay": {
       "castersData": [
         {
+          "role": "caster",
           "displayName": "Caster One",
           "portraitUrl": "http://127.0.0.1:3001/assets/1515151515151515151515151515151515151515151515151515151515151515.png",
           "pronouns": "he/him",
@@ -29,6 +32,7 @@
           }
         },
         {
+          "role": "caster",
           "displayName": "Caster Two",
           "portraitUrl": null
         }
@@ -258,6 +262,7 @@
     "heroBans": {
       "castersData": [
         {
+          "role": "caster",
           "displayName": "Caster One",
           "portraitUrl": "http://127.0.0.1:3001/assets/1515151515151515151515151515151515151515151515151515151515151515.png",
           "pronouns": "he/him",
@@ -267,6 +272,7 @@
           }
         },
         {
+          "role": "caster",
           "displayName": "Caster Two",
           "portraitUrl": null
         }
@@ -496,6 +502,7 @@
     "mapSelect": {
       "castersData": [
         {
+          "role": "caster",
           "displayName": "Caster One",
           "portraitUrl": "http://127.0.0.1:3001/assets/1515151515151515151515151515151515151515151515151515151515151515.png",
           "pronouns": "he/him",
@@ -505,6 +512,7 @@
           }
         },
         {
+          "role": "caster",
           "displayName": "Caster Two",
           "portraitUrl": null
         }
@@ -744,6 +752,7 @@
     "scoreboard": {
       "castersData": [
         {
+          "role": "caster",
           "displayName": "Caster One",
           "portraitUrl": "http://127.0.0.1:3001/assets/1515151515151515151515151515151515151515151515151515151515151515.png",
           "pronouns": "he/him",
@@ -753,6 +762,7 @@
           }
         },
         {
+          "role": "caster",
           "displayName": "Caster Two",
           "portraitUrl": null
         }
@@ -982,6 +992,7 @@
     "teamRoster": {
       "castersData": [
         {
+          "role": "caster",
           "displayName": "Caster One",
           "portraitUrl": "http://127.0.0.1:3001/assets/1515151515151515151515151515151515151515151515151515151515151515.png",
           "pronouns": "he/him",
@@ -991,6 +1002,7 @@
           }
         },
         {
+          "role": "caster",
           "displayName": "Caster Two",
           "portraitUrl": null
         }

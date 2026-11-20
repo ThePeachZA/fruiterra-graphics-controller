@@ -21,7 +21,7 @@ These are defects that currently make a shipped feature fail, risk data loss, or
 | C11 | Safe path handling | Constrain file operations to the app-data/assets roots. Asset requests accept only a 64-character lowercase hex hash and an allow-listed extension; overlay overrides reject `..`, separators and non-`.html` names. See `docs/assets.md` §1.4 and §3. |
 | C12 | Remove dead/incorrect state | `Match.scoreA/scoreB` writes, unused `matches[]`, `substitutions[]`, `SET_CHAMPION`, `rounds`, NDI fields: remove or wire up. No user-facing behaviour change. |
 | C13 | Timer overlay decision | The timer broadcasts `matchTimer` but no overlay consumes it. Either ship a compatible timer overlay in v1 or explicitly mark the timer as control-only. |
-| C14 | Map game-mode links | **Fixed 2026-11-14** — Map assets now have a **Game mode…** link editor in Assets. Unlinked maps still group under **Other** on the map-pool overlay. Found during manual QA on 2026-11-12. |
+| C14 | Map game modes | **Fixed 2026-11-14; corrected in A40 on 2026-11-19** — Map assets now use an inline **Game mode** select in Assets. Unlinked maps still group under **Other** on the map-pool overlay. The same value derives **Game mode** on map slots; typed modes are manual overrides. See section P. |
 | C15 | Asset cleanup after a failed load | **Open — found 2026-11-15.** If `app.json` and `app.json.bak` are both unreadable, the app starts with the empty default state. The startup GC is skipped (`loaded == false`), but **Clean up now** and the post-save GC still build the keep set from the empty state plus `store.load().ok()`, which is `None` on the same error, so every user blob is deleted. Guard both paths on a successful load (or an explicit import) and show a notice instead of deleting. See `docs/decisions.md`. |
 
 ### Font specifics (C1)
@@ -63,7 +63,7 @@ The Tournament View is completed properly in v1. Full design: `docs/tournament.m
 
 **Key semantics:** generation is a starting point, not a rule. The board is fully editable at any time, including after play starts. Auto-advance is on by default and is suppressed per slot once a slot is placed by hand. Groups can be edited mid-event; played results are retained.
 
-**Out of scope for v1** unless pulled forward: bracket overlay, forfeits as a result type, multi-stage playoffs, custom points, match history, external tournament-site import. These remain in the post-v1 list.
+**Out of scope for v1** unless pulled forward: bracket overlay, forfeits as a result type, custom points, match history, external tournament-site import. Multi-stage playoffs were pulled forward into v1 as `BracketFormat::MultiStage`, with **Push to overlay** for group and bracket fixtures. The remaining items stay in the post-v1 list.
 
 ## B. v1 candidates (not committed — none are in v1)
 
@@ -75,8 +75,8 @@ These are small, isolated additions that would be cheap to pull forward *after* 
 | B2 | All overlay URLs with copy buttons | Current UI exposes only the game overlay URL; the rest are hidden in the menu. |
 | B3 | Overlay health/reconnect indicator | Surface connected client count and last broadcast time. |
 | B4 | Basic hotkeys | Score +/-, next map, show/hide — high value during a live show. |
-| B5 | Timer overlay | Makes the existing Timer tab actually usable on stream. |
-| B6 | Bulk asset import | The importer opens one file per dialog. Add a multi-select import for the chosen category, with the same validation, hashing and dedupe as the single-file path. Requested 2026-11-12 during QA fixture setup. |
+| B5 | Timer overlay | The timer is control-only in v1; a bundled broadcast timer can read the existing `matchTimer` messages. |
+| B6 | ~~Bulk asset import~~ | **Shipped 2026-11-18 (touch-up 16).** Asset import accepts multiple files with per-file validation, hashing, dedupe and error reporting. Image pickers also support direct upload with auto-selection (touch-up 18). |
 
 ## C. Post-v1 improvements (option 3 backlog)
 
@@ -92,36 +92,12 @@ These are small, isolated additions that would be cheap to pull forward *after* 
 
 Each of these gets a design pass before implementation; none should be started until v1 has shipped and the protocol review checkpoint has passed.
 
-### C1. Overlay visual polish (requested 2026-11-11 — post-v1)
+### C1. Overlay visual polish (deferred to a separate session)
 
-A focused pass over the seven existing overlays so they look good and play nice
-in OBS. This is **not** a redesign: the current layouts, hierarchy and visual
-identity stay. The overlays must remain drop-in compatible with the existing
-protocol and the 1920×1080 canvas.
-
-| ID | Item | Scope |
-|---|---|---|
-| O1 | Social row fit | Fix the 6-caster `row-casters` social-row overflow (~14px with long handles) without changing the card layout. |
-| O2 | Long-name handling | The R1 fix already shrinks then ellipsizes team, player, talent, map and hero names on one line, with 32/24-character input limits. Remaining polish: tags, pronouns and handles, and any multiline treatment if the design ever wants it. |
-| O3 | Spacing and alignment | Tighten inconsistent padding, baselines and vertical rhythm while keeping the existing composition. |
-| O4 | Safe areas | Keep content clear of the 1920×1080 edges and OBS scaling; no scrollbars or accidental overflow. |
-| O5 | Visual QA sweep | Re-run the full overlay checklist in OBS after the pass and record the result. |
-
-Guardrails:
-
-- Preserve the current visual design: same sections, hierarchy, colours and
-  typography roles. This is polish, not a new skin.
-- No protocol changes: same filenames, message types, `init` handling, DOM
-  contracts used by CSS, and `show` behaviour.
-- Keep the five `FGC Display*` faces and local-only assets.
-- Prefer CSS-only changes; keep JavaScript changes minimal and covered by the
-  static overlay tests.
-- Every layout change must be checked in OBS at 1920×1080 and reflected in
-  `docs/overlay-qa.md`.
-- Do not pull in backlog features such as a timer overlay, bracket overlay,
-  scenes or new broadcast types.
-- Update `docs/assets.md` §5 and the QA checklist if a behaviour or expected
-  layout changes.
+The owner asked for overlay appearance work to be handled in a new session.
+The seven shipped overlays are unchanged in v1: same filenames, protocol,
+geometry and 1920×1080 layout. Any later design pass must keep those contracts
+and be signed off in OBS before shipping.
 
 ### C2. Control and overlay requests raised during R1 (2026-11-12 — post-v1)
 
@@ -226,7 +202,7 @@ Related: B2 (copy buttons for every overlay URL), B3 (connection status) and the
 - Server-side scene/preset switching and multiple simultaneous match outputs.
 
 ### Overlays and presentation
-- Overlay visual polish pass (see §C1): fit, spacing and long-name handling without changing the design or protocol.
+- Further overlay polish (see §C1): fit, spacing and long-name handling without changing the design or protocol.
 - Animate-in/out and show/hide API beyond `display` toggling; replay animations on demand.
 - Live preview panel inside the app (iframe/WebView) for each overlay.
 - Overlay theme/template system; scoreboard skins.
@@ -251,11 +227,11 @@ Related: B2 (copy buttons for every overlay URL), B3 (connection status) and the
 - Bracket overlay output.
 - Drag/drop reseeding and matchup editing.
 - Forfeits, disqualifications and walkovers.
-- Multi-stage playoffs and cross-group seeding.
+- More than one group stage and one playoff; deeper multi-stage formats after the shipped v1 implementation.
 - Match history and per-team tournament stats.
 
 ### Assets and data
-- Asset deduplication, hashing, thumbnail cache, image optimisation (WebP/AVIF).
+- Further image optimisation (WebP/AVIF) beyond the shipped hash-keyed lazy thumbnail cache.
 - Relative/portable asset storage; per-show asset packs.
 - SQLite option if JSON becomes a bottleneck (probably not needed).
 - Backup rotation, restore points, cloud/network sync.
@@ -291,3 +267,438 @@ Related: B2 (copy buttons for every overlay URL), B3 (connection status) and the
 6. **Dioxus component library** choice still pending (Phase 3).
 7. **Data migration** from Electron: path detection and schema differences.
 8. **Timer has no overlay** in v1; it is control-only. Users who expect it on stream will notice — call this out in the README.
+
+## F. Pre-release UI touch-up sweep (shipped 2026-11-18)
+
+Nineteen pre-release touch-ups shipped in the app: hidden overlay URLs with a show option, optional auto-start server, Settings timer section removed, sidebar reorder and Lucide icons, automatic team-colour sampling from logos, logo background off by default with matching projection, player-card preview, merged **Maps & Bans** with a hero-bans toggle, match/map-pool export and import, **Loser picks** moved to Config, saved matches with scheduled start times and a match library, talent type dropdown, floating timer, conditional Tournament **Board/Groups** tabs by format, thumbnail loading/cache performance work, multi-file asset import, gallery card fixes, and quick upload in image pickers. Details are recorded in `docs/decisions.md`.
+
+## G. Final pre-release changes (2026-11-18)
+
+- **Timer widget.** The floating timer is now the only timer control. Settings
+  and the Match Controller **Timer** tab are removed; the widget provides icon
+  Start/Pause/Stop actions and an expandable settings panel.
+- **Talent roles.** `TalentType` is Caster, Host, Analyst, Interviewer or Other,
+  stored on each match assignment. The per-person `type` field is removed by
+  schema v2; legacy `panelist` and `observer` values map to Analyst and Other.
+- **Tournaments.** `BracketFormat::MultiStage` generates groups followed by an
+  elimination bracket and shows both **Board** and **Groups**. Group fixtures
+  and bracket matches expose **Push to overlay**.
+- **Assets.** Changing a map's game-mode link refreshes derived map-slot mode
+  snapshots when they still match the old derived value; manually entered modes
+  are preserved. Thumbnails load lazily, decode asynchronously and keep a
+  hash-keyed data-URL cache.
+- **Overlays.** The seven bundled overlays ship unchanged apart from two scoped
+  functional fixes: `hero-bans.html` (A8 note) and `game-overlay.html` (A9 stale
+  logo clearing). Visual polish is deferred to a separate post-v1 session.
+
+## H. Final QA feedback fixed before v1
+
+- **Talent assignment layout.** A38 passed functionally, but the tester flagged
+  visible slot labels as unnecessary and asked for one person per row. The
+  Talent tab now removes those labels and renders six rows with the person
+  picker and **Role** select horizontally aligned. The slot name remains as an
+  accessibility group label. A38 was re-run and passed before the v1 tag.
+
+## I. A39 final QA findings (2026-11-18)
+
+A39 failed with nine tester findings on the Tournament view:
+
+1. The **Groups** tab should appear before **Board**.
+2. A multi-stage playoff should stay empty until the group stage is completed.
+3. Removing a team from a group needs a confirmation dialog.
+4. Fixture results should autosave when added; the results **Save** button should go.
+5. Fixture rows should offer a pencil/details button for score, status and
+   winner verification instead of inline score and status controls.
+6. Bracket placement when groups complete is currently wrong.
+7. **Push** and **Edit** controls overflow in the board view.
+8. “Push match to match controller” must be distinguished from the future
+   “push tournament” graphic overlay.
+9. The board should look like a traditional bracket with directional lines
+   between rounds, not a kanban-style board.
+
+The v1 disposition of these findings is recorded in `docs/manual-qa.md`.
+
+The 2026-11-18 re-check was also rejected, with five additional v1 blockers:
+
+1. Edit statuses to only be upcoming and complete.
+2. Rename "Board" to "Bracket".
+3. Design still doesn't show a traditional bracket, elements are top-aligned and
+   the linking lines between then don't make sense (two matches should go
+   directly into one match with no crossing).
+4. Remove arrows to move a match up or down, replace with a draggable element
+   and an ability to lock/unlock the dragging (locked by default). Clarified by
+   the owner: the draggable element is a **participant**, not a match card; drag
+   a participant onto another slot in the same round to swap them.
+5. The elements feel very condensed: we want to have 'comfy' padding (this
+   applies to all elements in every UI element across the whole app). The owner
+   later judged the applied spacing slightly too comfy and asked to revisit it
+   during the whole-app GUI review.
+6. While re-running the runbook, the owner asked for **Push to match** to become
+   an icon and to add a confirmation before it overrides Match Controller. The
+   confirmation reads **Replace the current Match Controller match with this
+   fixture?** with **Cancel** and **Push to match** actions.
+7. After items 2 and 3 passed, the owner superseded the remaining runbook flow
+   with a setup-model change: once a tournament has been initially started or
+   generated, teams and fixtures can no longer be added.
+8. The generation step must open a preview in a pop-up window before committing,
+   showing seeding, group distribution and bracket placement details for
+   confirmation.
+9. Dragging must be removed from the live Groups and Bracket spaces and allowed
+   only inside that generation preview.
+10. The owner reported that the current drag implementation still does not work
+    and must be made functional in the preview before A39 can continue.
+
+## J. A39 post-step-7 owner findings (2026-11-19)
+
+After item 5 step 7, the owner reported that the hash change may have come from
+generating instead of cancelling, and added five v1 findings:
+
+1. Regenerating and clearing a generated stage are different actions. Provide
+   separate controls and require confirmation before a reset; no add control may
+   silently discard a bracket.
+2. Seeding must be editable inside the bracket generation preview, with placements
+   updating from the edited order before **Generate**.
+3. Match/group-fixture status must be a two-state toggle switch rather than a
+   select; only **Upcoming** and **Complete** are valid.
+4. The double-elimination lower bracket connectors must join the correct matches
+   without crossing, and upper-bracket losers must show dotted drop stubs into
+   the lower bracket.
+5. Preview dragging needs a visible, animated drag indicator so the drag is
+   obviously active.
+
+Reset controls and confirmation dialogs were added to Setup, Groups and Bracket.
+Bracket previews now support seed-number editing and seed-handle dragging. Match
+details dialogs use `Switch` controls, bracket geometry follows stored winner
+links with dotted upper-bracket drop stubs, and the preview renders a fixed drag
+ghost with a subtle pulse. QA resumes with A39 item 5 step 7 only.
+
+## K. A39 item 8 owner finding (2026-11-19)
+
+After item 8 passed, the owner noticed that the bracket **Edit match** dialog
+still contains a **Delete match** action. This contradicts the v1 scope that
+locks structural additions and removals after generation. The destructive block
+is now gated by `tournament_is_generated`, so it cannot appear for any live
+bracket match while its Edit/Push card remains available.
+
+## L. A39 item 9 owner finding (2026-11-19)
+
+The owner failed the whole-app spacing review: spacing was still too generous,
+navigation was difficult in Tournament and Match Controller, and more
+collapsible sections were requested, specifically the Tournaments sidebar. The
+fix uses scoped CSS reductions instead of changing the global spacing tokens, so
+overlay component dimensions and the earlier accepted spacing decisions are
+untouched. The Tournaments sidebar can now collapse to a narrow panel by mouse
+or keyboard, with `aria-expanded`, `aria-controls` and focus retained on the
+toggle. Match Controller saved matches are behind a collapsed
+`Saved matches (n)` disclosure, and hero-ban fields are grouped under a
+collapsible disclosure when hero bans are enabled. A reusable
+`.fgc-disclosure` pattern was added for future sections.
+
+The owner passed the re-check with one follow-up: bracket match cards should be
+wider and the space between separate matches narrower. The bracket constants
+now use a 248 px card, 56 px column gap and 108 px row height, down from 216/80/144.
+
+## M. A39 item 10 owner finding (2026-11-19)
+
+The owner passed item 10 with this exact answer:
+
+> Pass; Small Request, move the buttons to regenerate round robin / bracket /
+> reset to a settings menu in line with the Group Stage / Bracket Heading +
+> Select number of groups or brackets within the preview screen. Note: The
+> Playoff preview and generaete should not be in the group tab, but rather the
+> bracket tab in multistage tournaments
+
+The multi-stage playoff preview and generate action live on **Bracket**, not
+**Groups**. The owner then superseded the dropdown part of the request:
+
+> Hmm, on second thought, instead of a dropdown menu, have all the buttons in a
+> horizontal row where the settings button currently is. Make sure that we
+> iconise and colour code them too so that it's easily understood and
+> intepretable
+
+`StageSettingsMenu`/`.fgc-stage-menu` were replaced by `StageActionTone`,
+`StageAction`, `.fgc-stage-actions` and an optional `Panel` `actions` slot. Each
+heading now has one horizontal row: `▷` Preview in accent orange and `↻`
+Regenerate in amber, plus `⌫` Reset in red once generated. Each keeps a visible
+label and matching `aria-label`/`title`. No dropdown ID or stage-settings menu
+remains. A later item 11 follow-up removed the green `+ Group` action and the
+preview's group-count selector, so no Add tone remains. Items 1–10 are accepted;
+item 11 passed with the follow-ups below.
+
+## N. A39 item 11 owner finding (2026-11-19)
+
+The owner failed item 11 with this exact answer:
+
+> Fail: 1. when toggling the status, sometimes a message about "at least two
+> teams must qualify for a playoff" appears but doesn't do anything; 2. There is
+> still a generate card with text in on the Setup page - remove it entirely;
+> 3. Group match details does not contain the advanced winner selection option
+> nor a customisation on the first to field like the bracket does; 4. Everything
+> else is a pass
+
+Fixes:
+
+1. The app's group-result store method now calls the silent
+   `core_set_group_result`. The result is still saved and a multi-stage playoff
+   still auto-seeds on the transition to a complete group stage, but seeding
+   errors are no longer surfaced while toggling a fixture status. Bracket still
+   reports why a playoff cannot be generated.
+2. The Setup **Generate** panel was deleted outright, including its entrant,
+   regenerate/reset note and preview buttons. SetupTab no longer takes an
+   `on_preview` handler; generation starts only from the Groups/Bracket heading
+   action rows.
+3. `GroupMatch` gained persisted `winner` and `winner_manual` fields with serde
+   defaults. New core helpers derive, override and clear the effective winner;
+   standings and head-to-head use it. The group fixture editor now has a
+   **First to** select (1–4) and **Advanced settings → Winner** with **Derived
+   from scores** and one option per slot, matching the bracket editor. A manual
+   winner marks the fixture completed, survives later score edits, drives the
+   standings and auto-seeds the playoff when it completes the group stage. The
+   read-only label was renamed from **Winner (derived)** to **Effective winner**.
+
+New tests cover group winner/first-to persistence and playoff seeding from a
+manual winner.
+
+The owner then passed item 11 with this exact follow-up:
+
+> Pass: remove "choose the group count in the preview"; remove "+ Group" outside
+> of the group generation
+
+Both follow-ups are implemented: the group preview no longer has a group-count
+selector or the "Choose the group count in the preview." note, and the live
+**Groups** heading no longer has `+ Group` or any manual group creation path.
+Groups come only from the generation preview via the heading action. Focus after
+deleting a group or removing a team returns to that generation action. With the
+follow-ups applied, A39 items 1–11 are accepted.
+
+## O. Overlay appearance deferred (2026-11-19)
+
+The owner asked for the overlay visual pass to be reverted and handled in a new
+session. The seven bundled HTML files are restored byte-for-byte from the
+pre-change backups, and no appearance-only artifacts or documentation remain in the
+pending v1 changes. v1 ships the original overlays.
+
+## P. A40 asset properties, map modes and attached hero icons (2026-11-19)
+
+The owner first failed A40 with this exact answer:
+
+> Fail at step 2: the maps don't respect the game mode in the selector. Note that it does update correctly in map pool. Further note, I'm still not happy with the current system of assigning map types, and by extension, hero ban icons, to a map / hero. In the old react application, we use to give a tag to a map to change it's mode, based on the existing mode icons that were imported. Basically like a properties or taxonomy approach.
+
+Scope choice: **Tags + bug fix (Recommended)**.
+
+The old behaviour stored a free-text mode on each map slot and only refreshed
+it when the text still matched the previous derived value and the slot name
+matched the map. Blank, renamed or hand-typed slots therefore stayed stale even
+though Map Pool followed the asset. `Asset.game_mode` now drives both Map Pool
+and map slots; `MapSlot.game_mode_manual` records a hand-typed mode, and
+changing the map name re-derives the mode and clears that flag. Visible labels
+say **Game mode**, not “tag”.
+
+The owner then rechecked the inline tag selects and answer:
+
+> The game mode tag works fine (just maybe remove tag from the label. However, the hero icon doesn't necessarily work well, as it is showing two names for both images, as they are both uploaded as "hero" category. Maybe for heroes, we have the ability to open up an image properties, and upload a hero icon directly onto that page? Since the icon shouldn't get reused for any other hero. This also adds scalability in case we want to add other elements, like videos or animations down the line.
+
+The hero half of that answer replaced the inline **Ban icon tag** select with a
+hero **Properties…** dialog and a direct upload flow:
+
+- `Asset.icon` still points at the ban icon, so `/state` and the overlay are
+  unchanged.
+- The uploaded image is a Hero asset with `Asset.attachment =
+  { owner: <hero id>, kind: "heroBanIcon" }`. It is hidden from the library,
+  hero pickers and ban lists, so only one name appears for the hero.
+- Replacing or removing a ban icon deletes the old attached asset; deleting a
+  hero deletes every attachment it owns. Legacy library icons are unlinked but
+  never deleted.
+- `AssetAttachmentKind` is extensible for future media such as animations or
+  videos without inventing another library category.
+- `#[serde(default)]` keeps older state files valid; no schema version change.
+
+Assistant CDP checks passed for both the first tag implementation and the final
+properties rework. The final pass covered the map slot → Map Pool → game-mode
+derivation loop, hero ban-icon upload/replace/remove/delete, hero and map
+rename, URL-import dedupe, and thumbnail loading after scrolling and navigation.
+`cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace` (53 tests) and `dx build --desktop` passed. QA state
+was restored from `app-before-a40.json` at hash
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` after each
+verification pass, with all 23 user blobs present. The owner recheck found one
+preview-refresh defect and one layout issue; both were fixed and the owner then
+passed A40 on 2026-11-20. Details are in `docs/manual-qa.md` and
+`docs/manual-qa-runbook.md` §A40.
+
+### A40 QA fixes: signal borrow panics (2026-11-19)
+
+Two panics were found while exercising the final properties rework in the built
+desktop app. Both came from holding a `Signal::peek()` borrow across `mutate()`,
+which tries to take a write borrow of the same signal:
+
+- `AppStore::delete_asset()` held `&self.state.peek().assets` while checking the
+  attachment flag, producing `AlreadyBorrowed` on the delete path.
+- `AppStore::set_asset_link()` held the same borrow while validating an editable
+  asset and its attachments, producing `AlreadyBorrowed` when a map **Game mode**
+  or hero attachment was edited.
+
+Both paths now copy the small values they need and drop the read borrow before
+calling `mutate()`. Test-only `AppStore::test_store()` and
+`ServerController::test_controller()` constructors were added so the regression
+tests can run without background tasks; they are behind `#[cfg(test)]`. New
+tests `deleting_a_hero_removes_its_attached_icon` and
+`setting_a_map_game_mode_through_the_store_refreshes_slots` cover the two
+borrow paths. No user-facing behaviour changed.
+
+### A40 owner recheck fixes: live preview and card actions (2026-11-20)
+
+The owner rechecked A40 and answered:
+
+> Fail at step 5: Replacing ban icon did override the image, but the preview image did not update until closing and reopening the properties menu. Extra note: the properties button does not fit well on the card, and the text is being truncated, review the placement of the button. Everything else passed
+
+Two fixes shipped:
+
+- `AssetThumb` used `use_future` with a clone of the first `asset` prop. When the
+  hero replaced its attached icon, the parent passed a new icon asset but the
+  running future still held the old one, so the data URL never refreshed until
+  the dialog was remounted. `AssetThumb` now mirrors the prop into a signal and
+  resolves it with `use_resource`, which reruns whenever that signal changes.
+  CDP confirmed the dialog's `.fgc-asset-properties__icon-image` changed from
+  image A to image B while the dialog stayed open.
+- Hero card actions now wrap onto two rows. **Properties…** takes the full
+  first row with the Outline variant; **Rename** and **Delete** share the
+  second. At 1360×860 the button measured 203px wide with `scrollWidth` 201 and
+  `clientWidth` 201, so the label is no longer truncated.
+
+After these fixes `cargo fmt --all`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace` (53 tests) and `dx build --desktop` passed again. CDP
+also rechecked thumbnails, card metrics and `/state` `gameOverlay.heroIcons`.
+QA state was restored from `app-before-a40.json` at hash
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` with all 23
+user blobs present; temporary QA icons and blobs were removed. The owner then
+passed the recheck in `docs/manual-qa-runbook.md` §A40 on 2026-11-20, so A40 is
+accepted.
+
+## Q. A17 project bundle export (2026-11-20)
+
+The owner failed A17 with this exact answer:
+
+> Fail: Error message "Something needs attention  Could not export the project: asset blob hash mismatch: expected 348188027503e8f22cbfe1bd20604fb09d48e7be21c349c9d1017ce3fb6d4383, got f31394496e59eb16785024dd57985adc8a0253c4755eb30eab91a774fb9c7a66"; no app.json or export.json available; images are copied though in /blobs/blobs/<>; How do I install the app when we haven't made a release yet or committed changes?
+
+The corrupt QA blob was restored from the correct `Curro.png` source; all 23
+user blobs now hash-match. `AssetStore::export_bundle()` now reads and verifies
+every referenced blob before creating the bundle, so a corrupt source cannot
+leave `blobs/` without `app.json` and `export.json`. The regression test
+`export_rejects_a_hash_mismatch_before_writing_anything` covers that failure.
+
+Both export and import now call `blob_path(directory, …)`. `blob_path()` already
+prepends `blobs`, so passing a root that already contained `blobs` produced the
+owner-observed `blobs/blobs/...` layout. The round-trip test asserts the flat
+layout. CDP triggered **Assets → Export project…** and the resulting bundle held
+only `app.json`, `export.json` and `blobs/`, with 23 verified user blobs, no
+nested `blobs/blobs` and no bundled art. `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace` and `dx build --desktop` passed. QA `app.json` stayed at
+hash `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`. On
+recheck the owner answered **Blocked**: no second Windows account/VM or
+release/installer was available for the second-machine import, so A17 is not a
+Pass. On 2026-11-21 the owner explicitly accepted that result for release with
+**“Accept A17; authorize tag”**. A17 is blocked-accepted; second-machine import
+remains unrun. The install workaround is in `docs/manual-qa-runbook.md` §A17.
+
+## R. A8 hero-bans owner note (2026-11-20)
+
+The owner passed A8 with this exact answer:
+
+> Pass: note that hero ban images should only apply on game-overlay.html, not on hero-bans.html; hero-bans.html should also ensure to crop images to the correct dimensions to ensure there is no overflow
+
+This note superseded the overlay freeze for `crates/server/overlays/hero-bans.html`
+only. At that point the other six shipped overlay HTML files remained
+byte-for-byte unchanged; A9 later approved a separate scoped change to
+`game-overlay.html`.
+
+`Projector::icon_asset_ids()` now gathers attached and legacy linked icon IDs,
+and `icon_identities()` adds their `(hash, ext)` content identities. Both
+`heroIcons` and `heroPortraits` skip those IDs and identities, so a duplicate
+Hero entry carrying an icon's bytes cannot replace the hero's large art or put a
+ban icon on `hero-bans.html`. `hero-bans.html` continues to read `heroPortraits`;
+`game-overlay.html` alone reads `heroIcons` for the ban strips. New tests:
+`duplicate_icon_files_do_not_become_hero_portraits`,
+`hero_ban_icons_are_confined_to_the_game_overlay` and
+`hero_bans_crops_portraits_inside_their_slots`.
+
+The hero-bans CSS now gives columns and portrait wrappers `min-width: 0` and
+`min-height: 0`, clips each wrapper with `overflow: hidden`, and renders images
+with `display: block`, `object-fit: cover` and `object-position: center`. CDP at
+1920×1080 measured a `200×2000` and a `2000×200` portrait filling their slots at
+`200,240`–`1720,840` with no document overflow; the game overlay still showed the
+distinct ban icons. `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
+and `dx build --desktop` passed. QA `app.json` was restored to hash
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+
+## S. A9 owner recheck (2026-11-20)
+
+A9 failed on recheck. With **Team 3** and **Team 1** loaded and neither logo
+assigned, `/state` correctly reported `null` for both sides, but the live
+`game-overlay.html` source still painted two old logos until OBS was refreshed.
+Pressing **Clear** had the same symptom: the app and `/state` cleared the logo,
+but the OBS source kept the old image until restart.
+
+The cause is in the shipped overlay script: `homeLogo.style.backgroundImage`
+and `awayLogo.style.backgroundImage` are assigned only when the corresponding
+`logoUrl` is truthy. There is no `else` branch to remove the stale background.
+A fresh OBS source works because it has no previous background image.
+
+The owner approved a scoped override of the overlay freeze for
+`crates/server/overlays/game-overlay.html`. The script now assigns
+`backgroundImage` unconditionally: the URL when present, otherwise `none`.
+An explicit `null` team also clears its slot; an absent team object in a partial
+frame is left alone. CDP verified stale logos clearing, `null` teams clearing,
+and new logos still applying. The static test
+`game_overlay_clears_stale_team_logos` locks in the branches. Only
+`game-overlay.html` and `hero-bans.html` differ among the seven overlays.
+
+Deferred overlay-refresh note from the owner: when no logo is set, show a
+placeholder image containing the team's **TAG** or another abbreviation of the
+team name so the slot is never empty. This is not being implemented in the A9
+fix. The owner rechecked after the fix and answered **“Pass.”** A9 is accepted
+and M3-6 is Done.
+
+## T. A29–A36 owner QA (2026-11-20)
+
+- **A29 — Pass.** Overlay URLs and the base URL stay hidden until **Show URLs**,
+  all eight appear while revealed, and **Hide URLs** restores the hidden state.
+  **Start server on launch** persists and auto-starts the server after restart.
+  Settings has no duplicated timer controls and points to the floating widget.
+  Touch-ups 1–3 are accepted.
+- **A30 — Pass.** Sidebar order and icons match; the floating timer is present
+  and usable on every destination, ticks and Start/Pause/Stop stay in sync with
+  connected consumers, and placement is legible without obscuring controls at
+  100%, 125%, and 150%. Touch-ups 4, 13, and 19 are accepted.
+- **A31 — Pass.** Logo colour sampling and contrast text are sensible;
+  **Separate logo background** defaults off and changes projected `logoBgColor`
+  correctly; the roster card preview updates with every player edit. Touch-ups
+  5, 6, and 7 are accepted.
+- **A32 — Pass with notes.** All five steps passed; Touch-ups 8, 10, and 11 are
+  accepted. Owner raised five follow-ups: hide hero-ban icons when bans are off,
+  add a countdown-to-scheduled-match timer mode, default map count by first-to
+  (1/3/5/7), always show all map name/mode options, and align map-field sizing
+  with other selectors. All five are implemented and assistant-verified before
+  `v1.0.0` (§2.19).
+- **A33 — Pass with note.** Save/load/delete, export/import and validation all
+  passed; Touch-ups 9 and 11 are accepted. Owner noted that **+ Add map** did
+  not add a map. A33-1 is Done: added slots carry `userAdded: true` and survive
+  validation, save and reload.
+- **A34 — Pass.** Per-assignment roles persist and drive casters labels; legacy
+  `panelist`/`observer` values migrate to schema 2 aliases; quick upload is
+  available in the relevant pickers and auto-selects the imported asset.
+  Touch-ups 12, 18 and the final talent-role change are accepted.
+- **A35 — Pass.** Multi-file import reports per-file errors without aborting
+  valid files; gallery cards and thumbnails render responsively; rename, delete
+  and link flows are unaffected. Touch-ups 15, 16 and 17 are accepted.
+- **A36 — Pass.** Round robin shows Groups only; single and double elimination
+  show Board only; multi-stage shows both with the Board locked until groups are
+  complete. Format changes and reload preserve `format: "multi-stage"` and both
+  stages. Touch-up 14 and the final multi-stage change are accepted.
+- **A41 — Pass.** All seven bundled overlays passed human OBS sign-off at
+  1920×1080: data-driven states, team colours, icon/mode links, long names,
+  reconnect/`show`, offline Archivo and one-minute watch checks. M9-5 and M9-6
+  are complete; appearance work is deferred.

@@ -9,6 +9,7 @@ mod asset_store;
 mod assets;
 mod error;
 mod match_control;
+mod match_library;
 mod migrate;
 mod model;
 mod paths;
@@ -27,6 +28,7 @@ pub use assets::{
 };
 pub use error::CoreError;
 pub use match_control::*;
+pub use match_library::{MATCH_LIBRARY_EXTENSION, read_match_library, write_match_library};
 pub use migrate::migrate;
 pub use model::*;
 pub use paths::{
@@ -53,7 +55,7 @@ pub const BINARY_NAME: &str = "fruiterra-gc";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Current persisted schema version.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Returns the application name.
 #[must_use]
@@ -69,7 +71,7 @@ mod tests {
     fn metadata_is_stable() {
         assert_eq!(APP_NAME, "Fruiterra Graphics Controller");
         assert_eq!(BINARY_NAME, "fruiterra-gc");
-        assert_eq!(SCHEMA_VERSION, 1);
+        assert_eq!(SCHEMA_VERSION, 2);
         assert!(!VERSION.is_empty());
     }
 }

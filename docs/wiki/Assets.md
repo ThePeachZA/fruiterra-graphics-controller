@@ -20,11 +20,14 @@ Choose a **Category** before importing:
 
 ## Import an image
 
-### From a file
+### From files
 
 1. Choose the **Category**.
-2. Select **Import file…**.
-3. Pick a PNG, JPEG, WebP, GIF or SVG file.
+2. Select **Import files…**.
+3. Pick one or more PNG, JPEG, WebP, GIF or SVG files.
+
+If some files fail to import, the successful imports are kept and the errors are
+reported.
 
 ### From a URL
 
@@ -35,65 +38,67 @@ Choose a **Category** before importing:
 The limit is **20 MB** per image. SVG files are checked for scripts and external
 references before they are stored; unsafe files are rejected.
 
-Bundled art ships with the application and is read-only. Imported images are
-content-addressed and read-only once stored. You can rename an asset, but the
-image data and its URL do not change.
+Bundled art ships with the application and is read-only. Imported art is yours
+to rename or delete.
 
-## Find an image
+### From an image picker
 
-- Type in **Search assets by name**.
-- Use the category chips to filter. Each chip shows its count.
-- Select an image to preview it.
-- Use **Rename** to change only the display name.
-- Use **Delete** to remove an image you imported.
+Image pickers in Teams, Talent and Match Controller can upload a new image
+directly into the relevant category. When a picker upload creates a new asset,
+that asset is selected automatically.
 
-## Link a ban icon or game mode
+## Rename or delete
 
-Two links change how an imported image is used. Both buttons appear on the asset
-card of imported images only; bundled art is read-only.
+- Select **Rename** on an imported asset to change its display name.
+- Select **Delete** to remove an imported asset. If something still uses it, the
+  reference is cleared rather than left broken.
 
-- **Hero → Ban icon…** chooses the small image the game overlay draws in a ban
-  strip. The linked image must be in the **Hero** category. Once linked it is
-  hidden from hero pickers and ban lists, so it never appears as a selectable
-  hero. Select **Use hero art** to remove the link and fall back to the hero's
-  own image.
-- **Map → Game mode…** groups a map under a game mode on the map-pool overlay.
-  Select **No game mode** to move it back to **Other**.
+Bundled assets cannot be renamed or deleted.
+
+## Hero and map properties
+
+Some assets have properties that tell the overlay which variant to use.
+
+- A **Hero** asset has **Properties…**. Use **Upload ban icon…** to attach a
+  small image to that hero; the button becomes **Replace ban icon…** once one
+  exists, and **Remove ban icon** clears it. The **Ban icon** preview updates as
+  soon as a replacement is chosen, without closing the dialog. The ban icon is
+  owned by that hero: it is hidden from the library, hero pickers and ban lists,
+  and is deleted when you replace/remove it or delete the hero. Without one, the
+  hero-bans overlay uses the hero's own art.
+- A **Map** asset has an inline **Game mode** select. The map-pool overlay groups
+  maps by that mode, and Match Controller fills **Game mode** on map slots that
+  use the map. Choose **No game mode** to clear it.
+
+Changing a map's game mode refreshes the **Game mode** field on map slots that
+still show the derived value. If you type a mode by hand, that value is kept
+until you choose a different map name, which re-derives the mode from the map's
+current game mode.
+
+Library thumbnails load lazily and are cached by content hash, so revisiting the
+page does not decode every image again. Long asset names show a tooltip and
+wrap to at most two lines.
 
 ## Project bundles
 
-A project bundle moves a project and its referenced images to another machine.
+A project bundle copies the project and the user images it references to another
+machine.
 
-- **Export project…** asks for a folder and creates
-  `fruiterra-project-<timestamp>/` inside it. The bundle contains `app.json`,
-  `export.json` and the referenced user images. Bundled art is not copied.
-- **Import project…** asks for a bundle folder and replaces the current project
-  after confirmation.
+- **Export project…** writes a folder named `fruiterra-project-<unix-timestamp>`
+  containing `app.json`, `export.json` and the referenced blobs.
+- **Import project…** replaces the current project with the bundle. This cannot
+  be undone.
 
-Use a bundle when moving to a new PC or before a risky change. See
-[Data and Backups](Data-and-Backups).
+Bundled art is never copied because every installation already has it.
 
-## Unused image data
+## Clean up storage
 
-Unreferenced image data is deleted automatically after a successful save and on
-startup. To clean up immediately, open **Settings → Asset storage** and select
-**Clean up now**. The panel shows how many files and how much space would be
-removed.
-
-Only user-imported, unreferenced images are removed. Bundled assets and images
-still used by the saved or current project are kept.
-
-## Where images live
-
-```text
-%APPDATA%\Fruiterra\Fruiterra Graphics Controller\assets\blobs\
-```
-
-Do not rename or edit files in this folder. Use the app to import and manage
-images.
+Unused imported image data is removed automatically after a successful save and
+on startup. In **Settings → Asset storage**, **Clean up now** removes anything
+the saved and current projects no longer use.
 
 ## Related pages
 
 - [Teams and Talent](Teams-and-Talent)
-- [Settings](Settings)
+- [Match Controller](Match-Controller)
 - [Data and Backups](Data-and-Backups)

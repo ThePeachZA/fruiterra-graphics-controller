@@ -70,6 +70,20 @@ impl ServerController {
         }
     }
 
+    /// Builds a controller for unit tests without starting the status task.
+    #[cfg(test)]
+    pub(crate) fn test_controller() -> Self {
+        Self {
+            handle: Signal::new(None::<ServerHandle>),
+            status: Signal::new(ServerStatus::Stopped),
+            base_url: Signal::new(base_url_for(false, DEFAULT_PORT)),
+            asset_mode: Signal::new(AssetMode::Served),
+            busy: Signal::new(false),
+            blob_dir: Signal::new(None::<PathBuf>),
+            differ: Signal::new(ProjectionDiffer::new()),
+        }
+    }
+
     /// Current lifecycle state.
     #[must_use]
     pub fn status(&self) -> ServerStatus {

@@ -14,8 +14,10 @@ an overlay, put your copy in the **Overlays folder** shown in Settings.
 
 ### Is there a timer overlay?
 
-No. The timer is control-only in version 1. Third-party overlays still receive
-`matchTimer` ticks and the start, pause and reset actions.
+No. The timer is control-only in version 1. The app includes an always-on timer
+widget with expandable settings, but no bundled broadcast timer graphic.
+Third-party overlays still receive `matchTimer` ticks and the start, pause and
+stop actions.
 
 ### Is there a bracket overlay?
 
@@ -24,8 +26,9 @@ overlay.
 
 ### Can I run more than one match or scene?
 
-The Match Controller edits one current match at a time. There are no presets,
-multiple scenes or undo/redo in version 1.
+The Match Controller edits one current match at a time. You can save matches to
+the match library, load them later, and export or import the library, but there
+are no presets, multiple scenes or undo/redo in version 1.
 
 ### Can I use Stream Deck or an HTTP API?
 
@@ -67,11 +70,11 @@ licensed for redistribution and served locally, so there are no runtime font
 downloads. The layout and protocol are unchanged. The typeface is not Apotek,
 and Saira remains bundled while the final font choice is reviewed.
 
-### Can I add custom points, match history or multi-stage playoffs?
+### Can I add custom points or match history?
 
 Not in version 1. These are recorded as post-v1 work. The current release covers
-single- and double-elimination brackets, round-robin groups, tiebreakers and
-group-to-playoff generation.
+single- and double-elimination brackets, round-robin groups, tiebreakers,
+multi-stage group-to-playoff events and pushing a fixture to the current match.
 
 ### Where do I report a bug?
 

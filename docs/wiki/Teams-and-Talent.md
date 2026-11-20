@@ -21,81 +21,78 @@ tag, name, colour and player count.
 | **Team name** | The full name shown on the overlays. |
 | **Team tag** | The short tag, usually 3–4 letters. |
 | **Record** | Free text such as `12-3`, shown on the scoreboard. |
-| **Team logo** | An image from the **Logo** category in Assets. |
+| **Team logo** | An image from the **Logo** category in Assets. Choosing a logo samples the team's colours automatically; adjust them below if needed. |
 | **Background** | The team's primary colour. |
 | **Text** | The colour used for text on the team's background. |
-| **Logo background** | The colour behind the logo. |
+| **Logo background** | The colour used behind the logo when a separate logo background is enabled. |
+| **Separate logo background** | Off by default. When off, the logo uses the normal background colour. Turn it on to place the logo on its own colour. |
 
 The **Preview** panel shows the badge and the scoreboard treatment as you edit.
 Changes save automatically.
 
 ### Players
 
-Open the **Players** tab to see the ordered roster.
+1. Select the **Players** tab.
+2. Select **+ Add player**.
+3. Fill in the player fields:
 
-1. Select **+ Add player**.
-2. Fill in the editor:
-   - **Player name**
-   - **Role** — Tank, Damage or Support
-   - **Position** — Core, Sub, Manager or Coach
-   - **Portrait** — an image from the **Portrait** category
-   - **Featured hero** — an image from the **Hero** category
-   - **Pronouns**
-3. Select **Done** to close the editor, or **Delete player** to remove them.
+| Field | What it does |
+|---|---|
+| **Player name** | The name shown on the roster overlay. |
+| **Role** | **Tank**, **Damage** or **Support**. |
+| **Position** | **Starter**, **Sub** or **Coach**. |
+| **Portrait** | An image from the **Portrait** category. |
+| **Featured hero** | An image from the **Hero** category. |
+| **Pronouns** | Optional. |
 
-Core players, substitutes, managers and coaches share one roster. The order in
-the saved project is the order the roster overlays use.
+4. Select **Done** to return to the roster list.
+
+The roster list shows each player's portrait, role, hero and position. Select a
+player card to edit that player again. Reordering players is not available in
+version 1.
 
 ### Delete a team
 
-Select **Delete team** in the team header.
+Select **Delete team** on **Team Info**.
 
-- If nothing uses the team, the app asks for confirmation and deletes it.
-- If the team is still used, the dialog lists every tournament and current-match
-  reference. You can cancel, or select **Remove references and delete** to clear
-  those references and delete the team.
-
-Results that involve the team go with it: a match it won returns to Pending
-(the scores are kept), a match left with a single team becomes a bye, and group
-fixtures keep their place with an empty side and stop counting in the standings.
-A champion that is deleted is cleared.
-
-Deletion cannot be undone.
+If the team is used by the current match or by a tournament, the app lists every
+reference and asks you to confirm. **Remove references and delete** clears those
+references and removes the team. **Cancel** keeps the team.
 
 ## Talent
 
-Open **Talent** in the sidebar. The left panel lists every talent member with
-their name, pronouns and social platform.
+Open **Talent** in the sidebar.
 
-### Add or edit talent
+### Create a talent member
 
 1. Select **+ Add talent**.
-2. Fill in:
-   - **Display name**
-   - **Real name** (optional)
-   - **Pronouns**
-   - **Social platform** — Twitter / X, Twitch, YouTube, Instagram or TikTok
-   - **Handle** — for example `@name`
-   - **Portrait** — an image from the **Portrait** category
+2. Fill in the fields:
+
+| Field | What it does |
+|---|---|
+| **Display name** | The name shown on the overlay. |
+| **Real name** | Optional. |
+| **Pronouns** | Optional. |
+| **Portrait** | An image from the **Portrait** category. |
+| **Social** | Platform, handle and an optional profile URL. |
+
 3. Changes save automatically.
 
-Select **Delete talent** to remove the person. Any current-match caster, panel or
-interviewer assignment that used them is cleared.
+The on-air role is not stored on the person. Set **Role** on each talent slot in
+**Match Controller → Talent**: **Caster**, **Host**, **Analyst**, **Interviewer**
+or **Other**. The same person can take a different role in another match.
 
-## Use talent in a match
+Deleting a talent member removes them from the current match's caster, panel and
+interview slots.
 
-Open **Match Controller → Talent** and assign:
+## Image pickers
 
-- **Caster 1** and **Caster 2**
-- **Panel 1**, **Panel 2** and **Panel 3**
-- **Interviewer**
-
-The interview desk also has an **Interviewee** picker. If no talent member fits,
-leave **Interviewee** empty and use **Custom name** and **Custom subtext**
-instead.
+Team, player and talent image fields use the asset picker. Pickers can select an
+existing asset, clear the selection, or upload a new image directly into the
+relevant category.
 
 ## Related pages
 
-- [Assets](Assets)
 - [Match Controller](Match-Controller)
-- [Overlays in OBS](Overlays-in-OBS)
+- [Assets](Assets)
+- [Tournament](Tournament)

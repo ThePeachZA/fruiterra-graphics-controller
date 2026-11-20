@@ -863,11 +863,15 @@
         // Teams
         if (d.teamA) {
           if (d.teamA.name) el.homeName.textContent = d.teamA.name;
-          if (d.teamA.logoUrl) el.homeLogo.style.backgroundImage = `url(${d.teamA.logoUrl})`;
+          el.homeLogo.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : 'none';
+        } else if (d.teamA === null) {
+          el.homeLogo.style.backgroundImage = 'none';
         }
         if (d.teamB) {
           if (d.teamB.name) el.awayName.textContent = d.teamB.name;
-          if (d.teamB.logoUrl) el.awayLogo.style.backgroundImage = `url(${d.teamB.logoUrl})`;
+          el.awayLogo.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : 'none';
+        } else if (d.teamB === null) {
+          el.awayLogo.style.backgroundImage = 'none';
         }
         document.fonts.ready.then(fitTeamNames);
 

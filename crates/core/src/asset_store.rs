@@ -209,23 +209,17 @@ impl AssetStore {
 
     /// Writes `app.json`, `export.json` and the referenced user blobs into
     /// `directory`.
+    ///
+    /// Every blob is read and verified before the bundle directory is created,
+    /// so a corrupt source store cannot leave a partial bundle behind.
     pub fn export_bundle(
         &self,
         state: &AppState,
         directory: &Path,
     ) -> Result<BlobReport, CoreError> {
-        fs::create_dir_all(directory).map_err(|source| CoreError::Io {
-            path: directory.to_path_buf(),
-            source,
-        })?;
-        let bundle_blobs = directory.join("blobs");
-        fs::create_dir_all(&bundle_blobs).map_err(|source| CoreError::Io {
-            path: bundle_blobs.clone(),
-            source,
-        })?;
-
         let mut report = BlobReport::default();
         let mut exported = BTreeSet::new();
+        let mut pending = Vec::new();
         for asset in state
             .assets
             .iter()
@@ -257,20 +251,20 @@ impl AssetStore {
                 });
             }
 
-            let target_path = blob_path(&bundle_blobs, &asset.hash, &asset.ext)?;
-            if let Some(parent) = target_path.parent() {
-                fs::create_dir_all(parent).map_err(|source| CoreError::Io {
-                    path: parent.to_path_buf(),
-                    source,
-                })?;
-            }
-            fs::write(&target_path, &bytes).map_err(|source| CoreError::Io {
-                path: target_path,
-                source,
-            })?;
             report.files += 1;
             report.bytes += bytes.len() as u64;
+            pending.push((asset.hash.clone(), asset.ext.clone(), bytes));
         }
+
+        fs::create_dir_all(directory).map_err(|source| CoreError::Io {
+            path: directory.to_path_buf(),
+            source,
+        })?;
+        let bundle_blobs = directory.join("blobs");
+        fs::create_dir_all(&bundle_blobs).map_err(|source| CoreError::Io {
+            path: bundle_blobs.clone(),
+            source,
+        })?;
 
         write_state_json(&directory.join("app.json"), state)?;
         let manifest = BundleManifest {
@@ -285,6 +279,20 @@ impl AssetStore {
                 source,
             }
         })?;
+
+        for (hash, ext, bytes) in pending {
+            let target_path = blob_path(directory, &hash, &ext)?;
+            if let Some(parent) = target_path.parent() {
+                fs::create_dir_all(parent).map_err(|source| CoreError::Io {
+                    path: parent.to_path_buf(),
+                    source,
+                })?;
+            }
+            fs::write(&target_path, &bytes).map_err(|source| CoreError::Io {
+                path: target_path,
+                source,
+            })?;
+        }
 
         Ok(report)
     }
@@ -319,7 +327,6 @@ impl AssetStore {
             .map_err(|error| CoreError::InvalidBundle(format!("invalid app.json: {error}")))?;
         let state = migrate(value)?;
 
-        let bundle_blobs = directory.join("blobs");
         let mut pending = Vec::new();
         let mut seen = BTreeSet::new();
         for asset in state
@@ -331,7 +338,7 @@ impl AssetStore {
                 continue;
             }
 
-            let path = blob_path(&bundle_blobs, &asset.hash, &asset.ext)?;
+            let path = blob_path(directory, &asset.hash, &asset.ext)?;
             let bytes = fs::read(&path).map_err(|_| CoreError::AssetBlobMissing {
                 hash: asset.hash.clone(),
                 ext: asset.ext.clone(),
@@ -540,6 +547,7 @@ mod tests {
             text_color: "#ffffff".to_owned(),
             aux_color: "#090909".to_owned(),
             logo,
+            logo_background: true,
             players: Vec::new(),
         }
     }
@@ -664,6 +672,12 @@ mod tests {
         assert_eq!(exported.files, 1);
         assert!(bundle.path().join("app.json").is_file());
         assert!(bundle.path().join("export.json").is_file());
+        assert!(
+            blob_path(bundle.path(), &inserted.asset.hash, &inserted.asset.ext)
+                .expect("exported blob path")
+                .is_file()
+        );
+        assert!(!bundle.path().join("blobs").join("blobs").exists());
 
         let (target_directory, target) = store();
         let (imported, report) = target.import_bundle(bundle.path()).expect("import");
@@ -682,6 +696,35 @@ mod tests {
     }
 
     #[test]
+    fn export_rejects_a_hash_mismatch_before_writing_anything() {
+        let (source_directory, source) = store();
+        let inserted = source
+            .insert("Logo", AssetCategory::Logo, PNG_A, None)
+            .expect("insert");
+        let mut state = AppState::default();
+        state.assets.push(inserted.asset.clone());
+
+        let blob = blob_path(
+            source_directory.path(),
+            &inserted.asset.hash,
+            &inserted.asset.ext,
+        )
+        .expect("blob path");
+        fs::write(&blob, PNG_B).expect("tamper");
+
+        let bundle = tempfile::tempdir().expect("bundle dir");
+        assert!(matches!(
+            source.export_bundle(&state, bundle.path()),
+            Err(CoreError::AssetHashMismatch { .. })
+        ));
+        assert!(!bundle.path().join("app.json").exists());
+        assert!(!bundle.path().join("export.json").exists());
+        assert!(!bundle.path().join("blobs").exists());
+
+        assert_no_temp_directory(source_directory.path());
+    }
+
+    #[test]
     fn import_rejects_a_hash_mismatch_before_writing_anything() {
         let (source_directory, source) = store();
         let inserted = source
@@ -693,12 +736,8 @@ mod tests {
         let bundle = tempfile::tempdir().expect("bundle dir");
         source.export_bundle(&state, bundle.path()).expect("export");
 
-        let blob = blob_path(
-            &bundle.path().join("blobs"),
-            &inserted.asset.hash,
-            &inserted.asset.ext,
-        )
-        .expect("blob path");
+        let blob =
+            blob_path(bundle.path(), &inserted.asset.hash, &inserted.asset.ext).expect("blob path");
         fs::write(&blob, PNG_B).expect("tamper");
 
         let (_target_directory, target) = store();

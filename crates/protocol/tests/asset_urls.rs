@@ -25,6 +25,15 @@ fn served_urls_are_hash_addressed_and_absolute() {
 }
 
 #[test]
+fn catalogue_resolves_linked_game_mode_names() {
+    let catalog = support::fixture_catalog();
+
+    assert_eq!(catalog.game_mode_for_map_name("ilios"), "Control");
+    assert_eq!(catalog.game_mode_for_map_name("KING'S ROW"), "Hybrid");
+    assert_eq!(catalog.game_mode_for_map_name("Unknown map"), "");
+}
+
+#[test]
 fn served_resolver_trims_trailing_slashes() {
     let resolver = ServedAssetResolver::new("http://127.0.0.1:3001///");
 
@@ -177,6 +186,36 @@ fn catalogue_reports_linked_icons() {
     assert!(catalog.is_linked_icon(&AssetId::from_raw("asset-ana-icon")));
     assert!(!catalog.is_linked_icon(&AssetId::from_raw("asset-ana")));
     assert!(!catalog.is_linked_icon(&AssetId::from_raw("missing")));
+}
+
+#[test]
+fn catalogue_hides_attached_hero_icons_from_selection() {
+    let mut assets = support::fixture_catalog().assets().to_vec();
+    let mut attached = fgc_core::Asset::new_user(
+        "Attached",
+        AssetCategory::Hero,
+        support::hash(0x44),
+        "png",
+        None,
+    )
+    .expect("attached asset");
+    let attached_id = attached.id.clone();
+    attached.attachment = Some(fgc_core::AssetAttachment::hero_ban_icon(AssetId::from_raw(
+        "asset-ana",
+    )));
+    assets.push(attached);
+    let catalog = AssetCatalog::new(assets);
+
+    let attached = catalog.get(&attached_id).expect("attached icon");
+    assert!(attached.is_attachment());
+    assert!(!catalog.is_selectable_hero(attached));
+    assert!(
+        catalog.is_selectable_hero(
+            catalog
+                .get(&AssetId::from_raw("asset-ana"))
+                .expect("Ana asset")
+        )
+    );
 }
 
 #[test]

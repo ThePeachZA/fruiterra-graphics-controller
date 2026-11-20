@@ -14,8 +14,10 @@ This page takes you from a fresh install to a working overlay in OBS.
 2. Select **+ New team**.
 3. On **Team Info**, fill in **Team name**, **Team tag** (3–4 letters) and
    **Record**.
-4. Choose a **Team logo**, then set the **Background**, **Text** and
-   **Logo background** colours. The **Preview** panel shows the result.
+4. Choose a **Team logo**. The app samples the team's colours from the logo;
+   adjust **Background**, **Text** and **Logo background** if needed. Turn on
+   **Separate logo background** only if the logo needs its own background
+   colour. The **Preview** panel shows the result.
 5. Open the **Players** tab and select **+ Add player** for each player.
 6. Fill in **Player name**, **Role**, **Position**, **Portrait**, **Featured
    hero** and **Pronouns**, then select **Done**.
@@ -27,71 +29,71 @@ See [Teams and Talent](Teams-and-Talent) for the full field list.
 
 1. Open **Talent**.
 2. Select **+ Add talent**.
-3. Fill in **Display name**, optional **Real name**, **Pronouns**, **Social
-   platform**, **Handle** and **Portrait**.
+3. Fill in **Display name**, optional **Real name**, **Type**, **Pronouns**,
+   **Social** and **Portrait**.
+4. Repeat for each caster or panel member.
 
-Add every caster, panel member and interviewer you expect to use.
-
-## 3. Add images
+## 3. Import assets
 
 1. Open **Assets**.
-2. Choose a **Category**: Logo, Portrait, Map, Hero, Game mode, Role or Side.
-3. Select **Import file…** and choose an image, or **Import from URL…** and
-   paste an image address.
-4. Repeat for the images you need.
+2. Choose a **Category** (for example **Logo** or **Portrait**).
+3. Select **Import files…** or **Import from URL…**.
 
-PNG, JPEG, WebP, GIF and SVG are accepted up to 20 MB. Identical images are
-stored once. See [Assets](Assets).
+Imported images become available in the logo, portrait, hero and map pickers.
+You can also upload an image directly from many pickers.
 
-## 4. Build the match
+See [Assets](Assets) for categories, limits and SVG rules.
+
+## 4. Create the match
 
 1. Open **Match Controller**.
-2. Select **Create match**.
-3. On the **Match** tab, set **Title**, **Subtitle**, **Format**, **Status**,
-   **Team A** and **Team B**.
-4. On **Map Selection**, select **+ Add map** and fill in each map. Mark the
-   current map with **Current map** and finished maps with **Complete**.
-5. On **Hero Bans**, choose the first-ban team and the hero each team banned.
-6. On **Talent**, assign **Caster 1**, **Caster 2**, the panel slots and the
-   interviewer.
-7. On **Map Pool**, tick the maps that should appear and put them in order.
-8. On **Timer**, set the clock defaults, then use **Start**, **Pause** and
-   **Reset** as needed.
-9. On **Config**, check **Team colours**, **Player portraits** and the branding
-   images.
-
-Every change is sent to the overlays immediately.
+2. If the page shows **No current match**, select **Create match**.
+3. On the **Match** tab, set **Title**, **Subtitle**, optional **Scheduled
+   start**, **Format** and **Status**.
+4. Choose **Team A** and **Team B**.
+5. Open **Maps & Bans**, select the map for each slot and mark the **Current
+   map**.
+6. Open **Talent** and assign **Caster 1**, **Caster 2** and any panel slots.
+   Set each slot's **Role**; there is no role on the talent library record.
+7. Use the timer widget above the status bar. Open **Timer settings** to choose
+   **Count up** or **Count down**, then select the icon **Start** when you go
+   live. The widget stays available on every page.
+8. Open **Config** to set team colours, player portraits, loser picks, hero
+   bans and branding.
 
 ## 5. Start the overlay server
 
-1. Open **Overlay**.
-2. Select **Start server**.
-3. Confirm the status reads **Running** and the **Base URL** is
-   `http://127.0.0.1:3001` unless you changed the port.
+1. Open **Overlay** in the sidebar. If **Start server on launch** is enabled in
+   Settings, the server may already be running.
+2. If needed, select **Start server**.
+3. Note the **Base URL** (default `http://127.0.0.1:3001`). Select **Show
+   URLs** if the Browser Source URLs are hidden.
 
-## 6. Add the overlays to OBS
+## 6. Add Browser Sources in OBS
 
-For each overlay you want:
+Create one Browser Source per overlay you want to show:
 
 1. In OBS, add a **Browser** source.
 2. Set **Width** to `1920` and **Height** to `1080`.
-3. Paste the URL from the **Browser sources** list. The **Copy URL** button
-   copies it for you.
-4. Turn off **Shutdown source when not visible** so the overlay keeps its
-   state.
+3. Paste the overlay URL from the **Overlay** page.
+4. Turn **off** **Shutdown source when not visible**.
 5. Leave the background transparent.
 
-The seven URLs are listed on [Overlays in OBS](Overlays-in-OBS).
+The usual first set is **Game overlay**, **Map select** and **Casters row**.
+See [Overlays in OBS](Overlays-in-OBS) for every URL and the recommended source
+settings.
 
-## 7. Check it live
+## 7. Go live
 
-1. Change the match **Subtitle** in **Match Controller**.
-2. Confirm the game overlay updates without reloading.
-3. Restart the server from **Overlay** and confirm the overlays reconnect.
+- Change the score, map, bans and talent in the Match Controller. The overlays
+  update immediately.
+- Use **Force update** if an overlay looks out of date.
+- When the match ends, set **Status** to **Complete**.
 
-If an overlay stays blank, see [Troubleshooting](Troubleshooting).
+## Next steps
 
-## Next
-
-- Running a bracket? Continue with [Tournament](Tournament).
-- Moving to another machine? See [Data and Backups](Data-and-Backups).
+- [Tournament](Tournament) — build a bracket or round-robin event.
+- [Settings](Settings) — change the port, start the server automatically, or
+  allow LAN connections.
+- [Troubleshooting](Troubleshooting) — fix a blank overlay, port conflict or
+  SmartScreen warning.

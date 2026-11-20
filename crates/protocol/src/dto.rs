@@ -1,5 +1,6 @@
 use fgc_core::{
-    MatchStatus, Position, Role, Side, SocialLink, TeamSide, TimerAlignment, TimerSettings,
+    MatchStatus, Position, Role, Side, SocialLink, TalentType, TeamSide, TimerAlignment,
+    TimerSettings,
 };
 use serde::{Deserialize, Serialize};
 
@@ -234,10 +235,12 @@ pub struct CastersDto {
     pub casters_data: Vec<CasterDto>,
 }
 
-/// One caster or panel member.
+/// One on-air talent member.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CasterDto {
+    /// Role selected for this match assignment.
+    pub role: TalentType,
     /// On-screen name.
     pub display_name: String,
     /// Pronouns, omitted when unset.

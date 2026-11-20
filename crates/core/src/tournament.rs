@@ -25,6 +25,15 @@ pub const DEFAULT_TIEBREAKERS: [Tiebreaker; 5] = [
 /// Teams advancing from each group by default.
 pub const DEFAULT_PLAYOFF_QUALIFIERS: u8 = 2;
 
+/// A generated stage that can be cleared independently of the entrant list.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TournamentStage {
+    /// Groups, round-robin fixtures, standings and any dependent playoff.
+    Groups,
+    /// Winners, losers, grand final and champion.
+    Bracket,
+}
+
 /// Smallest bracket this module generates.
 pub const MIN_ENTRANTS: usize = 2;
 
@@ -622,6 +631,10 @@ pub fn sync_group_fixtures(tournament: &mut Tournament, group_id: &GroupId) {
         {
             continue;
         }
+        if fixture.winner_manual && !group_winner_in_slots(&fixture) {
+            fixture.winner = None;
+            fixture.winner_manual = false;
+        }
 
         if let (Some(team1), Some(team2)) = (&fixture.team1, &fixture.team2) {
             existing_pairs.insert(pair_key(team1, team2));
@@ -640,6 +653,8 @@ pub fn sync_group_fixtures(tournament: &mut Tournament, group_id: &GroupId) {
                 score2: 0,
                 status: BracketMatchStatus::Pending,
                 first_to: tournament.default_first_to,
+                winner: None,
+                winner_manual: false,
             });
         }
     }
@@ -732,6 +747,8 @@ pub fn add_group_fixture(
         score2: 0,
         status: BracketMatchStatus::Pending,
         first_to: tournament.default_first_to,
+        winner: None,
+        winner_manual: false,
     };
     let id = fixture.id.clone();
     tournament.group_matches.push(fixture);
@@ -753,6 +770,10 @@ pub fn remove_group_fixture(tournament: &mut Tournament, fixture_id: &MatchId) -
 }
 
 /// Sets a group fixture's scores and status.
+///
+/// A multi-stage tournament seeds its playoff once, on the result that
+/// completes the group stage. Seeding errors are ignored here for callers that
+/// only need to know whether the fixture was found.
 pub fn set_group_result(
     tournament: &mut Tournament,
     fixture_id: &MatchId,
@@ -760,6 +781,96 @@ pub fn set_group_result(
     score2: u16,
     status: BracketMatchStatus,
 ) -> bool {
+    set_group_result_with_playoff(tournament, fixture_id, score1, score2, status).unwrap_or(true)
+}
+
+/// Sets a group fixture's scores and status, reporting playoff-seeding errors.
+///
+/// Returns `Ok(false)` when the fixture does not exist. The result is still
+/// written when the group stage completes; only the automatic seeding can fail.
+pub fn set_group_result_with_playoff(
+    tournament: &mut Tournament,
+    fixture_id: &MatchId,
+    score1: u16,
+    score2: u16,
+    status: BracketMatchStatus,
+) -> Result<bool, PlayoffError> {
+    let was_complete = group_stage_complete(tournament);
+    let Some(fixture) = tournament
+        .group_matches
+        .iter_mut()
+        .find(|fixture| &fixture.id == fixture_id)
+    else {
+        return Ok(false);
+    };
+    let keep_manual_winner = fixture.winner_manual
+        && fixture.winner.as_ref().is_some_and(|winner| {
+            fixture.team1.as_ref() == Some(winner) || fixture.team2.as_ref() == Some(winner)
+        });
+    fixture.score1 = score1;
+    fixture.score2 = score2;
+    fixture.status = status;
+    if status == BracketMatchStatus::Completed {
+        if !keep_manual_winner {
+            fixture.winner = score_group_winner(fixture);
+            fixture.winner_manual = false;
+        }
+    } else {
+        fixture.winner = None;
+        fixture.winner_manual = false;
+    }
+    refresh(tournament);
+    if tournament.format == BracketFormat::MultiStage
+        && !was_complete
+        && group_stage_complete(tournament)
+    {
+        generate_playoff(tournament)?;
+    }
+    Ok(true)
+}
+
+/// Returns the winner implied by a group fixture's scores.
+#[must_use]
+pub fn score_group_winner(fixture: &GroupMatch) -> Option<TeamId> {
+    match fixture.score1.cmp(&fixture.score2) {
+        Ordering::Greater => fixture.team1.clone(),
+        Ordering::Less => fixture.team2.clone(),
+        Ordering::Equal => None,
+    }
+}
+
+fn group_winner_in_slots(fixture: &GroupMatch) -> bool {
+    fixture.winner.as_ref().is_some_and(|winner| {
+        fixture.team1.as_ref() == Some(winner) || fixture.team2.as_ref() == Some(winner)
+    })
+}
+
+/// Returns the effective winner for a completed group fixture.
+#[must_use]
+pub fn effective_group_winner(fixture: &GroupMatch) -> Option<&TeamId> {
+    if fixture.status != BracketMatchStatus::Completed {
+        return None;
+    }
+    if fixture.winner_manual && group_winner_in_slots(fixture) {
+        return fixture.winner.as_ref();
+    }
+    match fixture.score1.cmp(&fixture.score2) {
+        Ordering::Greater => fixture.team1.as_ref(),
+        Ordering::Less => fixture.team2.as_ref(),
+        Ordering::Equal => None,
+    }
+}
+
+/// Sets or clears a group fixture's manual winner override.
+///
+/// `Some(team)` must be one of the two teams and marks the fixture completed.
+/// `None` falls back to the score-derived winner.
+pub fn set_group_winner(
+    tournament: &mut Tournament,
+    fixture_id: &MatchId,
+    winner: Option<TeamId>,
+) -> bool {
+    let was_complete = group_stage_complete(tournament);
     let Some(fixture) = tournament
         .group_matches
         .iter_mut()
@@ -767,9 +878,46 @@ pub fn set_group_result(
     else {
         return false;
     };
-    fixture.score1 = score1;
-    fixture.score2 = score2;
-    fixture.status = status;
+
+    match winner {
+        Some(team)
+            if fixture.team1.as_ref() == Some(&team) || fixture.team2.as_ref() == Some(&team) =>
+        {
+            fixture.winner = Some(team);
+            fixture.winner_manual = true;
+            fixture.status = BracketMatchStatus::Completed;
+        }
+        Some(_) => return false,
+        None => {
+            fixture.winner_manual = false;
+            fixture.winner = if fixture.status == BracketMatchStatus::Completed {
+                score_group_winner(fixture)
+            } else {
+                None
+            };
+        }
+    }
+
+    refresh(tournament);
+    if tournament.format == BracketFormat::MultiStage
+        && !was_complete
+        && group_stage_complete(tournament)
+    {
+        let _ = generate_playoff(tournament);
+    }
+    true
+}
+
+/// Changes one group fixture's first-to override.
+pub fn set_group_first_to(tournament: &mut Tournament, fixture_id: &MatchId, first_to: u8) -> bool {
+    let Some(fixture) = tournament
+        .group_matches
+        .iter_mut()
+        .find(|fixture| &fixture.id == fixture_id)
+    else {
+        return false;
+    };
+    fixture.first_to = first_to.clamp(1, 4);
     refresh(tournament);
     true
 }
@@ -820,18 +968,81 @@ pub fn round_robin_pairs(team_ids: &[TeamId]) -> Vec<(TeamId, TeamId)> {
     pairs
 }
 
+/// Returns true when the group stage has fully completed round-robin play.
+///
+/// Every group needs at least two teams and a completed fixture for each pair
+/// generated by [`round_robin_pairs`]. Fixtures outside those pairings are
+/// ignored.
+#[must_use]
+pub fn group_stage_complete(tournament: &Tournament) -> bool {
+    if tournament.groups.is_empty() {
+        return false;
+    }
+
+    tournament.groups.iter().all(|group| {
+        if group.team_ids.len() < MIN_ENTRANTS {
+            return false;
+        }
+        round_robin_pairs(&group.team_ids)
+            .into_iter()
+            .all(|(team1, team2)| {
+                tournament.group_matches.iter().any(|fixture| {
+                    fixture.group == group.id
+                        && fixture.status == BracketMatchStatus::Completed
+                        && match (&fixture.team1, &fixture.team2) {
+                            (Some(left), Some(right)) => {
+                                (left == &team1 && right == &team2)
+                                    || (left == &team2 && right == &team1)
+                            }
+                            _ => false,
+                        }
+                })
+            })
+    })
+}
+
 /// Generates a playoff bracket from the group standings.
 ///
 /// # Errors
 ///
-/// Returns [`PlayoffError::NoGroups`] when there is no group stage, and
-/// [`PlayoffError::NotEnoughQualifiers`] when fewer than two teams would
-/// advance.
+/// Returns [`PlayoffError::NoGroups`] when there is no group stage,
+/// [`PlayoffError::GroupStageIncomplete`] while any expected group fixture is
+/// unfinished, and [`PlayoffError::NotEnoughQualifiers`] when fewer than two
+/// teams would advance.
 pub fn generate_playoff(tournament: &mut Tournament) -> Result<(), PlayoffError> {
     if tournament.groups.is_empty() {
         return Err(PlayoffError::NoGroups);
     }
+    if !group_stage_complete(tournament) {
+        return Err(PlayoffError::GroupStageIncomplete);
+    }
 
+    seed_playoff(tournament)
+}
+
+/// Builds a playoff from the current group order without requiring results.
+///
+/// This is used only by the generation preview so the operator can see the
+/// provisional bracket before the group stage is played. The returned bracket
+/// is never committed as the real playoff.
+pub fn project_playoff(tournament: &mut Tournament) -> Result<(), PlayoffError> {
+    if tournament.groups.is_empty() {
+        return Err(PlayoffError::NoGroups);
+    }
+
+    // The real playoff is intentionally absent until the group stage finishes.
+    // Temporarily use an elimination format so refresh does not clear the
+    // provisional bracket, then restore the multi-stage format.
+    let format = tournament.format;
+    if format == BracketFormat::MultiStage {
+        tournament.format = BracketFormat::SingleElim;
+    }
+    let result = seed_playoff(tournament);
+    tournament.format = format;
+    result
+}
+
+fn seed_playoff(tournament: &mut Tournament) -> Result<(), PlayoffError> {
     recompute_standings(tournament);
     let qualifiers_per_group = usize::from(tournament.playoff_qualifiers.max(1));
     let mut qualifiers = Vec::new();
@@ -861,6 +1072,25 @@ pub fn generate_playoff(tournament: &mut Tournament) -> Result<(), PlayoffError>
         BracketFormat::SingleElim
     };
     generate_elimination_from_teams(tournament, format, &qualifiers);
+    Ok(())
+}
+
+/// Generates the round-robin group stage of a multi-stage tournament.
+///
+/// The playoff is left empty until every group fixture is completed; setting
+/// the final group result seeds it automatically via [`set_group_result`].
+/// The tournament format is [`BracketFormat::MultiStage`] from this point on.
+///
+/// # Errors
+///
+/// This currently always returns `Ok`; the `Result` is retained so callers do
+/// not need to change when the playoff seeding rules evolve.
+pub fn generate_multistage(
+    tournament: &mut Tournament,
+    group_count: usize,
+) -> Result<(), PlayoffError> {
+    generate_round_robin(tournament, group_count);
+    tournament.format = BracketFormat::MultiStage;
     Ok(())
 }
 
@@ -898,14 +1128,17 @@ pub fn compute_standings(tournament: &Tournament, group: &Group) -> Vec<Standing
             continue;
         }
 
+        let winner = effective_group_winner(fixture);
         if let Some(row) = rows.get_mut(team1) {
             row.played = row.played.saturating_add(1);
             row.points_for = row.points_for.saturating_add(u32::from(fixture.score1));
             row.points_against = row.points_against.saturating_add(u32::from(fixture.score2));
-            match fixture.score1.cmp(&fixture.score2) {
-                Ordering::Greater => row.wins = row.wins.saturating_add(1),
-                Ordering::Less => row.losses = row.losses.saturating_add(1),
-                Ordering::Equal => row.draws = row.draws.saturating_add(1),
+            if winner == Some(team1) {
+                row.wins = row.wins.saturating_add(1);
+            } else if winner == Some(team2) {
+                row.losses = row.losses.saturating_add(1);
+            } else {
+                row.draws = row.draws.saturating_add(1);
             }
         }
 
@@ -913,10 +1146,12 @@ pub fn compute_standings(tournament: &Tournament, group: &Group) -> Vec<Standing
             row.played = row.played.saturating_add(1);
             row.points_for = row.points_for.saturating_add(u32::from(fixture.score2));
             row.points_against = row.points_against.saturating_add(u32::from(fixture.score1));
-            match fixture.score2.cmp(&fixture.score1) {
-                Ordering::Greater => row.wins = row.wins.saturating_add(1),
-                Ordering::Less => row.losses = row.losses.saturating_add(1),
-                Ordering::Equal => row.draws = row.draws.saturating_add(1),
+            if winner == Some(team2) {
+                row.wins = row.wins.saturating_add(1);
+            } else if winner == Some(team1) {
+                row.losses = row.losses.saturating_add(1);
+            } else {
+                row.draws = row.draws.saturating_add(1);
             }
         }
     }
@@ -1058,9 +1293,7 @@ fn head_to_head_wins(
         if team1 == team2 || !tied_teams.contains(team1) || !tied_teams.contains(team2) {
             continue;
         }
-        if (team1 == team && fixture.score1 > fixture.score2)
-            || (team2 == team && fixture.score2 > fixture.score1)
-        {
+        if effective_group_winner(fixture) == Some(team) {
             wins += 1;
         }
     }
@@ -1072,12 +1305,58 @@ fn head_to_head_wins(
 // Propagation, champion and reset
 // ---------------------------------------------------------------------------
 
+/// Clears one generated stage and everything derived from it.
+///
+/// Entrants and tiebreakers are kept so the stage can be previewed again. A
+/// multi-stage playoff is removed with its group stage because it is seeded
+/// from group standings.
+pub fn reset_stage(tournament: &mut Tournament, stage: TournamentStage) {
+    match stage {
+        TournamentStage::Groups => {
+            tournament.groups.clear();
+            tournament.group_matches.clear();
+            tournament.standings.clear();
+            if tournament.format == BracketFormat::MultiStage {
+                tournament.winners.clear();
+                tournament.losers.clear();
+                tournament.grand_final.clear();
+                tournament.champion = None;
+                tournament.champion_manual = false;
+            }
+        }
+        TournamentStage::Bracket => {
+            tournament.winners.clear();
+            tournament.losers.clear();
+            tournament.grand_final.clear();
+            tournament.champion = None;
+            tournament.champion_manual = false;
+        }
+    }
+    tournament.status = TournamentStatus::Setup;
+    refresh(tournament);
+}
+
+/// Drops a playoff left behind by a multi-stage event whose group stage is no
+/// longer complete. Elimination formats keep their brackets.
+fn clear_stale_playoff(tournament: &mut Tournament) {
+    if tournament.format != BracketFormat::MultiStage || group_stage_complete(tournament) {
+        return;
+    }
+    tournament.winners.clear();
+    tournament.losers.clear();
+    tournament.grand_final.clear();
+    tournament.champion = None;
+    tournament.champion_manual = false;
+    tournament.status = TournamentStatus::Setup;
+}
+
 /// Recomputes every derived tournament value.
 ///
 /// This is intentionally idempotent: board edits only change the raw fields,
 /// then call this helper to advance winners, repair links, refresh standings
 /// and update the champion.
 pub fn refresh(tournament: &mut Tournament) {
+    clear_stale_playoff(tournament);
     normalize_seeds(tournament);
     repair_links(tournament);
     repair_group_fixtures(tournament);
@@ -1719,6 +1998,10 @@ fn repair_group_fixtures(tournament: &mut Tournament) {
         {
             fixture.team2 = None;
         }
+        if fixture.winner_manual && !group_winner_in_slots(fixture) {
+            fixture.winner = None;
+            fixture.winner_manual = false;
+        }
     }
 }
 
@@ -1780,6 +2063,9 @@ pub enum PlayoffError {
     /// No group stage exists, so there are no standings to qualify from.
     #[error("Create at least one group first.")]
     NoGroups,
+    /// Some expected group fixtures are still pending or live.
+    #[error("Finish every group fixture before generating the playoff.")]
+    GroupStageIncomplete,
     /// Fewer than two teams would advance from the groups.
     #[error("At least two teams must qualify for a playoff.")]
     NotEnoughQualifiers,

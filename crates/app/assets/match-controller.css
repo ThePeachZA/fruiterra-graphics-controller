@@ -1,9 +1,9 @@
-/* Match Controller destination: seven tabs that drive the live overlays. */
+/* Match Controller destination: six tabs that drive the live overlays. */
 
 .fgc-match {
     display: flex;
     flex-direction: column;
-    gap: var(--fgc-space-4);
+    gap: var(--fgc-space-3);
 }
 
 /* Toolbar. */
@@ -13,8 +13,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--fgc-space-4);
-    padding: var(--fgc-space-4) var(--fgc-space-5);
+    gap: var(--fgc-space-3);
+    padding: var(--fgc-space-3) var(--fgc-space-4);
     border: 1px solid var(--fgc-line);
     border-radius: var(--fgc-radius-lg);
     background: var(--fgc-panel);
@@ -42,12 +42,62 @@
     flex-wrap: wrap;
 }
 
+/* Saved match library. */
+
+.fgc-match-library {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-match-library__list {
+    display: flex;
+    max-height: 16rem;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+    overflow-y: auto;
+}
+
+.fgc-match-library__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fgc-space-3);
+    padding: var(--fgc-space-2);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-sm);
+    background: var(--fgc-bg-elevated);
+}
+
+.fgc-match-library__info {
+    min-width: 0;
+}
+
+.fgc-match-library__title {
+    font-size: var(--fgc-text-sm);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fgc-match-library__meta {
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xs);
+}
+
+.fgc-match-library__actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: var(--fgc-space-1);
+}
+
 .fgc-match__section-header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--fgc-space-3);
+    gap: var(--fgc-space-2);
 }
 
 .fgc-match__section-header .fgc-note {
@@ -60,7 +110,7 @@
 .fgc-match-teams {
     display: flex;
     flex-direction: column;
-    gap: var(--fgc-space-4);
+    gap: var(--fgc-space-3);
 }
 
 .fgc-match-teams__swap {
@@ -79,8 +129,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--fgc-space-5);
-    padding: var(--fgc-space-4);
+    gap: var(--fgc-space-4);
+    padding: var(--fgc-space-3);
     border: 1px solid var(--fgc-line);
     border-radius: var(--fgc-radius-md);
     background: var(--fgc-bg-elevated);
@@ -124,20 +174,29 @@
 .fgc-map-list {
     display: flex;
     flex-direction: column;
-    gap: var(--fgc-space-4);
+    gap: var(--fgc-space-3);
 }
 
 .fgc-map-slot {
     display: flex;
     flex-direction: column;
-    gap: var(--fgc-space-4);
+    gap: var(--fgc-space-3);
+}
+
+.fgc-map-slot .fgc-native-select,
+.fgc-map-slot .fgc-field > input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 2.75rem;
+    padding: var(--fgc-space-2) var(--fgc-space-3);
+    font-size: var(--fgc-text-sm);
 }
 
 .fgc-map-slot__row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--fgc-space-4);
+    gap: var(--fgc-space-3);
 }
 
 .fgc-map-slot__row .fgc-toggle-row--inline {
@@ -154,7 +213,7 @@
 .fgc-map-slot__scores {
     display: flex;
     align-items: flex-end;
-    gap: var(--fgc-space-4);
+    gap: var(--fgc-space-3);
     max-width: 26rem;
 }
 
@@ -171,7 +230,28 @@
     text-transform: uppercase;
 }
 
-/* Hero bans tab. */
+.fgc-map-slot__bans > summary {
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.fgc-map-slot__bans > .fgc-disclosure__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-map-slot__bans .fgc-form-row {
+    align-items: flex-end;
+}
+
+.fgc-map-slot__bans .fgc-field {
+    min-width: 0;
+}
+
+/* Legacy hero-bans table styles, retained for imported saved layouts. */
 
 .fgc-bans-table {
     display: flex;
@@ -213,9 +293,26 @@
 /* Talent tab. */
 
 .fgc-talent-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fgc-space-3);
+}
+
+.fgc-talent-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-    gap: var(--fgc-space-4);
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, 10rem);
+    align-items: center;
+    gap: var(--fgc-space-3);
+}
+
+.fgc-talent-row .fgc-native-select {
+    min-width: 0;
+}
+
+.fgc-talent-role {
+    border-color: var(--fgc-line-strong);
+    color: var(--fgc-accent);
+    font-size: var(--fgc-text-xs);
 }
 
 /* Map pool tab. */

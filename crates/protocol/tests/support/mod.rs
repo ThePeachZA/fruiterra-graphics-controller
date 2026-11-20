@@ -3,8 +3,8 @@
 use fgc_core::{
     AppState, Asset, AssetCategory, AssetId, AssetOrigin, DisplaySettings, MapHeroBans, MapSlot,
     Match, MatchId, MatchStatus, MatchTalent, OverlaySettings, Player, PlayerId, Position, Role,
-    Scoring, Settings, Side, SocialLink, SocialPlatform, Talent, TalentId, TalentRef, Team, TeamId,
-    TeamSide, TimerAlignment, TimerSettings,
+    Scoring, Settings, Side, SocialLink, SocialPlatform, Talent, TalentId, TalentRef, TalentType,
+    Team, TeamId, TeamSide, TimerAlignment, TimerSettings,
 };
 use fgc_protocol::{
     AssetCatalog, Projector, SCOREBOARD_TYPES, SectionCache, ServedAssetResolver, TimerPayload,
@@ -36,6 +36,7 @@ fn asset(
         icon: None,
         portrait: None,
         game_mode: None,
+        attachment: None,
     }
 }
 
@@ -186,6 +187,7 @@ pub fn fixture_state() -> AppState {
         text_color: "#ffffff".to_owned(),
         aux_color: "#111111".to_owned(),
         logo: Some(AssetId::from_raw("asset-logo-a")),
+        logo_background: true,
         players: vec![
             Player {
                 id: PlayerId::from_raw("player-ace"),
@@ -217,6 +219,7 @@ pub fn fixture_state() -> AppState {
         text_color: "#000000".to_owned(),
         aux_color: "#090909".to_owned(),
         logo: None,
+        logo_background: true,
         players: vec![Player {
             id: PlayerId::from_raw("player-blaze"),
             name: "Blaze".to_owned(),
@@ -254,12 +257,15 @@ pub fn fixture_state() -> AppState {
         id: MatchId::from_raw("match-grand-final"),
         title: "Grand Final".to_owned(),
         subtitle: "Upper Bracket".to_owned(),
+        scheduled_at: None,
         team_a: Some(TeamId::from_raw("team-a")),
         team_b: Some(TeamId::from_raw("team-b")),
         maps: vec![
             MapSlot {
                 name: "Ilios".to_owned(),
                 game_mode_name: "Control".to_owned(),
+                game_mode_manual: false,
+                user_added: false,
                 completed: true,
                 score_a: 2,
                 score_b: 1,
@@ -268,6 +274,8 @@ pub fn fixture_state() -> AppState {
             MapSlot {
                 name: "Nepal".to_owned(),
                 game_mode_name: "Control".to_owned(),
+                game_mode_manual: false,
+                user_added: false,
                 completed: false,
                 score_a: 0,
                 score_b: 0,
@@ -276,6 +284,8 @@ pub fn fixture_state() -> AppState {
             MapSlot {
                 name: "Dorado".to_owned(),
                 game_mode_name: "Escort".to_owned(),
+                game_mode_manual: false,
+                user_added: false,
                 completed: false,
                 score_a: 0,
                 score_b: 0,
@@ -312,9 +322,11 @@ pub fn fixture_state() -> AppState {
         talent: MatchTalent {
             caster1: Some(TalentRef {
                 talent_id: TalentId::from_raw("talent-one"),
+                role: TalentType::Caster,
             }),
             caster2: Some(TalentRef {
                 talent_id: TalentId::from_raw("talent-two"),
+                role: TalentType::Caster,
             }),
             ..MatchTalent::default()
         },
@@ -332,6 +344,7 @@ pub fn fixture_state() -> AppState {
             overlay: OverlaySettings::default(),
             display: DisplaySettings {
                 team_colors_enabled: true,
+                show_hero_bans: true,
                 tournament_logo: Some(AssetId::from_raw("asset-logo-t")),
                 watermark_logo: None,
             },
@@ -352,6 +365,7 @@ pub fn minimal_match() -> Match {
         id: MatchId::from_raw("match-minimal"),
         title: String::new(),
         subtitle: String::new(),
+        scheduled_at: None,
         team_a: None,
         team_b: None,
         maps: Vec::new(),

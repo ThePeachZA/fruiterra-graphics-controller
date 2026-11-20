@@ -184,6 +184,8 @@
 
     .hero-ban-column {
       flex: 1;
+      min-width: 0;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       align-items: stretch;
@@ -193,13 +195,18 @@
 
     .hero-ban-portrait {
       flex: 1;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
       border-radius: 6px;
     }
 
     .hero-ban-portrait img {
+      display: block;
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center;
       border-radius: 6px;
     }
 

@@ -9,11 +9,10 @@ Windows broadcast control for Overwatch, with OBS-compatible HTML overlays.
 [![Licence](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
 > [!NOTE]
-> **Status: milestones M0–M10 implemented.** The domain model, server, overlays,
-> all seven views and the packaging/release workflow are in place. Tagged
-> installers are not published yet: the manual release gates in
-> [`docs/manual-qa.md`](docs/manual-qa.md) must pass before `v1.0.0` is tagged.
-> The app is usable from source today.
+> **Status: v1.0.0.** The domain model, server, overlays, all seven views and
+> the packaging/release workflow are in place. Manual release gates R1–R8 are
+> closed; release evidence and publication status are tracked in
+> [`docs/manual-qa.md`](docs/manual-qa.md). The app is usable from source today.
 
 ## Overview
 
@@ -32,23 +31,27 @@ on Tokio.
 - **Overlay server** — start, stop and restart the server from the app, copy
   Browser Source URLs and watch the connected-client count.
 - **Teams and talent** — team colours, logos, records and rosters; player roles,
-  positions, portraits and featured heroes; caster, panel and interviewer
-  profiles. Deleting a team that is still referenced is blocked with a full
-  reference list.
-- **Match Controller** — seven tabs for match setup, map selection, hero bans,
-  talent assignment, map pool, timer and per-match configuration. Scores are
-  derived from completed maps or entered manually, and every change is
-  projected to the overlays immediately.
+  positions, portraits and featured heroes; talent profiles with an on-air role
+  chosen per match assignment. Deleting a team that is still referenced is
+  blocked with a full reference list.
+- **Match Controller** — five tabs for match setup, maps and per-map hero bans,
+  talent assignment, map pool and per-match configuration. Scores are derived
+  from completed maps or entered manually, and every change is projected to the
+  overlays immediately. A compact always-on widget controls the timer and hides
+  its settings in an expandable panel.
 - **Tournament** — single- and double-elimination brackets, round-robin groups
   with fixtures and standings, ordered tiebreakers with head-to-head,
-  group-to-playoff generation, grand-final reset, automatic champion detection
-  and a fully editable bracket board with keyboard slot movement and 50–150%
-  zoom.
+  multi-stage group-to-playoff generation, grand-final reset, automatic
+  champion detection and a bracket board with 50–150% zoom. Results and match
+  details stay editable after generation; participants are arranged in the
+  generation preview. Group or bracket fixtures can be pushed straight into
+  the current match.
 - **Assets** — a content-addressed image library with bundled and imported
-  assets, deduplication by SHA-256, and project bundles for moving a setup
-  between machines.
-- **Settings** — overlay port, LAN access, asset URL mode, timer defaults,
-  display options and overlay-folder overrides.
+  assets, deduplication by SHA-256, linked hero icons and game modes, fast
+  lazy-loaded thumbnails, and project bundles for moving a setup between
+  machines.
+- **Settings** — overlay port, LAN access, asset URL mode, display options and
+  overlay-folder overrides. Timer settings live in the floating timer widget.
 
 ## Overlays
 
@@ -213,7 +216,7 @@ directory is shown above; the old spreadsheets are not read or modified.
 - No bracket overlay in v1.
 - Releases are unsigned, so Windows SmartScreen may warn on first run.
 - No undo/redo, presets, multiple scenes, HTTP/Stream Deck API, auto-update,
-  match history, custom points or multi-stage playoffs.
+  match history or custom points.
 
 ## Troubleshooting
 

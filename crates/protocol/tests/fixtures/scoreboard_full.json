@@ -2,6 +2,7 @@
   "data": {
     "castersData": [
       {
+        "role": "caster",
         "displayName": "Caster One",
         "portraitUrl": "http://127.0.0.1:3001/assets/1515151515151515151515151515151515151515151515151515151515151515.png",
         "pronouns": "he/him",
@@ -11,6 +12,7 @@
         }
       },
       {
+        "role": "caster",
         "displayName": "Caster Two",
         "portraitUrl": null
       }

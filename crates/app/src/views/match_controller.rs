@@ -1,4 +1,4 @@
-//! Match Controller destination: seven tabs that drive the live overlays.
+//! Match Controller destination: the tabs that drive the live overlays.
 //!
 //! All persistent edits go through [`AppStore`], which validates and reprojects
 //! them. Timer run state is deliberately ephemeral and owned above this view
@@ -9,12 +9,11 @@
 use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
-use dioxus_primitives::toast::{ToastOptions, use_toast};
 use fgc_core::{
-    AssetCategory, AssetId, Match, MatchStatus, Scoring, Side, Talent, TalentId, TalentSlot, Team,
-    TeamId, TeamSide, TimerMode, empty_hero_bans,
+    AssetCategory, AssetId, Match, MatchStatus, Scoring, Side, Talent, TalentId, TalentSlot,
+    TalentType, Team, TeamId, TeamSide, default_map_slots, empty_hero_bans,
 };
-use fgc_protocol::{AssetCatalog, TimerActionDto};
+use fgc_protocol::AssetCatalog;
 use fgc_server::ServerStatus;
 
 use crate::components::Panel;
@@ -22,52 +21,40 @@ use crate::components::asset_picker::AssetPicker;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::input::Input;
 use crate::components::switch::Switch;
-use crate::server::{OVERLAY_FILES, overlay_url};
 use crate::state::AppStore;
-use crate::timer::{
-    TimerController, TimerState, broadcast_tick, format_clock, join_time, send_timer_action,
-    split_time,
-};
-use crate::views::overlay::copy_to_clipboard;
+use crate::timer::{TimerController, broadcast_tick};
+use crate::views::overlay::OverlayUrls;
 
-/// The seven Match Controller tabs, in display order.
+/// The Match Controller tabs, in display order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum MatchTab {
     /// Teams, title, format, status, sides and scores.
     Setup,
-    /// Map slots, scores, completion and picker.
+    /// Map slots, scores and hero bans in one place.
     Maps,
-    /// One hero ban per team per map.
-    Bans,
     /// Caster, panel and interview assignments.
     Talent,
     /// Ordered map pool for the map-pool overlay.
     MapPool,
-    /// Timer settings, controls and live preview.
-    Timer,
     /// Overlay appearance, branding and Browser Source URLs.
     Config,
 }
 
 impl MatchTab {
-    const ALL: [Self; 7] = [
+    const ALL: [Self; 5] = [
         Self::Setup,
         Self::Maps,
-        Self::Bans,
         Self::Talent,
         Self::MapPool,
-        Self::Timer,
         Self::Config,
     ];
 
     const fn label(self) -> &'static str {
         match self {
             Self::Setup => "Match",
-            Self::Maps => "Map Selection",
-            Self::Bans => "Hero Bans",
+            Self::Maps => "Maps & Bans",
             Self::Talent => "Talent",
             Self::MapPool => "Map Pool",
-            Self::Timer => "Timer",
             Self::Config => "Config",
         }
     }
@@ -177,17 +164,11 @@ pub fn MatchControllerView() -> Element {
                 MatchTab::Maps => rsx! {
                     MapSelectionTab { match_state: match_state.clone() }
                 },
-                MatchTab::Bans => rsx! {
-                    HeroBansTab { match_state: match_state.clone() }
-                },
                 MatchTab::Talent => rsx! {
                     TalentTab { match_state: match_state.clone(), talents }
                 },
                 MatchTab::MapPool => rsx! {
                     MapPoolTab { match_state: match_state.clone() }
-                },
-                MatchTab::Timer => rsx! {
-                    TimerTab { timer: timer.state, target: timer.target }
                 },
                 MatchTab::Config => rsx! {
                     ConfigTab { match_state: match_state.clone() }
@@ -201,6 +182,8 @@ pub fn MatchControllerView() -> Element {
 #[component]
 fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
     let store = use_context::<AppStore>();
+    let state = store.state();
+    let saved_matches = state.read().matches.clone();
     let (score_a, score_b) = fgc_protocol::scores(&match_state);
     let manual = matches!(match_state.scoring, Scoring::Manual { .. });
     let (manual_a, manual_b) = match &match_state.scoring {
@@ -251,6 +234,17 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
                             value: "{match_state.subtitle}",
                             placeholder: "e.g. Week 4",
                             oninput: move |event: FormEvent| store.update_match(|current| current.subtitle = event.value()),
+                        }
+                    }
+                    label { class: "fgc-field",
+                        span { class: "fgc-field__label", "Scheduled start" }
+                        Input {
+                            r#type: "datetime-local",
+                            value: "{match_state.scheduled_at.clone().unwrap_or_default()}",
+                            aria_label: "Scheduled start",
+                            oninput: move |event: FormEvent| {
+                                store.set_match_scheduled_at(event.value());
+                            },
                         }
                     }
                     label { class: "fgc-field",
@@ -311,19 +305,6 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
                             option { value: "1", "Attack / Defend" }
                             option { value: "2", "Defend / Attack" }
                         }
-                    }
-                }
-                div { class: "fgc-toggle-row",
-                    div { class: "fgc-toggle-row__text",
-                        p { class: "fgc-toggle-row__title", "Loser picks" }
-                        p { class: "fgc-toggle-row__hint",
-                            "Each map after the first is picked by the previous map's loser."
-                        }
-                    }
-                    Switch {
-                        checked: match_state.loser_picks,
-                        aria_label: "Loser picks",
-                        on_checked_change: move |checked: bool| store.set_match_loser_picks(checked),
                     }
                 }
             }
@@ -447,17 +428,123 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
                     }
                 }
             }
+
+            MatchLibraryPanel { saved: saved_matches, teams }
         }
     }
 }
 
-/// Map slots, map names, modes, scores and per-map state.
+/// Saved matches with their map pools, ready to load or move to another
+/// machine. The current match stays live while this list is used.
+#[component]
+fn MatchLibraryPanel(saved: Vec<Match>, teams: Vec<Team>) -> Element {
+    let store = use_context::<AppStore>();
+
+    rsx! {
+        Panel {
+            title: format!("Match library ({})", saved.len()),
+            description: "Save a snapshot of the current match, load one here, or export the whole library.".to_owned(),
+            div { class: "fgc-match-library",
+                div { class: "fgc-actions",
+                    Button {
+                        variant: ButtonVariant::Primary,
+                        size: ButtonSize::Sm,
+                        onclick: move |_| store.save_current_match(),
+                        "Save current"
+                    }
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        size: ButtonSize::Sm,
+                        onclick: move |_| store.export_matches(),
+                        "Export…"
+                    }
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        size: ButtonSize::Sm,
+                        onclick: move |_| store.import_matches(),
+                        "Import…"
+                    }
+                }
+                details { class: "fgc-disclosure", id: "fgc-match-library-list",
+                    summary { "Saved matches ({saved.len()})" }
+                    div { class: "fgc-disclosure__body",
+                        if saved.is_empty() {
+                            p { class: "fgc-note", "No saved matches yet. Use Save current to add one." }
+                        } else {
+                            div { class: "fgc-match-library__list",
+                                for entry in saved.iter() {
+                                    div { class: "fgc-match-library__item", key: "{entry.id}",
+                                        div { class: "fgc-match-library__info",
+                                            p { class: "fgc-match-library__title",
+                                                if entry.title.trim().is_empty() {
+                                                    "Untitled match"
+                                                } else {
+                                                    "{entry.title}"
+                                                }
+                                            }
+                                            p { class: "fgc-match-library__meta",
+                                                "{saved_match_teams(entry, &teams)}"
+                                                if let Some(scheduled) = &entry.scheduled_at {
+                                                    " · {scheduled}"
+                                                }
+                                            }
+                                        }
+                                        div { class: "fgc-match-library__actions",
+                                            Button {
+                                                variant: ButtonVariant::Ghost,
+                                                size: ButtonSize::Sm,
+                                                onclick: {
+                                                    let id = entry.id.clone();
+                                                    move |_| store.load_saved_match(id.clone())
+                                                },
+                                                "Load"
+                                            }
+                                            Button {
+                                                variant: ButtonVariant::Ghost,
+                                                size: ButtonSize::Sm,
+                                                onclick: {
+                                                    let id = entry.id.clone();
+                                                    move |_| store.delete_saved_match(id.clone())
+                                                },
+                                                "Delete"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        p { class: "fgc-note",
+                            "Map pools travel with each match. Import adds new matches without replacing teams, talent or assets."
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn saved_match_teams(entry: &Match, teams: &[Team]) -> String {
+    let tag = |id: &Option<TeamId>| -> String {
+        id.as_ref()
+            .and_then(|id| teams.iter().find(|team| &team.id == id))
+            .map_or_else(|| "TBD".to_owned(), |team| team.tag.clone())
+    };
+    format!("{} vs {}", tag(&entry.team_a), tag(&entry.team_b))
+}
+
+/// Map slots, map names, modes, scores and per-map hero bans.
 #[component]
 fn MapSelectionTab(match_state: Match) -> Element {
     let store = use_context::<AppStore>();
+    let state = store.state();
+    let show_bans = state.read().settings.display.show_hero_bans;
     let catalog = store.catalog();
     let maps = match_state.maps.clone();
+    let bans = match_state.hero_bans.clone();
     let map_count = maps.len();
+    let expected_maps = default_map_slots(match_state.first_to);
+    let mut custom_names = use_signal(BTreeMap::<usize, String>::new);
+    let mut custom_modes = use_signal(BTreeMap::<usize, String>::new);
     let map_names: Vec<String> = catalog
         .in_category(AssetCategory::Map)
         .map(|asset| asset.name.clone())
@@ -466,23 +553,25 @@ fn MapSelectionTab(match_state: Match) -> Element {
         .in_category(AssetCategory::GameMode)
         .map(|asset| asset.name.clone())
         .collect();
+    let heroes: Vec<String> = catalog
+        .in_category(AssetCategory::Hero)
+        .filter(|asset| catalog.is_selectable_hero(asset))
+        .map(|asset| asset.name.clone())
+        .collect();
 
     rsx! {
-        datalist { id: "fgc-map-names",
-            for name in map_names.iter() {
-                option { value: "{name}" }
-            }
-        }
-        datalist { id: "fgc-mode-names",
-            for name in mode_names.iter() {
-                option { value: "{name}" }
+        if show_bans {
+            datalist { id: "fgc-hero-names",
+                for name in heroes.iter() {
+                    option { value: "{name}" }
+                }
             }
         }
 
         div { class: "fgc-view",
             div { class: "fgc-match__section-header",
                 p { class: "fgc-note",
-                    "{map_count} map slot(s). The first map is picked by team A; later maps follow the loser of the previous map when loser picks is enabled."
+                    "{map_count} map slot(s); first to {match_state.first_to} defaults to {expected_maps}. The first map is picked by team A; later maps follow the loser of the previous map when loser picks is enabled. A map's mode follows its game mode in Assets; choose Custom to override one slot."
                 }
                 div { class: "fgc-actions",
                     Button {
@@ -497,6 +586,14 @@ fn MapSelectionTab(match_state: Match) -> Element {
                         onclick: move |_| store.reset_maps(),
                         "Reset all maps"
                     }
+                    if show_bans {
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            size: ButtonSize::Sm,
+                            onclick: move |_| store.reset_hero_bans(),
+                            "Reset all bans"
+                        }
+                    }
                 }
             }
 
@@ -504,10 +601,37 @@ fn MapSelectionTab(match_state: Match) -> Element {
                 for (index, map) in maps.into_iter().enumerate() {
                     {
                         let catalog_for_name = catalog.clone();
+                        let catalog_for_custom_name = catalog.clone();
+                        let catalog_for_mode = catalog.clone();
+                        let ban = bans.get(index).cloned().unwrap_or_else(empty_hero_bans);
+                        let ban_team_a = ban.team_a.first().cloned().unwrap_or_default();
+                        let ban_team_b = ban.team_b.first().cloned().unwrap_or_default();
                         let is_current = match_state.current_map == Some(index);
                         let chosen_by = map.chosen_by;
                         let loser_picks = match_state.loser_picks;
-                        let label = if index == 7 {
+                        let name_is_custom = custom_names.peek().contains_key(&index);
+                        let name_draft = custom_names
+                            .peek()
+                            .get(&index)
+                            .cloned()
+                            .unwrap_or_else(|| map.name.clone());
+                        let name_value = if name_is_custom {
+                            "__custom__".to_owned()
+                        } else {
+                            map.name.clone()
+                        };
+                        let mode_is_custom = custom_modes.peek().contains_key(&index);
+                        let mode_draft = custom_modes
+                            .peek()
+                            .get(&index)
+                            .cloned()
+                            .unwrap_or_else(|| map.game_mode_name.clone());
+                        let mode_value = if mode_is_custom {
+                            "__custom__".to_owned()
+                        } else {
+                            map.game_mode_name.clone()
+                        };
+                        let label = if index >= expected_maps {
                             "Tiebreaker".to_owned()
                         } else {
                             format!("Map {}", index + 1)
@@ -520,26 +644,115 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                     div { class: "fgc-form-row",
                                         label { class: "fgc-field",
                                             span { class: "fgc-field__label", "Map name" }
-                                            Input {
-                                                list: "fgc-map-names",
-                                                value: "{map.name}",
-                                                placeholder: "Select or type a map",
-                                                oninput: move |event: FormEvent| {
-                                                    let name = event.value();
-                                                    let mode = mode_for_map(&catalog_for_name, &name);
-                                                    store.set_map_name(index, &name, &mode);
+                                            select {
+                                                class: "fgc-native-select",
+                                                aria_label: "Map name",
+                                                value: name_value,
+                                                onchange: move |event| {
+                                                    let value = event.value();
+                                                    if value == "__custom__" {
+                                                        let draft = custom_names
+                                                            .peek()
+                                                            .get(&index)
+                                                            .cloned()
+                                                            .unwrap_or_default();
+                                                        custom_names.write().insert(index, draft.clone());
+                                                        let mode = catalog_for_name.game_mode_for_map_name(&draft);
+                                                        store.set_map_name(index, &draft, &mode);
+                                                    } else {
+                                                        custom_names.write().remove(&index);
+                                                        let mode = catalog_for_name.game_mode_for_map_name(&value);
+                                                        store.set_map_name(index, &value, &mode);
+                                                    }
                                                 },
+                                                option { value: "", "Select a map" }
+                                                for name in map_names.iter() {
+                                                    option { value: "{name}", selected: *name == map.name, "{name}" }
+                                                }
+                                                if !map.name.is_empty() && !map_names.contains(&map.name) {
+                                                    option {
+                                                        value: "{map.name}",
+                                                        selected: name_value == map.name,
+                                                        "{map.name} (imported)"
+                                                    }
+                                                }
+                                                option {
+                                                    value: "__custom__",
+                                                    selected: name_is_custom,
+                                                    "Custom…"
+                                                }
+                                            }
+                                            if name_is_custom {
+                                                Input {
+                                                    value: name_draft,
+                                                    aria_label: "Custom map name",
+                                                    placeholder: "Type a map name",
+                                                    oninput: move |event: FormEvent| {
+                                                        let value = event.value();
+                                                        custom_names.write().insert(index, value.clone());
+                                                        let mode = catalog_for_custom_name.game_mode_for_map_name(&value);
+                                                        store.set_map_name(index, &value, &mode);
+                                                    },
+                                                }
                                             }
                                         }
                                         label { class: "fgc-field",
                                             span { class: "fgc-field__label", "Game mode" }
-                                            Input {
-                                                list: "fgc-mode-names",
-                                                value: "{map.game_mode_name}",
-                                                placeholder: "TBC",
-                                                oninput: move |event: FormEvent| {
-                                                    store.set_map_mode(index, &event.value());
+                                            select {
+                                                class: "fgc-native-select",
+                                                aria_label: "Game mode",
+                                                value: mode_value,
+                                                onchange: move |event| {
+                                                    let value = event.value();
+                                                    if value == "__custom__" {
+                                                        let draft = custom_modes
+                                                            .peek()
+                                                            .get(&index)
+                                                            .cloned()
+                                                            .unwrap_or_default();
+                                                        custom_modes.write().insert(index, draft.clone());
+                                                        store.set_map_mode(index, &draft);
+                                                    } else {
+                                                        custom_modes.write().remove(&index);
+                                                        if value.is_empty() {
+                                                            let derived = catalog_for_mode
+                                                                .game_mode_for_map_name(&map.name);
+                                                            store.set_map_name(index, &map.name, &derived);
+                                                        } else {
+                                                            store.set_map_mode(index, &value);
+                                                        }
+                                                    }
                                                 },
+                                                option { value: "", "From map" }
+                                                for name in mode_names.iter() {
+                                                    option { value: "{name}", selected: *name == map.game_mode_name, "{name}" }
+                                                }
+                                                if !map.game_mode_name.is_empty()
+                                                    && !mode_names.contains(&map.game_mode_name)
+                                                {
+                                                    option {
+                                                        value: "{map.game_mode_name}",
+                                                        selected: mode_value == map.game_mode_name,
+                                                        "{map.game_mode_name} (imported)"
+                                                    }
+                                                }
+                                                option {
+                                                    value: "__custom__",
+                                                    selected: mode_is_custom,
+                                                    "Custom…"
+                                                }
+                                            }
+                                            if mode_is_custom {
+                                                Input {
+                                                    value: mode_draft,
+                                                    aria_label: "Custom game mode",
+                                                    placeholder: "Type a game mode",
+                                                    oninput: move |event: FormEvent| {
+                                                        let value = event.value();
+                                                        custom_modes.write().insert(index, value.clone());
+                                                        store.set_map_mode(index, &value);
+                                                    },
+                                                }
                                             }
                                         }
                                         label { class: "fgc-field",
@@ -647,110 +860,73 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
-/// One hero ban per team per map.
-#[component]
-fn HeroBansTab(match_state: Match) -> Element {
-    let store = use_context::<AppStore>();
-    let catalog = store.catalog();
-    let maps = match_state.maps.clone();
-    let bans = match_state.hero_bans.clone();
-    let heroes: Vec<String> = catalog
-        .in_category(AssetCategory::Hero)
-        .filter(|asset| !catalog.is_linked_icon(&asset.id))
-        .map(|asset| asset.name.clone())
-        .collect();
-
-    rsx! {
-        datalist { id: "fgc-hero-names",
-            for name in heroes.iter() {
-                option { value: "{name}" }
-            }
-        }
-
-        div { class: "fgc-view",
-            div { class: "fgc-match__section-header",
-                p { class: "fgc-note",
-                    "The overlays show one ban per team. Choose the first-ban team and the hero each team banned."
-                }
-                Button {
-                    variant: ButtonVariant::Destructive,
-                    size: ButtonSize::Sm,
-                    onclick: move |_| store.reset_hero_bans(),
-                    "Reset all bans"
-                }
-            }
-
-            Panel {
-                div { class: "fgc-bans-table",
-                    div { class: "fgc-bans-table__head",
-                        span { "Map" }
-                        span { "First ban" }
-                        span { "Team A" }
-                        span { "Team B" }
-                    }
-                    for (index, map) in maps.into_iter().enumerate() {
-                        {
-                            let ban = bans.get(index).cloned().unwrap_or_else(empty_hero_bans);
-                            let team_a = ban.team_a.first().cloned().unwrap_or_default();
-                            let team_b = ban.team_b.first().cloned().unwrap_or_default();
-                            rsx! {
-                                div { key: "{index}", class: "fgc-bans-table__row",
-                                    span { class: "fgc-bans-table__map",
-                                        if map.name.is_empty() {
-                                            "Map {index + 1}"
-                                        } else {
-                                            "{map.name}"
+                                    if show_bans {
+                                        details { class: "fgc-disclosure fgc-disclosure--compact fgc-map-slot__bans",
+                                            summary { "Hero bans" }
+                                            div { class: "fgc-disclosure__body",
+                                                div { class: "fgc-form-row",
+                                                    label { class: "fgc-field",
+                                                        span { class: "fgc-field__label", "First ban" }
+                                                        select {
+                                                            class: "fgc-native-select",
+                                                            aria_label: "First ban team",
+                                                            value: match ban.first_ban_team {
+                                                                Some(TeamSide::A) => "A",
+                                                                Some(TeamSide::B) => "B",
+                                                                None => "",
+                                                            },
+                                                            onchange: move |event| {
+                                                                let side = match event.value().as_str() {
+                                                                    "A" => Some(TeamSide::A),
+                                                                    "B" => Some(TeamSide::B),
+                                                                    _ => None,
+                                                                };
+                                                                store.set_first_ban_team(index, side);
+                                                            },
+                                                            option { value: "", "—" }
+                                                            option { value: "A", "Team A" }
+                                                            option { value: "B", "Team B" }
+                                                        }
+                                                    }
+                                                    label { class: "fgc-field",
+                                                        span { class: "fgc-field__label", "Team A ban" }
+                                                        Input {
+                                                            list: "fgc-hero-names",
+                                                            value: "{ban_team_a}",
+                                                            placeholder: "Hero",
+                                                            aria_label: "Team A ban",
+                                                            oninput: move |event: FormEvent| {
+                                                                store.set_hero_ban(index, TeamSide::A, &event.value());
+                                                            },
+                                                        }
+                                                    }
+                                                    label { class: "fgc-field",
+                                                        span { class: "fgc-field__label", "Team B ban" }
+                                                        Input {
+                                                            list: "fgc-hero-names",
+                                                            value: "{ban_team_b}",
+                                                            placeholder: "Hero",
+                                                            aria_label: "Team B ban",
+                                                            oninput: move |event: FormEvent| {
+                                                                store.set_hero_ban(index, TeamSide::B, &event.value());
+                                                            },
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
-                                    select {
-                                        class: "fgc-native-select",
-                                        value: match ban.first_ban_team {
-                                            Some(TeamSide::A) => "A",
-                                            Some(TeamSide::B) => "B",
-                                            None => "",
-                                        },
-                                        onchange: move |event| {
-                                            let side = match event.value().as_str() {
-                                                "A" => Some(TeamSide::A),
-                                                "B" => Some(TeamSide::B),
-                                                _ => None,
-                                            };
-                                            store.set_first_ban_team(index, side);
-                                        },
-                                        option { value: "", "—" }
-                                        option { value: "A", "Team A" }
-                                        option { value: "B", "Team B" }
-                                    }
-                                    Input {
-                                        list: "fgc-hero-names",
-                                        value: "{team_a}",
-                                        placeholder: "Hero",
-                                        oninput: move |event: FormEvent| {
-                                            store.set_hero_ban(index, TeamSide::A, &event.value());
-                                        },
-                                    }
-                                    Input {
-                                        list: "fgc-hero-names",
-                                        value: "{team_b}",
-                                        placeholder: "Hero",
-                                        oninput: move |event: FormEvent| {
-                                            store.set_hero_ban(index, TeamSide::B, &event.value());
-                                        },
-                                    }
                                 }
                             }
                         }
                     }
+                }
+            }
+
+            if !show_bans {
+                p { class: "fgc-note",
+                    "Hero bans are hidden. Turn them on in Config → Overlay appearance."
                 }
             }
         }
@@ -779,15 +955,20 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                 div { class: "fgc-talent-grid",
                     for slot in TalentSlot::ALL {
                         {
-                            let current = match_state
-                                .talent
-                                .slot(slot)
+                            let reference = match_state.talent.slot(slot);
+                            let current = reference
                                 .map_or_else(String::new, |reference| reference.talent_id.as_str().to_owned());
+                            let current_id = reference.map(|reference| reference.talent_id.clone());
+                            let role = reference.map_or_else(|| slot.default_role(), |reference| reference.role);
                             rsx! {
-                                label { key: "{slot.label()}", class: "fgc-field",
-                                    span { class: "fgc-field__label", "{slot.label()}" }
+                                div {
+                                    key: "{slot.label()}",
+                                    class: "fgc-talent-row",
+                                    role: "group",
+                                    aria_label: "{slot.label()} assignment",
                                     select {
                                         class: "fgc-native-select",
+                                        aria_label: "{slot.label()} talent",
                                         value: "{current}",
                                         onchange: move |event| {
                                             let value = event.value();
@@ -798,6 +979,7 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                                                 } else {
                                                     Some(TalentId::from_raw(value))
                                                 },
+                                                role,
                                             );
                                         },
                                         option { value: "", "— Select —" }
@@ -807,6 +989,28 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                                                 value: "{talent.id}",
                                                 selected: talent.id.as_str() == current.as_str(),
                                                 "{talent.display_name}"
+                                            }
+                                        }
+                                    }
+                                    select {
+                                        class: "fgc-native-select fgc-talent-role",
+                                        aria_label: "{slot.label()} role",
+                                        disabled: current_id.is_none(),
+                                        value: role.slug(),
+                                        onchange: move |event| {
+                                            let Some(next) = TalentType::from_slug(&event.value()) else {
+                                                return;
+                                            };
+                                            if let Some(id) = current_id.clone() {
+                                                store.set_talent_slot(slot, Some(id), next);
+                                            }
+                                        },
+                                        for option in TalentType::ALL {
+                                            option {
+                                                key: "{option.slug()}",
+                                                value: option.slug(),
+                                                selected: option == role,
+                                                "{option.label()}"
                                             }
                                         }
                                     }
@@ -994,248 +1198,11 @@ fn MapPoolTab(match_state: Match) -> Element {
     }
 }
 
-/// Timer settings, controls and a live preview.
-#[component]
-fn TimerTab(timer: Signal<TimerState>, target: Signal<String>) -> Element {
-    let store = use_context::<AppStore>();
-    let state = store.state();
-    let settings = state.read().settings.timer.clone();
-    let current = timer();
-    let (hours, minutes, seconds) = split_time(current.total_seconds);
-    let zeroes = settings.leading_zeroes;
-    let mode = settings.mode;
-    let alignment = settings.alignment;
-
-    rsx! {
-        div { class: "fgc-grid fgc-grid--two",
-            Panel {
-                title: "Timer settings".to_owned(),
-                div { class: "fgc-form-row",
-                    label { class: "fgc-field",
-                        span { class: "fgc-field__label", "Mode" }
-                        select {
-                            class: "fgc-native-select",
-                            value: match mode {
-                                TimerMode::CountUp => "countup",
-                                TimerMode::CountDown => "countdown",
-                                TimerMode::Target => "target",
-                            },
-                            onchange: move |event| {
-                                let mode = match event.value().as_str() {
-                                    "countdown" => TimerMode::CountDown,
-                                    "target" => TimerMode::Target,
-                                    _ => TimerMode::CountUp,
-                                };
-                                store.set_timer_mode(mode);
-                                let mut timer = timer;
-                                timer.set(TimerState::default());
-                            },
-                            option { value: "countup", "Count up" }
-                            option { value: "countdown", "Count down" }
-                            option { value: "target", "Count to target" }
-                        }
-                    }
-                    label { class: "fgc-field",
-                        span { class: "fgc-field__label", "Alignment" }
-                        select {
-                            class: "fgc-native-select",
-                            value: match alignment {
-                                fgc_core::TimerAlignment::Left => "left",
-                                fgc_core::TimerAlignment::Center => "center",
-                                fgc_core::TimerAlignment::Right => "right",
-                            },
-                            onchange: move |event| {
-                                let alignment = match event.value().as_str() {
-                                    "left" => fgc_core::TimerAlignment::Left,
-                                    "right" => fgc_core::TimerAlignment::Right,
-                                    _ => fgc_core::TimerAlignment::Center,
-                                };
-                                store.set_timer_alignment(alignment);
-                            },
-                            option { value: "left", "Left" }
-                            option { value: "center", "Centre" }
-                            option { value: "right", "Right" }
-                        }
-                    }
-                }
-
-                if mode == TimerMode::CountDown {
-                    div { class: "fgc-form-row",
-                        label { class: "fgc-field",
-                            span { class: "fgc-field__label", "Hours" }
-                            Input {
-                                r#type: "number",
-                                value: "{hours}",
-                                oninput: move |event: FormEvent| {
-                                    let mut timer = timer;
-                                    let (_, minutes, seconds) = split_time(timer.peek().total_seconds);
-                                    timer.set(TimerState {
-                                        running: false,
-                                        total_seconds: join_time(
-                                            parse_u32(&event.value()),
-                                            minutes,
-                                            seconds,
-                                        ),
-                                    });
-                                },
-                            }
-                        }
-                        label { class: "fgc-field",
-                            span { class: "fgc-field__label", "Minutes" }
-                            Input {
-                                r#type: "number",
-                                value: "{minutes}",
-                                oninput: move |event: FormEvent| {
-                                    let mut timer = timer;
-                                    let (hours, _, seconds) = split_time(timer.peek().total_seconds);
-                                    timer.set(TimerState {
-                                        running: false,
-                                        total_seconds: join_time(
-                                            hours,
-                                            parse_u32(&event.value()),
-                                            seconds,
-                                        ),
-                                    });
-                                },
-                            }
-                        }
-                        label { class: "fgc-field",
-                            span { class: "fgc-field__label", "Seconds" }
-                            Input {
-                                r#type: "number",
-                                value: "{seconds}",
-                                oninput: move |event: FormEvent| {
-                                    let mut timer = timer;
-                                    let (hours, minutes, _) = split_time(timer.peek().total_seconds);
-                                    timer.set(TimerState {
-                                        running: false,
-                                        total_seconds: join_time(
-                                            hours,
-                                            minutes,
-                                            parse_u32(&event.value()),
-                                        ),
-                                    });
-                                },
-                            }
-                        }
-                    }
-                }
-
-                if mode == TimerMode::Target {
-                    label { class: "fgc-field",
-                        span { class: "fgc-field__label", "Target date and time" }
-                        Input {
-                            r#type: "datetime-local",
-                            value: "{target}",
-                            oninput: move |event: FormEvent| target.set(event.value()),
-                        }
-                    }
-                    p { class: "fgc-note",
-                        "The timer counts down to the target. Set a target before starting."
-                    }
-                }
-
-                div { class: "fgc-toggle-row",
-                    div { class: "fgc-toggle-row__text",
-                        p { class: "fgc-toggle-row__title", "Leading zeroes" }
-                        p { class: "fgc-toggle-row__hint", "Pad single-digit values on the overlay." }
-                    }
-                    Switch {
-                        checked: zeroes,
-                        aria_label: "Leading zeroes",
-                        on_checked_change: move |checked| store.set_timer_leading_zeroes(checked),
-                    }
-                }
-                div { class: "fgc-toggle-row",
-                    div { class: "fgc-toggle-row__text",
-                        p { class: "fgc-toggle-row__title", "Standalone timer" }
-                        p { class: "fgc-toggle-row__hint", "Hide the timer surround." }
-                    }
-                    Switch {
-                        checked: settings.standalone,
-                        aria_label: "Standalone timer",
-                        on_checked_change: move |checked| store.set_timer_standalone(checked),
-                    }
-                }
-            }
-
-            Panel {
-                title: "Timer".to_owned(),
-                div { class: "fgc-timer",
-                    span { class: "fgc-timer__value", "{format_clock(current.total_seconds)}" }
-                    p { class: "fgc-note",
-                        if current.running {
-                            "Running"
-                        } else {
-                            "Paused"
-                        }
-                    }
-                }
-                div { class: "fgc-actions",
-                    Button {
-                        variant: ButtonVariant::Primary,
-                        disabled: current.running
-                            || (mode == TimerMode::Target && target.is_empty()),
-                        onclick: move |_| {
-                            let mut timer = timer;
-                            let total_seconds = timer.peek().total_seconds;
-                            timer.set(TimerState {
-                                running: true,
-                                total_seconds,
-                            });
-                            send_timer_action(&store, TimerActionDto::start());
-                        },
-                        "Start"
-                    }
-                    Button {
-                        variant: ButtonVariant::Secondary,
-                        disabled: !current.running,
-                        onclick: move |_| {
-                            let mut timer = timer;
-                            let total_seconds = timer.peek().total_seconds;
-                            timer.set(TimerState {
-                                running: false,
-                                total_seconds,
-                            });
-                            send_timer_action(&store, TimerActionDto::pause());
-                        },
-                        "Pause"
-                    }
-                    Button {
-                        variant: ButtonVariant::Destructive,
-                        onclick: move |_| {
-                            let (hours, minutes, seconds) = if mode == TimerMode::CountDown {
-                                split_time(timer.peek().total_seconds)
-                            } else {
-                                (0, 0, 0)
-                            };
-                            let mut timer = timer;
-                            timer.set(TimerState {
-                                running: false,
-                                total_seconds: join_time(hours, minutes, seconds),
-                            });
-                            send_timer_action(
-                                &store,
-                                TimerActionDto::reset(hours, minutes, seconds),
-                            );
-                        },
-                        "Reset"
-                    }
-                }
-                p { class: "fgc-note",
-                    "Timer run state is not saved; timer settings are."
-                }
-            }
-        }
-    }
-}
-
 /// Overlay appearance, branding and Browser Source URLs.
 #[component]
 fn ConfigTab(match_state: Match) -> Element {
     let store = use_context::<AppStore>();
     let state = store.state();
-    let toast = use_toast();
     let settings = state.read().settings.clone();
     let server = store.server();
     let base_url = server.base_url();
@@ -1284,6 +1251,36 @@ fn ConfigTab(match_state: Match) -> Element {
                             },
                         }
                     }
+                    div { class: "fgc-toggle-row",
+                        div { class: "fgc-toggle-row__text",
+                            p { class: "fgc-toggle-row__title", "Loser picks" }
+                            p { class: "fgc-toggle-row__hint",
+                                "Each map after the first is picked by the previous map's loser."
+                            }
+                        }
+                        Switch {
+                            checked: match_state.loser_picks,
+                            aria_label: "Loser picks",
+                            on_checked_change: move |checked: bool| store.set_match_loser_picks(checked),
+                        }
+                    }
+                    div { class: "fgc-toggle-row",
+                        div { class: "fgc-toggle-row__text",
+                            p { class: "fgc-toggle-row__title", "Hero bans" }
+                            p { class: "fgc-toggle-row__hint",
+                                "Show hero bans inside Map Selection."
+                            }
+                        }
+                        Switch {
+                            checked: settings.display.show_hero_bans,
+                            aria_label: "Hero bans",
+                            on_checked_change: move |checked| {
+                                store.mutate(|state| {
+                                    state.settings.display.show_hero_bans = checked;
+                                });
+                            },
+                        }
+                    }
                 }
 
                 Panel {
@@ -1308,52 +1305,9 @@ fn ConfigTab(match_state: Match) -> Element {
                 }
             }
 
-            Panel {
-                title: "Overlay URLs".to_owned(),
-                description: "Paste these into OBS Browser Sources at 1920×1080.".to_owned(),
-                div { class: "fgc-source-list",
-                    for file in OVERLAY_FILES {
-                        {
-                            let url = overlay_url(&base_url, file);
-                            let url_for_code = url.clone();
-                            let url_for_click = url.clone();
-                            let file_for_toast = file.to_owned();
-                            rsx! {
-                                div { key: "{file}", class: "fgc-source",
-                                    div { class: "fgc-source__meta",
-                                        p { class: "fgc-source__file", "{file}" }
-                                        code { class: "fgc-code", "{url_for_code}" }
-                                    }
-                                    Button {
-                                        variant: ButtonVariant::Outline,
-                                        size: ButtonSize::Sm,
-                                        onclick: move |_| {
-                                            copy_to_clipboard(&url_for_click);
-                                            toast.success(
-                                                "Browser source copied".to_owned(),
-                                                ToastOptions::new()
-                                                    .description(file_for_toast.clone()),
-                                            );
-                                        },
-                                        "Copy URL"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            OverlayUrls { base_url }
         }
     }
-}
-
-/// Returns the game-mode name linked to a map asset, if any.
-fn mode_for_map(catalog: &AssetCatalog, name: &str) -> String {
-    catalog
-        .find_by_name(AssetCategory::Map, name)
-        .and_then(|asset| asset.game_mode.as_ref())
-        .and_then(|id| catalog.get(id))
-        .map_or_else(String::new, |asset| asset.name.clone())
 }
 
 /// Groups map assets by their linked game mode.
@@ -1375,29 +1329,16 @@ fn parse_score(value: &str) -> u16 {
     value.trim().parse::<u16>().unwrap_or(0)
 }
 
-/// Parses a non-negative number, treating blank or invalid input as zero.
-fn parse_u32(value: &str) -> u32 {
-    value.trim().parse::<u32>().unwrap_or(0)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn tabs_have_the_original_order() {
+    fn maps_and_bans_share_one_tab() {
         let labels: Vec<&str> = MatchTab::ALL.iter().map(|tab| tab.label()).collect();
         assert_eq!(
             labels,
-            [
-                "Match",
-                "Map Selection",
-                "Hero Bans",
-                "Talent",
-                "Map Pool",
-                "Timer",
-                "Config"
-            ]
+            ["Match", "Maps & Bans", "Talent", "Map Pool", "Config"]
         );
     }
 
@@ -1406,6 +1347,5 @@ mod tests {
         assert_eq!(parse_score("12"), 12);
         assert_eq!(parse_score(""), 0);
         assert_eq!(parse_score("-1"), 0);
-        assert_eq!(parse_u32("90"), 90);
     }
 }

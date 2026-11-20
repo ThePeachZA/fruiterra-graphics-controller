@@ -42,10 +42,10 @@ protocol as before.
 | [Quick Start](Quick-Start) | A first broadcast from an empty install |
 | [Overlays in OBS](Overlays-in-OBS) | The seven overlays, OBS settings, reconnect and overrides |
 | [Teams and Talent](Teams-and-Talent) | Team identity, rosters, casters and deletion rules |
-| [Match Controller](Match-Controller) | Every match tab, from maps to the timer |
+| [Match Controller](Match-Controller) | Every match tab, from maps to config, plus the timer widget |
 | [Tournament](Tournament) | Brackets, groups, playoffs and the board |
 | [Assets](Assets) | Importing, organising and moving images |
-| [Settings](Settings) | Port, LAN access, timer defaults and display options |
+| [Settings](Settings) | Port, server startup, LAN access, display options and storage |
 | [Data and Backups](Data-and-Backups) | Where your data lives and how to move it |
 | [Troubleshooting](Troubleshooting) | Common problems and fixes |
 | [FAQ](FAQ) | Short answers to common questions |

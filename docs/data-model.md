@@ -75,6 +75,8 @@ pub struct Match {
 pub struct MapSlot {
     pub name: String,
     pub game_mode_name: String,      // wire field `type`; free text ("Control", "TBC", …)
+    pub game_mode_manual: bool,      // true after the owner types a mode
+    pub user_added: bool,            // true after + Add map
     pub completed: bool,
     pub score_a: u16,
     pub score_b: u16,
@@ -110,6 +112,13 @@ pub struct MatchTalent {
 // ---------- assets ----------
 pub enum AssetCategory { Logo, Portrait, Map, Hero, GameMode, Role, Side }
 
+pub enum AssetAttachmentKind { HeroBanIcon }
+
+pub struct AssetAttachment {
+    pub owner: AssetId,              // asset that owns this file
+    pub kind: AssetAttachmentKind,   // role for the owner
+}
+
 pub struct Asset {
     pub id: AssetId,                 // logical identity referenced by teams/players
     pub name: String,                // display name
@@ -120,9 +129,10 @@ pub struct Asset {
     pub original_filename: Option<String>,
     pub added_at: Option<String>,
     // Optional per-category extras kept only where used:
-    pub icon: Option<AssetId>,       // hero icon
+    pub icon: Option<AssetId>,       // hero → attached ban icon
     pub portrait: Option<AssetId>,   // hero portrait
     pub game_mode: Option<AssetId>,  // map → game mode
+    pub attachment: Option<AssetAttachment>, // hidden media owned by another asset
 }
 
 // ---------- tournament ----------
@@ -130,7 +140,7 @@ pub struct Asset {
 pub struct Tournament {
     pub id: TournamentId,
     pub name: String,
-    pub format: BracketFormat,       // SingleElim | DoubleElim | RoundRobin
+    pub format: BracketFormat,       // SingleElim | DoubleElim | RoundRobin | MultiStage
     pub entrants: Vec<Entrant>,      // { team_id, seed }
     pub winners: Vec<Round>,
     pub losers: Vec<Round>,
@@ -164,6 +174,19 @@ pub struct BracketMatch {
     pub next: Option<MatchLink>,     // { match, slot }
     pub loser_next: Option<MatchLink>,
     pub first_to: u8,
+}
+
+pub struct GroupMatch {
+    pub id: MatchId,
+    pub group: GroupId,
+    pub team1: Option<TeamId>,
+    pub team2: Option<TeamId>,
+    pub score1: u16,
+    pub score2: u16,
+    pub status: BracketMatchStatus,   // Pending | Live | Completed
+    pub first_to: u8,                 // 1..=4 in the UI
+    pub winner: Option<TeamId>,       // persisted manual override
+    pub winner_manual: bool,          // true when winner overrides the scores
 }
 
 // ---------- app ----------
@@ -201,21 +224,27 @@ pub struct Settings {
 
 - `map_pool` stays a list of **names**, because the overlay receives names and the original resolves assets by case-insensitive name match. Switching to IDs would be a silent behaviour change.
 - `MapSlot.game_mode_name` is the wire `type` string; it is not an enum because the UI allows free text and the overlay renders it verbatim.
+- `MapSlot.game_mode_manual` (`gameModeManual` on the wire, `#[serde(default)]`) records a mode typed by the owner. Game-mode changes skip these slots; changing the map name derives a fresh mode from the map's game mode and clears the flag. Older state files load with the flag set to `false`.
+- `MapSlot.user_added` (`userAdded` on the wire, `#[serde(default)]`) records a slot created with **+ Add map**. It keeps an otherwise empty tiebreaker from being trimmed on load. Older state files load with the flag set to `false`.
+- `Asset.game_mode` is the map's game mode and is edited inline on the map card. `Asset.icon` points at a hero's ban icon and is edited from the hero's **Properties…** dialog.
+- `Asset.attachment` (`attachment` on the wire, `#[serde(default)]`) marks media owned by another asset. `kind: "heroBanIcon"` is the first variant; attached files are hidden from the library and pickers and are deleted with their owner. No schema version change was needed.
 - `Team.record` is `Option<String>` internally; the wire DTO substitutes `"0-0"` exactly as the original does.
 - Timer state (running/seconds) is **ephemeral runtime state**, not persisted — matching the original. Only timer *settings* persist.
 - Asset lookup is case-insensitive by `name` for maps/heroes/game modes, matching the original `find` calls.
 - Assets are content-addressed: the URL is derived from `hash` + `ext`, so replacing an image produces a new URL and cannot serve a stale cache. Full asset semantics are in `docs/assets.md`.
 - Tournament `standings` are derived from `group_matches` on every change and are **not** persisted; recomputing on load avoids stale tables. Full tournament semantics are in `docs/tournament.md`.
+- Whether a tournament is locked after generation is derived from its existing groups, fixtures and bracket; there is no separate persisted generation flag and `SCHEMA_VERSION` remains `2`. The generation preview, provisional bracket placements, seed edits, drag ghost and drop highlights are ephemeral UI state and are never written to `app.json`.
+- Stage reset is a mutation of the existing tournament fields. It clears the selected groups or bracket and any derived champion, but adds no persisted reset or regeneration marker.
 
 ---
 
-## 3. Persistence schema v1
+## 3. Persistence schema v2
 
 `%APPDATA%/<app-id>/data/app.json` (exact app-id decided in Phase 3).
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "teams": [
     {
       "id": "…uuid…",
@@ -250,6 +279,8 @@ pub struct Settings {
       {
         "name": "Ilios",
         "gameModeName": "Control",
+        "gameModeManual": false,
+        "userAdded": false,
         "completed": false,
         "scoreA": 0,
         "scoreB": 0,
@@ -302,6 +333,8 @@ pub struct Settings {
 - User asset blobs live at `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\assets\blobs\<first-two-hex>\<sha256>.<ext>`; `app.json` stores only metadata.
 - `app.json.bak` holds the previous good file. Writes are temp-file + rename.
 - `schemaVersion` newer than the binary is refused with a readable error and a "back up and continue" path rather than silent data loss.
+- `SCHEMA_VERSION` is 2. Migration 0→1 adds the version field; migration 1→2 removes `talents[].type` and writes `role` on every occupied match talent assignment. Legacy `panelist`/`observer` values map to `analyst`/`other`; otherwise the slot supplies a default (`caster1`/`caster2` → caster, panel slots → analyst, interviewer → interviewer).
+- A talent assignment is `{ "talentId": "…uuid…", "role": "caster" }`. The role belongs to the assignment, not the person, so the same talent can have a different role in another match. Accepted role slugs are `caster`, `host`, `analyst`, `interviewer` and `other`.
 
 ---
 
@@ -313,6 +346,7 @@ pub struct Settings {
 | `teamA == teamB` | Keep team A, clear team B |
 | `currentMap` out of range | Clamp to `None` |
 | `firstTo` outside 1..=4 | Clamp to 3 |
+| Trailing map slots beyond the first-to format | Empty slots are trimmed to the format for `firstTo` (1/3/5/7), logged as `RepairKind::MapCountNormalized`; saved projects with fewer slots are not padded, and entered maps, tiebreakers and slots added with **+ Add map** are kept. A derived game mode on an unnamed slot is not user data; a slot added with **+ Add map** carries `userAdded: true` so it survives even while empty. |
 | Map scores negative | Clamp to 0 |
 | `mapPool` names with no matching asset | Kept (the overlay can still render the name); no error |
 | Asset `hash` not exactly 64 lowercase hex chars | Rejected; the asset is dropped from the library and logged (C11) |
@@ -330,7 +364,7 @@ Import/export uses the same validator, so a hand-edited file cannot crash the ap
 
 - **Score clamping happens during deserialization.** Scores are `u16`, so a negative value is clamped to 0 by a field deserializer before the repair table runs. The repair table never observes a negative score.
 - **Field paths in errors.** `migrate` deserializes through `serde_path_to_error`, so an invalid enum or type reports its JSON location (for example `teams[0].players[0].role`).
-- **Fixed enum spellings.** Lowercase: `Role`, `Position`, `MatchStatus`, `AssetOrigin`, `BracketMatchStatus`, `TimerMode`, `TimerAlignment`, `SocialPlatform`. Kebab-case: `AssetCategory` (`game-mode`), `BracketFormat` (`single-elim`, `double-elim`, `round-robin`), `TournamentStatus`, `Tiebreaker`. `TeamSide` is `"A"`/`"B"`; `Side` is `0`/`1`/`2`; `Scoring` is tagged with `mode`.
+- **Fixed enum spellings.** Lowercase: `Role`, `Position`, `MatchStatus`, `AssetOrigin`, `BracketMatchStatus`, `TimerMode`, `TimerAlignment`, `SocialPlatform`. Kebab-case: `AssetCategory` (`game-mode`), `BracketFormat` (`single-elim`, `double-elim`, `round-robin`, `multi-stage`), `TournamentStatus`, `Tiebreaker`. `TeamSide` is `"A"`/`"B"`; `Side` is `0`/`1`/`2`; `Scoring` is tagged with `mode`.
 - **Repairs are logged once.** `validate_and_repair` emits a `tracing::warn!` per repair; `migrate` calls it without logging the results again.
 
 ### 4.2 M6 reference rules

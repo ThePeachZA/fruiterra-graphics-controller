@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use crate::{
     AppState, AssetId, GroupId, MatchId, PlayerId, TalentId, TeamId, TournamentId,
     TournamentRepairKind, is_allowed_extension, is_valid_hash, repair_tournament,
+    trim_trailing_empty_maps_for_first_to,
 };
 
 /// Longest team name the overlays can render without truncation.
@@ -23,6 +24,8 @@ pub enum RepairKind {
     CurrentMapOutOfRange,
     /// A first-to value outside 1..=4 was reset.
     FirstToClamped,
+    /// Trailing empty map slots beyond the first-to format were removed.
+    MapCountNormalized,
     /// An asset with a malformed hash was removed from the library.
     AssetHashRejected,
     /// An asset with an unsupported extension was removed from the library.
@@ -88,6 +91,19 @@ pub fn validate_and_repair(state: &mut AppState) -> Vec<Repair> {
         }
 
         clamp_first_to(&mut current.first_to, "match.firstTo", &mut repairs);
+
+        let before = current.maps.len();
+        trim_trailing_empty_maps_for_first_to(current);
+        if current.maps.len() != before {
+            repairs.push(Repair::new(
+                RepairKind::MapCountNormalized,
+                format!(
+                    "match map slots were resized from {before} to {} for first-to {}",
+                    current.maps.len(),
+                    current.first_to
+                ),
+            ));
+        }
     }
 
     state.assets.retain(|asset| {
@@ -340,7 +356,86 @@ fn dedupe_ids<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{empty_hero_bans, empty_map_slot, insert_map, new_match};
     use serde_json::json;
+
+    #[test]
+    fn trailing_empty_maps_are_normalized_to_first_to_on_load() {
+        let mut current = new_match();
+        current.first_to = 1;
+        current.maps = (0..9).map(|_| empty_map_slot()).collect();
+        current.maps[0].name = "Ilios".to_owned();
+        current.maps[0].game_mode_name = "Control".to_owned();
+        // A derived mode on an unnamed slot is not user data.
+        current.maps[1].game_mode_name = "Escort".to_owned();
+        current.hero_bans = (0..9).map(|_| empty_hero_bans()).collect();
+
+        let mut state = AppState {
+            current_match: Some(current),
+            ..AppState::default()
+        };
+        let repairs = validate_and_repair(&mut state);
+        let current = state.current_match.expect("current match");
+
+        assert_eq!(current.maps.len(), 1);
+        assert_eq!(current.hero_bans.len(), 1);
+        assert_eq!(current.maps[0].name, "Ilios");
+        assert!(
+            repairs
+                .iter()
+                .any(|repair| repair.kind == RepairKind::MapCountNormalized)
+        );
+    }
+
+    #[test]
+    fn load_normalization_keeps_entered_tiebreakers_and_manual_modes() {
+        let mut current = new_match();
+        current.first_to = 1;
+        current.maps = (0..9).map(|_| empty_map_slot()).collect();
+        current.maps[0].name = "Ilios".to_owned();
+        current.maps[1].name = "Tiebreaker".to_owned();
+        current.maps[2].game_mode_name = "Push".to_owned();
+        current.maps[2].game_mode_manual = true;
+        current.hero_bans = (0..9).map(|_| empty_hero_bans()).collect();
+
+        let mut state = AppState {
+            current_match: Some(current),
+            ..AppState::default()
+        };
+        validate_and_repair(&mut state);
+        let current = state.current_match.expect("current match");
+
+        assert_eq!(current.maps.len(), 3);
+        assert_eq!(current.hero_bans.len(), 3);
+        assert_eq!(current.maps[1].name, "Tiebreaker");
+        assert!(current.maps[2].game_mode_manual);
+    }
+
+    #[test]
+    fn user_added_empty_map_survives_validation() {
+        let mut current = new_match();
+        current.first_to = 1;
+        current.maps.truncate(1);
+        current.hero_bans.truncate(1);
+        insert_map(&mut current, 1);
+        assert!(current.maps[1].user_added);
+
+        let mut state = AppState {
+            current_match: Some(current),
+            ..AppState::default()
+        };
+        let repairs = validate_and_repair(&mut state);
+        let current = state.current_match.expect("current match");
+
+        assert_eq!(current.maps.len(), 2);
+        assert_eq!(current.hero_bans.len(), 2);
+        assert!(current.maps[1].user_added);
+        assert!(
+            repairs
+                .iter()
+                .all(|repair| repair.kind != RepairKind::MapCountNormalized)
+        );
+    }
 
     #[test]
     fn overlong_names_are_truncated_to_the_display_limits() {

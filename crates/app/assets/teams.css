@@ -80,6 +80,12 @@
     overflow-wrap: anywhere;
 }
 
+.fgc-talent-list__type {
+    color: var(--fgc-accent);
+    font-size: var(--fgc-text-xs);
+    font-weight: 600;
+}
+
 .fgc-team-list__count,
 .fgc-talent-list__platform {
     color: var(--fgc-text-faint);
@@ -174,7 +180,7 @@
 .fgc-tabs {
     display: flex;
     gap: var(--fgc-space-1);
-    padding: 0.25rem;
+    padding: var(--fgc-space-1);
     border: 1px solid var(--fgc-line);
     border-radius: var(--fgc-radius-md);
     background: var(--fgc-bg-elevated);
@@ -249,6 +255,18 @@
     display: flex;
     flex-direction: column;
     gap: var(--fgc-space-2);
+}
+
+.fgc-player-preview {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-3);
+    width: 100%;
+    padding: var(--fgc-space-2);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-md);
+    background: var(--fgc-bg-elevated);
+    color: var(--fgc-text);
 }
 
 .fgc-player-card {

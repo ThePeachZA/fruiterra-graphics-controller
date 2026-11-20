@@ -11,6 +11,7 @@
 mod app;
 mod assets_io;
 mod components;
+mod logo_colors;
 mod server;
 mod smoke;
 mod state;

@@ -23,6 +23,7 @@ pub fn team(id: &str, name: &str) -> Team {
         text_color: "#ffffff".to_owned(),
         aux_color: "#090909".to_owned(),
         logo: None,
+        logo_background: true,
         players: Vec::new(),
     }
 }
@@ -66,6 +67,7 @@ pub fn asset(id: &str, hash: &str, ext: &str) -> Asset {
         icon: None,
         portrait: None,
         game_mode: None,
+        attachment: None,
     }
 }
 
@@ -74,11 +76,14 @@ pub fn match_state(id: &str) -> Match {
         id: MatchId::from_raw(id),
         title: "Grand Final".to_owned(),
         subtitle: "Season 1".to_owned(),
+        scheduled_at: None,
         team_a: Some(TeamId::from_raw("team-a")),
         team_b: Some(TeamId::from_raw("team-b")),
         maps: vec![MapSlot {
             name: "Ilios".to_owned(),
             game_mode_name: "Control".to_owned(),
+            game_mode_manual: false,
+            user_added: false,
             completed: false,
             score_a: 0,
             score_b: 0,
@@ -140,6 +145,8 @@ pub fn group_match(id: &str) -> GroupMatch {
         score2: 0,
         status: BracketMatchStatus::Pending,
         first_to: 3,
+        winner: None,
+        winner_manual: false,
     }
 }
 

@@ -13,11 +13,21 @@ use reqwest::Url;
 /// Timeout applied to a single URL import.
 const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// Opens the native file picker for an allow-listed image.
+/// Opens the native file picker for one or more allow-listed images.
+#[must_use]
+pub fn pick_image_files() -> Vec<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Import images")
+        .add_filter("Images", &["png", "jpg", "jpeg", "webp", "gif", "svg"])
+        .pick_files()
+        .unwrap_or_default()
+}
+
+/// Opens the native file picker for one allow-listed image.
 #[must_use]
 pub fn pick_image_file() -> Option<PathBuf> {
     rfd::FileDialog::new()
-        .set_title("Import image")
+        .set_title("Choose image")
         .add_filter("Images", &["png", "jpg", "jpeg", "webp", "gif", "svg"])
         .pick_file()
 }
@@ -26,6 +36,25 @@ pub fn pick_image_file() -> Option<PathBuf> {
 #[must_use]
 pub fn pick_bundle_folder(title: &str) -> Option<PathBuf> {
     rfd::FileDialog::new().set_title(title).pick_folder()
+}
+
+/// Opens a save dialog for a match library file.
+#[must_use]
+pub fn pick_match_library_save() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Export matches")
+        .add_filter("Match library", &[fgc_core::MATCH_LIBRARY_EXTENSION])
+        .set_file_name("matches.json")
+        .save_file()
+}
+
+/// Opens an open dialog for a match library file.
+#[must_use]
+pub fn pick_match_library_open() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Import matches")
+        .add_filter("Match library", &[fgc_core::MATCH_LIBRARY_EXTENSION])
+        .pick_file()
 }
 
 /// Validates a URL before any network request is made.

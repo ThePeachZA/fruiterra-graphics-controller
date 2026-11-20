@@ -146,7 +146,7 @@ All five carry **the identical scoreboard payload**. The type name selects the s
 - `currentMapIndex` is `null` when no map is selected. `game-overlay` adds 1 for display (`MAP ${index + 1}`); the server sends the raw 0-based index (C2).
 - `currentMap` / `mapType` are `""` when no map is selected.
 - `record` defaults to `"0-0"`.
-- `heroBans` is always an array; entries may be missing for maps that have none.
+- `heroBans` is always an array; entries may be missing for maps that have none. When **Hero bans** is off, `heroBans` is `[]` and `heroIcons` is `{}` so no ban icons remain on any overlay.
 - `mapPoolData` is `[]` when the pool is empty.
 
 **Key-name quirks preserved:**

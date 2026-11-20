@@ -45,10 +45,12 @@ pub struct Asset {
     pub origin: AssetOrigin,      // Bundled | User
     pub original_filename: Option<String>, // for "from URL" and diagnostics
     pub added_at: Option<String>,
-    // category-specific links (hero art)
+    // category-specific links (hero art, map mode)
     pub icon: Option<AssetId>,
     pub portrait: Option<AssetId>,
     pub game_mode: Option<AssetId>,
+    // hidden media owned by another asset
+    pub attachment: Option<AssetAttachment>,
 }
 ```
 
@@ -109,12 +111,24 @@ Allowed types: `png`, `jpg`/`jpeg`, `webp`, `gif`, `svg`. Max 20 MB per file. SV
 
 Bundled assets are read-only in the library: they cannot be renamed or deleted because they live inside the binary. Imported assets are read-only once stored as well; “replace” is expressed by pointing the team, player or setting at a different asset, never by mutating bytes in place.
 
-**Links.** Two category-specific links are editable from the library:
+**Properties.** Map cards expose **Game mode** inline. Hero cards expose
+**Properties…**, which opens a dialog for that one image:
 
-- **Hero → Ban icon…** points a Hero asset at the small image the game overlay draws in a ban strip. The icon is itself a Hero-category image; once linked it is hidden from hero pickers and ban lists so it never appears as a selectable hero. Without a link the ban strip falls back to the hero's own art (or its `portrait` link).
-- **Map → Game mode…** points a Map asset at a bundled or imported game-mode image. Unlinked maps group under **Other** on the map-pool overlay.
+- **Hero → Ban icon** is uploaded directly from the hero's properties dialog.
+  The uploaded image is stored as a Hero-category asset with an
+  `Asset.attachment` of kind `heroBanIcon` owned by that hero. It is hidden from
+  the library, hero pickers and ban lists, so it cannot be reused for another
+  hero. Replacing or removing the ban icon deletes the old attached asset;
+  deleting the hero deletes all of its attachments. Without one, the ban strip
+  falls back to the hero's own art (or its `portrait` link).
+- **Map → Game mode** points a Map asset at a bundled or imported game-mode
+  image. Unlinked maps group under **Other** on the map-pool overlay. The same
+  field derives **Game mode** on map slots that use the map; a mode typed by
+  hand is kept until the slot's map name changes.
 
-Links are metadata only; the linked image keeps its own content-addressed URL and is never copied or mutated.
+The attachment marker is additive (`#[serde(default)]`), so older state files
+load unchanged. `AssetAttachmentKind` leaves room for future attached media
+such as animations or videos without adding another library category.
 
 ### 1.6 Deletion and garbage collection
 

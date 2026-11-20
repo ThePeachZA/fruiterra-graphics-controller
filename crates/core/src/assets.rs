@@ -284,6 +284,7 @@ impl Asset {
             icon: None,
             portrait: None,
             game_mode: None,
+            attachment: None,
         })
     }
 
@@ -309,6 +310,7 @@ impl Asset {
             icon: None,
             portrait: None,
             game_mode: None,
+            attachment: None,
         })
     }
 }

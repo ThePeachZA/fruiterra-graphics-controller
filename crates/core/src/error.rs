@@ -107,6 +107,10 @@ pub enum CoreError {
     #[error("invalid project bundle: {0}")]
     InvalidBundle(String),
 
+    /// A match library file was malformed or incomplete.
+    #[error("invalid match library: {0}")]
+    InvalidMatchLibrary(String),
+
     /// A schema migration failed.
     #[error("migration from schema version {from} failed: {message}")]
     Migration {

@@ -260,7 +260,7 @@ The exact module split can change during implementation, but the crate boundarie
 - Timer run state is ephemeral in `TimerController` (`crates/app/src/timer.rs`), provided at the app root, so visiting another destination neither stops the clock nor resets it; the configured timer settings persist in `AppState::settings.timer`. A tick is broadcast once per second while running, and a settings change broadcasts the current paused value.
 - Map names and modes are free text backed by datalists. Map assets are optional until M9, and map-pool entries without a matching asset are skipped by projection rather than emitted as blank rows.
 - Hero bans store one hero per team per map, matching the overlay contract; selecting a new hero replaces the previous ban and clearing the field removes it.
-- The seven tabs reuse the shared `.fgc-tabs`/`.fgc-tab` controls from the Teams destination, with Match Controller-specific layout in `crates/app/assets/match-controller.css`.
+- The five tabs reuse the shared `.fgc-tabs`/`.fgc-tab` controls from the Teams destination, with Match Controller-specific layout in `crates/app/assets/match-controller.css`. Timer settings live in the app-shell timer widget rather than a tab.
 
 ---
 
@@ -419,7 +419,7 @@ No automated pixel rendering in CI. The manual QA checklist is the compatibility
 
 **In v1:** parity workflows, correctness fixes C1–C13, completed Tournament control view T1–T14, hashed assets AS1–AS10, seven overlays, Windows NSIS installer + portable ZIP.
 
-**Not in v1:** undo/redo, presets, multiple OBS scenes, bracket overlay, HTTP/Stream Deck API, timer overlay, macOS/Linux, auto-update, code signing, legacy Electron import, multi-stage playoffs, custom points, match history.
+**Not in v1:** undo/redo, presets, multiple OBS scenes, bracket overlay, HTTP/Stream Deck API, timer overlay, macOS/Linux, auto-update, code signing, legacy Electron import, custom points and match history. Multi-stage playoffs, per-match talent roles and the widget-only timer were pulled forward into v1.
 
 ---
 
