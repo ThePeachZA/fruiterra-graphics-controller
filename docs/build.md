@@ -321,8 +321,8 @@ The script clones `https://github.com/<owner>/<repo>.wiki.git`, copies every
 `docs/wiki/*.md` page, commits and pushes. Pass `-Repo owner/name` to target a
 different repository.
 
-> [!IMPORTANT]
-> The GitHub wiki must be enabled first. Private repositories on the GitHub Free
-> plan cannot enable wikis, so the wiki clone fails with `Repository not found`
-> until the repository is public or the plan supports private wikis. Until then,
-> `docs/wiki/Home.md` is the published end-user guide.
+> [!NOTE]
+> The repository is public and the wiki is published at
+> <https://github.com/ThePeachZA/fruiterra-graphics-controller/wiki>.
+> `docs/wiki/Home.md` remains the versioned source; publish changes with the
+> script above.

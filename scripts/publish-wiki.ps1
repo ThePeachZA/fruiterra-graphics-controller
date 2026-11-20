@@ -1,7 +1,8 @@
 # Publishes docs/wiki to the GitHub wiki.
 #
-# The GitHub wiki repository only exists after the wiki is enabled on the
-# repository. Private repositories need a plan that supports private wikis.
+# The GitHub wiki repository only exists after the wiki is enabled and its first
+# page has been created in the GitHub web UI. Private repositories need a plan
+# that supports private wikis.
 #
 # Usage:
 #   pwsh ./scripts/publish-wiki.ps1
