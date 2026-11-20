@@ -462,6 +462,29 @@ because the browser was on the host PC.
   made before the v1 tag. Design details and open questions are in
   `docs/backlog.md` C3.
 
+## Remote-access UI ships ahead of Tailscale plumbing (2026-11-21)
+
+**Status: D8-2 done 2026-11-21; D8-3 to D8-7 remain open.** The owner chose an
+honest UI-first slice for the first C3 item instead of pulling client detection
+and serve lifecycle forward.
+
+- **Persisted scope.** `OverlaySettings.remoteAccess` stores `off`, `lan`,
+  `tailscale` or `funnel` in the versioned state file. The existing `allowLan`
+  flag stays the bind source of truth; validation maps an older `allowLan: true`
+  save to the LAN scope, and both the LAN switch and the selector keep the two
+  fields in sync.
+- **What is live.** Off (loopback) and LAN work exactly as before, including a
+  listener restart when the scope changes. Settings shows the active scope,
+  server state and base URL (the URL stays masked while URLs are hidden), plus
+  the shared Browser Source panel with copy and Open in browser actions.
+- **What is deliberately not live.** Tailscale and Funnel render as disabled
+  options with a plain note that detection, serving and public exposure are
+  later items. They never bind a different interface or generate a remote URL.
+  No Tailscale binary is detected, installed or invoked, and no `tailscale
+  serve` or `funnel` command is run.
+- **Next.** D8-3 detection, D8-4 serve lifecycle with teardown, D8-5 gated
+  Funnel, D8-6 remote URL generation and D8-7 docs/QA finish the feature.
+
 ## Asset cleanup guarded against a failed load (2026-11-15)
 
 **Status: fixed 2026-11-21; v1 correctness item C15.** Found while recovering the test fixture.

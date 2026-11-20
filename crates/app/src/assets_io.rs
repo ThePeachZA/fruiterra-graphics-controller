@@ -162,6 +162,26 @@ pub fn open_overlays_folder() -> Result<PathBuf, String> {
     Ok(directory)
 }
 
+/// Opens an app-generated overlay URL in the default browser.
+///
+/// The URL comes from `overlay_url`, but it is still passed straight to the
+/// child process instead of through a shell so no argument is re-parsed.
+pub fn open_browser(url: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(url)
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| format!("Could not open the browser: {error}"))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = url;
+        Err("Opening the browser is only supported on Windows.".to_owned())
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn reveal(directory: &Path) -> Result<(), String> {
     std::process::Command::new("explorer")

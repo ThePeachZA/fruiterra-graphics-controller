@@ -1130,6 +1130,21 @@ pub struct Standing {
     pub points: u32,
 }
 
+/// Who can reach the overlay server.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RemoteAccessMode {
+    /// Loopback only, the v1 default.
+    #[default]
+    Off,
+    /// Any device on the local network.
+    Lan,
+    /// A device on the user's Tailscale tailnet.
+    Tailscale,
+    /// The public internet through Tailscale Funnel.
+    Funnel,
+}
+
 /// Overlay server settings.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1143,6 +1158,9 @@ pub struct OverlaySettings {
     /// Whether the server starts with the application.
     #[serde(default)]
     pub auto_start: bool,
+    /// Access scope shown in Settings.
+    #[serde(default)]
+    pub remote_access: RemoteAccessMode,
 }
 
 impl Default for OverlaySettings {
@@ -1151,6 +1169,7 @@ impl Default for OverlaySettings {
             port: default_port(),
             allow_lan: false,
             auto_start: false,
+            remote_access: RemoteAccessMode::Off,
         }
     }
 }
@@ -1385,6 +1404,7 @@ mod tests {
         let overlay: OverlaySettings =
             serde_json::from_str(r#"{"port":3001,"allowLan":false}"#).expect("overlay");
         assert!(!overlay.auto_start);
+        assert_eq!(overlay.remote_access, RemoteAccessMode::Off);
 
         let display: DisplaySettings = serde_json::from_str(r#"{}"#).expect("display");
         assert!(display.show_hero_bans);
@@ -1413,10 +1433,12 @@ mod tests {
     fn new_schema_fields_round_trip() {
         let overlay = OverlaySettings {
             auto_start: true,
+            remote_access: RemoteAccessMode::Lan,
             ..OverlaySettings::default()
         };
         let json = serde_json::to_string(&overlay).expect("serialise overlay");
         assert!(json.contains("\"autoStart\":true"));
+        assert!(json.contains("\"remoteAccess\":\"lan\""));
 
         let display = DisplaySettings {
             show_hero_bans: false,

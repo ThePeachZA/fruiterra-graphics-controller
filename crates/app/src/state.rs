@@ -18,10 +18,10 @@ use fgc_core::{
     AppState, Asset as CoreAsset, AssetAttachment, AssetAttachmentKind, AssetCategory, AssetId,
     AssetOrigin, AssetStore, BracketFormat, BracketMatchStatus, BracketSection, BracketSlot,
     DEFAULT_TIEBREAKERS, GroupId, IntervieweeRef, JsonStore, LinkError, LinkKind, MapSlot, Match,
-    MatchId, MatchLink, MatchStatus, MemoryStore, Player, PlayerId, Position, Role, Scoring, Side,
-    SlotError, Store, Talent, TalentId, TalentRef, TalentSlot, TalentType, Team, TeamId,
-    TeamReference, TeamSide, Tiebreaker, TimerAlignment, TimerMode, Tournament, TournamentId,
-    TournamentStage, TournamentStatus, UnusedAssets, add_entrant as core_add_entrant,
+    MatchId, MatchLink, MatchStatus, MemoryStore, Player, PlayerId, Position, RemoteAccessMode,
+    Role, Scoring, Side, SlotError, Store, Talent, TalentId, TalentRef, TalentSlot, TalentType,
+    Team, TeamId, TeamReference, TeamSide, Tiebreaker, TimerAlignment, TimerMode, Tournament,
+    TournamentId, TournamentStage, TournamentStatus, UnusedAssets, add_entrant as core_add_entrant,
     add_group_fixture as core_add_group_fixture, add_match as core_add_match,
     add_round as core_add_round, clear_talent_references, derived_scores, insert_map,
     match_mut as core_match_mut, move_map as move_map_slot, move_map_pool as move_map_pool_slot,
@@ -289,11 +289,52 @@ impl AppStore {
     }
 
     /// Enables or disables binding on the LAN interface.
+    ///
+    /// The existing switch and the new Remote access selector share one bind
+    /// flag, so both stay in sync.
     pub fn set_allow_lan(&self, allow_lan: bool) {
-        if self.state.peek().settings.overlay.allow_lan == allow_lan {
+        let scope = if allow_lan {
+            RemoteAccessMode::Lan
+        } else {
+            RemoteAccessMode::Off
+        };
+        let (allow_lan_now, mode_now) = {
+            let state = self.state.peek();
+            (
+                state.settings.overlay.allow_lan,
+                state.settings.overlay.remote_access,
+            )
+        };
+        if allow_lan_now == allow_lan && mode_now == scope {
             return;
         }
-        self.mutate(|state| state.settings.overlay.allow_lan = allow_lan);
+        self.mutate(move |state| {
+            state.settings.overlay.allow_lan = allow_lan;
+            state.settings.overlay.remote_access = scope;
+        });
+        self.apply_network_change();
+    }
+
+    /// Selects who can reach the overlay server.
+    ///
+    /// Tailscale and Funnel are visible but disabled in the UI until their
+    /// detection and serve-lifecycle items land.
+    pub fn set_remote_access(&self, mode: RemoteAccessMode) {
+        let (allow_lan_now, mode_now) = {
+            let state = self.state.peek();
+            (
+                state.settings.overlay.allow_lan,
+                state.settings.overlay.remote_access,
+            )
+        };
+        let lan = matches!(mode, RemoteAccessMode::Lan);
+        if mode_now == mode && allow_lan_now == lan {
+            return;
+        }
+        self.mutate(move |state| {
+            state.settings.overlay.remote_access = mode;
+            state.settings.overlay.allow_lan = lan;
+        });
         self.apply_network_change();
     }
 

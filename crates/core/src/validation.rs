@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use crate::{
-    AppState, AssetId, GroupId, MatchId, PlayerId, TalentId, TeamId, TournamentId,
-    TournamentRepairKind, is_allowed_extension, is_valid_hash, repair_tournament,
+    AppState, AssetId, GroupId, MatchId, PlayerId, RemoteAccessMode, TalentId, TeamId,
+    TournamentId, TournamentRepairKind, is_allowed_extension, is_valid_hash, repair_tournament,
     trim_trailing_empty_maps_for_first_to,
 };
 
@@ -67,6 +67,14 @@ impl Repair {
 /// repair is also logged at `warn` level.
 pub fn validate_and_repair(state: &mut AppState) -> Vec<Repair> {
     let mut repairs = Vec::new();
+
+    // Older saves have no scope field. A LAN bind means the owner already chose
+    // the LAN scope, so keep the new selector consistent without a repair toast.
+    if state.settings.overlay.remote_access == RemoteAccessMode::Off
+        && state.settings.overlay.allow_lan
+    {
+        state.settings.overlay.remote_access = RemoteAccessMode::Lan;
+    }
 
     dedupe_state_ids(state, &mut repairs);
     clamp_names(state, &mut repairs);
@@ -358,6 +366,16 @@ mod tests {
     use super::*;
     use crate::{empty_hero_bans, empty_map_slot, insert_map, new_match};
     use serde_json::json;
+
+    #[test]
+    fn legacy_lan_bind_selects_the_lan_scope() {
+        let mut state = AppState::default();
+        state.settings.overlay.allow_lan = true;
+
+        validate_and_repair(&mut state);
+
+        assert_eq!(state.settings.overlay.remote_access, RemoteAccessMode::Lan);
+    }
 
     #[test]
     fn trailing_empty_maps_are_normalized_to_first_to_on_load() {

@@ -1,6 +1,7 @@
 //! Settings destination: overlay network, startup and display defaults.
 
 use dioxus::prelude::*;
+use fgc_core::RemoteAccessMode;
 use fgc_server::AssetMode;
 
 use crate::assets_io::format_bytes;
@@ -8,8 +9,10 @@ use crate::components::button::{Button, ButtonVariant};
 use crate::components::input::Input;
 use crate::components::switch::Switch;
 use crate::components::{Field, KeyValue, KeyValues, Panel, ToggleRow};
+use crate::remote_access;
 use crate::server::DEFAULT_PORT;
 use crate::state::AppStore;
+use crate::views::overlay::OverlayUrls;
 
 /// Editable settings that are live in milestone M4 and M5.
 #[component]
@@ -29,6 +32,15 @@ pub fn SettingsView() -> Element {
 
     let port_text = use_signal(|| settings.overlay.port.to_string());
     let port_error = use_signal(|| None::<String>);
+
+    let snapshot = state.read();
+    let remote_mode = snapshot.settings.overlay.remote_access;
+    let remote_status =
+        remote_access::status_text(&snapshot, server.is_running(), store.urls_visible());
+    let remote_notice = remote_access::pending_notice(remote_mode);
+    let remote_base_url = remote_access::base_url(&snapshot);
+    let local_scope = matches!(remote_mode, RemoteAccessMode::Off | RemoteAccessMode::Lan);
+    drop(snapshot);
 
     use_effect(move || store.refresh_unused());
 
@@ -80,7 +92,7 @@ pub fn SettingsView() -> Element {
                     title: "Allow LAN connections".to_owned(),
                     hint: Some(
                         "Bind on all interfaces so another machine on the network can render overlays. \
-                         Loopback-only is safer."
+                         Mirrors Local network in Remote access; loopback-only is safer."
                             .to_owned(),
                     ),
                     Switch {
@@ -110,6 +122,34 @@ pub fn SettingsView() -> Element {
                         option { value: "served", "Served URLs (/assets/…)" }
                         option { value: "data-url", "Inline data URLs" }
                     }
+                }
+            }
+            Panel {
+                title: "Remote access".to_owned(),
+                description: "Who can open the overlays, and where to point OBS.".to_owned(),
+                Field {
+                    label: "Access scope".to_owned(),
+                    hint: Some("Tailscale and Funnel are prepared in later items.".to_owned()),
+                    select {
+                        class: "fgc-native-select",
+                        value: remote_access::mode_value(remote_mode),
+                        aria_label: "Remote access scope",
+                        onchange: move |event| {
+                            let mode = remote_access::mode_from_value(&event.value());
+                            store.set_remote_access(mode);
+                        },
+                        option { value: "off", "This PC (loopback only)" }
+                        option { value: "lan", "Local network" }
+                        option { value: "tailscale", disabled: true, "Tailscale (coming later)" }
+                        option { value: "funnel", disabled: true, "Funnel (coming later)" }
+                    }
+                }
+                p { class: "fgc-note", role: "status", "{remote_status}" }
+                if let Some(notice) = remote_notice {
+                    p { class: "fgc-note", "{notice}" }
+                }
+                if local_scope {
+                    OverlayUrls { base_url: remote_base_url }
                 }
             }
             Panel {

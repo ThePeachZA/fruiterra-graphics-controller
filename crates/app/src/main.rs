@@ -12,6 +12,7 @@ mod app;
 mod assets_io;
 mod components;
 mod logo_colors;
+mod remote_access;
 mod server;
 mod smoke;
 mod state;

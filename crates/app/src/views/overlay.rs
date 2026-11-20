@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use dioxus_primitives::toast::{ToastOptions, use_toast};
 use fgc_server::ServerStatus;
 
+use crate::assets_io::open_browser;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::{KeyValue, KeyValues, Panel};
 use crate::server::{OVERLAY_FILES, overlay_url};
@@ -146,13 +147,16 @@ pub(crate) fn OverlayUrls(base_url: String) -> Element {
     }
 }
 
-/// One overlay URL with a copy button.
+/// One overlay URL with open and copy buttons.
 #[component]
 fn SourceRow(file: String, url: String, visible: bool) -> Element {
+    let store = use_context::<AppStore>();
     let toast = use_toast();
     let url_for_code = url.clone();
     let url_for_click = url.clone();
+    let url_for_open = url.clone();
     let file_for_toast = file.clone();
+    let file_for_open = file.clone();
 
     rsx! {
         div { class: "fgc-source",
@@ -164,17 +168,34 @@ fn SourceRow(file: String, url: String, visible: bool) -> Element {
                     code { class: "fgc-code fgc-code--hidden", "URL hidden" }
                 }
             }
-            Button {
-                variant: ButtonVariant::Outline,
-                size: ButtonSize::Sm,
-                onclick: move |_| {
-                    copy_to_clipboard(&url_for_click);
-                    toast.success(
-                        "Browser source copied".to_owned(),
-                        ToastOptions::new().description(file_for_toast.clone()),
-                    );
-                },
-                "Copy URL"
+            div { class: "fgc-actions",
+                Button {
+                    variant: ButtonVariant::Outline,
+                    size: ButtonSize::Sm,
+                    onclick: move |_| {
+                        if let Err(error) = open_browser(&url_for_open) {
+                            store.report_error(error);
+                            return;
+                        }
+                        toast.success(
+                            "Overlay opened".to_owned(),
+                            ToastOptions::new().description(file_for_open.clone()),
+                        );
+                    },
+                    "Open in browser"
+                }
+                Button {
+                    variant: ButtonVariant::Outline,
+                    size: ButtonSize::Sm,
+                    onclick: move |_| {
+                        copy_to_clipboard(&url_for_click);
+                        toast.success(
+                            "Browser source copied".to_owned(),
+                            ToastOptions::new().description(file_for_toast.clone()),
+                        );
+                    },
+                    "Copy URL"
+                }
             }
         }
     }
