@@ -8,7 +8,7 @@
 //! Asset imports, exports and garbage collection run on blocking tasks so
 //! hashing and disk I/O never stall the UI thread.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -49,6 +49,9 @@ use crate::server::{ServerController, base_url_for, project_outbound, server_con
 /// How often dirty state is written to disk.
 const SAVE_INTERVAL: Duration = Duration::from_millis(500);
 
+/// Notice shown when cleanup is refused because state cannot be trusted.
+const CLEANUP_PAUSED_NOTICE: &str = "Asset cleanup is paused because the saved state could not be read. Restore app.json or import a project before cleaning up.";
+
 /// UI-facing owner of the domain state and the overlay server.
 #[derive(Clone, Copy)]
 pub struct AppStore {
@@ -59,6 +62,7 @@ pub struct AppStore {
     dirty: Signal<bool>,
     saving: Signal<bool>,
     asset_busy: Signal<bool>,
+    cleanup_allowed: Signal<bool>,
     unused: Signal<UnusedAssets>,
     last_error: Signal<Option<String>>,
     notice: Signal<Option<String>>,
@@ -100,6 +104,7 @@ impl AppStore {
         let dirty = use_signal(|| false);
         let saving = use_signal(|| false);
         let asset_busy = use_signal(|| false);
+        let cleanup_allowed = use_signal(|| loaded);
         let unused = use_signal(UnusedAssets::default);
         let last_error = use_signal(|| error);
         let notice = use_signal(|| None::<String>);
@@ -114,6 +119,7 @@ impl AppStore {
             dirty,
             saving,
             asset_busy,
+            cleanup_allowed,
             unused,
             last_error,
             notice,
@@ -145,6 +151,7 @@ impl AppStore {
             dirty: Signal::new(false),
             saving: Signal::new(false),
             asset_busy: Signal::new(false),
+            cleanup_allowed: Signal::new(true),
             unused: Signal::new(UnusedAssets::default()),
             last_error: Signal::new(None),
             notice: Signal::new(None),
@@ -182,6 +189,12 @@ impl AppStore {
     #[must_use]
     pub fn asset_busy(&self) -> bool {
         *self.asset_busy.read()
+    }
+
+    /// True while saved state is trustworthy enough to delete unused blobs.
+    #[must_use]
+    pub fn cleanup_allowed(&self) -> bool {
+        *self.cleanup_allowed.read()
     }
 
     /// Totals for blobs that no current asset metadata references.
@@ -1841,6 +1854,7 @@ impl AppStore {
                 tokio::task::spawn_blocking(move || asset_store.import_bundle(&directory)).await;
             match imported {
                 Ok(Ok((imported, report))) => {
+                    this.allow_cleanup();
                     this.mutate(move |state| *state = imported);
                     this.refresh_unused();
                     this.notify(format!(
@@ -1870,27 +1884,31 @@ impl AppStore {
         };
         let state = self.state.peek().clone();
         let store = self.store.peek().clone();
+        let cleanup_allowed = self.cleanup_allowed();
 
         self.set_asset_busy(true);
         let this = *self;
         spawn(async move {
             let collected = tokio::task::spawn_blocking(move || {
-                let saved = store.load().ok();
-                let mut keep = referenced_hashes(&state);
-                if let Some(saved) = saved {
-                    keep.extend(referenced_hashes(&saved));
-                }
-                asset_store.collect_garbage_hashes(&keep)
+                let Some(keep) = cleanup_keep_hashes(cleanup_allowed, &state, store.as_ref())?
+                else {
+                    return Ok(None);
+                };
+                asset_store
+                    .collect_garbage_hashes(&keep)
+                    .map(Some)
+                    .map_err(|error| error.to_string())
             })
             .await;
 
             match collected {
-                Ok(Ok(report)) => this.notify(format!(
+                Ok(Ok(Some(report))) => this.notify(format!(
                     "Removed {} unused file(s) ({}).",
                     report.files,
                     format_bytes(report.bytes)
                 )),
-                Ok(Err(error)) => this.report_error(format!("Could not clean up assets: {error}")),
+                Ok(Ok(None)) => this.notify(CLEANUP_PAUSED_NOTICE),
+                Ok(Err(error)) => this.report_error(error),
                 Err(error) => this.report_error(format!("The cleanup task failed: {error}")),
             }
             this.refresh_unused();
@@ -1898,28 +1916,36 @@ impl AppStore {
         });
     }
 
-    /// Recomputes the unused-asset totals using the same keep set as cleanup:
-    /// the union of the saved snapshot and the current in-memory state.
+    /// Recomputes the unused-asset totals using the same keep set as cleanup.
     pub fn refresh_unused(&self) {
         let Some(asset_store) = self.asset_store.peek().clone() else {
             return;
         };
         let state = self.state.peek().clone();
         let store = self.store.peek().clone();
+        let cleanup_allowed = self.cleanup_allowed();
         let mut unused = self.unused;
         spawn(async move {
             let totals = tokio::task::spawn_blocking(move || {
-                let mut keep = referenced_hashes(&state);
-                if let Ok(saved) = store.load() {
-                    keep.extend(referenced_hashes(&saved));
-                }
-                asset_store.unused_hashes(&keep)
+                let Some(keep) = cleanup_keep_hashes(cleanup_allowed, &state, store.as_ref())?
+                else {
+                    return Ok(UnusedAssets::default());
+                };
+                asset_store
+                    .unused_hashes(&keep)
+                    .map_err(|error| error.to_string())
             })
             .await;
             match totals {
                 Ok(Ok(totals)) => unused.set(totals),
-                Ok(Err(error)) => warn!(%error, "could not count unused assets"),
-                Err(error) => warn!(%error, "unused asset count task failed"),
+                Ok(Err(error)) => {
+                    unused.set(UnusedAssets::default());
+                    warn!(%error, "could not count unused assets");
+                }
+                Err(error) => {
+                    unused.set(UnusedAssets::default());
+                    warn!(%error, "unused asset count task failed");
+                }
             }
         });
     }
@@ -2032,6 +2058,11 @@ impl AppStore {
         asset_busy.set(busy);
     }
 
+    fn allow_cleanup(&self) {
+        let mut cleanup_allowed = self.cleanup_allowed;
+        cleanup_allowed.set(true);
+    }
+
     fn spawn_saver(&self) {
         let mut dirty = self.dirty;
         let mut saving = self.saving;
@@ -2040,6 +2071,7 @@ impl AppStore {
         let asset_store = self.asset_store;
         let mut unused = self.unused;
         let mut last_error = self.last_error;
+        let cleanup_allowed = self.cleanup_allowed;
 
         use_future(move || async move {
             loop {
@@ -2049,24 +2081,34 @@ impl AppStore {
                 }
 
                 let store = store.peek().clone();
+                let gc_store = store.clone();
                 let snapshot = state.cloned();
-                let snapshot_for_gc = snapshot.clone();
                 dirty.set(false);
                 saving.set(true);
 
                 match persist(store, snapshot).await {
                     Ok(()) => {
                         debug!("state saved");
-                        if let Some(asset_store) = asset_store.peek().clone() {
+                        let allowed = *cleanup_allowed.peek();
+                        if !allowed {
+                            unused.set(UnusedAssets::default());
+                            debug!("asset cleanup paused; saved state was not trusted");
+                        } else if let Some(asset_store) = asset_store.peek().clone() {
                             let current = state.peek().clone();
                             let collected = tokio::task::spawn_blocking(move || {
-                                let mut keep = referenced_hashes(&current);
-                                keep.extend(referenced_hashes(&snapshot_for_gc));
-                                asset_store.collect_garbage_hashes(&keep)
+                                let Some(keep) =
+                                    cleanup_keep_hashes(allowed, &current, gc_store.as_ref())?
+                                else {
+                                    return Ok(None);
+                                };
+                                asset_store
+                                    .collect_garbage_hashes(&keep)
+                                    .map(Some)
+                                    .map_err(|error| error.to_string())
                             })
                             .await;
                             match collected {
-                                Ok(Ok(report)) => {
+                                Ok(Ok(Some(report))) => {
                                     if report.files > 0 {
                                         debug!(
                                             files = report.files,
@@ -2075,6 +2117,10 @@ impl AppStore {
                                         );
                                     }
                                     unused.set(UnusedAssets::default());
+                                }
+                                Ok(Ok(None)) => {
+                                    unused.set(UnusedAssets::default());
+                                    debug!("asset cleanup paused; saved state was not trusted");
                                 }
                                 Ok(Err(error)) => {
                                     warn!(%error, "asset cleanup after save failed");
@@ -2098,17 +2144,31 @@ impl AppStore {
         let store = self.store;
         let asset_store = self.asset_store;
         let dirty = self.dirty;
+        let cleanup_allowed = self.cleanup_allowed;
         use_drop(move || {
             if *dirty.peek() {
                 let store = store.peek().clone();
                 let snapshot = state.cloned();
                 match store.save(&snapshot) {
                     Ok(()) => {
-                        if let Some(asset_store) = asset_store.peek().clone() {
-                            let mut keep = referenced_hashes(&snapshot);
-                            keep.extend(referenced_hashes(&state.peek()));
-                            if let Err(error) = asset_store.collect_garbage_hashes(&keep) {
-                                warn!(%error, "asset cleanup on exit failed");
+                        let allowed = *cleanup_allowed.peek();
+                        if !allowed {
+                            warn!("asset cleanup on exit paused; saved state was not trusted");
+                        } else if let Some(asset_store) = asset_store.peek().clone() {
+                            match cleanup_keep_hashes(allowed, &snapshot, store.as_ref()) {
+                                Ok(Some(keep)) => {
+                                    if let Err(error) = asset_store.collect_garbage_hashes(&keep) {
+                                        warn!(%error, "asset cleanup on exit failed");
+                                    }
+                                }
+                                Ok(None) => {
+                                    warn!(
+                                        "asset cleanup on exit paused; saved state was not trusted"
+                                    );
+                                }
+                                Err(error) => {
+                                    warn!(%error, "asset cleanup on exit could not read saved state");
+                                }
                             }
                         }
                     }
@@ -2277,6 +2337,25 @@ pub fn display_name_from_filename(filename: Option<&str>) -> String {
         .to_owned()
 }
 
+/// Builds the keep set for asset cleanup, or returns `None` when cleanup must
+/// be paused because the saved state cannot be trusted.
+fn cleanup_keep_hashes(
+    cleanup_allowed: bool,
+    state: &AppState,
+    store: &dyn Store,
+) -> Result<Option<BTreeSet<String>>, String> {
+    if !cleanup_allowed {
+        return Ok(None);
+    }
+
+    let saved = store
+        .load()
+        .map_err(|error| format!("Could not load saved state: {error}"))?;
+    let mut keep = referenced_hashes(state);
+    keep.extend(referenced_hashes(&saved));
+    Ok(Some(keep))
+}
+
 /// Loads state from a store, returning defaults and an error message on failure.
 #[must_use]
 pub fn load_state(store: &dyn Store) -> (AppState, Option<String>) {
@@ -2438,6 +2517,18 @@ mod tests {
     use super::*;
     use fgc_core::{Asset, CoreError, SocialLink, SocialPlatform};
 
+    struct FailingStore;
+
+    impl Store for FailingStore {
+        fn load(&self) -> Result<AppState, CoreError> {
+            Err(CoreError::StorePoisoned)
+        }
+
+        fn save(&self, _state: &AppState) -> Result<(), CoreError> {
+            Ok(())
+        }
+    }
+
     fn team(name: &str) -> Team {
         Team {
             id: TeamId::new(),
@@ -2470,20 +2561,47 @@ mod tests {
 
     #[test]
     fn load_state_falls_back_to_defaults_on_error() {
-        struct Failing;
-        impl Store for Failing {
-            fn load(&self) -> Result<AppState, CoreError> {
-                Err(CoreError::StorePoisoned)
-            }
-
-            fn save(&self, _state: &AppState) -> Result<(), CoreError> {
-                Ok(())
-            }
-        }
-
-        let (loaded, error) = load_state(&Failing);
+        let (loaded, error) = load_state(&FailingStore);
         assert_eq!(loaded, AppState::default());
         assert!(error.is_some());
+    }
+
+    #[test]
+    fn cleanup_keep_hashes_pauses_when_cleanup_is_not_allowed() {
+        let keep = cleanup_keep_hashes(false, &AppState::default(), &FailingStore)
+            .expect("paused cleanup should not report an error");
+
+        assert!(keep.is_none());
+    }
+
+    #[test]
+    fn cleanup_keep_hashes_refuses_unreadable_saved_state() {
+        let error = cleanup_keep_hashes(true, &AppState::default(), &FailingStore)
+            .expect_err("unreadable saved state should refuse cleanup");
+
+        assert!(error.contains("Could not load saved state"), "{error}");
+    }
+
+    #[test]
+    fn cleanup_keep_hashes_unions_saved_and_current_references() {
+        let mut saved = AppState::default();
+        saved.assets.push(
+            Asset::new_user("Saved", AssetCategory::Logo, "1".repeat(64), "png", None)
+                .expect("saved asset"),
+        );
+        let store = MemoryStore::new(saved);
+        let mut current = AppState::default();
+        current.assets.push(
+            Asset::new_user("Current", AssetCategory::Logo, "2".repeat(64), "png", None)
+                .expect("current asset"),
+        );
+
+        let keep = cleanup_keep_hashes(true, &current, &store)
+            .expect("saved state should load")
+            .expect("cleanup should be allowed");
+
+        assert!(keep.contains(&"1".repeat(64)));
+        assert!(keep.contains(&"2".repeat(64)));
     }
 
     #[test]

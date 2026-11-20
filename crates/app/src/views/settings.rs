@@ -21,6 +21,7 @@ pub fn SettingsView() -> Element {
     let asset_mode = server.asset_mode();
     let unused = store.unused();
     let busy = store.asset_busy();
+    let cleanup_allowed = store.cleanup_allowed();
     let overlays_path = fgc_core::overlays_override_dir().map_or_else(
         |_| "Unavailable".to_owned(),
         |path| path.display().to_string(),
@@ -159,7 +160,7 @@ pub fn SettingsView() -> Element {
                 div { class: "fgc-actions",
                     Button {
                         variant: ButtonVariant::Outline,
-                        disabled: busy || unused.files == 0,
+                        disabled: busy || !cleanup_allowed || unused.files == 0,
                         onclick: move |_| store.clean_up_unused(),
                         if busy { "Working…" } else { "Clean up now" }
                     }
@@ -177,8 +178,14 @@ pub fn SettingsView() -> Element {
                         "Open overlays folder"
                     }
                 }
-                p { class: "fgc-note",
-                    "Unreferenced image data is deleted automatically after a successful save and on startup. Clean up now removes anything the saved and current projects no longer use."
+                if cleanup_allowed {
+                    p { class: "fgc-note",
+                        "Unreferenced image data is deleted automatically after a successful save and on startup. Clean up now removes anything the saved and current projects no longer use."
+                    }
+                } else {
+                    p { class: "fgc-note", role: "status",
+                        "Asset cleanup is paused because the saved state could not be read. Restore app.json or import a project before clearing unused files; nothing will be deleted in the meantime."
+                    }
                 }
             }
             Panel {

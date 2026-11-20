@@ -464,7 +464,7 @@ because the browser was on the host PC.
 
 ## Asset cleanup guarded against a failed load (2026-11-15)
 
-**Status: open v1 correctness item C15.** Found while recovering the test fixture.
+**Status: fixed 2026-11-21; v1 correctness item C15.** Found while recovering the test fixture.
 A PowerShell `Set-Content -Encoding utf8` wrote a BOM into both `app.json` and
 `app.json.bak`; serde rejected both, the app started on the empty default state,
 and the 20 user blobs were removed.
@@ -476,11 +476,16 @@ and the 20 user blobs were removed.
   fails (`loaded == false`), but the **Clean up now** button and the saver path
   are not.
 - **Guard.** Track whether the last load succeeded (the existing `Bootstrap::loaded`
-  is enough) and refuse both collectors while it is false, with a plain-language
-  notice. A successful import or an explicit user save that replaces the state
-  can re-enable cleanup.
-- **Not changed yet.** No code change is made in this QA pass; the item is
-  recorded for the v1 correctness sweep so the behaviour is not lost.
+  is enough) and refuse every cleanup collector while it is false, with a
+  plain-language notice. Only a full project-bundle import replaces the state
+  and re-enables cleanup; an explicit user save does not.
+- **Fix.** `AppStore` now carries `cleanup_allowed`, seeded from whether the
+  startup load succeeded. Manual, post-save and exit collection all go through
+  `cleanup_keep_hashes()`, which returns no keep set while cleanup is paused or
+  the saved state is unreadable. Settings disables **Clean up now** and shows a
+  plain-language explanation; no blobs are deleted in that state. Importing a
+  full project bundle replaces the state and re-enables cleanup; a single-image
+  import does not, because it would otherwise orphan the unknown blobs.
 
 ## Origin-aware overlay connection pulled forward (2026-11-16)
 
