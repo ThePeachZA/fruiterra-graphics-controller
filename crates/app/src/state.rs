@@ -45,6 +45,7 @@ use tracing::{debug, info, warn};
 
 use crate::assets_io::format_bytes;
 use crate::server::{ServerController, base_url_for, project_outbound, server_config};
+use crate::tailscale::{TailscaleState, TailscaleStatus};
 
 /// How often dirty state is written to disk.
 const SAVE_INTERVAL: Duration = Duration::from_millis(500);
@@ -66,6 +67,8 @@ pub struct AppStore {
     unused: Signal<UnusedAssets>,
     last_error: Signal<Option<String>>,
     notice: Signal<Option<String>>,
+    /// Cached Tailscale client detection; `None` before the first result.
+    tailscale: Signal<Option<TailscaleStatus>>,
     /// Ephemeral UI state for revealing Browser Source URLs.
     reveal_urls: Signal<bool>,
     /// Cached data URLs for thumbnails, keyed by `hash:ext`.
@@ -108,6 +111,7 @@ impl AppStore {
         let unused = use_signal(UnusedAssets::default);
         let last_error = use_signal(|| error);
         let notice = use_signal(|| None::<String>);
+        let tailscale = use_signal(|| None);
         let reveal_urls = use_signal(|| false);
         let thumb_urls = use_signal(HashMap::<String, String>::new);
 
@@ -123,6 +127,7 @@ impl AppStore {
             unused,
             last_error,
             notice,
+            tailscale,
             reveal_urls,
             thumb_urls,
             server,
@@ -155,6 +160,7 @@ impl AppStore {
             unused: Signal::new(UnusedAssets::default()),
             last_error: Signal::new(None),
             notice: Signal::new(None),
+            tailscale: Signal::new(None),
             reveal_urls: Signal::new(false),
             thumb_urls: Signal::new(HashMap::new()),
             server: ServerController::test_controller(),
@@ -213,6 +219,29 @@ impl AppStore {
     #[must_use]
     pub fn notice(&self) -> Option<String> {
         self.notice.cloned()
+    }
+
+    /// Cached Tailscale detection; `None` while the first check is in flight.
+    #[must_use]
+    pub fn tailscale_status(&self) -> Option<TailscaleStatus> {
+        self.tailscale.cloned()
+    }
+
+    /// Reads the installed Tailscale client off the UI thread.
+    pub fn refresh_tailscale(&self) {
+        let mut slot = self.tailscale;
+        slot.set(None);
+        spawn(async move {
+            let detected = tokio::task::spawn_blocking(crate::tailscale::detect).await;
+            let status = detected.unwrap_or_else(|error| TailscaleStatus {
+                executable: None,
+                version: None,
+                state: TailscaleState::Unavailable {
+                    reason: format!("detection task failed: {error}"),
+                },
+            });
+            slot.set(Some(status));
+        });
     }
 
     /// Whether Browser Source URLs are currently revealed in the UI.

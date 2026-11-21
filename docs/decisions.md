@@ -477,13 +477,31 @@ and serve lifecycle forward.
   listener restart when the scope changes. Settings shows the active scope,
   server state and base URL (the URL stays masked while URLs are hidden), plus
   the shared Browser Source panel with copy and Open in browser actions.
-- **What is deliberately not live.** Tailscale and Funnel render as disabled
-  options with a plain note that detection, serving and public exposure are
-  later items. They never bind a different interface or generate a remote URL.
-  No Tailscale binary is detected, installed or invoked, and no `tailscale
-  serve` or `funnel` command is run.
+- **What was deliberately not live at the time.** Funnel stayed disabled and
+  Tailscale was disabled until detection landed in D8-3. Neither mode bound a
+  different interface or generated a remote URL, and no `tailscale serve` or
+  `funnel` command was run.
 - **Next.** D8-3 detection, D8-4 serve lifecycle with teardown, D8-5 gated
   Funnel, D8-6 remote URL generation and D8-7 docs/QA finish the feature.
+
+## Tailscale detection landed; serving still pending (2026-11-21)
+
+**Status: D8-3 done 2026-11-21; D8-4 to D8-7 remain open.**
+
+- **Detection only.** Settings reads the user's installed CLI — PATH first,
+  then `%ProgramFiles%\Tailscale` and `%ProgramFiles(x86)\Tailscale` — and runs
+  only `tailscale status --json` and `tailscale version` on a blocking task.
+  `BackendState` plus `Self.DNSName` and `Self.Online` become not installed,
+  stopped, needs login, or connected. Each non-ready state has a plain remedy
+  and a Refresh button; nothing is installed or bundled.
+- **Scope unlock.** Tailscale becomes selectable only when the client reports
+  `Running`. Selecting it still leaves the local server in place: remote
+  serving is D8-4. Funnel stays disabled.
+- **Privacy and safety.** Only the short version, this device's MagicDNS name
+  and its online flag are displayed. Peer lists, auth URLs and keys are not.
+  No serve, funnel or reset command is issued.
+- **Next.** D8-4 serve lifecycle with teardown, D8-5 gated Funnel, D8-6 remote
+  URL generation and D8-7 docs/QA.
 
 ## Asset cleanup guarded against a failed load (2026-11-15)
 

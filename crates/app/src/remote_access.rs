@@ -46,7 +46,7 @@ pub fn mode_label(mode: RemoteAccessMode) -> &'static str {
 pub fn pending_notice(mode: RemoteAccessMode) -> Option<&'static str> {
     match mode {
         RemoteAccessMode::Tailscale => Some(
-            "Tailscale remote access is not wired up yet. Client detection and remote serving are planned.",
+            "Tailscale is detected, but remote serving is not wired up yet. Overlays still use the local server until the next item lands.",
         ),
         RemoteAccessMode::Funnel => Some(
             "Funnel is not available yet. It needs Tailscale, HTTPS and an explicit public-exposure opt-in.",

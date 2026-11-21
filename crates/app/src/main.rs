@@ -17,6 +17,7 @@ mod server;
 mod smoke;
 mod state;
 mod status;
+mod tailscale;
 mod theme;
 mod timer;
 mod views;

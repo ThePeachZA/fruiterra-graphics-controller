@@ -5,13 +5,14 @@ use fgc_core::RemoteAccessMode;
 use fgc_server::AssetMode;
 
 use crate::assets_io::format_bytes;
-use crate::components::button::{Button, ButtonVariant};
+use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::input::Input;
 use crate::components::switch::Switch;
 use crate::components::{Field, KeyValue, KeyValues, Panel, ToggleRow};
 use crate::remote_access;
 use crate::server::DEFAULT_PORT;
 use crate::state::AppStore;
+use crate::tailscale::{TailscaleState, TailscaleStatus};
 use crate::views::overlay::OverlayUrls;
 
 /// Editable settings that are live in milestone M4 and M5.
@@ -42,7 +43,19 @@ pub fn SettingsView() -> Element {
     let local_scope = matches!(remote_mode, RemoteAccessMode::Off | RemoteAccessMode::Lan);
     drop(snapshot);
 
+    let tailscale: Option<TailscaleStatus> = store.tailscale_status();
+    let tailscale_ready = matches!(
+        tailscale.as_ref().map(|status| &status.state),
+        Some(TailscaleState::Ready { .. })
+    );
+    let tailscale_summary = tailscale.as_ref().map_or_else(
+        || "Checking Tailscale…".to_owned(),
+        crate::tailscale::summary,
+    );
+    let tailscale_remedy = tailscale.as_ref().and_then(crate::tailscale::remedy);
+
     use_effect(move || store.refresh_unused());
+    use_effect(move || store.refresh_tailscale());
 
     rsx! {
         div { class: "fgc-view",
@@ -129,7 +142,7 @@ pub fn SettingsView() -> Element {
                 description: "Who can open the overlays, and where to point OBS.".to_owned(),
                 Field {
                     label: "Access scope".to_owned(),
-                    hint: Some("Tailscale and Funnel are prepared in later items.".to_owned()),
+                    hint: Some("Tailscale unlocks when its client is connected; Funnel and remote serving come later.".to_owned()),
                     select {
                         class: "fgc-native-select",
                         value: remote_access::mode_value(remote_mode),
@@ -140,9 +153,25 @@ pub fn SettingsView() -> Element {
                         },
                         option { value: "off", "This PC (loopback only)" }
                         option { value: "lan", "Local network" }
-                        option { value: "tailscale", disabled: true, "Tailscale (coming later)" }
+                        option { value: "tailscale", disabled: !tailscale_ready, "Tailscale" }
                         option { value: "funnel", disabled: true, "Funnel (coming later)" }
                     }
+                }
+                Field {
+                    label: "Tailscale client".to_owned(),
+                    hint: Some("Read from your installed Tailscale CLI; nothing is bundled.".to_owned()),
+                    div { class: "fgc-inline",
+                        p { class: "fgc-note", role: "status", "{tailscale_summary}" }
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            size: ButtonSize::Sm,
+                            onclick: move |_| store.refresh_tailscale(),
+                            "Refresh"
+                        }
+                    }
+                }
+                if let Some(remedy) = tailscale_remedy {
+                    p { class: "fgc-note", "{remedy}" }
                 }
                 p { class: "fgc-note", role: "status", "{remote_status}" }
                 if let Some(notice) = remote_notice {
