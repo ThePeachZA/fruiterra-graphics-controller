@@ -2716,8 +2716,11 @@ change the v1.0.0 release gates in sections 4–6. Record results in §7 of
 remote overlay screenshot before and after a host edit, and the final blocked
 reload. A5 remains the owner's LAN evidence for the v1.0.0 UI.
 
-**Result: Pending — awaiting owner result.** No second LAN PC was available for
-this runbook pass.
+**Result: Pass — owner 2026-11-21.** Exact answer: **“Pass.”** Host LAN IP
+`192.168.50.121`, port `3001`; second PC Windows 11 with OBS 33.0.1; exact URL
+`http://192.168.50.121:3001/overlays/game-overlay.html`. Notes: none. The owner
+did not supply the firewall-rule capture, before/after screenshots or final
+blocked-reload screenshot, so those evidence items remain gaps in the record.
 
 ---
 
@@ -2826,7 +2829,8 @@ evidence set is incomplete; host-side A43 is not a substitute for those fields.
 1. On a phone with Wi-Fi off and cellular data active, sign in to the same
    tailnet.
 2. Open the exact `https://<dnsname>/fgc/overlays/game-overlay.html` URL from
-   the host's Overlay page.
+   the host's Overlay page. Another bundled overlay is acceptable for this
+   connectivity check if the exact URL is recorded.
 3. Confirm the HTTPS certificate is accepted, the overlay paints at the browser
    viewport and there is no `?port=` or local IP in the address.
 4. Edit a score on the host and confirm the phone overlay updates without a
@@ -2849,8 +2853,13 @@ evidence set is incomplete; host-side A43 is not a substitute for those fields.
 **Evidence:** Phone model/OS, Tailscale client version, exact URL, a screenshot
 before and after a host edit, and any certificate or connection error text.
 
-**Result: Pending — awaiting owner result.** No phone was available for this
-runbook pass.
+**Result: Pass — owner 2026-11-21.** Exact answer: **“Pass.”** Samsung S25 FE,
+Tailscale client 1.104.6, cellular data active, cellular toggle Pass. Exact URL
+used: `https://sekhmet.note-hydra.ts.net/fgc/overlays/map-select.html`. The
+owner used **Add Map** during the check and reported that new slots were labelled
+`Tiebreaker` and did not appear on `map-select.html` until the format was
+changed. That is recorded as Doctrine **ISS-001** and `docs/backlog.md` §W; it
+is a separate post-v1 map-count finding and does not change the A45 Pass.
 
 ---
 

@@ -2,3 +2,27 @@
 /dist
 /.dx
 *.pdb
+# >>> doctrine managed — rewritten by `doctrine install`; edit outside this block
+# Customised a skill? Replace its link with a real dir; the next install drops
+# it from this block. Until then, un-ignore it BELOW the block, e.g.
+#   !/.agents/skills/<id>
+# (git cannot re-include a path whose parent dir is itself ignored.)
+.doctrine/state/
+.doctrine/slice/*/phases
+.doctrine/**/handover.md
+.doctrine/slice/*/inquisition.md
+.doctrine/slice/*/research/
+.codex/hooks.json
+.doctrine/memory/index/*
+.doctrine/memory/embeddings/*
+.doctrine/memory/state/*
+.doctrine/memory/shipped/
+.doctrine/dispatch/
+.doctrine/observations/**/.tmp.*
+.doctrine/agents/*
+.doctrine/skills/*
+.doctrine/workflows/*
+# <<< doctrine managed
+# Windows Doctrine builds use directory junctions for slug aliases. They appear
+# as duplicate directories to Git; keep only the canonical NNN/ records.
+.doctrine/backlog/*/*-*/
