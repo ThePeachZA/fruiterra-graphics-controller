@@ -286,6 +286,7 @@ Vendored component files keep their upstream MIT/Apache-2.0 headers, and `THIRD_
 - Vendored component CSS modules are registered through `#[css_module]` and bundled by `dx`.
 - Class naming: `fgc-<block>__<element>--<modifier>`; no CSS modules for app styles, no Tailwind, no Node.
 - Compact navigation is session-only: the flag lives in a shell signal because `AppState::settings` holds persisted broadcast/overlay/timer configuration, so storing a view preference there would change `app.json`. Labels stay in the DOM as clipped text and every nav button keeps `aria-label`/`title`.
+- Live overlay visibility is session-only for the same reason: `AppStore` keeps an ephemeral `overlay_visible` signal, broadcasts the existing `Outbound::Show { visible }` on change, and seeds every start/restart plan with the current value. Hidden state survives a server restart but never enters `AppState` or `app.json`; a fresh app launch starts visible.
 - Dark theme only in v1; light theme is a backlog item.
 - UI font: Inter (OFL) bundled locally with `@font-face`. Overlay font: Archivo (OFL), selected in R1 and served by the server; Saira stays bundled as a reversible fallback.
 

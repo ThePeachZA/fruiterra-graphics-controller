@@ -74,6 +74,8 @@ pub struct AppStore {
     serve: Signal<ServeState>,
     /// Ephemeral UI state for revealing Browser Source URLs.
     reveal_urls: Signal<bool>,
+    /// Ephemeral live visibility state broadcast to connected overlays.
+    overlay_visible: Signal<bool>,
     /// Cached data URLs for thumbnails, keyed by `hash:ext`.
     thumb_urls: Signal<HashMap<String, String>>,
     server: ServerController,
@@ -117,6 +119,7 @@ impl AppStore {
         let tailscale = use_signal(|| None);
         let serve = use_signal(ServeState::default);
         let reveal_urls = use_signal(|| false);
+        let overlay_visible = use_signal(|| true);
         let thumb_urls = use_signal(HashMap::<String, String>::new);
 
         let app = Self {
@@ -134,6 +137,7 @@ impl AppStore {
             tailscale,
             serve,
             reveal_urls,
+            overlay_visible,
             thumb_urls,
             server,
         };
@@ -172,6 +176,7 @@ impl AppStore {
             tailscale: Signal::new(None),
             serve: Signal::new(ServeState::Off),
             reveal_urls: Signal::new(false),
+            overlay_visible: Signal::new(true),
             thumb_urls: Signal::new(HashMap::new()),
             server: ServerController::test_controller(),
         }
@@ -328,6 +333,19 @@ impl AppStore {
     pub fn set_urls_visible(&self, visible: bool) {
         let mut reveal_urls = self.reveal_urls;
         reveal_urls.set(visible);
+    }
+
+    /// Whether connected overlays are currently visible.
+    #[must_use]
+    pub fn overlays_visible(&self) -> bool {
+        *self.overlay_visible.read()
+    }
+
+    /// Shows or hides every connected overlay with the existing `show` message.
+    pub fn set_overlays_visible(&self, visible: bool) {
+        let mut overlay_visible = self.overlay_visible;
+        overlay_visible.set(visible);
+        self.server.broadcast(Outbound::Show { visible });
     }
 
     /// Number of bundled and user assets in the current catalogue.
@@ -2215,13 +2233,16 @@ impl AppStore {
         }
 
         let base_url = self.current_base_url();
-        let outbound = project_outbound(
+        let mut outbound = project_outbound(
             &state,
             &self.catalog.peek(),
             &base_url,
             self.server.asset_mode(),
             blob_root.as_deref(),
         );
+        outbound.push(Outbound::Show {
+            visible: self.overlays_visible(),
+        });
         (config, base_url, outbound)
     }
 
@@ -2936,6 +2957,44 @@ mod tests {
     fn server_plan_uses_the_configured_port() {
         let config = server_config(4123, false, AssetMode::Served);
         assert_eq!(config.port, 4123);
+    }
+
+    #[test]
+    fn overlay_visibility_toggle_is_ephemeral() {
+        fn scenario() -> Element {
+            let store = AppStore::test_store(AppState::default());
+            assert!(store.overlays_visible());
+
+            store.set_overlays_visible(false);
+            assert!(!store.overlays_visible());
+            assert!(!*store.dirty.peek());
+
+            store.set_overlays_visible(true);
+            assert!(store.overlays_visible());
+            assert!(!*store.dirty.peek());
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
+    }
+
+    #[test]
+    fn server_plan_broadcasts_current_overlay_visibility() {
+        fn scenario() -> Element {
+            let store = AppStore::test_store(AppState::default());
+
+            let (_config, _base_url, outbound) = store.server_plan();
+            assert_eq!(outbound.last(), Some(&Outbound::Show { visible: true }));
+
+            store.set_overlays_visible(false);
+            let (_config, _base_url, outbound) = store.server_plan();
+            assert_eq!(outbound.last(), Some(&Outbound::Show { visible: false }));
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
     }
 
     #[test]

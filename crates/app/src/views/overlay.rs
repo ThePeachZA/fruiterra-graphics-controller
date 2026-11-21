@@ -25,6 +25,7 @@ pub fn OverlayView() -> Element {
     let tone = status_tone(&status);
     let label = status_text(&status);
     let urls_visible = store.urls_visible();
+    let overlays_visible = store.overlays_visible();
 
     rsx! {
         div { class: "fgc-view",
@@ -51,6 +52,10 @@ pub fn OverlayView() -> Element {
                             label: "Overlay files".to_owned(),
                             value: OVERLAY_FILES.len().to_string(),
                         }
+                        KeyValue {
+                            label: "Live overlays".to_owned(),
+                            value: if overlays_visible { "Visible".to_owned() } else { "Hidden".to_owned() },
+                        }
                         if let ServerStatus::Running { port, .. } = &status {
                             KeyValue {
                                 label: "Listening on".to_owned(),
@@ -59,6 +64,13 @@ pub fn OverlayView() -> Element {
                         }
                     }
                     div { class: "fgc-actions",
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            disabled: !running || busy,
+                            aria_pressed: overlays_visible,
+                            onclick: move |_| store.set_overlays_visible(!overlays_visible),
+                            if overlays_visible { "Hide overlays" } else { "Show overlays" }
+                        }
                         if running {
                             Button {
                                 variant: ButtonVariant::Secondary,

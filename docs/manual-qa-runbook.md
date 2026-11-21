@@ -3100,3 +3100,60 @@ profile, so the authoritative
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` hashes
 were not disturbed.
+
+---
+
+### A50 — Live show/hide overlay control
+
+**Covers:** IMP-019
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Use a
+   temporary `APPDATA` and WebView user-data folder so the authoritative QA
+   files are never opened by the run.
+2. At 1280×800, confirm **Hide overlays** is disabled while the server is
+   stopped, `aria-pressed="true"`, `Live overlays: Visible`, and exposed as a
+   non-ignored AX button with `pressed: true`.
+3. Start the server. Confirm the toggle becomes enabled. Create a WebView target
+   for `http://127.0.0.1:3001/overlays/game-overlay.html` and wait until
+   `/health` reports one overlay client.
+4. Click **Hide overlays** with the pointer. Confirm the UI reads `Show
+   overlays`, `aria-pressed="false"`, `Live overlays: Hidden`, the AX name and
+   pressed state follow, and the overlay's `.overlay` computed display and inline
+   style are `none`.
+5. Focus **Show overlays** and activate it with Enter. Confirm the UI returns to
+   `Hide overlays`, `aria-pressed="true"`, `Live overlays: Visible`, and
+   `.overlay` display returns to `block`.
+6. Hide the overlays again, press **Restart**, wait for `/health` to report one
+   client again, and confirm the overlay stays hidden. This proves the current
+   visibility seeds the next server plan.
+7. Set the viewport to 375×812. Confirm `document.scrollWidth` equals
+   `innerWidth`, the toggle is fully inside the viewport with no clipped label,
+   and it remains a non-ignored AX button. Click **Show overlays** and confirm
+   `.overlay` returns to `block`.
+8. Stop the server and confirm the toggle is disabled again. Close the overlay
+   target and app, recheck the QA hashes and `tailscale serve status`, then
+   delete the isolated harness.
+
+**Evidence:** CDP DOM, computed-style, `/health` and accessibility-tree
+snapshots at 1280×800 and 375×812; no screenshots were taken or published.
+
+**Result: Pass — assistant 2026-11-21.** At 1280×800 the stopped toggle was
+`Hide overlays`, `disabled: true`, `aria-pressed: "true"`, `Live overlays:
+Visible`, and the AX tree reported `pressed: true`. With the server running and
+one overlay client connected, pointer activation changed `.overlay` from
+`block` to computed/inline `none`, the UI to `Show overlays`, `aria-pressed:
+"false"` and `Live overlays: Hidden`, with the AX name and pressed state
+following. Real Enter activation restored `block` and the visible UI state.
+After hiding and restarting the server, `/health` again reported one client and
+`.overlay` stayed `none`. At 375×812 `scrollWidth` and `innerWidth` were both
+`375`; the toggle measured `x=115`, `right=246.72`, `width=131.72`, with
+`clientWidth == scrollWidth` and a non-ignored AX pressed state. Pointer
+activation there also restored `block`, and stopping the server disabled the
+toggle. The isolated `app.json` and `app.json.bak` stayed at
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` through
+shutdown; the authoritative hashes and `No serve config` were rechecked after
+the harness was removed.
