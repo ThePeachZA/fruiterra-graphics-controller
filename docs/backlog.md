@@ -842,7 +842,7 @@ not canonical IDs and are tagged on each record as `legacy:<id>` or
 not duplicated. The unnumbered §C bullets were migrated as seven grouped
 umbrella records to be split when promoted.
 
-Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed · done × 1, improvement/closed · done × 22, improvement/triaged × 7, idea/triaged × 22, chore/closed · done × 3, chore/triaged × 2, issue/triaged × 1, chore/closed · accepted × 1. CHR-004 was closed · done after the font review reconciliation.
+Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed · done × 1, improvement/closed · done × 24, improvement/triaged × 5, idea/triaged × 22, chore/closed · done × 3, chore/triaged × 2, issue/triaged × 1, chore/closed · accepted × 1. CHR-004 was closed · done after the font review reconciliation; B1 and B2 were closed · done as post-v1 work.
 
 | Legacy | Doctrine | Kind | Status | Title |
 |---|---|---|---|---|
@@ -876,8 +876,8 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | T13 | IMP-016 | improvement | closed · done | Tournament unit tests |
 | T14 | IMP-017 | improvement | closed · done | Keyboard access and 1080p 32-team board |
 | T15 | IMP-018 | improvement | closed · done | Multi-stage groups, playoff restore and Push to overlay |
-| B1 | IMP-019 | improvement | triaged | Show/hide overlay control |
-| B2 | IMP-020 | improvement | triaged | All overlay URLs with copy buttons |
+| B1 | IMP-019 | improvement | closed · done | Show/hide overlay control |
+| B2 | IMP-020 | improvement | closed · done | All overlay URLs with copy buttons |
 | B3 | IMP-021 | improvement | triaged | Overlay health/reconnect indicator |
 | B4 | IMP-022 | improvement | triaged | Basic hotkeys |
 | B5 | IMP-023 | improvement | triaged | Timer overlay |
