@@ -312,7 +312,7 @@ The exact module split can change during implementation, but the crate boundarie
 **Deliverables**
 
 - Seven overlay HTML files ported with minimal diff: only `@font-face` and family names change.
-- Five Archivo WOFF2 files (Saira retained for comparison), both OFL texts, Inter for the UI.
+- Five Archivo WOFF2 files (Saira retained as a reversible fallback), both OFL texts, Inter for the UI.
 - All assets served from `/assets/<hash>.<ext>`; fonts from stable paths.
 - `show` supported server-side but not sent.
 - Overlay QA checklist completed at 1920×1080.

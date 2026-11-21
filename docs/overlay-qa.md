@@ -48,7 +48,7 @@ smoke test, not a substitute for the OBS sign-off below.
   `/assets/fonts/archivo-*.woff2`; no font or image request 404ed. Accented,
   Cyrillic and CJK names rendered in the roster DOM (SØREN, ДМИТРИЙ ВОЛКОВ,
   王小明). Archivo loads with `document.fonts.check` true for the used faces;
-  Saira remains bundled for the A/B comparison.
+  Saira remains bundled as a reversible fallback.
 - **Network:** no requests left `127.0.0.1:3001`; only the overlay WebSocket and
   local `/assets/...` URLs were used.
 - **Live update:** editing the match subtitle in Match Controller changed

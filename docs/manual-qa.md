@@ -86,7 +86,7 @@ measuring the served overlays at 1920×1080.
 | R1-8 | Casters | Handle renders as `@@arc` | Overlay prepends `@` to a stored handle that already includes it | **Fixed** — `@` is added only when missing; fixture shows `@arc`, `@priya`, `@marco`, `@sam` |
 | R1-9 | Map pool | Pool is visible immediately, then fades a second time at 1.2s | A second render sets inline `opacity: 1` before the delayed animation class lands | **Fixed** — CSS-driven reveal; no inline opacity; delays 800ms/1200ms, `fill: forwards` |
 | R1-10 | Rosters | Long player names wrap and change card height; substitutes differ | Player name has no fitting rule and the info block is not fixed height | **Fixed** — shared `fitText()`; core info block fixed at 106px; `ДМИТРИЙ ВОЛКОВ` shrinks to 25px; long sub name ellipsizes at 14px |
-| R1-11 | All | Saira does not read like Apotek | Font substitution decision from M9 | **Trial** — all seven overlays now load Archivo; Saira retained for A/B review (`docs/fonts.md`); M9-5 re-run |
+| R1-11 | All | Saira does not read like Apotek | Font substitution decision from M9 | **Done** — R1 selected Archivo; all seven overlays load Archivo; Saira retained as a reversible fallback (`docs/fonts.md`); M9-5 Done and A41 Pass |
 | R1-12 | All | Long names need a hard limit, not just visual fitting | Raised during the pass; fitting alone leaves unbounded input | **Fixed** — team 32, player 24, talent 24 characters; `maxlength` in the UI, `RepairKind::NameTooLong` on load |
 
 Design changes raised during the pass that are **not** v1 fixes (map-mode icons
@@ -688,7 +688,7 @@ between them.
 | Clean-VM sign-off | Tester | R5 used a separate computer instead of a clean VM; the owner explicitly accepted that substitution. |
 | SmartScreen acceptance | Maintainer | R7 Pass; unsigned v1 with documented warning and checksums. |
 | GitHub tag and release | Maintainer | Completed 2026-11-21 after R1–R8 and the A17 blocked acceptance: tag `v1.0.0`, release run [44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532), [v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0). |
-| Font design review (Archivo vs Saira) | Maintainer/designer | Archivo is wired in as the R1 trial; a revert is a five-file `src:` swap plus the test prefix, no layout CSS change. |
+| Font design review (Archivo vs Saira) | Maintainer/designer | Closed — R1 selected Archivo, M9-5 is Done and A41 Pass signed off the overlays. A revert is a five-file `src:` swap plus the test prefix, no layout CSS change. |
 | Overlay visual review | Maintainer/designer | The seven bundled overlays ship unchanged apart from the scoped A8 and A9 functional fixes; OBS aesthetic/transparency/reconnect sign-off is A41. Appearance work is deferred to a separate session. |
 | Code signing certificate | Maintainer | Out of scope for v1; the workflow keeps a commented signing step. |
 

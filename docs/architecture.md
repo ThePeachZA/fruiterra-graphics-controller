@@ -286,7 +286,7 @@ Vendored component files keep their upstream MIT/Apache-2.0 headers, and `THIRD_
 - Vendored component CSS modules are registered through `#[css_module]` and bundled by `dx`.
 - Class naming: `fgc-<block>__<element>--<modifier>`; no CSS modules for app styles, no Tailwind, no Node.
 - Dark theme only in v1; light theme is a backlog item.
-- UI font: Inter (OFL) bundled locally with `@font-face`. Overlay font: Archivo (OFL), served by the server; Saira stays bundled for the A/B comparison.
+- UI font: Inter (OFL) bundled locally with `@font-face`. Overlay font: Archivo (OFL), selected in R1 and served by the server; Saira stays bundled as a reversible fallback.
 
 ---
 

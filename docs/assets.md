@@ -217,7 +217,7 @@ crates/server/assets/fonts/
 ├─ archivo-600.woff2
 ├─ archivo-900.woff2
 ├─ OFL-Archivo.txt
-├─ saira-300.woff2            # fallback, retained for the A/B comparison
+├─ saira-300.woff2            # fallback, retained for a reversible swap
 ├─ saira-400.woff2
 ├─ saira-500.woff2
 ├─ saira-600.woff2
@@ -258,11 +258,11 @@ Mapping used when editing the CSS:
 | `'Apotek Black'` | `'FGC Display Black'` |
 
 - Fallback stack: `'FGC Display', 'Apotek', sans-serif`.
-- Review checkpoint: the R1 pass rejected Saira as too unlike Apotek. All seven
-  overlays now load Archivo; Saira stays beside it for an A/B comparison.
-  Switching either way means replacing the five WOFF2 files and their `src:`
-  URLs, plus the `FONT_PREFIX` constant in `crates/server/tests/overlays.rs`.
-  No layout CSS changes.
+- Font decision: the R1 pass rejected Saira as too unlike Apotek, so all seven
+  overlays ship Archivo. Saira stays beside it as a reversible fallback; no A/B
+  review remains open. Switching either way means replacing the five WOFF2 files
+  and their `src:` URLs, plus the `FONT_PREFIX` constant in
+  `crates/server/tests/overlays.rs`. No layout CSS changes.
 - No subsetting: accented Latin renders from Archivo; scripts Archivo does not
   cover (CJK, Arabic, etc.) fall back to the system sans. This is verified with
   the Cyrillic and CJK fixture names.

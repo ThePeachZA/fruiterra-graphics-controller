@@ -8,7 +8,7 @@ These are defects that currently make a shipped feature fail, risk data loss, or
 
 | ID | Fix | Detail |
 |---|---|---|
-| C1 | Local fonts | Replace all `https://design.penpot.app/...` `@font-face` URLs with locally served OFL fonts. Replace the Google Fonts `Inter` import in the UI with a bundled or system font. No runtime network dependency for fonts. Apotek is commercial (Kerns & Cairns) and cannot be redistributed; **Archivo** (OFL 1.1) is now the active overlay font behind neutral `FGC Display*` aliases, with **Saira** retained for the A/B review. See `docs/assets.md` §4 and `docs/fonts.md`. |
+| C1 | Local fonts | Replace all `https://design.penpot.app/...` `@font-face` URLs with locally served OFL fonts. Replace the Google Fonts `Inter` import in the UI with a bundled or system font. No runtime network dependency for fonts. Apotek is commercial (Kerns & Cairns) and cannot be redistributed; **Archivo** (OFL 1.1) is the active overlay font behind neutral `FGC Display*` aliases, with **Saira** retained as a reversible fallback. See `docs/assets.md` §4 and `docs/fonts.md`. |
 | C2 | `currentMapIndex` off-by-one | Overlays tab “Force Update” sends `currentMapIndex + 1`; Match Controller sends the raw index. Standardise on the raw index (overlay adds 1 for display). |
 | C3 | Stale asset caches | Team logo and player caches are never invalidated. Fixed structurally in `docs/assets.md`: assets are content-addressed, so a changed image gets a new hash and URL; the overlay cannot show a stale cached file. |
 | C4 | Port source of truth | One configured port (default 3001), shared by Settings and Overlays; restart on change; clear error on bind failure; no silent fallback. |
@@ -268,7 +268,7 @@ request, not part of this item.
 
 ## D. Review checkpoints
 
-- **Font review (after the R1 re-run):** compare Archivo (current) against Saira in situ at 1920×1080, using the same fixture. Barlow remains untried. A decision either way is a five-file WOFF2 and `src:` swap plus the test prefix; no layout CSS change.
+- **Font review (after the R1 re-run): Done.** R1 selected Archivo; M9-5 is Done and A41 Pass confirmed the seven overlays at 1920×1080. Saira stays bundled as a reversible fallback; Barlow remains untried. A future swap is five WOFF2 files and `src:` URLs plus the `FONT_PREFIX` test constant; no layout CSS change. Tracked in Doctrine `CHR-004`.
 - **Protocol review (after v1 ships):** decide whether to introduce a versioned v2 protocol; v1 stays byte-compatible.
 - **Tournament overlay review (after v1 tournament completion):** decide whether to pull the bracket overlay forward from the post-v1 list.
 
@@ -617,6 +617,9 @@ release/installer was available for the second-machine import, so A17 is not a
 Pass. On 2026-11-21 the owner explicitly accepted that result for release with
 **“Accept A17; authorize tag”**. A17 is blocked-accepted; second-machine import
 remains unrun. The install workaround is in `docs/manual-qa-runbook.md` §A17.
+Follow-up is tracked as Doctrine `CHR-005`; the runbook now spells out the exact
+steps 4–6 needed to close the gap, and the code-level second-directory round-trip
+was re-verified on 2026-11-21 without changing the blocked-accepted result.
 
 ## R. A8 hero-bans owner note (2026-11-20)
 
@@ -839,7 +842,7 @@ not canonical IDs and are tagged on each record as `legacy:<id>` or
 not duplicated. The unnumbered §C bullets were migrated as seven grouped
 umbrella records to be split when promoted.
 
-Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed · done × 1, improvement/closed · done × 22, improvement/triaged × 7, idea/triaged × 22, chore/closed · done × 2, chore/triaged × 3, issue/triaged × 1, chore/closed · accepted × 1.
+Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed · done × 1, improvement/closed · done × 22, improvement/triaged × 7, idea/triaged × 22, chore/closed · done × 3, chore/triaged × 2, issue/triaged × 1, chore/closed · accepted × 1. CHR-004 was closed · done after the font review reconciliation.
 
 | Legacy | Doctrine | Kind | Status | Title |
 |---|---|---|---|---|
@@ -911,7 +914,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | §C group | IDE-021 | idea | triaged | Assets and data roadmap (§C) |
 | §C group | IDE-022 | idea | triaged | UI and UX roadmap (§C) |
 | §C group | IDE-023 | idea | triaged | Platform and delivery roadmap (§C) |
-| Follow-up note | CHR-004 | chore | triaged | Font A/B review checkpoint |
+| Follow-up note | CHR-004 | chore | closed · done | Font A/B review checkpoint |
 | Follow-up note | IDE-024 | idea | triaged | Protocol v2 review checkpoint |
 | Follow-up note | IDE-025 | idea | triaged | Tournament overlay review checkpoint |
 | Follow-up note | IMP-032 | improvement | triaged | Placeholder TAG image for empty slots |

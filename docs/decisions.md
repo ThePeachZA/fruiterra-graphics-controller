@@ -34,12 +34,12 @@
 
 ### Fonts / external dependencies
 **Finding:** Apotek is a commercial typeface by Kerns & Cairns (Adobe Fonts / Type Network). The OTFs in the repo cannot be redistributed or self-hosted without an appropriate licence.
-**Decision: Saira confirmed** (OFL 1.1, Omnibus-Type) — 9 weights, 7 widths, variable, 885 glyphs, free for commercial use, self-hosting and embedding. *(Superseded by the R1 Archivo trial at the end of this file.)*
+**Decision: Saira confirmed** (OFL 1.1, Omnibus-Type) — 9 weights, 7 widths, variable, 885 glyphs, free for commercial use, self-hosting and embedding. *(Superseded by the R1 Archivo selection at the end of this file.)*
 - Map Light/Regular/Medium/SemiBold/Black to Saira 300/400/500/600/900.
 - Bundle WOFF2 files + `OFL.txt`; serve from `/assets/fonts/`.
 - Bundle Inter (OFL) locally for the control UI; remove the Google Fonts import.
 - Use neutral `FGC Display*` aliases with a fallback stack (`'FGC Display', 'Apotek', sans-serif`) and run a metrics/visual QA pass on all overlays.
-- **Review checkpoint:** once the rebuilt overlay HTML is rendering, compare Saira against **Archivo** and **Barlow** in situ. If either fits better, it is a five-file swap; no architectural change.
+- **Review checkpoint:** once the rebuilt overlay HTML is rendering, compare Saira against **Archivo** and **Barlow** in situ. If either fits better, it is a five-file swap; no architectural change. *(Resolved in R1: Archivo selected; see M9-5 and A41.)*
 
 ### Q3 — New features wanted
 **Decision: all five are backlog-only; none enter v1.**
@@ -68,7 +68,7 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 |---|---|
 | 1 | **Parity-first + correctness fixes.** Every existing workflow and the overlay protocol are preserved; no protocol redesign. |
 | 2 | **Tournament View completed properly in v1** (control view only), meeting TR1–TR10. Bracket overlay is post-v1. |
-| 3 | **Fonts:** Saira (OFL 1.1) replaces Apotek at weights 300/400/500/600/900; Inter bundled for the UI; all fonts served locally from `/assets/fonts/`; no PenPot/Google Fonts at runtime. Review Archivo/Barlow once overlays render. |
+| 3 | **Fonts:** Saira (OFL 1.1) replaces Apotek at weights 300/400/500/600/900; Inter bundled for the UI; all fonts served locally from `/assets/fonts/`; no PenPot/Google Fonts at runtime. Review Archivo/Barlow once overlays render. *(Resolved in R1: Archivo selected; see M9-5 and A41.)* |
 | 4 | **No new features in v1.** Undo/redo, presets, multiple scenes, bracket overlay and HTTP/Stream Deck API are backlogged. Timer overlay is post-v1; timer is control-only in v1. |
 | 5 | **Windows-only v1.** WebView2, single bundle target, single CI runner. |
 | 6 | **Licence:** MIT, carried over from the original project. |
@@ -414,7 +414,7 @@ Rationale: they all add new surface area (UI, schema or protocol) and would dela
 - **One fitting rule.** All seven overlays share an inline `fitText(el, maxSize, minSize)` helper: shrink to a floor, then ellipsize on one line. It measures in scale-normalised layout pixels so the 0.9 transform animation on some headers cannot fool it, and re-fits on `document.fonts.ready` after each render.
 - **Name limits.** `MAX_TEAM_NAME_CHARS = 32`, `MAX_PLAYER_NAME_CHARS = 24`, `MAX_TALENT_NAME_CHARS = 24`. `validate_and_repair` truncates overlong names with `RepairKind::NameTooLong`; the Teams and Talent inputs enforce `maxlength`. Long names still shrink before truncating, so 32 characters can render in full where the box allows.
 - **Layout fixes.** Game overlay name box is single-line with ellipsis and inset logo art; map-select names/types/chosen-by are centred; map-pool reveal is CSS-driven (no inline opacity writes or second fade); roster info blocks are a fixed 106px with fixed line heights; caster handles get one `@`; hero-ban and map-pool text use block widths and a lower fit floor.
-- **Archivo trial.** The R1 finding that Saira does not read like Apotek is addressed by switching all seven overlays to five static Archivo WOFF2 files (300/400/500/600/900). Saira files and `OFL.txt` stay beside them for the A/B comparison; `OFL-Archivo.txt` is added. The overlay test pins `FONT_PREFIX = "archivo"`, so reverting is a one-line change plus the `@font-face` `src:` URLs.
+- **Archivo selection.** The R1 finding that Saira does not read like Apotek is addressed by switching all seven overlays to five static Archivo WOFF2 files (300/400/500/600/900). Saira files and `OFL.txt` stay beside them as a reversible fallback; `OFL-Archivo.txt` is added. The overlay test pins `FONT_PREFIX = "archivo"`, so reverting is a one-line change plus the `@font-face` `src:` URLs.
 - **Not defects.** The map-select canvas is exactly 1920×1080 and the maps row is centred (the enlarged current card shifts visual weight); the watermark has no transform or letter-spacing (the apparent stretch is font metrics); hero bans are current-map only by design.
 
 ## R1 re-run - second OBS pass (2026-11-14)

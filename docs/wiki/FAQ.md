@@ -88,8 +88,9 @@ the app there and select **Import project…**.
 
 Version 1 bundles Archivo under the neutral `FGC Display*` family names. It is
 licensed for redistribution and served locally, so there are no runtime font
-downloads. The layout and protocol are unchanged. The typeface is not Apotek,
-and Saira remains bundled while the final font choice is reviewed.
+downloads. The layout and protocol are unchanged. The typeface is not Apotek;
+Archivo was selected during v1 QA, and Saira remains bundled as a reversible
+fallback.
 
 ### Can I add custom points or match history?
 

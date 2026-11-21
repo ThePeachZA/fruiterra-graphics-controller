@@ -17,19 +17,20 @@ Apotek is a commercial typeface by **Kerns & Cairns** (distributed via Adobe Fon
 
 | Font | Licence | Weights / widths | Character | All-caps | Verdict |
 |---|---|---|---|---|---|
-| **Saira** | OFL 1.1 | 100–900, 50–125 width (variable); 9 weights × 7 widths | Squared, technical grotesque; superellipse curves | Excellent; sturdy caps, good numerals | **Recommended** — closest to Apotek's robust, slightly squared feel, and the width axis is useful for long tags/names |
-| **Archivo** | OFL 1.1 | 100–900; normal/semi-expanded/expanded | Neutral American grotesque; high-impact | Excellent; very professional, less "gamer" | Safe alternative if Saira feels too technical |
+| **Saira** | OFL 1.1 | 100–900, 50–125 width (variable); 9 weights × 7 widths | Squared, technical grotesque; superellipse curves | Excellent; sturdy caps, good numerals | Initial recommendation; superseded by R1 (Archivo selected). Retained as a reversible fallback |
+| **Archivo** | OFL 1.1 | 100–900; normal/semi-expanded/expanded | Neutral American grotesque; high-impact | Excellent; very professional, less "gamer" | **Selected** in R1 and shipped in v1 |
 | **Barlow** | OFL 1.1 | 9 weights; normal/semi-condensed/condensed | DIN-like, technical, sporty | Very good; condensed variants suit jerseys/scoreboards | Good alternative; slightly narrower than Apotek |
 | **Titillium Web** | OFL 1.1 | 200–900 | Clean, broadcast/scientific | Good; a little generic | Reliable but less distinctive |
 | **Bebas Neue** | OFL 1.1 | 1 weight, all-caps display | Tall condensed display | Excellent for headlines only | Not suitable for rosters/body text; could be a secondary display face |
 | **Rajdhani** | OFL 1.1 | 300–700, condensed techno | Very "esports" | Good, but dated/techy and limited weights | Not recommended as the primary face |
 | **Chakra Petch** | OFL 1.1 | 6 weights, squared techno | Futuristic | Good for titles, less so for body | Not recommended as the primary face |
 
-## Decision: Archivo trial (Saira retained for comparison)
+## Decision: Archivo selected (Saira retained as reversible fallback)
 
 The first OBS pass (R1) found that Saira does not read like Apotek. **Archivo**
-is now wired into all seven overlays as a trial; Saira remains in the repository
-so the same overlays can be compared without a rebuild.
+was selected and shipped in all seven v1 overlays. M9-5 is Done and A41 Pass
+confirmed the shipped rendering at 1920×1080. Saira remains bundled so a revert
+is a five-file swap, not because the choice is still open.
 
 - **Licence:** SIL Open Font License 1.1 — commercial use, embedding,
   self-hosting, subsetting and modification are allowed; derivatives stay OFL;
@@ -41,10 +42,10 @@ so the same overlays can be compared without a rebuild.
 - **Source:** Google Fonts / Omnibus-Type for Saira, Google Fonts / Omnibus-Type
   for Archivo. `OFL.txt` (Saira) and `OFL-Archivo.txt` ship beside the files.
 
-Saira was the M9 choice and remains the fallback if Archivo does not win the
-comparison: a robust squared grotesque with a huge weight/width system, strong
-all-caps, and a width axis for long names. Its files and licence stay in the
-repository until the trial is accepted or reverted.
+Saira was the M9 choice and remains the bundled fallback: a robust squared
+grotesque with a huge weight/width system, strong all-caps, and a width axis for
+long names. Its files and licence stay so a revert is the same five-file swap;
+no A/B review remains open.
 
 ### Weight mapping
 
@@ -84,6 +85,9 @@ Bundle **Inter** (OFL) locally for the control panel and remove the Google Fonts
 
 ## Visual QA checklist
 
+Signed off by R1/M9-5 and A41; R2 covered the offline item. The boxes are kept
+as the reusable acceptance checklist.
+
 - [ ] All 7 overlays at 1920×1080, transparent background, in OBS.
 - [ ] Long team names and tags: no overflow or clipping; test names up to the
       32-character team / 24-character player limits. Text shrinks to a floor,
@@ -96,20 +100,19 @@ Bundle **Inter** (OFL) locally for the control panel and remove the Google Fonts
 - [ ] Offline test: disconnect the network, restart OBS, confirm fonts still load.
 - [ ] Licence file present in the bundle and referenced in About/README.
 
-## Review checkpoint
+## Review outcome
 
-Run the same seven overlays with **Archivo** (current) and **Saira** (fallback)
-side by side at 1920×1080 in OBS, using the same fixture. Keep both sets of WOFF2
-files and licence files in the repo so the comparison is reproducible. The
-overlay test in `crates/server/tests/overlays.rs` pins the active prefix
-(`FONT_PREFIX`), so reverting is a one-line change plus the `@font-face` `src:`
-URLs; the neutral aliases mean no layout CSS change. **Barlow** remains an
-untried third option.
+R1 selected **Archivo** over Saira; M9-5 is Done and A41 Pass signed off all
+seven overlays at 1920×1080. Both WOFF2 sets and licence files stay in the repo
+so a revert is reproducible. The overlay test in `crates/server/tests/overlays.rs`
+pins the active prefix (`FONT_PREFIX`), so reverting is a one-line change plus
+the `@font-face` `src:` URLs; the neutral aliases mean no layout CSS change.
+**Barlow** remains an untried third option, not an open checkpoint.
 
 ## Fallback plan
 
-If Archivo does not win the comparison, revert to **Saira** (already bundled) or
-try **Barlow** (sportier, more condensed). Either migration is the same: swap the
+If a future change needs a different face, revert to **Saira** (already bundled)
+or try **Barlow** (sportier, more condensed). Either migration is the same: swap the
 five WOFF2 files, update the five `@font-face` `src:` URLs and the
 `FONT_PREFIX` test constant, and keep the family aliases. Do not ship Apotek
 unless a redistribution licence is purchased.
