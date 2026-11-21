@@ -253,6 +253,28 @@ fn hero_bans_crops_portraits_inside_their_slots() {
 }
 
 #[test]
+fn row_casters_social_row_stays_inside_the_card() {
+    let text = overlay_text("row-casters.html");
+
+    assert!(
+        text.contains(".talent-subtext {\n      display: flex;\n      align-items: center;\n      gap: 12px;\n      max-width: 100%;\n      min-width: 0;\n    }"),
+        "the social row must be constrained to the card's content box"
+    );
+    assert!(
+        text.contains("flex: 0 0 20px;"),
+        "the social icon must not shrink away"
+    );
+    assert!(
+        text.contains(".social-handle,\n    .pronouns {\n      min-width: 0;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;\n    }"),
+        "long handles and pronouns must ellipsize instead of widening the row"
+    );
+    assert!(
+        text.contains("class=\"social-handle\" title="),
+        "the full handle must remain available on the rendered span"
+    );
+}
+
+#[test]
 fn every_overlay_declares_exactly_the_five_display_faces() {
     for spec in &OVERLAYS {
         let text = overlay_text(spec.file);

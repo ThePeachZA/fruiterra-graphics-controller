@@ -131,10 +131,13 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      max-width: 100%;
+      min-width: 0;
     }
 
     /* Social Icon */
     .social-icon {
+      flex: 0 0 20px;
       width: 20px;
       height: 20px;
     }
@@ -153,6 +156,7 @@
 
     /* Separator */
     .separator {
+      flex: 0 0 auto;
       font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
       font-size: 24px;
       color: #ac46f7;
@@ -163,6 +167,16 @@
       font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
       font-size: 24px;
       color: #ac46f7;
+    }
+
+    /* Long handles and pronouns ellipsize inside the card instead of
+       widening the row beyond the card's clipped edge. */
+    .social-handle,
+    .pronouns {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     /* Hidden elements */
@@ -300,8 +314,9 @@
         ? `<div class="social-icon">${socialIconSvg}</div>`
         : '';
       const handle = String(caster.socialMedia?.handle ?? '').trim();
+      const displayHandle = handle.startsWith('@') ? handle : `@${handle}`;
       const socialHandle = handle
-        ? `<span class="social-handle">${escapeHtml(handle.startsWith('@') ? handle : `@${handle}`)}</span>`
+        ? `<span class="social-handle" title="${escapeHtml(displayHandle)}">${escapeHtml(displayHandle)}</span>`
         : '';
       const separator = (socialIcon || socialHandle) && caster.pronouns 
         ? '<span class="separator">|</span>' 
