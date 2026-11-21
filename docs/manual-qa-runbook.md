@@ -3399,3 +3399,55 @@ were recorded. The authoritative `app.json`/`app.json.bak` hashes stayed at
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
 `tailscale serve status` was `No serve config`, and the harness was deleted.
+
+### A55 — Standalone bundled timer overlay
+
+**Covers:** IMP-023, B5, M9-11
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Use an
+   isolated `APPDATA` and WebView user-data folder copied from the QA fixture.
+   The fixture's timer mode is `target` with no target, so set the in-app timer
+   mode to `countup` through the CDP-driven UI before **Start timer**.
+2. Start the server and open `http://127.0.0.1:3001/overlays/timer.html` as a
+   separate CDP target at 1920×1080. Await `document.fonts.ready`, then record
+   the default text, computed styles, DOM box, background colour and document
+   size before any tick.
+3. Use the real app controls for **Start timer**, **Pause timer** and
+   **Stop timer**, sampling the overlay text and the in-app clock after each
+   transition. Confirm a running tick advances, a pause holds the last value,
+   and stop resets to `00:00:00`.
+4. While the timer is running, change **Leading zeroes** and **Alignment**
+   through the app UI. Wait for the next one-second tick after each setting
+   change; settings are carried in the tick, not broadcast immediately.
+   Confirm unpadded text and left/right placement, then restore centre and
+   padded settings.
+5. Use **Hide overlays** / **Show overlays** and confirm the timer root changes
+   between `display: none` and `display: flex`. Record all network requests,
+   failed HTTP responses and console/log errors for the overlay target.
+6. Stop the app, archive any state the run wrote, restore the authoritative
+   `app.json`/`app.json.bak` fixture, recheck their hashes and
+   `tailscale serve status`, then delete the isolated harness.
+
+**Evidence:** CDP DOM and computed-style JSON at 1920×1080 for fourteen states,
+the in-app clock samples, network/console capture and `/health`; no screenshots
+were taken or published.
+
+**Result: Pass — assistant 2026-11-21.** The run used WebView2 158.0.4370.33.
+The default state was `00:00:00`, count-up reached `00:00:02`, pause held
+`00:00:02` across a 1.4 s wait, stop reset to `00:00:00`, leading-zeroes off
+rendered `0:0:4`, alignment left placed the text box at x=96 and right at
+x=1422.55, and restored settings returned to centred `00:00:08`. `show` false
+set `display: none` on `#timer-root`; `show` true restored `display: flex`.
+Every state had `scrollWidth == innerWidth == 1920`,
+`scrollHeight == innerHeight == 1080`, body background `rgba(0, 0, 0, 0)`, and
+`document.fonts.check('600 160px "FGC Display"')` true. `externalRequests`,
+`failedResponses` and `consoleErrors` were all empty after adding a local
+`data:` favicon. The app resolved its data directory through Windows Known
+Folders despite the isolated `APPDATA`, so the QA-mutated state was archived and
+the authoritative files restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`.
+`tailscale serve status` was `No serve config`, and the harness was deleted.

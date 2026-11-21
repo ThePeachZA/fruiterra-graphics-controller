@@ -15,7 +15,7 @@ This document is the compatibility contract. Existing overlay HTML must render a
 | Encoding | UTF-8 JSON, one object per frame |
 | Server → client | `{ "type": <string>, "data": <object> }` |
 | Client → server | `{ "type": "requestInit" }` (optional) |
-| Reconnect | Client-side; all seven overlays retry every 2 s |
+| Reconnect | Client-side; all bundled overlays, including the standalone timer, retry every 2 s |
 | Port | `?port=` on the overlay URL, default 3001; `?host=` may override the host |
 
 `/state` returns the current keyed state map (same object sent in `init`). `/health` returns `{ "status": "ok", "port": <port>, "overlays": <connected count>, "version": "<app version>" }`.
@@ -50,6 +50,7 @@ On connect the server sends:
 | `team-roster-home.html` | `data.teamRoster` |
 | `team-roster-away.html` | `data.teamRoster` |
 | `row-casters.html` | `data.casters.castersData` |
+| `timer.html` | `data.matchTimer` (if the timer has run) |
 
 If any of those keys is missing on connect, the corresponding overlay renders blank until the next live broadcast. Our `init` is therefore built from current state and always includes every key the current match can populate.
 
@@ -198,8 +199,8 @@ Two shapes, exactly as the original sends them:
 { "type": "matchTimer", "data": { "action": "reset", "hours": 0, "minutes": 0, "seconds": 0 } }
 ```
 
-- No bundled overlay consumes `matchTimer` in v1 (C13). It is still sent so third-party timer overlays keep working.
-- `action` messages do **not** include `hours`/`minutes`/`seconds` except `reset`.
+- v1 was control-only (C13): no bundled overlay consumed `matchTimer`. Post-v1, the standalone `timer.html` renders the last tick and the `reset` payload; it adds no new wire field. The app still sends the same frames so third-party timer overlays keep working.
+- `action` messages do **not** include `hours`/`minutes`/`seconds` except `reset`. The timer overlay ignores `start` and `pause` frames: a pause is represented by the absence of further ticks.
 
 ### 3.4 `show`
 

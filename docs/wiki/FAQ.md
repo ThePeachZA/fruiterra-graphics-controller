@@ -21,10 +21,12 @@ generator; those are separate post-v1 work.
 
 ### Is there a timer overlay?
 
-No. The timer is control-only in version 1. The app includes an always-on timer
-widget with expandable settings, but no bundled broadcast timer graphic.
-Third-party overlays still receive `matchTimer` ticks and the start, pause and
-stop actions.
+Yes, as a separate simple source. The app still owns the timer controls, and a
+standalone `timer.html` at `/overlays/timer.html` renders the broadcast time.
+It uses the existing `matchTimer` ticks and applies the sent alignment and
+leading-zeroes settings; it does not run its own clock or appear in the
+auto-overlay scene list. Third-party overlays still receive the same ticks and
+start, pause and reset actions.
 
 ### Is there a bracket overlay?
 

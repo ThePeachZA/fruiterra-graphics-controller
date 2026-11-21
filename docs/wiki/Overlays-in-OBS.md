@@ -1,9 +1,10 @@
 # Overlays in OBS
 
-The app serves seven plain HTML overlays. Each one is a separate OBS Browser
-Source at **1920×1080** with a transparent background.
+The app serves seven plain HTML match overlays plus a standalone timer overlay.
+Each one is a separate OBS Browser Source at **1920×1080** with a transparent
+background.
 
-## The seven overlays
+## The seven match overlays
 
 Replace `<base>` with the **Base URL** shown on the **Overlay** page. The
 default is `http://127.0.0.1:3001`.
@@ -18,7 +19,11 @@ default is `http://127.0.0.1:3001`.
 | Away team roster | `<base>/overlays/team-roster-away.html` | The away team's players, roles, portraits and heroes |
 | Casters row | `<base>/overlays/row-casters.html` | The assigned casters, panel and their social handles |
 
-The **Overlay** page lists the same URLs with a **Copy URL** button for each.
+The timer is a separate plain source: `<base>/overlays/timer.html`. It shows the
+last broadcast timer value with the sent alignment and leading-zeroes settings.
+It is not part of the auto-overlay scene list; add it as its own Browser Source.
+
+The **Overlay** page lists the same match-overlay URLs with a **Copy URL** button for each.
 URLs are hidden by default; select **Show URLs** to reveal them and **Hide
 URLs** to hide them again.
 
@@ -112,8 +117,8 @@ A page served by the app uses its own origin automatically.
 Third-party overlays receive the same messages as the bundled ones. This
 includes `matchTimer` ticks and the start, pause and reset actions.
 
-The timer is **control-only** in version 1. There is no bundled timer overlay;
-use a third-party overlay if you need one on screen.
+The in-app timer remains the operator control. The bundled `timer.html` renders
+those ticks directly and does not run its own clock.
 
 For the WebSocket contract, message types, payload fields and a copyable
 listener, see [Custom overlays](Custom-Overlays).

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link rel="icon" href="data:,">
+  <title>Timer Overlay</title>
+  <style>
+    @font-face {
+      font-family: 'FGC Display';
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+      src: url('/assets/fonts/archivo-600.woff2') format('woff2');
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .fgc-timer {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      padding: 0 96px;
+    }
+
+    .fgc-timer[data-align="left"] {
+      justify-content: flex-start;
+    }
+
+    .fgc-timer[data-align="right"] {
+      justify-content: flex-end;
+    }
+
+    .fgc-timer__value {
+      color: #fff;
+      font-family: 'FGC Display', Arial, sans-serif;
+      font-size: 160px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      white-space: nowrap;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
+    }
+
+    .fgc-timer--hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="fgc-timer" id="timer-root" data-align="center">
+    <div class="fgc-timer__value" id="timer-value" role="timer" aria-live="off">00:00:00</div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const query = new URLSearchParams(location.search);
+      const root = document.getElementById('timer-root');
+      const value = document.getElementById('timer-value');
+
+      function nonNegativeInteger(input) {
+        const number = Number(input);
+        return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : 0;
+      }
+
+      function formatPart(number, pad) {
+        return pad ? String(number).padStart(2, '0') : String(number);
+      }
+
+      function renderTimer(data) {
+        if (!data || typeof data !== 'object') return;
+
+        const settings = data.settings && typeof data.settings === 'object' ? data.settings : {};
+        const pad = settings.leadingZeroes !== false;
+        const alignment = settings.alignment;
+
+        root.dataset.align = alignment === 'left' || alignment === 'right' ? alignment : 'center';
+        value.textContent = [
+          formatPart(nonNegativeInteger(data.hours), pad),
+          formatPart(nonNegativeInteger(data.minutes), pad),
+          formatPart(nonNegativeInteger(data.seconds), pad),
+        ].join(':');
+      }
+
+      function handleMessage(message) {
+        if (!message || typeof message !== 'object') return;
+
+        if (message.type === 'init') {
+          const timer = message.data && message.data.matchTimer;
+          if (timer && typeof timer === 'object' && !timer.action) renderTimer(timer);
+          return;
+        }
+        if (message.type === 'matchTimer') {
+          if (
+            message.data &&
+            typeof message.data === 'object' &&
+            (!message.data.action || message.data.action === 'reset')
+          ) {
+            renderTimer(message.data);
+          }
+          return;
+        }
+        if (message.type === 'show' && typeof message.visible === 'boolean') {
+          root.classList.toggle('fgc-timer--hidden', !message.visible);
+        }
+      }
+
+      function connect() {
+        const host = query.get('host');
+        const port = query.get('port');
+        const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+        const target = host || port
+          ? `${host || 'localhost'}:${port || '3001'}`
+          : (location.host || 'localhost:3001');
+        const ws = new WebSocket(`${scheme}://${target}`);
+
+        ws.onopen = () => ws.send(JSON.stringify({ type: 'requestInit' }));
+        ws.onmessage = ({ data }) => {
+          try {
+            handleMessage(JSON.parse(data));
+          } catch (error) {
+            console.error('Timer overlay parse error:', error);
+          }
+        };
+        ws.onclose = () => setTimeout(connect, 2000);
+        ws.onerror = (error) => console.error('Timer overlay WS error:', error);
+      }
+
+      connect();
+    })();
+  </script>
+</body>
+</html>

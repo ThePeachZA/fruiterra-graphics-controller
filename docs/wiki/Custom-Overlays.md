@@ -132,8 +132,8 @@ no `data` object.
 | `init` | A keyed map of the last payloads | Keys appear once that section has been broadcast at least once. Paint from this on connect. |
 | `scoreboard`, `gameOverlay`, `mapSelect`, `heroBans`, `teamRoster` | The same scoreboard payload | The type name selects the subscriber, not the content. Read the key your overlay needs. |
 | `casters` | `{ "castersData": [...] }` | The same array is also embedded in the scoreboard payload. |
-| `matchTimer` | A tick (`hours`, `minutes`, `seconds`, `settings`) or an action (`start`, `pause`, `reset`) | No bundled overlay displays the timer; third-party timer overlays use it. |
-| `show` | No `data`; top-level `visible` | Supported by all seven bundled overlays, but not sent by the app in version 1. |
+| `matchTimer` | A tick (`hours`, `minutes`, `seconds`, `settings`) or an action (`start`, `pause`, `reset`) | The standalone `timer.html` renders ticks; third-party timer overlays use the same frames. |
+| `show` | No `data`; top-level `visible` | Supported by the seven bundled match overlays and `timer.html`; added after v1. |
 
 Unchanged sections are not re-sent. If you join late or miss an update, use
 `requestInit` to get the current map again.

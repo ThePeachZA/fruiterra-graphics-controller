@@ -55,8 +55,8 @@ on Tokio.
 
 ## Overlays
 
-All seven overlays are served from the overlay server and embedded in the
-executable.
+All seven match overlays are served from the overlay server and embedded in the
+executable. A standalone timer overlay is bundled as well.
 
 | Overlay | URL |
 |---|---|
@@ -67,13 +67,17 @@ executable.
 | Home team roster | `/overlays/team-roster-home.html` |
 | Away team roster | `/overlays/team-roster-away.html` |
 | Casters row | `/overlays/row-casters.html` |
+| Timer (standalone) | `/overlays/timer.html` |
 
 Add each one to OBS as a Browser Source at 1920×1080 with a transparent
 background. The default base URL is `http://127.0.0.1:3001`. A third-party
 overlay may pass `?port=<port>` when it connects from a different origin.
 
-The timer is **control-only** in v1: there is no bundled timer overlay, but
-third-party overlays still receive `matchTimer` ticks and actions.
+The in-app timer remains the operator control. The standalone `timer.html` is a
+plain renderer: it shows the last `matchTimer` tick, applies the sent alignment
+and leading-zeroes settings, and does not run its own clock. It is not part of
+the auto-overlay scene list; add it as its own Browser Source. Third-party
+overlays still receive `matchTimer` ticks and actions.
 
 ## Requirements
 

@@ -75,7 +75,7 @@ These are small, isolated additions that would be cheap to pull forward *after* 
 | B2 | ~~All overlay URLs with copy buttons~~ | **Done 2026-11-21.** D8-6/D8-9 added labelled Browser Source groups for each enabled access path; every group lists all seven overlay URLs with Open and Copy actions. A48 verified the groups and hidden state; Doctrine IMP-020 closed · done. |
 | B3 | ~~Overlay health/reconnect indicator~~ | **Done 2026-11-21.** The Overlay view shows **Connected clients** and **Last broadcast** using the existing status poll and a session-only broadcast timestamp, with a `role="status"` reconnect note when the server is running with zero clients. A51 verified 0/1 client states, broadcast-age ticking, restart and disconnect transitions, both viewports and the unchanged QA state; Doctrine IMP-021 closed · done. |
 | B4 | ~~Basic hotkeys~~ | **Merged into IDE-004 on 2026-11-21.** The owner wants hotkeys only inside the auto-overlay controller: `1`–`7` select a bundled scene and arrow keys cycle the included subset. No global app or OS shortcuts. Doctrine IMP-022 closed · promoted. |
-| B5 | Timer overlay | The timer is control-only in v1; a bundled broadcast timer can read the existing `matchTimer` messages. |
+| B5 | ~~Timer overlay~~ | **Done 2026-11-21.** A standalone `timer.html` renders the existing `matchTimer` ticks with the sent alignment and leading-zeroes settings; it has no local clock and is not in the auto-overlay scene list. A55 verified live ticks, pause, stop, settings, `show`, transparency and no external requests. Doctrine IMP-023 closed · done. |
 | B6 | ~~Bulk asset import~~ | **Shipped 2026-11-18 (touch-up 16).** Asset import accepts multiple files with per-file validation, hashing, dedupe and error reporting. Image pickers also support direct upload with auto-selection (touch-up 18). |
 
 ## C. Post-v1 improvements (option 3 backlog)
@@ -221,7 +221,7 @@ request, not part of this item.
 - Animate-in/out and show/hide API beyond `display` toggling; replay animations on demand.
 - Live preview panel inside the app (iframe/WebView) for each overlay.
 - Overlay theme/template system; scoreboard skins.
-- Timer overlay with countup/countdown/target, alignment, leading zeroes, standalone mode.
+- Plain standalone `timer.html` renderer done under IMP-023 (B5); it reads the app's countup/countdown/target ticks and applies sent alignment and leading zeroes. Richer timer presentation modes remain deferred.
 - Tournament/bracket overlay.
 - Lower-thirds, player intro, matchup, winner screens, ad/BRB loops.
 - Per-show asset packs and overlay overrides folder (already planned in the base architecture).
@@ -880,7 +880,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | B2 | IMP-020 | improvement | closed · done | All overlay URLs with copy buttons |
 | B3 | IMP-021 | improvement | closed · done | Overlay health/reconnect indicator |
 | B4 | IMP-022 | improvement | closed · promoted | Basic hotkeys (merged into IDE-004) |
-| B5 | IMP-023 | improvement | triaged | Timer overlay |
+| B5 | IMP-023 | improvement | closed · done | Timer overlay |
 | B6 | IMP-024 | improvement | closed · done | Bulk asset import |
 | P1 | IDE-006 | idea | triaged | Undo / redo |
 | P2 | IDE-007 | idea | triaged | Presets / show templates |
@@ -921,6 +921,8 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | Follow-up note | IMP-032 | improvement | closed · done | Placeholder TAG image for empty slots |
 | Follow-up note | IDE-026 | idea | triaged | In-app variable and script inspector |
 | Follow-up note | IDE-027 | idea | triaged | Legacy Electron app.json importer |
+| Owner request | IDE-028 | idea | open | Animated HTML stinger transitions (team and head-to-head) |
+| Owner request | IDE-029 | idea | open | Flythrough overlay with looping video and lower-third series data |
 
 No v1.0.0 content, schema, protocol or QA state was changed by the migration.
 Screenshots remain unpublished; D10 is parked, not approved.
@@ -1087,3 +1089,75 @@ screenshots were taken or published, the authoritative QA hashes remain
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` was `No serve config`.
+
+## AD. Post-v1 timer overlay — IMP-023 / B5 (2026-11-21)
+
+IMP-023 is closed · done. The owner narrowed B5 to a plainly rendered timer
+with no extra features, so the implemented `crates/server/overlays/timer.html`
+is only a renderer for the existing `matchTimer` wire contract. It shows the
+last tick, applies the tick's `settings.leadingZeroes` and `settings.alignment`,
+renders the `reset` payload, and obeys top-level `show`. It intentionally has no
+local clock, no countdown logic, no new message type, no persisted state and no
+auto-overlay scene entry; add it to OBS as its own Browser Source.
+
+The page uses the existing embedded-overlay route, origin-aware WebSocket
+resolver, `requestInit` handshake and 2 s reconnect. It has a local `data:`
+favicon so a Browser Source makes no missing-resource request. Static guards
+live in `crates/server/tests/timer_overlay.rs`, separate from the frozen
+seven-overlay suite, so the new page cannot weaken the v1 font, network or
+subscription assertions. README, protocol, build, wiki and QA docs now describe
+the standalone source while leaving the v1 C13 decision intact.
+
+A55 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence. Live app ticks advanced to `00:00:02`, pause held that value, stop
+reset to `00:00:00`, unpadded text rendered `0:0:4`, left/right placement put the
+text at x=96/x=1422.55, and `show` changed `display` between `none` and `flex`.
+The 1920×1080 document stayed transparent with the bundled font loaded;
+external requests, failed responses and console errors were all empty. The QA
+app resolved its data directory through Windows Known Folders despite an
+isolated `APPDATA`, so the QA-mutated state was archived and the authoritative
+hashes restored. No screenshots were taken or published, and
+`tailscale serve status` remained `No serve config`.
+
+## AE. Stinger transitions idea — IDE-028 (2026-11-21)
+
+IDE-028 is open and tagged `area:overlay`, `needs-design`, `post-v1`,
+`user-requested` and `prior-art:docs-c`. It needs IDE-004 (auto-overlay host)
+and follows IDE-018 (§C presentation roadmap). No code was implemented: this
+item records the owner's request for animated HTML stingers that incorporate
+tournament and team logos, available separately and also built into the auto
+overlay. A team transition should feature that team's logo; the
+`game-overlay.html` transition should show the two logos head-to-head.
+
+The item's prose records research across OWL, OWWC and OWCS, LoL Worlds/MSI/LCK/
+LPL, and VALORANT VCT. The common convention is a modular, late-bound system:
+one shared motion language and swappable team/event data, rather than unrelated
+bespoke clips. OWL used fast 2D swipe/wipe motion; Riot toolkits handled many
+teams with late-bound logos and colours; OWCS used regional wordmarks and
+palettes; VCT used timing tokens and responsive text; LCK kept overlays
+restrained. The proposed direction is separate transparent HTML pages plus a
+reusable auto-overlay module, with fallbacks for missing logos and colours and
+no CDN or official-mark copying.
+
+## AF. Flythrough overlay idea — IDE-029 (2026-11-21)
+
+IDE-029 is open and tagged `area:overlay`, `needs-design`, `post-v1`,
+`user-requested` and `prior-art:docs-c`. It follows IDE-018. No code was
+implemented: this item records the owner's request for a flythrough overlay
+with a looping video file and a lower-third bug showing who is playing, current
+score, current round/map and ban information. The owner will share a personal
+example before design starts, and that reference must be recorded in the item
+first.
+
+Research found no formal industry use of the term “flythrough”; the closest
+documented patterns are broadcast/package openers, perspective-grid or
+push-through transitions, team/player intros and persistent match bugs. Riot's
+world-feed practice favours clean, localisation-friendly graphics zones; OWL
+favoured fast 2D motion; VCT/BUCK used perspective grids for forward momentum;
+MSI 24 showed the value of one adaptive motif; and community Overwatch package
+docs list the data a match bug carries. The proposed direction is a transparent
+1920×1080 page with a local muted looping video, a compact lower third, the
+existing overlay projection as its data source, a still fallback, explicit
+empty states and no remote assets. Official marks remain out of scope without
+permission.

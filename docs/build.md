@@ -179,14 +179,14 @@ This validates the packaged binary, embedded overlays, embedded assets and the s
 2. **Requirements** — Windows 10/11 x64, WebView2 (installer bootstraps it), OBS Browser Source.
 3. **Install** — installer or portable ZIP; SmartScreen note and checksum verification.
 4. **Quick start** — start the server, add teams/assets, create a match, copy the overlay URL into OBS at 1920×1080.
-5. **Overlay URLs** — the seven bundled files, the `?port=` parameter, and the default port 3001.
+5. **Overlay URLs** — the seven bundled match files, the standalone `timer.html`, the `?port=` parameter, and the default port 3001.
 6. **Migrating from the Google Sheets workflow** - **no automatic import**: teams, talent, matches and assets must be re-entered. This is stated plainly, not buried.
-7. **Timer** - control-only in v1; there is no bundled timer overlay. Third-party timer overlays still receive `matchTimer`.
+7. **Timer** - v1 was control-only. Post-v1, the standalone `timer.html` reads the existing `matchTimer` ticks without a new protocol; third-party timer overlays still receive the same ticks and actions.
 8. **Network and security** - localhost by default; "Allow LAN access" binds `0.0.0.0`; CORS is `*`; there is no authentication in v1. LAN access relies on a Windows Firewall rule scoped to the **Private** profile and the **local subnet**; the app never asks for a public-network rule.
 9. **Fonts and licences** - Archivo (overlay), Saira (retained fallback) and Inter (UI) are OFL 1.1; local only; no runtime font requests.
 10. **Build from source** — Rust stable, `dioxus-cli` 0.7.10, `cargo test`, `dx bundle`.
 11. **Troubleshooting** — SmartScreen, WebView2 missing, port already in use, firewall rule on LAN mode.
-12. **Known limitations** - no import from the earlier Google Sheets workflow, timer control-only, no code signing, Windows-only, bracket overlay post-v1.
+12. **Known limitations** - no import from the earlier Google Sheets workflow, in-app timer controls with a separate render-only timer source, no code signing, Windows-only, bracket overlay post-v1.
 13. **Licence** - MIT, stated in the font/licence section with a link to `LICENSE`; no separate top-level section.
 
 The README must not claim features that are backlogged (undo/redo, presets, multiple scenes, HTTP control API, bracket overlay).
