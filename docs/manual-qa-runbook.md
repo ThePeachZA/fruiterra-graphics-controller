@@ -3157,3 +3157,63 @@ toggle. The isolated `app.json` and `app.json.bak` stayed at
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` through
 shutdown; the authoritative hashes and `No serve config` were rechecked after
 the harness was removed.
+
+---
+
+### A51 — Overlay health and reconnect indicator
+
+**Covers:** IMP-021
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Use an
+   isolated `APPDATA` and WebView user-data folder so the authoritative QA files
+   are never opened by the run.
+2. At 1280×800 with the server stopped, confirm **Connected clients: 0 clients**
+   and **Last broadcast: Never**, and that no reconnect note is present.
+3. Start the server. Confirm `Running · 0 clients`, **Last broadcast: Just now**,
+   `/health {"overlays":0,...}`, and a reconnect note with `role="status"` that
+   is non-ignored in the accessibility tree.
+4. Create a WebView target for
+   `http://127.0.0.1:3001/overlays/game-overlay.html`. Wait until `/health`
+   reports `overlays:1`; confirm the UI reads `1 client` and the reconnect note
+   is gone.
+5. Click **Hide overlays** to send a new frame. Confirm **Last broadcast**
+   returns to `Just now`, then wait for the one-second clock and confirm it
+   advances to `1s ago`.
+6. Press **Restart**. Confirm the brief zero-client state returns the reconnect
+   note and reseeds **Last broadcast: Just now**, then the overlay reconnects to
+   `1 client` and clears the note. Close the overlay target and confirm
+   `0 clients`, the note again, and a broadcast age that keeps increasing.
+7. Set the viewport to 375×812. Confirm `document.scrollWidth == innerWidth`,
+   that the new rows and note stay inside the viewport, and that their labels and
+   the note remain non-ignored in the accessibility tree. If the floating timer
+   covers Stop/Restart at the initial scroll position, scroll normally before
+   using those controls.
+8. Stop the server. Confirm **Last broadcast: Never**, the reconnect note is
+   removed and the overlay toggle is disabled. Close the overlay target and app,
+   recheck the QA hashes and `tailscale serve status`, then delete the isolated
+   harness.
+
+**Evidence:** CDP DOM, accessibility-tree, one-second clock and `/health`
+snapshots at 1280×800 and 375×812; no screenshots were taken or published.
+
+**Result: Pass — assistant 2026-11-21.** The run used WebView2 158.0.4370.33.
+While stopped, the panel showed `0 clients` and `Never` with no note. Starting
+with no clients showed `Running · 0 clients`, `Just now`, `/health
+{"overlays":0,...}` and a non-ignored `role="status"` note. An overlay target
+moved `/health` to `overlays:1`, changed the UI to `1 client` and cleared the
+note. Hiding overlays reseeded `Just now`; the clock then advanced to `1s ago`.
+Restart briefly returned to `0 clients` with the note and `Just now` before the
+overlay reconnected; closing it returned to `0 clients`, restored the note and
+left the age increasing. Stopping cleared the value to `Never`, removed the note
+and disabled the toggle. At both 1280×800 and 375×812, `scrollWidth` equalled
+`innerWidth`; the rows and note stayed inside the viewport and the accessibility
+tree exposed `Connected clients`, `Last broadcast` and the note. At 375×812 the
+pre-existing floating timer initially covered Stop/Restart; after a normal wheel
+scroll they were hit-testable and Stop worked. The isolated and authoritative
+`app.json`/`app.json.bak` hashes stayed at
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
+`tailscale serve status` was `No serve config`, and the harness was deleted.

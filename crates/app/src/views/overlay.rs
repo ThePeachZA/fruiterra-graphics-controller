@@ -1,5 +1,7 @@
 //! Overlay destination: server controls and OBS Browser Source URLs.
 
+use std::time::{Duration, Instant};
+
 use dioxus::prelude::*;
 use dioxus_primitives::toast::{ToastOptions, use_toast};
 use fgc_server::ServerStatus;
@@ -10,7 +12,7 @@ use crate::components::{CollapsiblePanel, KeyValue, KeyValues, Panel};
 use crate::remote_access::{self, OverlayUrlGroup};
 use crate::server::{OVERLAY_FILES, overlay_url};
 use crate::state::AppStore;
-use crate::status::{status_text, status_tone};
+use crate::status::{broadcast_age_text, client_count_text, status_text, status_tone};
 
 /// Server lifecycle controls and copyable Browser Source URLs.
 #[component]
@@ -26,6 +28,23 @@ pub fn OverlayView() -> Element {
     let label = status_text(&status);
     let urls_visible = store.urls_visible();
     let overlays_visible = store.overlays_visible();
+    let mut clock = use_signal(Instant::now);
+
+    use_future(move || async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            clock.set(Instant::now());
+        }
+    });
+
+    let clients = match &status {
+        ServerStatus::Running { clients, .. } => *clients,
+        _ => 0,
+    };
+    let last_broadcast_age = server
+        .last_broadcast()
+        .map(|last| clock.read().saturating_duration_since(last));
+    let needs_reconnect = running && clients == 0;
 
     rsx! {
         div { class: "fgc-view",
@@ -55,6 +74,14 @@ pub fn OverlayView() -> Element {
                         KeyValue {
                             label: "Live overlays".to_owned(),
                             value: if overlays_visible { "Visible".to_owned() } else { "Hidden".to_owned() },
+                        }
+                        KeyValue {
+                            label: "Connected clients".to_owned(),
+                            value: client_count_text(clients),
+                        }
+                        KeyValue {
+                            label: "Last broadcast".to_owned(),
+                            value: broadcast_age_text(last_broadcast_age),
                         }
                         if let ServerStatus::Running { port, .. } = &status {
                             KeyValue {
@@ -95,6 +122,11 @@ pub fn OverlayView() -> Element {
                     }
                     p { class: "fgc-note",
                         "The base URL and Browser Source URLs stay hidden until you reveal them below. Port, remote access, asset URLs and auto-start are configured in Settings."
+                    }
+                    if needs_reconnect {
+                        p { class: "fgc-note", role: "status",
+                            "No Browser Sources are connected. Open or refresh an OBS Browser Source to reconnect."
+                        }
                     }
                 }
                 CollapsiblePanel {

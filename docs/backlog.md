@@ -73,7 +73,7 @@ These are small, isolated additions that would be cheap to pull forward *after* 
 |---|---|---|
 | B1 | ~~Show/hide overlay control~~ | **Done 2026-11-21.** Overlay view gained a **Hide overlays** / **Show overlays** button backed by a session-only signal. It broadcasts the existing `{type:"show", visible}` message, seeds start/restart with the current value, and never writes to `app.json`. A50 verified both viewports, pointer/keyboard activation, AX state, live overlay display and restart persistence; Doctrine IMP-019 closed · done. |
 | B2 | ~~All overlay URLs with copy buttons~~ | **Done 2026-11-21.** D8-6/D8-9 added labelled Browser Source groups for each enabled access path; every group lists all seven overlay URLs with Open and Copy actions. A48 verified the groups and hidden state; Doctrine IMP-020 closed · done. |
-| B3 | Overlay health/reconnect indicator | Surface connected client count and last broadcast time. |
+| B3 | ~~Overlay health/reconnect indicator~~ | **Done 2026-11-21.** The Overlay view shows **Connected clients** and **Last broadcast** using the existing status poll and a session-only broadcast timestamp, with a `role="status"` reconnect note when the server is running with zero clients. A51 verified 0/1 client states, broadcast-age ticking, restart and disconnect transitions, both viewports and the unchanged QA state; Doctrine IMP-021 closed · done. |
 | B4 | Basic hotkeys | Score +/-, next map, show/hide — high value during a live show. |
 | B5 | Timer overlay | The timer is control-only in v1; a bundled broadcast timer can read the existing `matchTimer` messages. |
 | B6 | ~~Bulk asset import~~ | **Shipped 2026-11-18 (touch-up 16).** Asset import accepts multiple files with per-file validation, hashing, dedupe and error reporting. Image pickers also support direct upload with auto-selection (touch-up 18). |
@@ -842,7 +842,7 @@ not canonical IDs and are tagged on each record as `legacy:<id>` or
 not duplicated. The unnumbered §C bullets were migrated as seven grouped
 umbrella records to be split when promoted.
 
-Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed · done × 1, improvement/closed · done × 24, improvement/triaged × 5, idea/triaged × 22, chore/closed · done × 3, chore/triaged × 2, issue/triaged × 1, chore/closed · accepted × 1. CHR-004 was closed · done after the font review reconciliation; B1 and B2 were closed · done as post-v1 work.
+Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed · done × 1, improvement/closed · done × 25, improvement/triaged × 4, idea/triaged × 22, chore/closed · done × 3, chore/triaged × 2, issue/triaged × 1, chore/closed · accepted × 1. CHR-004 was closed · done after the font review reconciliation; B1, B2 and B3 were closed · done as post-v1 work.
 
 | Legacy | Doctrine | Kind | Status | Title |
 |---|---|---|---|---|
@@ -878,7 +878,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | T15 | IMP-018 | improvement | closed · done | Multi-stage groups, playoff restore and Push to overlay |
 | B1 | IMP-019 | improvement | closed · done | Show/hide overlay control |
 | B2 | IMP-020 | improvement | closed · done | All overlay URLs with copy buttons |
-| B3 | IMP-021 | improvement | triaged | Overlay health/reconnect indicator |
+| B3 | IMP-021 | improvement | closed · done | Overlay health/reconnect indicator |
 | B4 | IMP-022 | improvement | triaged | Basic hotkeys |
 | B5 | IMP-023 | improvement | triaged | Timer overlay |
 | B6 | IMP-024 | improvement | closed · done | Bulk asset import |
@@ -955,5 +955,30 @@ A49 in [`docs/manual-qa.md`](manual-qa.md) and
 WebView evidence at 1280×800 and 375×812. No schema, protocol, server runtime,
 route, destination or v1.0.0 overlay changed. No screenshots were taken or
 published, and the authoritative QA hashes remain
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`.
+
+## Z. Post-v1 overlay health — IMP-021 (2026-11-21)
+
+B3 is now terminal as Doctrine **IMP-021**, closed · done. The Overlay view
+reports **Connected clients** from the existing server-status poll and **Last
+broadcast** from a session-only timestamp in `ServerController`. The timestamp
+is recorded only when a frame is actually sent, including the initial
+start/restart frames, and is cleared on start, restart and stop. A one-second
+view clock ages the display; a running server with zero clients also shows a
+`role="status"` reconnect note. Nothing is added to `AppState`, `app.json`,
+the protocol, the server runtime, routes or the bundled overlays.
+
+A51 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real desktop
+WebView DOM, accessibility-tree and `/health` evidence at 1280×800 and 375×812:
+0/1 client counts, `Just now` → `1s ago` ageing, restart reseeding, disconnect
+and reconnect notes, and `Never` after stopping. Both viewports had
+`scrollWidth == innerWidth`, with the new rows and note inside the viewport and
+exposed in the accessibility tree. At 375×812 the pre-existing floating timer
+initially covered Stop/Restart; after a normal wheel scroll they were
+hit-testable and Stop worked. Harness and authoritative QA hashes were
+unchanged, `tailscale serve status` was `No serve config`, and no screenshots
+were taken or published. The authoritative hashes remain
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`.

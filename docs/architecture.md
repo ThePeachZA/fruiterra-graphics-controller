@@ -251,6 +251,7 @@ Stopped ──start──► Starting ──bind ok──► Running ──stop�
 - `Stop` cancels a `CancellationToken`, axum performs a graceful shutdown, the thread joins, and the result is reported through a oneshot.
 - The UI never blocks on the join; `stop()` is awaited inside `dioxus::prelude::spawn`.
 - A panic in the server thread is caught at the thread boundary, logged, and surfaced as `Failed`.
+- Overlay health display uses existing state: the connected-client count comes from the 500 ms `ServerStatus` poll, while `ServerController` keeps a session-only `last_broadcast: Signal<Option<Instant>>`. It is set only when a frame is actually sent (including the initial start/restart frames), cleared on start/restart/stop, and aged by a one-second clock in the Overlay view. Nothing is written to `AppState`, `app.json`, the protocol, the server runtime or an endpoint; `/health` is unchanged.
 
 ---
 

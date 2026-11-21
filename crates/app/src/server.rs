@@ -7,7 +7,7 @@
 
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use dioxus::prelude::*;
 use fgc_core::{AppState, Asset, AssetOrigin, Match};
@@ -31,6 +31,7 @@ pub struct ServerController {
     busy: Signal<bool>,
     blob_dir: Signal<Option<PathBuf>>,
     differ: Signal<ProjectionDiffer>,
+    last_broadcast: Signal<Option<Instant>>,
 }
 
 impl ServerController {
@@ -45,6 +46,7 @@ impl ServerController {
         let busy = use_signal(|| false);
         let blob_dir = use_signal(|| fgc_core::assets_root().ok());
         let differ = use_signal(ProjectionDiffer::new);
+        let last_broadcast = use_signal(|| None::<Instant>);
 
         use_future(move || async move {
             let mut status = status;
@@ -67,6 +69,7 @@ impl ServerController {
             busy,
             blob_dir,
             differ,
+            last_broadcast,
         }
     }
 
@@ -81,6 +84,7 @@ impl ServerController {
             busy: Signal::new(false),
             blob_dir: Signal::new(None::<PathBuf>),
             differ: Signal::new(ProjectionDiffer::new()),
+            last_broadcast: Signal::new(None::<Instant>),
         }
     }
 
@@ -114,6 +118,22 @@ impl ServerController {
         matches!(*self.status.peek(), ServerStatus::Running { .. })
     }
 
+    /// Time of the most recent frame actually broadcast to overlay clients.
+    #[must_use]
+    pub fn last_broadcast(&self) -> Option<Instant> {
+        *self.last_broadcast.read()
+    }
+
+    fn note_broadcast(&self) {
+        let mut last_broadcast = self.last_broadcast;
+        last_broadcast.set(Some(Instant::now()));
+    }
+
+    fn clear_last_broadcast(&self) {
+        let mut last_broadcast = self.last_broadcast;
+        last_broadcast.set(None);
+    }
+
     /// Replaces the displayed base URL, for example after a settings edit
     /// while the server is stopped.
     pub fn set_base_url(&self, url: impl Into<String>) {
@@ -134,6 +154,7 @@ impl ServerController {
         }
         let mut differ = self.differ;
         differ.write().seed(&initial);
+        self.clear_last_broadcast();
         let mut busy = self.busy;
         let mut status = self.status;
         busy.set(true);
@@ -143,13 +164,18 @@ impl ServerController {
         let mut handle_signal = self.handle;
         let mut status_signal = self.status;
         let mut busy_signal = self.busy;
+        let mut last_broadcast_signal = self.last_broadcast;
 
         spawn(async move {
             let started = tokio::task::spawn_blocking(move || ServerHandle::start(config)).await;
             match started {
                 Ok(Ok(handle)) => {
+                    let sent_initial = !initial.is_empty();
                     for message in initial {
                         handle.broadcast(message);
+                    }
+                    if sent_initial {
+                        last_broadcast_signal.set(Some(Instant::now()));
                     }
                     debug!(port = ?handle.port(), "overlay server started");
                     status_signal.set(handle.status());
@@ -173,6 +199,7 @@ impl ServerController {
         if self.busy() {
             return;
         }
+        self.clear_last_broadcast();
         let mut handle_signal = self.handle;
         let handle = handle_signal.write().take();
         let mut status = self.status;
@@ -209,6 +236,7 @@ impl ServerController {
         if self.busy() {
             return;
         }
+        self.clear_last_broadcast();
         let mut differ = self.differ;
         differ.write().seed(&initial);
         let mut handle_signal = self.handle;
@@ -221,6 +249,7 @@ impl ServerController {
 
         let mut status_signal = self.status;
         let mut busy_signal = self.busy;
+        let mut last_broadcast_signal = self.last_broadcast;
 
         spawn(async move {
             if let Some(previous) = previous
@@ -232,8 +261,12 @@ impl ServerController {
             let started = tokio::task::spawn_blocking(move || ServerHandle::start(config)).await;
             match started {
                 Ok(Ok(handle)) => {
+                    let sent_initial = !initial.is_empty();
                     for message in initial {
                         handle.broadcast(message);
+                    }
+                    if sent_initial {
+                        last_broadcast_signal.set(Some(Instant::now()));
                     }
                     debug!(port = ?handle.port(), "overlay server restarted");
                     status_signal.set(handle.status());
@@ -270,6 +303,7 @@ impl ServerController {
         let handle = self.handle.peek().as_ref().cloned();
         if let Some(handle) = handle {
             handle.broadcast(message);
+            self.note_broadcast();
         }
     }
 
@@ -290,8 +324,12 @@ impl ServerController {
 
         let mut differ = self.differ;
         let frames = differ.write().take(outbound, force);
+        let sent = !frames.is_empty();
         for message in frames {
             handle.broadcast(message);
+        }
+        if sent {
+            self.note_broadcast();
         }
     }
 }
@@ -569,5 +607,55 @@ mod tests {
         let mut differ = ProjectionDiffer::new();
         let frames = vec![Outbound::show(true), Outbound::show(true)];
         assert_eq!(differ.take(frames, false).len(), 2);
+    }
+
+    #[test]
+    fn last_broadcast_tracks_noted_activity_and_can_be_cleared() {
+        fn scenario() -> Element {
+            let controller = ServerController::test_controller();
+            assert_eq!(controller.last_broadcast(), None);
+
+            let before = Instant::now();
+            controller.note_broadcast();
+            let after = Instant::now();
+            let last = controller
+                .last_broadcast()
+                .expect("a noted broadcast should have a timestamp");
+            assert!(last >= before && last <= after);
+
+            controller.clear_last_broadcast();
+            assert_eq!(controller.last_broadcast(), None);
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
+    }
+
+    #[test]
+    fn broadcast_without_a_running_server_is_not_activity() {
+        fn scenario() -> Element {
+            let controller = ServerController::test_controller();
+            controller.broadcast(Outbound::show(true));
+            assert_eq!(controller.last_broadcast(), None);
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
+    }
+
+    #[test]
+    fn stopping_clears_broadcast_activity() {
+        fn scenario() -> Element {
+            let controller = ServerController::test_controller();
+            controller.note_broadcast();
+            controller.stop();
+            assert_eq!(controller.last_broadcast(), None);
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
     }
 }
