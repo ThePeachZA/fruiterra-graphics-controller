@@ -904,7 +904,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | D8-9 | IMP-031 | improvement | closed · done | Dual Browser Source URL sets and UI pass |
 | D9 | CHR-003 | chore | closed · done | Custom overlay author documentation |
 | D10 | CHR-001 | chore | triaged | Wiki screenshots for the v1 guide |
-| M9-7 | ISS-018 | issue | triaged | six-caster row clips social row |
+| M9-7 | ISS-018 | issue | closed · fixed | six-caster row clips social row |
 | R3 | CHR-006 | chore | closed · accepted | original pre-rebuild overlay HTML |
 | A17 | CHR-005 | chore | triaged | A17 second-machine project import |
 | §C group | IDE-017 | idea | triaged | Protocol and server roadmap (§C) |
@@ -1024,3 +1024,34 @@ No screenshots were taken or published; the authoritative QA hashes remain
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` remained `No serve config`.
+
+## AB. Post-v1 caster row fix — ISS-018 / M9-7 (2026-11-21)
+
+ISS-018 is closed · fixed. The owner approved the scoped fix after the v1
+closeout: keep the caster wire protocol, `app.json` schema and 1920×1080 overlay
+geometry unchanged, and solve the clipping inside `row-casters.html`.
+
+The real WebView2 baseline reproduced M9-7 with six casters:
+`@anextremelylongcastersocialhandle` crossed the card right edge by `26.75px`
+and the left edge by `96.92px`, and `@longcasterhandlefive` crossed the left
+edge by `23.67px`. The fix constrains `.talent-subtext` to the card content box
+with `max-width: 100%` and `min-width: 0`, keeps `.social-icon` at
+`flex: 0 0 20px`, and lets `.social-handle` and `.pronouns` ellipsize with
+`overflow: hidden`, `text-overflow: ellipsis` and `white-space: nowrap`. The
+rendered handle span also carries the full handle in `title`.
+
+A53 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the post-fix DOM and
+computed-style evidence at 1920×1080. All six social rows stayed inside their
+250px content boxes; the long handles ellipsized at 142/240px and 159/394px,
+their pronouns at 47/79px and 29/72px, and each full handle remained in `title`.
+The 1- and 4-caster states kept their 900px and 415px cards, the document stayed
+1920×1080, and there were zero page console errors. The static guard
+`row_casters_social_row_stays_inside_the_card` was added to
+`crates/server/tests/overlays.rs`. `cargo fmt --all`, format check, check,
+clippy, test, `git diff --check` and `dx build --desktop` passed; no schema,
+protocol, persisted state or other v1 overlay changed. No screenshots were
+taken or published, the authoritative QA hashes remain
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` was `No serve config`.

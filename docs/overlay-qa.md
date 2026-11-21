@@ -58,10 +58,16 @@ smoke test, not a substitute for the OBS sign-off below.
 - **Reconnect:** after the server was restarted, `/health` reported
   `overlays: 1` for the focused tab and `overlays: 7` after reloading all tabs;
   the focused overlay repainted from the replayed cache.
-- **Known observation:** a 6-caster `row-casters` layout clips the social row by
-  about 14px with long handles. The same clipping occurs with a `sans-serif`
-  fallback, so it is pre-existing layout behaviour rather than a font
-  regression; no CSS was changed in the font port.
+- **M9-7, fixed after v1:** the original 6-caster `row-casters` row clipped long
+  handles; real WebView2 measured `+26.75px` right / `-96.92px` left for
+  `@anextremelylongcastersocialhandle` and `-23.67px` left for
+  `@longcasterhandlefive`. The same baseline clipping occurred with a
+  `sans-serif` fallback, so it was pre-existing layout behaviour rather than a
+  font regression; no CSS was changed in the font port. ISS-018 later confined
+  `.talent-subtext` to the card content box, fixed the icon at 20px, and
+  ellipsized long handles/pronouns while retaining the full handle in `title`.
+  Gate A53 measured all six social rows inside their card content boxes with
+  unchanged 1920×1080 geometry and card widths.
 
 ## Files covered
 

@@ -307,8 +307,10 @@ when not visible** turned off.
 - Text overflows the canvas, is clipped, or renders in a fallback font for Latin
   text.
 - A source disconnects, flickers or stops updating during the 10-minute watch.
-- The 6-caster `row-casters` clipping is **known** (see M9-7). Record it if you
-  see it, but do not fail R1 for that specific pre-existing case.
+- The 6-caster `row-casters` clipping was a historical v1 observation (M9-7)
+  that was fixed after v1 and verified in A53. Do not fail R1 for the v1 case;
+  if clipping recurs, record DOM boxes and computed styles for the failing
+  handle instead of relying on a screenshot.
 
 **Evidence:** One screenshot per overlay, the OBS source list, and the
 `/health` output showing `overlays: 7`.
@@ -3285,3 +3287,63 @@ despite remaining included files, and excluded frames could retain
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
 `tailscale serve status` was `No serve config`, and no screenshots were taken.
+
+---
+
+### A53 — Six-caster social-row containment
+
+**Covers:** ISS-018, M9-7 (post-v1 overlay polish)
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Use an
+   isolated `APPDATA` and WebView user-data folder copied from the QA fixture so
+   the authoritative `app.json` files are never opened by the run.
+2. Start the server and open `http://127.0.0.1:3001/overlays/row-casters.html`
+   as a separate CDP target. Set the viewport to 1920×1080. The harness has no
+   caster projection in the server cache, so clear the page WebSocket's
+   `onclose`/`onerror` handlers, close it, and inject the six-caster payload
+   directly with
+   `updateOverlay({ type: 'casters', data: { castersData: [...] } })`. Await
+   `document.fonts.ready` before measuring.
+3. Reproduce the baseline overflow first: with six cards,
+   `@anextremelylongcastersocialhandle` crossed the card's right edge by
+   `26.75px` and its left edge by `96.92px`; `@longcasterhandlefive` crossed the
+   left edge by `23.67px`. This confirms the M9-7 report before changing CSS.
+4. Apply the scoped fix: constrain `.talent-subtext` to the card content box,
+   keep `.social-icon` at `flex: 0 0 20px`, and let `.social-handle` and
+   `.pronouns` use `min-width: 0`, `overflow: hidden`, `text-overflow: ellipsis`
+   and `white-space: nowrap`. Render the full handle in `title` on the handle
+   span. Rebuild, relaunch, and replay the 1-, 4- and 6-caster payloads.
+5. For every card, record DOM boxes, `clientWidth`/`scrollWidth`, `title` and
+   computed styles for the card, content box, `.talent-subtext`, icon, handle,
+   separator and pronouns. Confirm every child stays inside the card content
+   box, only overlong text ellipsizes, full handles remain in `title`, and the
+   1920×1080 document size and card widths are unchanged.
+6. Stop the app, recheck the authoritative hashes and
+   `tailscale serve status`, then delete the isolated harness.
+
+**Evidence:** CDP DOM and computed-style JSON at 1920×1080 for the 1-, 4- and
+6-caster states, plus the pre-fix six-caster baseline; no screenshots were taken
+or published.
+
+**Result: Pass — assistant 2026-11-21.** The run used WebView2 158.0.4370.33
+and an isolated QA profile. At 1920×1080 every state had
+`scrollWidth == innerWidth == 1920` and `scrollHeight == innerHeight == 1080`.
+The six-caster row kept six 270px cards inside the 1720px container; each
+250px content box contained every social-row child, with the long-handle cards
+measuring `outsideRight: 0` at worst. `@longcasterhandlefive` ellipsized at
+142/240px and `@anextremelylongcastersocialhandle` at 159/394px; their pronouns
+ellipsized at 47/79px and 29/72px. Each handle's `title` retained the full
+handle. The four-caster row kept 415px cards and ellipsized only the extreme
+handle (281/394px); the one-caster row kept a 900px card and showed the extreme
+handle in full (394/394px). Computed styles were
+`.talent-subtext { display:flex; gap:12px; max-width:100%; min-width:0 }`,
+`.social-icon { flex:0 0 20px }` and
+`.social-handle, .pronouns { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }`.
+Zero page console errors were recorded. The authoritative
+`app.json`/`app.json.bak` hashes stayed at
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
+`tailscale serve status` was `No serve config`, and the harness was deleted.
