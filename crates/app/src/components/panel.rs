@@ -58,8 +58,9 @@ pub fn Disclosure(
 
     rsx! {
         details { ..merged,
-            summary {
-                span { "{title}" }
+            summary { class: "fgc-disclosure__summary",
+                span { class: "fgc-disclosure__chevron", aria_hidden: "true", "▸" }
+                span { class: "fgc-disclosure__title", "{title}" }
                 if let Some(hint) = hint {
                     span { class: "fgc-disclosure__hint", "{hint}" }
                 }

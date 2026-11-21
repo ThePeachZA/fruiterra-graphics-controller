@@ -3053,3 +3053,50 @@ heading/phrasing children (`H2`, `SPAN`, `SPAN`), was focusable
 changed twice. The QA `app.json` and `app.json.bak` were restored after the app
 closed; `app.json` returned to hash
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+
+---
+
+### A49 — Post-v1 disclosure affordances and compact navigation
+
+**Covers:** IMP-001, IMP-002
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Use a
+   temporary `APPDATA` and WebView user-data folder so the authoritative QA
+   files are never opened by the run.
+2. At 1280×800, confirm the expanded shell grid, seven visible labels and no
+   horizontal overflow. Toggle **Collapse navigation** by activation click,
+   then by keyboard Enter with the toggle focused; confirm the `72px` icon rail,
+   active indicator, names in the accessibility tree, and no overflow.
+3. Hover a compact nav item at 1280 and 375, and at 1280 move focus to it with
+   Tab; confirm the tooltip pseudo-element carries the destination name and
+   becomes visible.
+4. Open a native `details` panel by summary click and close it with Enter;
+   confirm the chevron is visible in both states and that open state survives an
+   unrelated compact-nav toggle. Repeat for a `Disclosure` subsection.
+5. Set the viewport to 375×812 and repeat the icon-rail, label, tooltip and
+   overflow checks, including the narrow-width CSS with the expanded class.
+
+**Evidence:** CDP DOM, computed-style and accessibility-tree snapshots at
+1280×800 and 375×812; no screenshots were taken or published.
+
+**Result: Pass — assistant 2026-11-21.** At 1280×800 the grid changed from
+`248px 1032px` to `72px 1208px` on both activation click and Enter; at 375×812 it
+was `72px 303px` both with the compact class and from the narrow-width media
+query. `document.scrollWidth` and `body.scrollWidth` equalled `innerWidth` at
+both widths. All seven nav buttons retained matching `aria-label`, `title` and
+`data-label`; the accessibility tree reported all seven as non-ignored while
+the text labels were clipped to `1px` / `inset(50%)`. The tooltip's `::after`
+content was `"Match Controller"` with opacity `0` hidden and `1` on real pointer
+hover at both widths and real keyboard focus-visible at 1280. Keyboard
+activation of Settings left
+`aria-current="page"` and a `3px` inset accent indicator. The panel chevron was
+visible at `rotate(-90deg)` closed and `rotate(0deg)` open; Enter returned it to
+closed, and an open panel stayed open across a compact-nav toggle. The
+`Disclosure` chevron was visible in both states. The run used an isolated
+profile, so the authoritative
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` hashes
+were not disturbed.

@@ -21,31 +21,66 @@
 .fgc-disclosure {
     margin-top: var(--fgc-space-2);
     border: 1px solid var(--fgc-line);
+    border-left: 3px solid var(--fgc-accent);
     border-radius: var(--fgc-radius-md);
     background: var(--fgc-bg-elevated);
 }
 
-.fgc-disclosure > summary {
+.fgc-disclosure[open] {
+    border-left-color: var(--fgc-line-strong);
+}
+
+.fgc-disclosure > .fgc-disclosure__summary {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-2);
     padding: var(--fgc-space-2) var(--fgc-space-3);
     color: var(--fgc-text-muted);
     cursor: pointer;
     font-size: var(--fgc-text-sm);
     font-weight: 700;
     list-style: none;
+    transition: background-color 120ms ease, color 120ms ease;
 }
 
-.fgc-disclosure > summary::-webkit-details-marker {
+.fgc-disclosure > .fgc-disclosure__summary::-webkit-details-marker {
     display: none;
 }
 
-.fgc-disclosure > summary::before {
-    margin-right: var(--fgc-space-2);
-    color: var(--fgc-accent);
-    content: "▸";
+.fgc-disclosure > .fgc-disclosure__summary:hover,
+.fgc-disclosure > .fgc-disclosure__summary:focus-visible {
+    background: var(--fgc-panel-hover);
+    color: var(--fgc-text);
 }
 
-.fgc-disclosure[open] > summary::before {
-    content: "▾";
+.fgc-disclosure > .fgc-disclosure__summary:focus-visible {
+    outline: 2px solid var(--fgc-accent);
+    outline-offset: -2px;
+}
+
+.fgc-disclosure__chevron {
+    display: grid;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    place-items: center;
+    border: 1px solid var(--fgc-line-strong);
+    border-radius: var(--fgc-radius-sm);
+    background: var(--fgc-bg);
+    color: var(--fgc-accent);
+    font-size: var(--fgc-text-xs);
+    line-height: 1;
+    transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.fgc-disclosure[open] > .fgc-disclosure__summary .fgc-disclosure__chevron {
+    border-color: var(--fgc-accent);
+    background: var(--fgc-accent-soft);
+    transform: rotate(90deg);
+}
+
+.fgc-disclosure__title {
+    min-width: 0;
 }
 
 .fgc-disclosure__hint {
@@ -128,9 +163,15 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
     column-gap: var(--fgc-space-3);
+    border-left: 3px solid var(--fgc-accent);
     list-style: none;
     cursor: pointer;
-    transition: background-color 120ms ease;
+    transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.fgc-panel--collapsible[open] > .fgc-panel__summary {
+    border-bottom: 1px solid var(--fgc-line);
+    border-left-color: var(--fgc-line-strong);
 }
 
 .fgc-panel--collapsible > .fgc-panel__summary > .fgc-panel__description {
@@ -147,29 +188,43 @@
     display: none;
 }
 
-.fgc-panel--collapsible > .fgc-panel__summary:hover {
+.fgc-panel--collapsible > .fgc-panel__summary:hover,
+.fgc-panel--collapsible > .fgc-panel__summary:focus-visible {
     background: var(--fgc-panel-hover);
 }
 
-.fgc-panel--collapsible[open] > .fgc-panel__summary {
-    border-bottom: 1px solid var(--fgc-line);
+.fgc-panel--collapsible > .fgc-panel__summary:focus-visible {
+    outline: 2px solid var(--fgc-accent);
+    outline-offset: -2px;
 }
 
 .fgc-panel__chevron {
+    display: grid;
     flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    place-items: center;
+    border: 1px solid var(--fgc-line-strong);
+    border-radius: var(--fgc-radius-sm);
+    background: var(--fgc-bg);
     color: var(--fgc-accent);
     font-size: var(--fgc-text-sm);
-    transition: transform 120ms ease;
+    line-height: 1;
+    transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease;
     transform: rotate(-90deg);
 }
 
 .fgc-panel--collapsible[open] > .fgc-panel__summary .fgc-panel__chevron {
+    border-color: var(--fgc-accent);
+    background: var(--fgc-accent-soft);
     transform: rotate(0deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
     .fgc-panel--collapsible > .fgc-panel__summary,
-    .fgc-panel__chevron {
+    .fgc-panel__chevron,
+    .fgc-disclosure > .fgc-disclosure__summary,
+    .fgc-disclosure__chevron {
         transition: none;
     }
 }

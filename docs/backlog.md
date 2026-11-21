@@ -925,3 +925,35 @@ No v1.0.0 content, schema, protocol or QA state was changed by the migration.
 Screenshots remain unpublished; D10 is parked, not approved.
 
 <!-- doctrine-migration-map:end -->
+
+## Y. Post-v1 UI polish — IMP-001 and IMP-002 (2026-11-21)
+
+The owner selected the UI-polish slice after the v1 closeout. Both items are
+now terminal: **IMP-001**, more visible collapsible elements, is closed · fixed;
+**IMP-002**, collapsible nav sidebar, is closed · done.
+
+IMP-001 keeps native `details` semantics and strengthens the existing
+`CollapsiblePanel` / `Disclosure` components: a persistent accent chevron,
+accent summary edge while collapsed, and hover/focus-visible treatment from
+existing theme tokens. There is no new disclosure system and no custom keyboard
+handling. A native summary click opened the panel, Enter closed it, and the open
+state survived an unrelated compact-nav toggle.
+
+IMP-002 adds a session-only compact navigation toggle built from the existing
+Lucide `PanelLeftClose` / `PanelLeftOpen` icons. The shell grid moves from
+`248px 1032px` to `72px 1208px` at 1280×800 and is `72px 303px` at 375×812.
+The seven labels stay in the DOM as clipped text with matching `aria-label`,
+`title` and `data-label`; the accessibility tree exposes all seven names, and
+hover/focus reveals a tooltip built from `data-label`. Active destination
+indication and `aria-current` remain intact. The flag stays in a Dioxus shell
+signal because `AppState::settings` is persisted broadcast/overlay/timer
+configuration; adding a view preference there would change `app.json` without a
+schema change.
+
+A49 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real desktop
+WebView evidence at 1280×800 and 375×812. No schema, protocol, server runtime,
+route, destination or v1.0.0 overlay changed. No screenshots were taken or
+published, and the authoritative QA hashes remain
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`.

@@ -31,3 +31,17 @@ without expanding everything by default.
 - A collapsed section is identifiable in a screenshot without reading the code.
 - Keyboard focus and activation still work through native `details`.
 - Open state survives unrelated state changes, as checked in A48.
+
+## Verification (2026-11-21)
+
+Closed · fixed. A `dx build --desktop` debug binary was driven in WebView2
+158.0.4370.33 over CDP 9222 with an isolated APPDATA/WebView profile. Computed
+styles at 1280×800 showed a persistent accent-coloured chevron on both
+`CollapsiblePanel` and `Disclosure`, a 3px accent summary edge while collapsed,
+and hover/focus-visible summary treatment using existing tokens. A native
+summary click opened the panel and keyboard Enter closed it; the panel chevron
+moved from `rotate(-90deg)` to `rotate(0deg)` and back. The panel stayed open
+while compact navigation was toggled, proving open state survives an unrelated
+shell change. A49 records the same evidence. No screenshots were taken, and the
+authoritative QA files were untouched because the desktop run used an isolated
+profile.

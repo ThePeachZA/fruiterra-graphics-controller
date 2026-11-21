@@ -2,8 +2,8 @@
 
 use dioxus::prelude::*;
 use dioxus_icons::lucide::{
-    Clock, Gamepad2, Images, Mic, MonitorPlay, Pause, Play, Settings2, SlidersHorizontal, Square,
-    Trophy, UsersRound,
+    Clock, Gamepad2, Images, Mic, MonitorPlay, PanelLeftClose, PanelLeftOpen, Pause, Play,
+    Settings2, SlidersHorizontal, Square, Trophy, UsersRound,
 };
 use dioxus_primitives::toast::{ToastOptions, use_toast};
 use fgc_core::{TimerAlignment, TimerMode};
@@ -80,6 +80,7 @@ pub fn App() -> Element {
     let timer = TimerController::use_controller();
     use_context_provider(|| timer);
     let mut destination = use_signal(|| Destination::Overlay);
+    let mut compact_nav = use_signal(|| false);
 
     let font_faces = FONT_FACES
         .replace("__LATIN__", &INTER_LATIN.to_string())
@@ -103,10 +104,12 @@ pub fn App() -> Element {
         ToastProvider {
             ErrorToasts {}
             NoticeToasts {}
-            div { class: "fgc-app",
+            div { class: if compact_nav() { "fgc-app fgc-app--compact-nav" } else { "fgc-app" },
                 Sidebar {
                     destination: destination(),
+                    compact: compact_nav(),
                     on_navigate: move |next| destination.set(next),
+                    on_toggle_compact: move |_| compact_nav.toggle(),
                 }
                 main { class: "fgc-main",
                     PageHeader { destination: destination() }
@@ -124,14 +127,40 @@ pub fn App() -> Element {
 
 /// Sidebar with the seven original destinations.
 #[component]
-fn Sidebar(destination: Destination, on_navigate: EventHandler<Destination>) -> Element {
+fn Sidebar(
+    destination: Destination,
+    compact: bool,
+    on_navigate: EventHandler<Destination>,
+    on_toggle_compact: EventHandler<()>,
+) -> Element {
+    let toggle_label = if compact {
+        "Expand navigation"
+    } else {
+        "Collapse navigation"
+    };
+
     rsx! {
         aside { class: "fgc-sidebar",
             div { class: "fgc-brand",
                 div { class: "fgc-brand__mark", "FG" }
-                div {
+                div { class: "fgc-brand__text",
                     p { class: "fgc-brand__name", "Fruiterra" }
                     p { class: "fgc-brand__sub", "Graphics Controller" }
+                }
+            }
+            div { class: "fgc-sidebar__tools",
+                button {
+                    class: "fgc-nav-toggle",
+                    r#type: "button",
+                    aria_label: toggle_label,
+                    title: toggle_label,
+                    onclick: move |_| on_toggle_compact.call(()),
+                    if compact {
+                        PanelLeftOpen { size: 16 }
+                    } else {
+                        PanelLeftClose { size: 16 }
+                    }
+                    span { class: "fgc-nav-toggle__label", if compact { "Expand" } else { "Collapse" } }
                 }
             }
             nav { class: "fgc-nav", aria_label: "Destinations",
@@ -145,9 +174,12 @@ fn Sidebar(destination: Destination, on_navigate: EventHandler<Destination>) -> 
                         },
                         r#type: "button",
                         aria_current: if item == destination { "page" } else { "false" },
+                        aria_label: item.label(),
+                        title: item.label(),
+                        "data-label": item.label(),
                         onclick: move |_| on_navigate.call(item),
                         {nav_icon(item)}
-                        span { "{item.label()}" }
+                        span { class: "fgc-nav__label", "{item.label()}" }
                         if !item.is_implemented() {
                             span { class: "fgc-nav__soon", "{item.milestone()}" }
                         }
