@@ -27,4 +27,4 @@ pub mod panel;
 #[allow(unused_imports)]
 pub use asset_picker::{AssetPicker, AssetThumb, find_asset, library_assets};
 pub use focus::focus_element_later;
-pub use panel::{Field, KeyValue, KeyValues, Panel, ToggleRow};
+pub use panel::{CollapsiblePanel, Disclosure, Field, KeyValue, KeyValues, Panel, ToggleRow};

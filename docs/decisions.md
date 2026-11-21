@@ -638,6 +638,34 @@ results. D8-8 completed the settings clean-up after this documentation pass.**
   process watch, and clean Serve teardown. Build, lint and tests pass, as does
   `dx build --desktop`. Funnel remains unimplemented.
 
+## Dual Browser Source URL sets and UI pass (2026-11-21)
+
+**Status: D8-9 done 2026-11-21. No state schema, protocol, server or overlay change.**
+
+- **Problem.** The two switches were independent, but the shared URL component
+  received one `base_url` that preferred Tailscale. With both switches on, the
+  LAN URL was working but not listed, so an OBS computer without tailnet access
+  had no URL to copy. Remote access also read as a dense stack of switches,
+  notes and URL rows, and most views had every secondary section open.
+- **URL decision.** `remote_access::browser_source_groups` builds one list entry
+  per enabled path. Local network uses the detected non-loopback LAN address,
+  Tailscale uses `https://<dnsname>/fgc`, and the loopback set is only a fallback
+  while neither enabled path has an address. A failed LAN detection never labels
+  `127.0.0.1` as **Local network**. All three `OverlayUrls` call sites now derive the
+  groups from state instead of receiving the single primary base URL. The
+  server's `base_url()` still drives served asset URLs and the status line; it
+  was deliberately not split, so no served payload or frozen overlay changes.
+- **UI decision.** Remote access uses two labelled access cards with the
+  Tailscale diagnostics attached to the Tailscale card. Browser sources is a
+  sibling panel with one card per access path, a per-path base URL, seven rows,
+  and copy/open actions disabled until URLs are revealed. Secondary sections
+  across Settings, Overlay, Match Controller, Teams, Talent, Tournament and
+  Assets use native `details` disclosures, so keyboard and screen-reader
+  behaviour is unchanged and no new UI state is introduced.
+- **Constraint.** Hidden URLs remain absent from the DOM: the hidden rows render
+  `URL hidden`, the group base renders `Base URL hidden`, and copy/open are
+  disabled. No token is added to any URL and Funnel remains unimplemented.
+
 ## Asset cleanup guarded against a failed load (2026-11-15)
 
 **Status: fixed 2026-11-21; v1 correctness item C15.** Found while recovering the test fixture.

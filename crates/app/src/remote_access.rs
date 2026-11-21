@@ -4,9 +4,11 @@
 //! listener on all interfaces; Tailscale adds Serve handlers for `/fgc` and `/`
 //! (see [`crate::tailscale`]). Funnel remains a later item.
 
+use std::net::Ipv4Addr;
+
 use fgc_core::{AppState, RemoteAccessMode};
 
-use crate::server::base_url_for;
+use crate::server::{base_url_for, base_url_for_host, lan_ipv4};
 use crate::tailscale::{SERVE_PATH, ServeState, WS_SERVE_PATH};
 
 /// Whether another device on the LAN can open the overlays.
@@ -75,6 +77,74 @@ pub fn base_url(state: &AppState, dns_name: Option<&str>) -> String {
 #[must_use]
 pub fn has_remote_url(state: &AppState, dns_name: Option<&str>) -> bool {
     is_tailscale_enabled(state) && dns_name.is_some_and(|name| !name.trim().is_empty())
+}
+
+/// One copyable Browser Source URL set for an enabled access path.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OverlayUrlGroup {
+    /// Stable identifier used for test selectors and layout hooks.
+    pub key: &'static str,
+    /// Short name for the access path.
+    pub label: &'static str,
+    /// Where this URL can be opened.
+    pub description: &'static str,
+    /// Base URL for the seven overlay files.
+    pub base_url: String,
+}
+
+/// Every Browser Source URL set currently available.
+///
+/// Local network and Tailscale are independent, so both sets are returned when
+/// both switches are on. Local network is listed only when a non-loopback LAN
+/// address is detected; the loopback set is a fallback when neither enabled
+/// path has a usable address.
+#[must_use]
+pub fn browser_source_groups(state: &AppState, dns_name: Option<&str>) -> Vec<OverlayUrlGroup> {
+    let lan_ip = if is_local_enabled(state) {
+        lan_ipv4()
+    } else {
+        None
+    };
+    browser_source_groups_for(state, dns_name, lan_ip)
+}
+
+fn browser_source_groups_for(
+    state: &AppState,
+    dns_name: Option<&str>,
+    lan_ip: Option<Ipv4Addr>,
+) -> Vec<OverlayUrlGroup> {
+    let mut groups = Vec::new();
+    let overlay = &state.settings.overlay;
+
+    if let Some(ip) = lan_ip {
+        groups.push(OverlayUrlGroup {
+            key: "lan",
+            label: "Local network",
+            description: "Other devices on this network.",
+            base_url: base_url_for_host(ip, overlay.port),
+        });
+    }
+
+    if has_remote_url(state, dns_name) {
+        let name = dns_name.unwrap_or_default().trim();
+        groups.push(OverlayUrlGroup {
+            key: "tailscale",
+            label: "Tailscale",
+            description: "Devices signed in to your tailnet.",
+            base_url: format!("https://{name}{SERVE_PATH}"),
+        });
+    }
+
+    if groups.is_empty() {
+        groups.push(OverlayUrlGroup {
+            key: "this-pc",
+            label: "This PC",
+            description: "Only this computer.",
+            base_url: base_url_for(false, overlay.port),
+        });
+    }
+
+    groups
 }
 
 /// One-line status for the enabled access paths.
@@ -167,6 +237,53 @@ mod tests {
         assert!(fallback.contains(":4123"));
         assert!(!fallback.contains("127.0.0.1"));
         assert!(status_text(&state, true, true, None).contains("Local network + Tailscale"));
+    }
+
+    #[test]
+    fn browser_source_groups_include_both_enabled_access_paths() {
+        let state = state_with(4123, true, true);
+        let groups = browser_source_groups_for(
+            &state,
+            Some("sekhmet.example.ts.net"),
+            Some(Ipv4Addr::new(192, 168, 50, 121)),
+        );
+
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups[0].key, "lan");
+        assert_eq!(groups[0].label, "Local network");
+        assert_eq!(groups[0].base_url, "http://192.168.50.121:4123");
+        assert_eq!(groups[1].key, "tailscale");
+        assert_eq!(groups[1].label, "Tailscale");
+        assert_eq!(groups[1].base_url, "https://sekhmet.example.ts.net/fgc");
+    }
+
+    #[test]
+    fn browser_source_groups_fall_back_until_an_address_is_known() {
+        let tailscale_only = state_with(4123, false, true);
+        let waiting = browser_source_groups_for(&tailscale_only, None, None);
+        assert_eq!(waiting.len(), 1);
+        assert_eq!(waiting[0].key, "this-pc");
+        assert_eq!(waiting[0].base_url, "http://127.0.0.1:4123");
+
+        let local_only = state_with(4123, true, false);
+        let lan = browser_source_groups_for(
+            &local_only,
+            Some("sekhmet.example.ts.net"),
+            Some(Ipv4Addr::new(192, 168, 50, 121)),
+        );
+        assert_eq!(lan.len(), 1);
+        assert_eq!(lan[0].key, "lan");
+    }
+
+    #[test]
+    fn browser_source_groups_never_label_loopback_as_lan() {
+        let state = state_with(4123, true, true);
+        let groups = browser_source_groups_for(&state, None, None);
+
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].key, "this-pc");
+        assert_eq!(groups[0].base_url, "http://127.0.0.1:4123");
+        assert!(!groups.iter().any(|group| group.key == "lan"));
     }
 
     #[test]

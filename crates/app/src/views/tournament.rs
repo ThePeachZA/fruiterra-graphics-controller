@@ -28,7 +28,7 @@ use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::focus_element_later;
 use crate::components::input::Input;
 use crate::components::switch::Switch;
-use crate::components::{Field, Panel, ToggleRow};
+use crate::components::{CollapsiblePanel, Disclosure, Field, Panel, ToggleRow};
 use crate::state::AppStore;
 
 // ---------------------------------------------------------------------------
@@ -1702,15 +1702,19 @@ fn SetupTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                         }
                     }
                 }
-                ToggleRow {
-                    title: "Grand-final reset".to_owned(),
-                    hint: Some("Replay the grand final when the losers-bracket team wins.".to_owned()),
-                    Switch {
-                        checked: tournament.grand_finals_reset,
-                        aria_label: "Grand-final reset",
-                        on_checked_change: move |enabled: bool| {
-                            store.set_tournament_grand_finals_reset(&reset_id, enabled);
-                        },
+                Disclosure {
+                    title: "Advanced bracket options".to_owned(),
+                    hint: Some("Grand-final reset".to_owned()),
+                    ToggleRow {
+                        title: "Grand-final reset".to_owned(),
+                        hint: Some("Replay the grand final when the losers-bracket team wins.".to_owned()),
+                        Switch {
+                            checked: tournament.grand_finals_reset,
+                            aria_label: "Grand-final reset",
+                            on_checked_change: move |enabled: bool| {
+                                store.set_tournament_grand_finals_reset(&reset_id, enabled);
+                            },
+                        }
                     }
                 }
             }
@@ -2984,7 +2988,7 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
 
     rsx! {
         div { class: "fgc-tournament-stack",
-            Panel {
+            CollapsiblePanel {
                 title: "Tiebreakers".to_owned(),
                 description: "Applied in order to sort the standings.".to_owned(),
                 ol { class: "fgc-tiebreakers",
@@ -3098,7 +3102,7 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                 }
             }
 
-            Panel {
+            CollapsiblePanel {
                 title: "Playoff".to_owned(),
                 div { class: "fgc-form-row",
                     Field { label: "Qualifiers per group".to_owned(),
@@ -3141,7 +3145,7 @@ fn SettingsTab(tournament: Tournament, teams: Vec<Team>) -> Element {
                 }
             }
 
-            Panel {
+            CollapsiblePanel {
                 title: "Champion".to_owned(),
                 div { class: "fgc-form-row",
                     Field { label: "Champion".to_owned(),

@@ -17,15 +17,15 @@ HTML, the messages or the 1920×1080 Browser Source settings.
 | Both switches off | `http://127.0.0.1:<port>/overlays/<file>.html` | Loopback in v1.0.0 and post-v1 |
 | **Local network** on | `http://<host-lan-ip>:<port>/overlays/<file>.html` | LAN in v1.0.0 via **Allow LAN connections**; a switch in post-v1 |
 | **Tailscale** on | `https://<dnsname>/fgc/overlays/<file>.html` | Post-v1 builds |
-| Both switches on | The Tailscale URL above; the LAN URL also works while **Local network** is on | Post-v1 builds |
+| Both switches on | Both URL sets: `http://<host-lan-ip>:<port>/overlays/<file>.html` and `https://<dnsname>/fgc/overlays/<file>.html` | Post-v1 builds |
 | Funnel | Not available | Not implemented; do not plan around it |
 
 In post-v1 builds, use **Settings → Remote access**. **Local network** and
 **Tailscale** are separate switches and both may be enabled at the same time.
-When both are on, the app shows the Tailscale URL once detection returns a DNS
-name. LAN access stays available through the LAN URL. In v1.0.0 the same LAN
-behaviour is controlled by **Allow LAN connections**; there is no Tailscale
-support.
+When both are on, **Browser sources** lists a labelled set for each path once
+Tailscale detection returns a DNS name: use the LAN set on the local network or
+the Tailscale set on the tailnet. In v1.0.0 the same LAN behaviour is controlled
+by **Allow LAN connections**; there is no Tailscale support.
 
 ## Before you start
 

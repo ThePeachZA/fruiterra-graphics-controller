@@ -16,8 +16,10 @@ button.
 > [!NOTE]
 > Post-v1 builds replace **Allow LAN connections** with a **Remote access**
 > panel containing two independent switches: **Local network** and **Tailscale**.
-> Both may be on at the same time. Tailscale is not available in the published
-> v1.0.0 release; Funnel is not implemented. See
+> Both may be on at the same time. **Browser sources** then shows a separate
+> URL set for each enabled path, and secondary panels such as **Display**,
+> **Asset storage** and **Overlay overrides** start collapsed. Tailscale is not
+> available in the published v1.0.0 release; Funnel is not implemented. See
 > [Remote overlays](Remote-Overlays).
 
 > [!WARNING]

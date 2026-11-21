@@ -88,9 +88,10 @@ port on public networks or to any remote address.
 
 In post-v1 builds, **Settings → Remote access → Local network** does the same
 job as **Allow LAN connections**. **Tailscale** is a separate switch in the
-same panel; both switches can be on at once. Tailscale shares overlays through
-your own client at `https://<dnsname>/fgc/overlays/<file>.html` and is **not**
-in the published v1.0.0 release. See [Remote overlays](Remote-Overlays).
+same panel; both switches can be on at once, and **Browser sources** lists a
+URL set for each enabled path. Tailscale shares overlays through your own client
+at `https://<dnsname>/fgc/overlays/<file>.html` and is **not** in the published
+v1.0.0 release. See [Remote overlays](Remote-Overlays).
 
 ## Third-party and custom overlays
 

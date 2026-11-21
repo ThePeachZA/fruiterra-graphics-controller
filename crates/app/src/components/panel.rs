@@ -7,6 +7,68 @@
 use dioxus::prelude::*;
 use dioxus_primitives::{dioxus_attributes::attributes, merge_attributes};
 
+/// A secondary titled section that starts collapsed.
+///
+/// Uses a native `details` element so mouse, keyboard and screen-reader
+/// behaviour comes from the platform instead of custom state.
+#[component]
+pub fn CollapsiblePanel(
+    /// Heading rendered in the panel header.
+    title: String,
+    /// Optional supporting copy rendered under the heading.
+    #[props(default)]
+    description: Option<String>,
+    #[props(extends = GlobalAttributes)] attributes: Vec<Attribute>,
+    children: Element,
+) -> Element {
+    let base = attributes!(details {
+        class: "fgc-panel fgc-panel--collapsible"
+    });
+    let merged = merge_attributes(vec![base, attributes]);
+
+    rsx! {
+        details { ..merged,
+            summary { class: "fgc-panel__header fgc-panel__summary",
+                h2 { class: "fgc-panel__title", "{title}" }
+                if let Some(description) = description {
+                    span { class: "fgc-panel__description", "{description}" }
+                }
+                span { class: "fgc-panel__chevron", aria_hidden: "true", "▾" }
+            }
+            div { class: "fgc-panel__body", {children} }
+        }
+    }
+}
+
+/// A collapsed subsection inside a panel.
+#[component]
+pub fn Disclosure(
+    /// Text shown on the summary row.
+    title: String,
+    /// Optional short hint shown after the title.
+    #[props(default)]
+    hint: Option<String>,
+    #[props(extends = GlobalAttributes)] attributes: Vec<Attribute>,
+    children: Element,
+) -> Element {
+    let base = attributes!(details {
+        class: "fgc-disclosure"
+    });
+    let merged = merge_attributes(vec![base, attributes]);
+
+    rsx! {
+        details { ..merged,
+            summary {
+                span { "{title}" }
+                if let Some(hint) = hint {
+                    span { class: "fgc-disclosure__hint", "{hint}" }
+                }
+            }
+            div { class: "fgc-disclosure__body", {children} }
+        }
+    }
+}
+
 /// A titled section with a body.
 #[component]
 pub fn Panel(

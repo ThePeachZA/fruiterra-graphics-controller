@@ -14,7 +14,7 @@ use crate::components::asset_picker::{AssetPicker, AssetThumb, find_asset, libra
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::input::Input;
-use crate::components::{Field, Panel};
+use crate::components::{Disclosure, Field, Panel};
 use crate::state::AppStore;
 
 /// Talent list and the editor for the selected member.
@@ -230,8 +230,11 @@ fn TalentEditor(talent: Talent, on_request_delete: EventHandler<Talent>) -> Elem
                         },
                     }
                 }
-                Field {
-                    label: "Real name".to_owned(),
+                Disclosure {
+                    title: "Optional details".to_owned(),
+                    hint: Some("Real name, pronouns, social link and portrait".to_owned()),
+                    Field {
+                        label: "Real name".to_owned(),
                     hint: Some("Optional".to_owned()),
                     Input {
                         value: talent.real_name.clone().unwrap_or_default(),
@@ -320,6 +323,7 @@ fn TalentEditor(talent: Talent, on_request_delete: EventHandler<Talent>) -> Elem
                     on_change: move |asset| {
                         store.update_talent(&portrait_id, move |talent| talent.portrait = asset);
                     },
+                }
                 }
                 div { class: "fgc-actions",
                     Button {

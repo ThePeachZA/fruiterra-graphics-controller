@@ -2963,3 +2963,56 @@ appeared. Serve status listed `/` and `/fgc` proxying `http://127.0.0.1:3001/`
 while running and `No serve config` after switching Tailscale off and after
 **Stop server**. The QA `app.json` hash was restored to
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+
+---
+
+### A48 — Dual Browser Source URL sets and collapsible sections
+
+**Covers:** D8-9
+
+**Steps:**
+
+1. In a post-v1 build, turn on both **Settings → Remote access → Local network**
+   and **Tailscale**. Wait until the Tailscale client reports a DNS name.
+2. Open **Overlay → Browser sources** and reveal URLs. Confirm two labelled
+   groups, **Local network** and **Tailscale**, and seven URLs in each.
+3. Confirm the LAN group uses `http://<lan-ip>:<port>/overlays/<file>.html` and
+   the Tailscale group uses `https://<dnsname>/fgc/overlays/<file>.html` with no
+   `?port=`, no token and no cross-contaminated base URL.
+4. Hide URLs and confirm both groups show placeholder text with no URL in the
+   DOM and copy/open actions disabled.
+5. Repeat on **Settings** and **Match Controller → Config**. Confirm the same
+   two groups and the shared reveal state.
+6. Open a secondary section such as **Settings → Display** or **Match library**.
+   Confirm it starts collapsed, the summary is keyboard focusable, Enter toggles
+   it and the open state survives unrelated state changes.
+
+**Pass:**
+
+- Both URL sets are listed when both switches are on.
+- Each set uses the correct scheme, host, `/fgc` prefix and filenames.
+- Hidden URLs never appear in the DOM and hidden actions cannot copy them.
+- Secondary sections are native disclosures with working keyboard focus.
+
+**Fail:**
+
+- Only the Tailscale or only the LAN set is shown when both switches are on.
+- A URL mixes a LAN IP with `/fgc`, uses `?port=` or contains a token.
+- A hidden URL or enabled copy/open action remains in the DOM.
+- A disclosure cannot be focused or toggled from the keyboard.
+
+**Evidence:** CDP DOM excerpts of both URL groups, hidden-state DOM, and a
+summary focus/toggle check.
+
+**Result: Pass — assistant 2026-11-21.** With Local network already on and
+Tailscale enabled temporarily for the check, CDP found `Local network` with base
+`http://192.168.50.121:3001` and `Tailscale` with base
+`https://sekhmet.note-hydra.ts.net/fgc`, each containing all seven overlay URLs.
+The same two groups were confirmed on Overlay, Settings and Match Controller →
+Config. Before reveal, both groups rendered `Base URL hidden` and `URL hidden`
+with disabled copy/open buttons. A `Display` summary contained only valid
+heading/phrasing children (`H2`, `SPAN`, `SPAN`), was focusable
+(`tabIndex: 0`), opened on activation and stayed open while URL reveal state
+changed twice. The QA `app.json` and `app.json.bak` were restored after the app
+closed; `app.json` returned to hash
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.

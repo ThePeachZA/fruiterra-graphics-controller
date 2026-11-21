@@ -12,7 +12,7 @@ use crate::components::asset_picker::AssetThumb;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::input::Input;
-use crate::components::{Field, Panel};
+use crate::components::{CollapsiblePanel, Field, Panel};
 use crate::state::AppStore;
 
 /// The asset library with filtering, import, preview and bundle controls.
@@ -141,7 +141,7 @@ pub fn AssetsView() -> Element {
                         "PNG, JPEG, WebP, GIF and SVG up to 20 MB. SVG files are checked for script and external references before they are stored."
                     }
                 }
-                Panel {
+                CollapsiblePanel {
                     title: "Project bundles".to_owned(),
                     description: "Move a project and its referenced images to another machine.".to_owned(),
                     div { class: "fgc-actions",

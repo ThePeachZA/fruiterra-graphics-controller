@@ -16,11 +16,11 @@ use fgc_core::{
 use fgc_protocol::AssetCatalog;
 use fgc_server::ServerStatus;
 
-use crate::components::Panel;
 use crate::components::asset_picker::AssetPicker;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::input::Input;
 use crate::components::switch::Switch;
+use crate::components::{CollapsiblePanel, Disclosure, Panel};
 use crate::state::AppStore;
 use crate::timer::{TimerController, broadcast_tick};
 use crate::views::overlay::OverlayUrls;
@@ -441,7 +441,7 @@ fn MatchLibraryPanel(saved: Vec<Match>, teams: Vec<Team>) -> Element {
     let store = use_context::<AppStore>();
 
     rsx! {
-        Panel {
+        CollapsiblePanel {
             title: format!("Match library ({})", saved.len()),
             description: "Save a snapshot of the current match, load one here, or export the whole library.".to_owned(),
             div { class: "fgc-match-library",
@@ -465,10 +465,10 @@ fn MatchLibraryPanel(saved: Vec<Match>, teams: Vec<Team>) -> Element {
                         "Import…"
                     }
                 }
-                details { class: "fgc-disclosure", id: "fgc-match-library-list",
-                    summary { "Saved matches ({saved.len()})" }
-                    div { class: "fgc-disclosure__body",
-                        if saved.is_empty() {
+                Disclosure {
+                    id: "fgc-match-library-list",
+                    title: format!("Saved matches ({})", saved.len()),
+                    if saved.is_empty() {
                             p { class: "fgc-note", "No saved matches yet. Use Save current to add one." }
                         } else {
                             div { class: "fgc-match-library__list",
@@ -516,7 +516,6 @@ fn MatchLibraryPanel(saved: Vec<Match>, teams: Vec<Team>) -> Element {
                         p { class: "fgc-note",
                             "Map pools travel with each match. Import adds new matches without replacing teams, talent or assets."
                         }
-                    }
                 }
             }
         }
@@ -862,9 +861,9 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                     }
 
                                     if show_bans {
-                                        details { class: "fgc-disclosure fgc-disclosure--compact fgc-map-slot__bans",
-                                            summary { "Hero bans" }
-                                            div { class: "fgc-disclosure__body",
+                                        Disclosure {
+                                            class: "fgc-disclosure--compact fgc-map-slot__bans",
+                                            title: "Hero bans".to_owned(),
                                                 div { class: "fgc-form-row",
                                                     label { class: "fgc-field",
                                                         span { class: "fgc-field__label", "First ban" }
@@ -914,7 +913,6 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                                         }
                                                     }
                                                 }
-                                            }
                                         }
                                     }
                                 }
@@ -1021,7 +1019,7 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                 }
             }
 
-            Panel {
+            CollapsiblePanel {
                 title: "Interview".to_owned(),
                 div { class: "fgc-form-row",
                     label { class: "fgc-field",
@@ -1204,8 +1202,6 @@ fn ConfigTab(match_state: Match) -> Element {
     let store = use_context::<AppStore>();
     let state = store.state();
     let settings = state.read().settings.clone();
-    let server = store.server();
-    let base_url = server.base_url();
     let team_colors = settings.display.team_colors_enabled;
 
     rsx! {
@@ -1283,7 +1279,7 @@ fn ConfigTab(match_state: Match) -> Element {
                     }
                 }
 
-                Panel {
+                CollapsiblePanel {
                     title: "Branding".to_owned(),
                     description: "Tournament logo and watermark used by the overlays.".to_owned(),
                     AssetPicker {
@@ -1305,7 +1301,7 @@ fn ConfigTab(match_state: Match) -> Element {
                 }
             }
 
-            OverlayUrls { base_url }
+            OverlayUrls {}
         }
     }
 }

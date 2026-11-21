@@ -460,7 +460,7 @@ fn load_asset_bytes(asset: &Asset, blob_root: Option<&Path>) -> Option<Vec<u8>> 
 /// The socket is never connected to a peer; connecting only asks the operating
 /// system which local interface would be used. Offline machines fall back to
 /// loopback in [`base_url_for`].
-fn lan_ipv4() -> Option<Ipv4Addr> {
+pub(crate) fn lan_ipv4() -> Option<Ipv4Addr> {
     let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0)).ok()?;
     socket.connect((Ipv4Addr::new(8, 8, 8, 8), 80)).ok()?;
     match socket.local_addr().ok()?.ip() {

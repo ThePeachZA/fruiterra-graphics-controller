@@ -12,7 +12,7 @@ use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::focus_element_later;
 use crate::components::input::Input;
 use crate::components::switch::Switch;
-use crate::components::{Field, Panel, ToggleRow};
+use crate::components::{CollapsiblePanel, Field, Panel, ToggleRow};
 use crate::state::AppStore;
 
 /// The two sections of the selected team.
@@ -428,7 +428,7 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
                     }
                 }
             }
-            Panel { title: "Preview".to_owned(),
+            CollapsiblePanel { title: "Preview".to_owned(),
                 TeamPreview { team: team.clone(), logo }
             }
         }
@@ -715,7 +715,7 @@ fn PlayerEditor(
                     },
                 }
             }
-            Panel {
+            CollapsiblePanel {
                 title: "Roster card preview".to_owned(),
                 description: "Exactly how this player appears in the roster list.".to_owned(),
                 div { class: "fgc-player-preview",

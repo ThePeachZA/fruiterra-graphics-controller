@@ -51,9 +51,9 @@ on a trusted network, and turn it off when you are done.
 Not in the published v1.0.0 release. Post-v1 builds add a **Tailscale** switch
 that uses your own client and generates `https://<dnsname>/fgc/overlays/…`
 URLs. **Local network** is a separate switch in the same panel, so both access
-paths can be on at once. The tailnet is the access boundary for Tailscale; the
-app does not install Tailscale or manage ACLs. See
-[Remote overlays](Remote-Overlays).
+paths can be on at once and **Browser sources** lists both URL sets. The tailnet
+is the access boundary for Tailscale; the app does not install Tailscale or
+manage ACLs. See [Remote overlays](Remote-Overlays).
 
 ### Can I share overlays publicly?
 

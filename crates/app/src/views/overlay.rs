@@ -6,7 +6,8 @@ use fgc_server::ServerStatus;
 
 use crate::assets_io::open_browser;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
-use crate::components::{KeyValue, KeyValues, Panel};
+use crate::components::{CollapsiblePanel, KeyValue, KeyValues, Panel};
+use crate::remote_access::{self, OverlayUrlGroup};
 use crate::server::{OVERLAY_FILES, overlay_url};
 use crate::state::AppStore;
 use crate::status::{status_text, status_tone};
@@ -79,18 +80,12 @@ pub fn OverlayView() -> Element {
                                 "Start server"
                             }
                         }
-                        Button {
-                            variant: ButtonVariant::Outline,
-                            aria_pressed: urls_visible,
-                            onclick: move |_| store.set_urls_visible(!urls_visible),
-                            if urls_visible { "Hide URLs" } else { "Show URLs" }
-                        }
                     }
                     p { class: "fgc-note",
-                        "URLs are hidden until you reveal them. Port, LAN access, asset URLs and auto-start are configured in Settings."
+                        "The base URL and Browser Source URLs stay hidden until you reveal them below. Port, remote access, asset URLs and auto-start are configured in Settings."
                     }
                 }
-                Panel {
+                CollapsiblePanel {
                     title: "OBS setup".to_owned(),
                     description: "Every overlay is a plain HTML Browser Source.".to_owned(),
                     ol { class: "fgc-steps",
@@ -106,31 +101,77 @@ pub fn OverlayView() -> Element {
                     }
                 }
             }
-            OverlayUrls { base_url }
+            OverlayUrls {}
         }
     }
 }
 
-/// The seven Browser Source URLs, hidden until the operator reveals them.
+/// Every Browser Source URL set currently available, hidden until revealed.
 ///
-/// The same component is used on Overlay and in Match Controller → Config so
-/// the visibility choice stays consistent and no URL leaks into either view.
+/// The same component is used on Overlay, in Settings and in Match Controller →
+/// Config so the visibility choice stays consistent and no URL leaks anywhere.
 #[component]
-pub(crate) fn OverlayUrls(base_url: String) -> Element {
+pub(crate) fn OverlayUrls() -> Element {
     let store = use_context::<AppStore>();
     let visible = store.urls_visible();
+    let dns_name = store.tailscale_dns_name();
+    let groups = {
+        let state = store.state();
+        let snapshot = state.read();
+        remote_access::browser_source_groups(&snapshot, dns_name.as_deref())
+    };
+    let actions = rsx! {
+        Button {
+            variant: ButtonVariant::Outline,
+            size: ButtonSize::Sm,
+            aria_pressed: visible,
+            onclick: move |_| store.set_urls_visible(!visible),
+            if visible { "Hide URLs" } else { "Show URLs" }
+        }
+    };
 
     rsx! {
         Panel {
             title: "Browser sources".to_owned(),
-            description: "Copy a URL into an OBS Browser Source at 1920×1080.".to_owned(),
-            div { class: "fgc-actions",
-                Button {
-                    variant: ButtonVariant::Outline,
-                    size: ButtonSize::Sm,
-                    aria_pressed: visible,
-                    onclick: move |_| store.set_urls_visible(!visible),
-                    if visible { "Hide URLs" } else { "Show URLs" }
+            description: "One set for each enabled access path. Paste a URL into OBS at 1920×1080.".to_owned(),
+            actions: Some(actions),
+            div { class: "fgc-url-groups",
+                for group in groups {
+                    UrlGroupCard {
+                        key: "{group.key}",
+                        group,
+                        visible,
+                    }
+                }
+            }
+            p { class: "fgc-note",
+                "Each set contains all seven overlays. Use the URLs for the network your OBS computer can reach."
+            }
+        }
+    }
+}
+
+/// One access path's seven Browser Source URLs.
+#[component]
+fn UrlGroupCard(group: OverlayUrlGroup, visible: bool) -> Element {
+    let key = group.key;
+    let base_url = group.base_url.clone();
+    let count = format!("{} sources", OVERLAY_FILES.len());
+
+    rsx! {
+        section { class: "fgc-url-group fgc-url-group--{key}",
+            header { class: "fgc-url-group__head",
+                div { class: "fgc-url-group__identity",
+                    div { class: "fgc-url-group__title-row",
+                        h3 { class: "fgc-url-group__title", "{group.label}" }
+                        span { class: "fgc-url-group__count", "{count}" }
+                    }
+                    p { class: "fgc-url-group__description", "{group.description}" }
+                }
+                if visible {
+                    code { class: "fgc-code fgc-url-group__base", "{base_url}" }
+                } else {
+                    code { class: "fgc-code fgc-code--hidden fgc-url-group__base", "Base URL hidden" }
                 }
             }
             div { class: "fgc-source-list",
@@ -138,7 +179,7 @@ pub(crate) fn OverlayUrls(base_url: String) -> Element {
                     SourceRow {
                         key: "{file}",
                         file: file.to_owned(),
-                        url: overlay_url(&base_url, file),
+                        url: overlay_url(&group.base_url, file),
                         visible,
                     }
                 }
@@ -157,6 +198,8 @@ fn SourceRow(file: String, url: String, visible: bool) -> Element {
     let url_for_open = url.clone();
     let file_for_toast = file.clone();
     let file_for_open = file.clone();
+    let open_label = format!("Open {file} in browser");
+    let copy_label = format!("Copy {file} URL");
 
     rsx! {
         div { class: "fgc-source",
@@ -170,8 +213,10 @@ fn SourceRow(file: String, url: String, visible: bool) -> Element {
             }
             div { class: "fgc-actions",
                 Button {
-                    variant: ButtonVariant::Outline,
+                    variant: ButtonVariant::Ghost,
                     size: ButtonSize::Sm,
+                    disabled: !visible,
+                    aria_label: open_label,
                     onclick: move |_| {
                         if let Err(error) = open_browser(&url_for_open) {
                             store.report_error(error);
@@ -182,11 +227,13 @@ fn SourceRow(file: String, url: String, visible: bool) -> Element {
                             ToastOptions::new().description(file_for_open.clone()),
                         );
                     },
-                    "Open in browser"
+                    "Open"
                 }
                 Button {
-                    variant: ButtonVariant::Outline,
+                    variant: ButtonVariant::Ghost,
                     size: ButtonSize::Sm,
+                    disabled: !visible,
+                    aria_label: copy_label,
                     onclick: move |_| {
                         copy_to_clipboard(&url_for_click);
                         toast.success(
@@ -194,7 +241,7 @@ fn SourceRow(file: String, url: String, visible: bool) -> Element {
                             ToastOptions::new().description(file_for_toast.clone()),
                         );
                     },
-                    "Copy URL"
+                    "Copy"
                 }
             }
         }

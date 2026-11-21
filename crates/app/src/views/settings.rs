@@ -1,14 +1,13 @@
 //! Settings destination: overlay network, startup and display defaults.
 
 use dioxus::prelude::*;
-use fgc_core::RemoteAccessMode;
 use fgc_server::AssetMode;
 
 use crate::assets_io::format_bytes;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::input::Input;
 use crate::components::switch::Switch;
-use crate::components::{Field, KeyValue, KeyValues, Panel, ToggleRow};
+use crate::components::{CollapsiblePanel, Field, KeyValue, KeyValues, Panel, ToggleRow};
 use crate::remote_access;
 use crate::server::DEFAULT_PORT;
 use crate::state::AppStore;
@@ -57,9 +56,6 @@ pub fn SettingsView() -> Element {
         dns_name,
     );
     let remote_notice = remote_access::pending_notice(remote_mode);
-    let remote_base_url = remote_access::base_url(&snapshot, dns_name);
-    let show_urls =
-        remote_mode != RemoteAccessMode::Funnel && (!tailscale_enabled || dns_name.is_some());
     let serve_line = tailscale_enabled
         .then(|| remote_access::serve_text(&store.serve_state(), server.is_running()));
     drop(snapshot);
@@ -142,59 +138,70 @@ pub fn SettingsView() -> Element {
             Panel {
                 title: "Remote access".to_owned(),
                 description: "Choose who can open the overlays. Both switches can be on.".to_owned(),
-                ToggleRow {
-                    title: "Local network".to_owned(),
-                    hint: Some(
-                        "Lets other devices on this network open the overlays. Windows firewall must allow the app on private networks."
-                            .to_owned(),
-                    ),
-                    Switch {
-                        checked: local_enabled,
-                        aria_label: "Local network access",
-                        on_checked_change: move |value| store.set_local_network(value),
-                    }
-                }
-                ToggleRow {
-                    title: "Tailscale".to_owned(),
-                    hint: Some(
-                        "Serves overlays on your tailnet at /fgc and /. Needs a connected Tailscale client."
-                            .to_owned(),
-                    ),
-                    Switch {
-                        checked: tailscale_enabled,
-                        disabled: !tailscale_ready,
-                        aria_label: "Tailscale remote access",
-                        on_checked_change: move |value| store.set_tailscale(value),
-                    }
-                }
-                Field {
-                    label: "Tailscale client".to_owned(),
-                    hint: Some("Read from your installed Tailscale CLI; nothing is bundled.".to_owned()),
-                    div { class: "fgc-inline",
-                        p { class: "fgc-note", role: "status", "{tailscale_summary}" }
-                        Button {
-                            variant: ButtonVariant::Outline,
-                            size: ButtonSize::Sm,
-                            onclick: move |_| store.refresh_tailscale(),
-                            "Refresh"
+                div { class: "fgc-access-grid",
+                    section { class: "fgc-access-card fgc-access-card--local",
+                        div { class: "fgc-access-card__head",
+                            div { class: "fgc-access-card__identity",
+                                span { class: "fgc-access-card__icon", aria_hidden: "true", "⌂" }
+                                div {
+                                    h3 { class: "fgc-access-card__title", "Local network" }
+                                    p { class: "fgc-access-card__hint",
+                                        "Other devices on this network. Windows firewall must allow the app on private networks."
+                                    }
+                                }
+                            }
+                            Switch {
+                                checked: local_enabled,
+                                aria_label: "Local network access",
+                                on_checked_change: move |value| store.set_local_network(value),
+                            }
                         }
                     }
+                    section { class: "fgc-access-card fgc-access-card--tailscale",
+                        div { class: "fgc-access-card__head",
+                            div { class: "fgc-access-card__identity",
+                                span { class: "fgc-access-card__icon", aria_hidden: "true", "⇄" }
+                                div {
+                                    h3 { class: "fgc-access-card__title", "Tailscale" }
+                                    p { class: "fgc-access-card__hint",
+                                        "Devices signed in to your tailnet at /fgc and /. Needs a connected Tailscale client."
+                                    }
+                                }
+                            }
+                            Switch {
+                                checked: tailscale_enabled,
+                                disabled: !tailscale_ready,
+                                aria_label: "Tailscale remote access",
+                                on_checked_change: move |value| store.set_tailscale(value),
+                            }
+                        }
+                        div { class: "fgc-access-card__diagnostics",
+                            p { class: "fgc-note", role: "status", "{tailscale_summary}" }
+                            Button {
+                                variant: ButtonVariant::Outline,
+                                size: ButtonSize::Sm,
+                                onclick: move |_| store.refresh_tailscale(),
+                                "Refresh"
+                            }
+                        }
+                    }
+                }
+                div { class: "fgc-access-status", role: "status",
+                    span { class: "fgc-access-status__label", "Status" }
+                    span { "{remote_status}" }
                 }
                 if let Some(remedy) = tailscale_remedy {
                     p { class: "fgc-note", "{remedy}" }
                 }
-                p { class: "fgc-note", role: "status", "{remote_status}" }
                 if let Some(line) = serve_line {
                     p { class: "fgc-note", role: "status", "{line}" }
                 }
                 if let Some(notice) = remote_notice {
                     p { class: "fgc-note", "{notice}" }
                 }
-                if show_urls {
-                    OverlayUrls { base_url: remote_base_url }
-                }
             }
-            Panel {
+            OverlayUrls {}
+            CollapsiblePanel {
                 title: "Display".to_owned(),
                 description: "Team colouring and the logos embedded in scoreboard payloads.".to_owned(),
                 ToggleRow {
@@ -230,7 +237,7 @@ pub fn SettingsView() -> Element {
                 }
                 p { class: "fgc-note", "Asset pickers arrive with the Teams, Talent and Tournament views." }
             }
-            Panel {
+            CollapsiblePanel {
                 title: "Asset storage".to_owned(),
                 description: "Content-addressed images used by the overlays and the asset library.".to_owned(),
                 KeyValues {
@@ -270,7 +277,7 @@ pub fn SettingsView() -> Element {
                     }
                 }
             }
-            Panel {
+            CollapsiblePanel {
                 title: "Overlay overrides".to_owned(),
                 description: "Tweak one overlay without rebuilding the application.".to_owned(),
                 KeyValues {

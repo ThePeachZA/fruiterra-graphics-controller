@@ -244,7 +244,8 @@ impl AppStore {
     }
 
     /// MagicDNS name of this device, once Tailscale detection has returned.
-    fn tailscale_dns_name(&self) -> Option<String> {
+    #[must_use]
+    pub fn tailscale_dns_name(&self) -> Option<String> {
         match self.tailscale_status()?.state {
             TailscaleState::Ready { dns_name, .. } if !dns_name.trim().is_empty() => {
                 Some(dns_name.trim().to_owned())
