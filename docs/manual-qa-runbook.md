@@ -1304,6 +1304,16 @@ its own `%APPDATA%\Fruiterra\Fruiterra Graphics Controller`, so the QA fixture
 on the main account is not overwritten. If a second account/VM is unavailable,
 answer **Blocked**.
 
+**Outstanding follow-up (tracked as Doctrine `CHR-005`):** steps 4–6 have not
+been run. A clean-machine import is not satisfied by the code-level
+`export_import_round_trips_on_a_second_directory` test, even though that test
+passed again on 2026-11-21. To close `CHR-005` and change A17 from
+blocked-accepted to Pass, run steps 4–6 on a second Windows account or VM with
+the v1 portable build, copy an exported bundle, import it through **Import
+project…**, then check teams, talent, assets, the match and both tournaments.
+Record the bundle listing and before/after evidence on both machines. Do not
+claim second-machine restore until that evidence exists.
+
 ---
 
 ### A18 — Asset cleanup and overlays folder
