@@ -41,7 +41,9 @@ fn auto_overlay_reads_the_auto_overlay_section_and_applies_show() {
     assert!(text.contains("message.data.autoOverlay"));
     assert!(text.contains("message.type === 'autoOverlay'"));
     assert!(text.contains("message.type === 'show'"));
-    assert!(text.contains("frame.dataset.visible = isVisible ? 'true' : 'false';"));
+    assert!(text.contains("for (const frame of frames.values())"));
+    assert!(text.contains("frame.dataset.visible = 'false';"));
+    assert!(text.contains("if (visible && file === safeActive) frame.dataset.visible = 'true';"));
     assert!(text.contains("new WebSocket(`${scheme}://${target}`)"));
     assert!(text.contains("location.host"));
     assert!(text.contains("query.get('host')") && text.contains("query.get('port')"));

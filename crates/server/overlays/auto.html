@@ -83,13 +83,14 @@
       const includedSet = new Set(included);
       const safeActive = includedSet.has(active) ? active : null;
 
+      for (const frame of frames.values()) {
+        frame.dataset.visible = 'false';
+      }
       for (const file of OVERLAYS) {
-        const isIncluded = includedSet.has(file);
-        if (!isIncluded) continue;
+        if (!includedSet.has(file)) continue;
 
         const frame = ensureFrame(file);
-        const isVisible = visible && file === safeActive;
-        frame.dataset.visible = isVisible ? 'true' : 'false';
+        if (visible && file === safeActive) frame.dataset.visible = 'true';
       }
     }
 
