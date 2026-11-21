@@ -280,6 +280,9 @@
     .team-bar__logo {
       width: 75px;
       height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
@@ -292,6 +295,25 @@
 
     .team-bar__logo.animate-logo {
       animation: fadeIn 0.4s ease forwards;
+    }
+
+    .team-bar__logo-placeholder {
+      display: none;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: 'FGC Display SemiBold', 'Apotek', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      text-transform: uppercase;
+      color: var(--team-logo-placeholder-color, #090909);
+    }
+
+    .team-bar__logo-placeholder--visible {
+      display: block;
     }
 
     .team-bar__score {
@@ -522,7 +544,7 @@
         <span class="team-bar__ban-text" id="home-ban-text">1st ban</span>
       </div>
       <div class="team-bar__name" id="home-name">HOME</div>
-      <div class="team-bar__logo" id="home-logo"></div>
+      <div class="team-bar__logo" id="home-logo"><span class="team-bar__logo-placeholder" id="home-logo-placeholder" aria-hidden="true"></span></div>
       <div class="team-bar__score" id="home-score">0</div>
       <div class="team-bar__side" id="home-side">
         <div class="team-bar__side-icon" id="home-side-icon"></div>
@@ -535,7 +557,7 @@
         <div class="team-bar__side-icon" id="away-side-icon"></div>
       </div>
       <div class="team-bar__score" id="away-score">0</div>
-      <div class="team-bar__logo" id="away-logo"></div>
+      <div class="team-bar__logo" id="away-logo"><span class="team-bar__logo-placeholder" id="away-logo-placeholder" aria-hidden="true"></span></div>
       <div class="team-bar__name" id="away-name">AWAY</div>
       <div class="team-bar__ban hidden" id="away-ban">
         <div class="team-bar__ban-icon" id="away-ban-icon"></div>
@@ -623,12 +645,14 @@
       homeName: document.getElementById('home-name'),
       homeScore: document.getElementById('home-score'),
       homeLogo: document.getElementById('home-logo'),
+      homeLogoPlaceholder: document.getElementById('home-logo-placeholder'),
       homeBan: document.getElementById('home-ban'),
       homeBanIcon: document.getElementById('home-ban-icon'),
       homeBanText: document.getElementById('home-ban-text'),
       awayName: document.getElementById('away-name'),
       awayScore: document.getElementById('away-score'),
       awayLogo: document.getElementById('away-logo'),
+      awayLogoPlaceholder: document.getElementById('away-logo-placeholder'),
       awayBan: document.getElementById('away-ban'),
       awayBanIcon: document.getElementById('away-ban-icon'),
       awayBanText: document.getElementById('away-ban-text'),
@@ -697,6 +721,32 @@
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       // Return black for light colors, white for dark colors
       return luminance > 0.5 ? '#090909' : '#ffffff';
+    }
+
+    function teamLogoPlaceholderColor(hexColor) {
+      const color = typeof hexColor === 'string' ? hexColor.trim() : '';
+      return getContrastColor(/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#eeeeee');
+    }
+
+    function teamLogoPlaceholderText(team) {
+      if (!team) return '';
+      const tag = typeof team.tag === 'string' ? team.tag.trim() : '';
+      if (tag) return tag;
+      const name = typeof team.name === 'string' ? team.name.trim() : '';
+      if (!name) return '';
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
+      return parts.slice(0, 2).map((part) => Array.from(part)[0].toUpperCase()).join('');
+    }
+
+    function setTeamLogoPlaceholder(logo, placeholder, team) {
+      if (team === undefined) return;
+      const text = team && !team.logoUrl ? teamLogoPlaceholderText(team) : '';
+      placeholder.textContent = text;
+      placeholder.classList.toggle('team-bar__logo-placeholder--visible', Boolean(text));
+      if (text) placeholder.setAttribute('title', text);
+      else placeholder.removeAttribute('title');
+      logo.classList.toggle('team-bar__logo--placeholder', Boolean(text));
     }
 
     function connect() {
@@ -864,14 +914,18 @@
         if (d.teamA) {
           if (d.teamA.name) el.homeName.textContent = d.teamA.name;
           el.homeLogo.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : 'none';
+          setTeamLogoPlaceholder(el.homeLogo, el.homeLogoPlaceholder, d.teamA);
         } else if (d.teamA === null) {
           el.homeLogo.style.backgroundImage = 'none';
+          setTeamLogoPlaceholder(el.homeLogo, el.homeLogoPlaceholder, null);
         }
         if (d.teamB) {
           if (d.teamB.name) el.awayName.textContent = d.teamB.name;
           el.awayLogo.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : 'none';
+          setTeamLogoPlaceholder(el.awayLogo, el.awayLogoPlaceholder, d.teamB);
         } else if (d.teamB === null) {
           el.awayLogo.style.backgroundImage = 'none';
+          setTeamLogoPlaceholder(el.awayLogo, el.awayLogoPlaceholder, null);
         }
         document.fonts.ready.then(fitTeamNames);
 
@@ -900,6 +954,8 @@
           // Set logo background colors
           el.homeBar.style.setProperty('--team-logo-bg', d.teamA.logoBgColor || '#eee');
           el.awayBar.style.setProperty('--team-logo-bg', d.teamB.logoBgColor || '#eee');
+          el.homeBar.style.setProperty('--team-logo-placeholder-color', teamLogoPlaceholderColor(d.teamA.logoBgColor));
+          el.awayBar.style.setProperty('--team-logo-placeholder-color', teamLogoPlaceholderColor(d.teamB.logoBgColor));
           el.homeBar.classList.add('team-colored');
           el.awayBar.classList.add('team-colored');
         } else {
@@ -911,6 +967,8 @@
           el.awayBar.style.removeProperty('--team-text-color');
           el.homeBar.style.removeProperty('--team-logo-bg');
           el.awayBar.style.removeProperty('--team-logo-bg');
+          el.homeBar.style.removeProperty('--team-logo-placeholder-color');
+          el.awayBar.style.removeProperty('--team-logo-placeholder-color');
         }
 
         // Scores

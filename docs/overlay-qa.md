@@ -68,6 +68,14 @@ smoke test, not a substitute for the OBS sign-off below.
   ellipsized long handles/pronouns while retaining the full handle in `title`.
   Gate A53 measured all six social rows inside their card content boxes with
   unchanged 1920×1080 geometry and card widths.
+- **IMP-032, fixed after v1:** empty team logo slots in `game-overlay.html` now
+  render the team TAG, or a short name abbreviation when the tag is blank, on
+  the existing logo background. The placeholder hides as soon as a real logo
+  is supplied, clears for unassigned teams, ellipsizes long tags while keeping
+  the full value in `title`, and uses a contrast colour against the logo
+  background. Gate A54 verified the live server `init` plus seven replayed
+  states in real WebView2 at 1920×1080 with no geometry change and zero page
+  console errors.
 
 ## Files covered
 

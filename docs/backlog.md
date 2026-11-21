@@ -918,7 +918,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | Owner request | IDE-004 | idea | closed · done | Auto-overlay scene switcher (auto.html) |
 | Follow-up note | IDE-024 | idea | triaged | Protocol v2 review checkpoint |
 | Follow-up note | IDE-025 | idea | triaged | Tournament overlay review checkpoint |
-| Follow-up note | IMP-032 | improvement | triaged | Placeholder TAG image for empty slots |
+| Follow-up note | IMP-032 | improvement | closed · done | Placeholder TAG image for empty slots |
 | Follow-up note | IDE-026 | idea | triaged | In-app variable and script inspector |
 | Follow-up note | IDE-027 | idea | triaged | Legacy Electron app.json importer |
 
@@ -1052,6 +1052,38 @@ The 1- and 4-caster states kept their 900px and 415px cards, the document stayed
 clippy, test, `git diff --check` and `dx build --desktop` passed; no schema,
 protocol, persisted state or other v1 overlay changed. No screenshots were
 taken or published, the authoritative QA hashes remain
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` was `No serve config`.
+
+## AC. Post-v1 empty-logo placeholder — IMP-032 (2026-11-21)
+
+IMP-032 is closed · done. It completes the owner's deferred A9 note: when a
+team has no logo, the game overlay's 75×55 logo slot now shows the team TAG on
+the existing logo background instead of an empty coloured box. The tag comes
+straight from the existing scoreboard projection; blank tags fall back to a
+short name abbreviation (`Northwind Sentinels` → `NS`, `王小明战队` → `王小`).
+No protocol, schema, persisted state or asset changed.
+
+The placeholder is a text span inside the shipped logo element. It uses
+`FGC Display SemiBold` at 24px, is confined to the 63×43 logo content box with
+`max-width:100%`, `overflow:hidden`, `text-overflow:ellipsis` and
+`white-space:nowrap`, and keeps the complete tag in `title`. It is hidden as
+soon as `logoUrl` is present, cleared for `null` teams, and left alone for a
+partial frame with no team fields. Team-colour mode sets a contrast colour from
+the logo background: white on `#20242b`, dark on `#f5f5f5`.
+
+A54 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence at 1920×1080. The live server `init` from the untouched fixture painted
+`T3`/`T1`; replayed frames verified partial-frame preservation, logo-present
+hiding, `LONGCASTERTAG` ellipsis at 63/227px with the full title, name
+fallbacks, `null`-team clearing and contrast colours. Document size and logo
+geometry stayed at 1920×1080 and 75×55, with zero page console errors. The
+static guard `game_overlay_shows_a_tag_placeholder_for_empty_logo_slots` was
+added to `crates/server/tests/overlays.rs`. `cargo fmt --all`, format check,
+check, clippy, test, `git diff --check` and `dx build --desktop` passed; no
+screenshots were taken or published, the authoritative QA hashes remain
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` was `No serve config`.

@@ -3347,3 +3347,55 @@ Zero page console errors were recorded. The authoritative
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
 `tailscale serve status` was `No serve config`, and the harness was deleted.
+
+---
+
+### A54 — Placeholder TAG image for empty logo slots
+
+**Covers:** IMP-032, M9-10 (post-v1 follow-up from A9 / M3-6)
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Use an
+   isolated `APPDATA` and WebView user-data folder copied from the QA fixture so
+   the authoritative `app.json` files are never opened by the run.
+2. Start the server and open
+   `http://127.0.0.1:3001/overlays/game-overlay.html` as a separate CDP target.
+   Set the viewport to 1920×1080, await `document.fonts.ready`, and first
+   measure the live `init` payload from the untouched fixture without injecting
+   data. The fixture's empty logo slots should show its stored tags.
+3. Replay direct `scoreboard` frames to cover the remaining states: empty tags,
+   a real `logoUrl`, a long tag, blank tags with Latin and CJK names, `null`
+   teams, a partial frame with no team fields, and light/dark `logoBgColor`
+   with team colours enabled. Record text, `title`, `clientWidth`/`scrollWidth`,
+   DOM boxes, logo `backgroundImage`, computed styles and computed text colour.
+4. Confirm placeholders appear only for a team with no logo, use the tag first
+   and fall back to a name abbreviation, ellipsize overlong text while keeping
+   the full value in `title`, clear for `null` teams, survive partial frames,
+   and hide as soon as a real logo is supplied. Confirm the 75×55 logo geometry,
+   63×43 content box and 1920×1080 document are unchanged.
+5. Stop the app, recheck the authoritative hashes and
+   `tailscale serve status`, then delete the isolated harness.
+
+**Evidence:** CDP DOM and computed-style JSON at 1920×1080 for the live `init`
+state and seven replayed states; no screenshots were taken or published.
+
+**Result: Pass — assistant 2026-11-21.** The run used WebView2 158.0.4370.33
+and an isolated QA profile. Every state had `scrollWidth == innerWidth == 1920`
+and `scrollHeight == innerHeight == 1080`, with
+`document.fonts.check('600 24px "FGC Display SemiBold"')` true. Live `init`
+painted `T3`/`T1` in the empty slots and, because the fixture uses team colours
+with `#30363d` logo backgrounds, computed to `rgb(255,255,255)`. Replayed frames
+kept the same tags through a partial frame, hid the home placeholder and applied
+a real logo URL while the away tag stayed, ellipsized `LONGCASTERTAG` at
+63/227px with the full tag in `title`, fell back to `NS` and `王小` for blank
+tags, cleared both placeholders for `null` teams, and produced white text on
+`#20242b` versus dark text on `#f5f5f5`. Computed styles were
+`display:block`, `font:600 24px "FGC Display SemiBold"`, `max-width:100%`,
+`overflow:hidden`, `text-overflow:ellipsis`, `white-space:nowrap`; every visible
+placeholder stayed inside the 63×43 logo content box. Zero page console errors
+were recorded. The authoritative `app.json`/`app.json.bak` hashes stayed at
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
+`tailscale serve status` was `No serve config`, and the harness was deleted.

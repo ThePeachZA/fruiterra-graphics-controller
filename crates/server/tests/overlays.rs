@@ -219,6 +219,38 @@ fn game_overlay_clears_stale_team_logos() {
 }
 
 #[test]
+fn game_overlay_shows_a_tag_placeholder_for_empty_logo_slots() {
+    let text = overlay_text("game-overlay.html");
+
+    assert!(
+        text.contains("function teamLogoPlaceholderText(team)")
+            && text.contains("function setTeamLogoPlaceholder(logo, placeholder, team)"),
+        "the game overlay should derive and render an empty-logo placeholder"
+    );
+    assert!(
+        text.contains("const tag = typeof team.tag === 'string' ? team.tag.trim() : '';")
+            && text.contains("if (tag) return tag;"),
+        "the team tag must be preferred for the placeholder"
+    );
+    assert!(
+        text.contains("placeholder.textContent = text;")
+            && text.contains("placeholder.classList.toggle('team-bar__logo-placeholder--visible', Boolean(text));"),
+        "the placeholder must be shown only when the logo slot is empty"
+    );
+    assert!(
+        text.contains("setTeamLogoPlaceholder(el.homeLogo, el.homeLogoPlaceholder, d.teamA);")
+            && text
+                .contains("setTeamLogoPlaceholder(el.awayLogo, el.awayLogoPlaceholder, d.teamB);"),
+        "scoreboard frames must update both placeholders"
+    );
+    assert!(
+        text.contains("setTeamLogoPlaceholder(el.homeLogo, el.homeLogoPlaceholder, null);")
+            && text.contains("setTeamLogoPlaceholder(el.awayLogo, el.awayLogoPlaceholder, null);"),
+        "unassigned teams must clear their placeholders"
+    );
+}
+
+#[test]
 fn map_select_card_count_follows_projected_maps() {
     let text = overlay_text("map-select.html");
 
