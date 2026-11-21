@@ -503,28 +503,69 @@ and serve lifecycle forward.
 - **Next.** D8-4 serve lifecycle with teardown, D8-5 gated Funnel, D8-6 remote
   URL generation and D8-7 docs/QA.
 
-## Tailscale Serve limited to /fgc (2026-11-21)
+## Tailscale Serve owns two paths (2026-11-21)
 
-**Status: D8-4 done 2026-11-21. D8-5 Funnel, D8-6 URLs and D8-7 docs/QA remain open.**
+**Status: D8-4 done 2026-11-21; the `/` path was added with D8-6 the same day.**
 
 - **Start.** In Tailscale scope, starting or restarting the overlay server runs
-  `tailscale serve --bg --yes --https=443 --set-path /fgc http://127.0.0.1:<port>`
-  on a blocking task. `--bg` lets the CLI return while tailscaled keeps the
-  handler; `--yes` prevents an interactive prompt. The local server still binds
-  loopback only, so `/fgc` is the sole remote entry point.
+  `tailscale serve --bg --yes --https=443 --set-path <path> http://127.0.0.1:<port>`
+  for `/fgc` and `/` on a blocking task. `--bg` lets the CLI return while
+  tailscaled keeps the config; `--yes` prevents an interactive prompt. The local
+  server still binds loopback only. A failed second install rolls back the
+  first, so a half-configured pair is not left behind.
+- **Why `/` exists.** Five of the seven overlays are frozen by this backlog's
+  file restriction, and all seven dial `wss://location.host/` with no path.
+  With only `/fgc`, a page at `/fgc/overlays/<file>.html` loads but its
+  WebSocket hits a 404. Tailscale matches the longest prefix and strips it, so
+  a companion `/` handler forwards the root WebSocket to the same local server
+  while `/fgc/overlays/...` still reaches `/overlays/...`. This was verified
+  with HTTP and WebSocket probes before it was wired into the app.
+- **Exposure tradeoff.** The root handler makes the whole local overlay server
+  reachable unprefixed on the tailnet (`/`, `/health`, `/state`,
+  `/overlays/...`, `/assets/...`). It is the same loopback service, not a new
+  one, but any pre-existing root Serve handler on this node is taken over while
+  the app serves and is not restored by teardown. The owner approved this
+  tradeoff so all seven overlays work without editing the frozen five.
 - **Teardown.** Stopping the server, changing scope away from Tailscale, and
   dropping the app root all run
-  `tailscale serve --yes --https=443 --set-path /fgc off`. Exit teardown is
-  synchronous because spawned tasks may not finish during shutdown.
-- **Isolation.** Only the `/fgc` path is removed. The port-wide `off` and
+  `tailscale serve --yes --https=443 --set-path <path> off` for both paths. Exit
+  teardown is synchronous because spawned tasks may not finish during shutdown.
+- **Isolation.** Only these two paths are removed. The port-wide `off` and
   `tailscale serve reset` are never used, so handlers installed by other
   software survive. A "handler does not exist" result is treated as success,
   making teardown idempotent. Named services were evaluated and rejected: this
   tailnet node is not tagged, so `--service svc:fgc` is unavailable.
 - **Honesty.** The app does not install or bundle Tailscale. Settings shows
-  whether `/fgc` is active, preparing or failed, with the raw CLI error on
-  failure. No per-overlay remote URLs are generated yet; that is D8-6.
-- **Next.** D8-5 gated Funnel, D8-6 remote URL generation and D8-7 docs/QA.
+  whether the handlers are active, preparing or failed, with the raw CLI error
+  on failure.
+- **Next.** D8-5 gated Funnel and D8-7 docs/QA.
+
+## Scope-aware overlay URLs (2026-11-21)
+
+**Status: D8-6 done 2026-11-21. D8-5 Funnel and D8-7 docs/QA remain open.**
+
+- **Shapes.** Tailscale uses `https://<dnsname>/fgc/overlays/<file>.html` from
+  this device's MagicDNS name, with no `?port=`. LAN keeps
+  `http://<lan-ip>:<port>/overlays/<file>.html`; This PC keeps
+  `http://127.0.0.1:<port>/overlays/<file>.html`. The same base URL drives
+  served asset URLs, so an overlay loaded through `/fgc` asks for
+  `/fgc/assets/...` instead of a localhost address on the OBS machine.
+- **Timing.** Detection runs once when the store is created, not only when
+  Settings mounts, so a launch straight into Overlay still gets remote URLs.
+  A persisted Tailscale scope with auto-start waits for that first result;
+  otherwise the server would begin with local asset URLs. Until the DNS name is
+  known, Settings says "waiting for Tailscale address" instead of inventing a
+  URL; when it arrives the base URL is refreshed and projected frames are
+  resent. The last known detection is kept during a manual Refresh so URLs do
+  not flicker out of the panel.
+- **Funnel stays hidden.** Funnel is still disabled in the selector, so it
+  keeps its pending notice and local URLs. The token belongs only in future
+  Funnel URLs (D8-5) and is never added to Tailscale URLs.
+- **Reachability.** The `/` Serve handler described above is part of making
+  these URLs usable: it is what lets the five frozen overlays keep their
+  WebSocket after the page loads under `/fgc`.
+- **Next.** D8-5 gated Funnel with an explicit public-exposure confirmation and
+  unguessable token, then D8-7 docs/QA.
 
 ## Asset cleanup guarded against a failed load (2026-11-15)
 

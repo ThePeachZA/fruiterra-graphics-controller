@@ -138,11 +138,11 @@ impl ServerController {
         let mut status = self.status;
         busy.set(true);
         status.set(ServerStatus::Starting);
+        self.set_base_url(base_url.clone());
 
         let mut handle_signal = self.handle;
         let mut status_signal = self.status;
         let mut busy_signal = self.busy;
-        let mut base_url_signal = self.base_url;
 
         spawn(async move {
             let started = tokio::task::spawn_blocking(move || ServerHandle::start(config)).await;
@@ -153,7 +153,6 @@ impl ServerController {
                     }
                     debug!(port = ?handle.port(), "overlay server started");
                     status_signal.set(handle.status());
-                    base_url_signal.set(base_url);
                     handle_signal.set(Some(handle));
                 }
                 Ok(Err(error)) => {
@@ -218,10 +217,10 @@ impl ServerController {
         let mut status = self.status;
         busy.set(true);
         status.set(ServerStatus::Starting);
+        self.set_base_url(base_url.clone());
 
         let mut status_signal = self.status;
         let mut busy_signal = self.busy;
-        let mut base_url_signal = self.base_url;
 
         spawn(async move {
             if let Some(previous) = previous
@@ -238,7 +237,6 @@ impl ServerController {
                     }
                     debug!(port = ?handle.port(), "overlay server restarted");
                     status_signal.set(handle.status());
-                    base_url_signal.set(base_url);
                     handle_signal.set(Some(handle));
                 }
                 Ok(Err(error)) => {

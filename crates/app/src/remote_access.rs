@@ -1,13 +1,13 @@
 //! Pure helpers for the Remote access settings panel.
 //!
 //! This module keeps the scope labels, status text and per-scope URLs together.
-//! Off and LAN bind the local listener; Tailscale adds a Serve handler for
-//! `/fgc` (see [`crate::tailscale`]) and Funnel remains a later item.
+//! Off and LAN bind the local listener; Tailscale adds Serve handlers for
+//! `/fgc` and `/` (see [`crate::tailscale`]) and Funnel remains a later item.
 
 use fgc_core::{AppState, RemoteAccessMode};
 
 use crate::server::base_url_for;
-use crate::tailscale::{SERVE_PATH, ServeState};
+use crate::tailscale::{SERVE_PATH, ServeState, WS_SERVE_PATH};
 
 /// HTML `select` value for a scope.
 #[must_use]
@@ -61,18 +61,34 @@ pub fn serve_text(serve: &ServeState, running: bool) -> String {
     }
     match serve {
         ServeState::Off => "Tailscale Serve is preparing…".to_owned(),
-        ServeState::Active => {
-            format!("Tailscale Serve is active at {SERVE_PATH} on your tailnet.")
-        }
+        ServeState::Active => format!(
+            "Tailscale Serve is active at {SERVE_PATH} and {WS_SERVE_PATH} (WebSocket) on your tailnet."
+        ),
         ServeState::Failed(error) => format!("Tailscale Serve failed: {error}"),
     }
 }
 
 /// Base URL for the scope that is currently selected.
+///
+/// Tailscale uses this device's MagicDNS name and the `/fgc` prefix. Before
+/// detection returns a name, and for every other scope, the local listener
+/// URL is used as a safe fallback.
 #[must_use]
-pub fn base_url(state: &AppState) -> String {
+pub fn base_url(state: &AppState, dns_name: Option<&str>) -> String {
     let overlay = &state.settings.overlay;
+    if overlay.remote_access == RemoteAccessMode::Tailscale
+        && let Some(name) = dns_name.map(str::trim).filter(|name| !name.is_empty())
+    {
+        return format!("https://{name}{SERVE_PATH}");
+    }
     base_url_for(overlay.allow_lan, overlay.port)
+}
+
+/// Whether a real remote URL can be shown for the selected scope.
+#[must_use]
+pub fn has_remote_url(state: &AppState, dns_name: Option<&str>) -> bool {
+    state.settings.overlay.remote_access == RemoteAccessMode::Tailscale
+        && dns_name.is_some_and(|name| !name.trim().is_empty())
 }
 
 /// One-line status for the active scope.
@@ -80,19 +96,27 @@ pub fn base_url(state: &AppState) -> String {
 /// The base URL follows the app-wide reveal setting so Settings does not leak
 /// it when URLs are hidden elsewhere.
 #[must_use]
-pub fn status_text(state: &AppState, running: bool, show_url: bool) -> String {
+pub fn status_text(
+    state: &AppState,
+    running: bool,
+    show_url: bool,
+    dns_name: Option<&str>,
+) -> String {
     let mode = state.settings.overlay.remote_access;
     if let Some(notice) = pending_notice(mode) {
         return notice.to_owned();
     }
 
     let lifecycle = if running { "running" } else { "stopped" };
+    if mode == RemoteAccessMode::Tailscale && !has_remote_url(state, dns_name) {
+        return format!("Tailscale — server {lifecycle} — waiting for Tailscale address");
+    }
     if show_url {
         format!(
             "{} — server {} — {}",
             mode_label(mode),
             lifecycle,
-            base_url(state)
+            base_url(state, dns_name)
         )
     } else {
         format!("{} — server {}", mode_label(mode), lifecycle)
@@ -120,15 +144,15 @@ mod tests {
     fn local_status_uses_loopback_and_lan_status_uses_a_lan_address() {
         let mut state = AppState::default();
         state.settings.overlay.port = 4123;
-        let hidden = status_text(&state, false, false);
+        let hidden = status_text(&state, false, false, None);
         assert!(hidden.contains("This PC"));
         assert!(hidden.contains("stopped"));
         assert!(!hidden.contains("127.0.0.1"));
-        assert!(status_text(&state, false, true).contains("127.0.0.1:4123"));
+        assert!(status_text(&state, false, true, None).contains("127.0.0.1:4123"));
 
         state.settings.overlay.remote_access = RemoteAccessMode::Lan;
         state.settings.overlay.allow_lan = true;
-        let status = status_text(&state, true, true);
+        let status = status_text(&state, true, true, None);
         assert!(status.contains("Local network"));
         assert!(status.contains("running"));
         assert!(status.contains(":4123"));
@@ -136,10 +160,33 @@ mod tests {
     }
 
     #[test]
+    fn tailscale_urls_use_the_magic_dns_name_and_fgc_prefix() {
+        let mut state = AppState::default();
+        state.settings.overlay.port = 4123;
+        state.settings.overlay.remote_access = RemoteAccessMode::Tailscale;
+
+        assert_eq!(
+            base_url(&state, Some("sekhmet.example.ts.net")),
+            "https://sekhmet.example.ts.net/fgc"
+        );
+        assert!(!has_remote_url(&state, None));
+        assert!(status_text(&state, true, true, None).contains("waiting for Tailscale address"));
+        assert_eq!(base_url(&state, None), "http://127.0.0.1:4123");
+
+        // Funnel is not live, so it must never advertise a tokenless public URL.
+        state.settings.overlay.remote_access = RemoteAccessMode::Funnel;
+        assert_eq!(
+            base_url(&state, Some("sekhmet.example.ts.net")),
+            "http://127.0.0.1:4123"
+        );
+        assert!(!has_remote_url(&state, Some("sekhmet.example.ts.net")));
+    }
+
+    #[test]
     fn funnel_still_explains_that_it_is_pending() {
         let mut state = AppState::default();
         state.settings.overlay.remote_access = RemoteAccessMode::Funnel;
-        assert!(status_text(&state, true, false).contains("not available yet"));
+        assert!(status_text(&state, true, false, None).contains("not available yet"));
     }
 
     #[test]

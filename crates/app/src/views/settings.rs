@@ -34,23 +34,36 @@ pub fn SettingsView() -> Element {
     let port_text = use_signal(|| settings.overlay.port.to_string());
     let port_error = use_signal(|| None::<String>);
 
-    let snapshot = state.read();
-    let remote_mode = snapshot.settings.overlay.remote_access;
-    let remote_status =
-        remote_access::status_text(&snapshot, server.is_running(), store.urls_visible());
-    let remote_notice = remote_access::pending_notice(remote_mode);
-    let remote_base_url = remote_access::base_url(&snapshot);
-    let local_scope = matches!(remote_mode, RemoteAccessMode::Off | RemoteAccessMode::Lan);
-    let tailscope_scope = remote_mode == RemoteAccessMode::Tailscale;
-    let serve_line = tailscope_scope
-        .then(|| remote_access::serve_text(&store.serve_state(), server.is_running()));
-    drop(snapshot);
-
     let tailscale: Option<TailscaleStatus> = store.tailscale_status();
     let tailscale_ready = matches!(
         tailscale.as_ref().map(|status| &status.state),
         Some(TailscaleState::Ready { .. })
     );
+    let dns_name = tailscale.as_ref().and_then(|status| match &status.state {
+        TailscaleState::Ready { dns_name, .. } if !dns_name.trim().is_empty() => {
+            Some(dns_name.as_str())
+        }
+        _ => None,
+    });
+
+    let snapshot = state.read();
+    let remote_mode = snapshot.settings.overlay.remote_access;
+    let remote_status = remote_access::status_text(
+        &snapshot,
+        server.is_running(),
+        store.urls_visible(),
+        dns_name,
+    );
+    let remote_notice = remote_access::pending_notice(remote_mode);
+    let remote_base_url = remote_access::base_url(&snapshot, dns_name);
+    let show_urls = remote_mode != RemoteAccessMode::Funnel
+        && (matches!(remote_mode, RemoteAccessMode::Off | RemoteAccessMode::Lan)
+            || dns_name.is_some());
+    let tailscope_scope = remote_mode == RemoteAccessMode::Tailscale;
+    let serve_line = tailscope_scope
+        .then(|| remote_access::serve_text(&store.serve_state(), server.is_running()));
+    drop(snapshot);
+
     let tailscale_summary = tailscale.as_ref().map_or_else(
         || "Checking Tailscale…".to_owned(),
         crate::tailscale::summary,
@@ -58,7 +71,6 @@ pub fn SettingsView() -> Element {
     let tailscale_remedy = tailscale.as_ref().and_then(crate::tailscale::remedy);
 
     use_effect(move || store.refresh_unused());
-    use_effect(move || store.refresh_tailscale());
 
     rsx! {
         div { class: "fgc-view",
@@ -183,7 +195,7 @@ pub fn SettingsView() -> Element {
                 if let Some(notice) = remote_notice {
                     p { class: "fgc-note", "{notice}" }
                 }
-                if local_scope {
+                if show_urls {
                     OverlayUrls { base_url: remote_base_url }
                 }
             }

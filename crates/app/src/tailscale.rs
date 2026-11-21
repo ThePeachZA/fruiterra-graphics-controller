@@ -2,10 +2,10 @@
 //!
 //! The app never bundles or installs Tailscale. It looks for the user's own
 //! CLI and reads only `tailscale status --json` and `tailscale version` for
-//! detection. Serve is limited to this app's `/fgc` path: starting installs a
-//! handler for the local overlay port, and stopping removes only that path.
-//! `tailscale serve reset` is never used because it would discard other
-//! services' configuration.
+//! detection. Serve owns two paths: `/fgc` proxies overlay pages and assets,
+//! and `/` proxies the WebSocket endpoint that five frozen overlays dial at
+//! the root. Stopping removes only those two paths. `tailscale serve reset`
+//! is never used because it would discard other services' configuration.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -20,15 +20,21 @@ const CLI_NAME: &str = "tailscale";
 /// Path prefix this app owns on Tailscale Serve.
 pub const SERVE_PATH: &str = "/fgc";
 
+/// Root path this app owns for the overlays' WebSocket connection.
+pub const WS_SERVE_PATH: &str = "/";
+
+/// Both paths installed while Tailscale serving is active.
+pub const SERVE_PATHS: [&str; 2] = [SERVE_PATH, WS_SERVE_PATH];
+
 const SERVE_HTTPS_PORT: &str = "443";
 
-/// Result of the last Tailscale Serve operation for this app's path.
+/// Result of the last Tailscale Serve operation for this app's paths.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum ServeState {
-    /// No handler installed by this app.
+    /// No handlers installed by this app.
     #[default]
     Off,
-    /// `/fgc` forwards to the local overlay server.
+    /// `/fgc` serves pages and `/` serves the WebSocket endpoint.
     Active,
     /// The last start or stop attempt failed.
     Failed(String),
@@ -188,54 +194,63 @@ fn classify(value: &Value) -> TailscaleState {
     }
 }
 
-/// Installs this app's `/fgc` handler, forwarding to the local overlay server.
+/// Installs both handlers this app owns, forwarding to the local overlay server.
 ///
-/// `--bg` lets the CLI return while tailscaled keeps the config. `--yes`
-/// prevents an interactive prompt. Callers must run this on a blocking task.
+/// `/fgc` carries the overlay pages and assets; `/` carries the WebSocket
+/// endpoint that five frozen overlays dial at the root. `--bg` lets the CLI
+/// return while tailscaled keeps the config, and `--yes` prevents a prompt.
+/// Callers must run this on a blocking task. A partial install is rolled back.
 pub fn start_serve(executable: &Path, port: u16) -> Result<(), String> {
-    let output = Command::new(executable)
-        .args([
-            "serve",
-            "--bg",
-            "--yes",
-            &format!("--https={SERVE_HTTPS_PORT}"),
-            &format!("--set-path={SERVE_PATH}"),
-            &format!("http://127.0.0.1:{port}/"),
-        ])
-        .output()
-        .map_err(|error| format!("could not start Tailscale Serve: {error}"))?;
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(serve_error(&output))
+    for (index, path) in SERVE_PATHS.iter().enumerate() {
+        if let Err(error) = set_serve_path(executable, path, Some(port)) {
+            for installed in &SERVE_PATHS[..index] {
+                let _ = set_serve_path(executable, installed, None);
+            }
+            return Err(error);
+        }
     }
+    Ok(())
 }
 
-/// Removes only this app's `/fgc` handler.
+/// Removes only this app's two handlers.
 ///
-/// This deliberately targets one path instead of using `tailscale serve
-/// reset` or a port-wide `off`, so handlers installed by other software are
-/// preserved. A missing handler is treated as success, making teardown safe
-/// to call more than once.
+/// This deliberately targets individual paths instead of using
+/// `tailscale serve reset` or a port-wide `off`, so handlers installed by
+/// other software are preserved. A missing handler is treated as success,
+/// making teardown safe to call more than once.
 pub fn stop_serve(executable: &Path) -> Result<(), String> {
-    let output = Command::new(executable)
-        .args([
-            "serve",
-            "--yes",
-            &format!("--https={SERVE_HTTPS_PORT}"),
-            &format!("--set-path={SERVE_PATH}"),
-            "off",
-        ])
-        .output()
-        .map_err(|error| format!("could not stop Tailscale Serve: {error}"))?;
-    if output.status.success() {
-        return Ok(());
+    let mut failure = None;
+    for path in SERVE_PATHS {
+        if let Err(error) = set_serve_path(executable, path, None)
+            && failure.is_none()
+            && !missing_handler(&error)
+        {
+            failure = Some(error);
+        }
     }
-    let error = serve_error(&output);
-    if missing_handler(&error) {
+    failure.map_or(Ok(()), Err)
+}
+
+fn set_serve_path(executable: &Path, path: &str, target: Option<u16>) -> Result<(), String> {
+    let mut arguments = vec!["serve".to_owned(), "--yes".to_owned()];
+    if target.is_some() {
+        arguments.push("--bg".to_owned());
+    }
+    arguments.push(format!("--https={SERVE_HTTPS_PORT}"));
+    arguments.push(format!("--set-path={path}"));
+    match target {
+        Some(port) => arguments.push(format!("http://127.0.0.1:{port}/")),
+        None => arguments.push("off".to_owned()),
+    }
+
+    let output = Command::new(executable)
+        .args(&arguments)
+        .output()
+        .map_err(|error| format!("could not configure Tailscale Serve at {path}: {error}"))?;
+    if output.status.success() {
         Ok(())
     } else {
-        Err(error)
+        Err(format!("{path}: {}", serve_error(&output)))
     }
 }
 

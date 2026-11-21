@@ -44,7 +44,8 @@ use fgc_server::{AssetMode, Outbound, ServerConfig};
 use tracing::{debug, info, warn};
 
 use crate::assets_io::format_bytes;
-use crate::server::{ServerController, base_url_for, project_outbound, server_config};
+use crate::remote_access;
+use crate::server::{ServerController, project_outbound, server_config};
 use crate::tailscale::{ServeState, TailscaleState, TailscaleStatus};
 
 /// How often dirty state is written to disk.
@@ -141,7 +142,11 @@ impl AppStore {
             app.spawn_startup_gc();
         }
         app.refresh_unused();
-        if app.state.peek().settings.overlay.auto_start && !app.server.is_running() {
+        app.refresh_tailscale();
+        if app.state.peek().settings.overlay.auto_start
+            && !app.server.is_running()
+            && !app.needs_tailscale_address()
+        {
             app.start_server();
         }
         app
@@ -238,10 +243,56 @@ impl AppStore {
         self.serve.cloned()
     }
 
+    /// MagicDNS name of this device, once Tailscale detection has returned.
+    fn tailscale_dns_name(&self) -> Option<String> {
+        match self.tailscale_status()?.state {
+            TailscaleState::Ready { dns_name, .. } if !dns_name.trim().is_empty() => {
+                Some(dns_name.trim().to_owned())
+            }
+            _ => None,
+        }
+    }
+
+    /// Base URL for the selected scope, including the Tailscale prefix.
+    fn current_base_url(&self) -> String {
+        let dns_name = self.tailscale_dns_name();
+        remote_access::base_url(&self.state.peek(), dns_name.as_deref())
+    }
+
+    /// True while auto-start is waiting for the first Tailscale address.
+    fn needs_tailscale_address(&self) -> bool {
+        self.state.peek().settings.overlay.remote_access == RemoteAccessMode::Tailscale
+            && self.tailscale_status().is_none()
+    }
+
+    /// True when a Tailscale auto-start can run now that detection has returned.
+    fn should_start_after_detection(&self) -> bool {
+        let overlay = &self.state.peek().settings.overlay;
+        overlay.auto_start
+            && overlay.remote_access == RemoteAccessMode::Tailscale
+            && !self.server.is_running()
+            && !self.server.busy()
+    }
+
+    /// Rebuilds projected asset URLs after a Tailscale address becomes known.
+    fn refresh_base_url(&self) {
+        let base_url = self.current_base_url();
+        if self.server.base_url() != base_url {
+            self.server.set_base_url(base_url);
+            if self.server.is_running() {
+                self.server
+                    .project_force(&self.state.peek(), &self.catalog.peek());
+            }
+        }
+    }
+
     /// Reads the installed Tailscale client off the UI thread.
+    ///
+    /// The last known result stays visible while a refresh runs, so revisiting
+    /// Settings does not briefly hide the generated URLs.
     pub fn refresh_tailscale(&self) {
+        let app = *self;
         let mut slot = self.tailscale;
-        slot.set(None);
         spawn(async move {
             let detected = tokio::task::spawn_blocking(crate::tailscale::detect).await;
             let status = detected.unwrap_or_else(|error| TailscaleStatus {
@@ -252,6 +303,10 @@ impl AppStore {
                 },
             });
             slot.set(Some(status));
+            app.refresh_base_url();
+            if app.should_start_after_detection() {
+                app.start_server();
+            }
         });
     }
 
@@ -2087,15 +2142,7 @@ impl AppStore {
     }
 
     fn apply_network_change(&self) {
-        let (allow_lan, port) = {
-            let state = self.state.peek();
-            (
-                state.settings.overlay.allow_lan,
-                state.settings.overlay.port,
-            )
-        };
-        let base_url = base_url_for(allow_lan, port);
-        self.server.set_base_url(base_url);
+        self.server.set_base_url(self.current_base_url());
 
         if self.server.is_running() {
             self.restart_server();
@@ -2104,9 +2151,9 @@ impl AppStore {
         }
     }
 
-    /// Installs or removes this app's `/fgc` handler to match the current
-    /// scope. `server_will_run` is the desired listener state; a handler is
-    /// only installed when the server is running and the Tailscale scope is chosen.
+    /// Installs or removes this app's Serve handlers to match the current
+    /// scope. `server_will_run` is the desired listener state; handlers are
+    /// only installed when the server is running and Tailscale is selected.
     fn sync_tailscale_serve(&self, server_will_run: bool) {
         let (mode, port) = {
             let state = self.state.peek();
@@ -2171,7 +2218,7 @@ impl AppStore {
             config = config.with_blob_dir(root);
         }
 
-        let base_url = base_url_for(overlay.allow_lan, overlay.port);
+        let base_url = self.current_base_url();
         let outbound = project_outbound(
             &state,
             &self.catalog.peek(),
