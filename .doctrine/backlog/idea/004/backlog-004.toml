@@ -5,11 +5,11 @@ id = 4
 slug = "auto-overlay-controller-page-autohtml"
 title = "Auto-overlay controller page (auto.html)"
 kind = "idea"
-status = "triaged"
+status = "started"
 resolution = ""
 created = "2026-11-21"
 updated = "2026-11-21"
-tags = ["area:overlay", "needs-design", "post-v1", "security", "user-requested"]
+tags = ["area:hotkeys", "area:overlay", "legacy:b4", "post-v1", "security", "user-requested"]
 
 # outbound-only. Cross-kind structural edges (e.g. references with a role
 # — `originates_from` for backlog→slice provenance — governed_by, related, drift) are

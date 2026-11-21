@@ -74,7 +74,7 @@ These are small, isolated additions that would be cheap to pull forward *after* 
 | B1 | ~~Show/hide overlay control~~ | **Done 2026-11-21.** Overlay view gained a **Hide overlays** / **Show overlays** button backed by a session-only signal. It broadcasts the existing `{type:"show", visible}` message, seeds start/restart with the current value, and never writes to `app.json`. A50 verified both viewports, pointer/keyboard activation, AX state, live overlay display and restart persistence; Doctrine IMP-019 closed · done. |
 | B2 | ~~All overlay URLs with copy buttons~~ | **Done 2026-11-21.** D8-6/D8-9 added labelled Browser Source groups for each enabled access path; every group lists all seven overlay URLs with Open and Copy actions. A48 verified the groups and hidden state; Doctrine IMP-020 closed · done. |
 | B3 | ~~Overlay health/reconnect indicator~~ | **Done 2026-11-21.** The Overlay view shows **Connected clients** and **Last broadcast** using the existing status poll and a session-only broadcast timestamp, with a `role="status"` reconnect note when the server is running with zero clients. A51 verified 0/1 client states, broadcast-age ticking, restart and disconnect transitions, both viewports and the unchanged QA state; Doctrine IMP-021 closed · done. |
-| B4 | Basic hotkeys | Score +/-, next map, show/hide — high value during a live show. |
+| B4 | ~~Basic hotkeys~~ | **Merged into IDE-004 on 2026-11-21.** The owner wants hotkeys only inside the auto-overlay controller: `1`–`7` select a bundled scene and arrow keys cycle the included subset. No global app or OS shortcuts. Doctrine IMP-022 closed · promoted. |
 | B5 | Timer overlay | The timer is control-only in v1; a bundled broadcast timer can read the existing `matchTimer` messages. |
 | B6 | ~~Bulk asset import~~ | **Shipped 2026-11-18 (touch-up 16).** Asset import accepts multiple files with per-file validation, hashing, dedupe and error reporting. Image pickers also support direct upload with auto-selection (touch-up 18). |
 
@@ -879,7 +879,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | B1 | IMP-019 | improvement | closed · done | Show/hide overlay control |
 | B2 | IMP-020 | improvement | closed · done | All overlay URLs with copy buttons |
 | B3 | IMP-021 | improvement | closed · done | Overlay health/reconnect indicator |
-| B4 | IMP-022 | improvement | triaged | Basic hotkeys |
+| B4 | IMP-022 | improvement | closed · promoted | Basic hotkeys (merged into IDE-004) |
 | B5 | IMP-023 | improvement | triaged | Timer overlay |
 | B6 | IMP-024 | improvement | closed · done | Bulk asset import |
 | P1 | IDE-006 | idea | triaged | Undo / redo |
@@ -915,6 +915,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | §C group | IDE-022 | idea | triaged | UI and UX roadmap (§C) |
 | §C group | IDE-023 | idea | triaged | Platform and delivery roadmap (§C) |
 | Follow-up note | CHR-004 | chore | closed · done | Font A/B review checkpoint |
+| Owner request | IDE-004 | idea | started | Auto-overlay scene switcher (auto.html) |
 | Follow-up note | IDE-024 | idea | triaged | Protocol v2 review checkpoint |
 | Follow-up note | IDE-025 | idea | triaged | Tournament overlay review checkpoint |
 | Follow-up note | IMP-032 | improvement | triaged | Placeholder TAG image for empty slots |

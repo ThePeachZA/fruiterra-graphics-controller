@@ -6,6 +6,10 @@
 
 Migrated from `docs/backlog.md` §B, legacy ID **B4**.
 
-Score +/-, next map and show/hide hotkeys. IMP-003 covers Stream Deck/Touch Portal control, not keyboard shortcuts, so this remains separate.
+Original scope was score ±, next map and show/hide hotkeys. The owner redirected
+B4 on 2026-11-21: hotkeys are wanted only inside the auto-overlay scene
+switcher. That feature is IDE-004, so this item is closed · promoted rather than
+implemented separately.
 
-**Status: triaged.** Not committed for v1; kept as a small isolated candidate.
+**Status: closed · promoted into IDE-004.** No global app shortcuts, global OS
+hooks, Stream Deck API, or hotkeys elsewhere are in scope.
