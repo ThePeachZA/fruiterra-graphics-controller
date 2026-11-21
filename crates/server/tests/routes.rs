@@ -123,6 +123,38 @@ async fn serves_embedded_overlays_and_rejects_unsafe_names() {
 }
 
 #[tokio::test]
+async fn serves_the_auto_overlay_scene_switcher() {
+    let (handle, base_url) = start(ServerConfig::new(0));
+    let client = client();
+
+    let response = client
+        .get(format!("{base_url}/overlays/auto.html"))
+        .send()
+        .await
+        .expect("auto overlay request");
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok()),
+        Some("text/html; charset=utf-8")
+    );
+    assert_eq!(
+        response
+            .headers()
+            .get(reqwest::header::CACHE_CONTROL)
+            .and_then(|value| value.to_str().ok()),
+        Some("no-cache")
+    );
+    let body = response.text().await.expect("auto overlay body");
+    assert!(body.contains("id=\"auto-root\""));
+    assert!(body.contains("message.type === 'autoOverlay'"));
+
+    handle.stop().await.expect("stop");
+}
+
+#[tokio::test]
 async fn serves_bundled_assets_with_immutable_headers_etag_and_ranges() {
     let (handle, base_url) = start(ServerConfig::new(0));
     let client = client();

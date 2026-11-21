@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <title>Auto Overlay</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .fgc-auto {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .fgc-auto__scene {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: none;
+      background: transparent;
+    }
+
+    .fgc-auto__scene[data-visible="true"] {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="fgc-auto" id="auto-root"></div>
+
+  <script>
+    const OVERLAYS = Object.freeze([
+      'game-overlay.html',
+      'map-select.html',
+      'hero-bans.html',
+      'map-pool.html',
+      'team-roster-home.html',
+      'team-roster-away.html',
+      'row-casters.html'
+    ]);
+    const ALLOWED = new Set(OVERLAYS);
+    const query = new URLSearchParams(location.search);
+    const root = document.getElementById('auto-root');
+    const frames = new Map();
+    let included = [];
+    let active = null;
+    let visible = true;
+
+    function sceneUrl(file) {
+      const params = new URLSearchParams();
+      const host = query.get('host');
+      const port = query.get('port');
+      if (host) params.set('host', host);
+      if (port) params.set('port', port);
+      const suffix = params.toString();
+      return `./${file}${suffix ? `?${suffix}` : ''}`;
+    }
+
+    function ensureFrame(file) {
+      let frame = frames.get(file);
+      if (frame) return frame;
+
+      frame = document.createElement('iframe');
+      frame.className = 'fgc-auto__scene';
+      frame.title = file;
+      frame.src = sceneUrl(file);
+      root.appendChild(frame);
+      frames.set(file, frame);
+      return frame;
+    }
+
+    function applySelection() {
+      const includedSet = new Set(included);
+      const safeActive = includedSet.has(active) ? active : null;
+
+      for (const file of OVERLAYS) {
+        const isIncluded = includedSet.has(file);
+        if (!isIncluded) continue;
+
+        const frame = ensureFrame(file);
+        const isVisible = visible && file === safeActive;
+        frame.dataset.visible = isVisible ? 'true' : 'false';
+      }
+    }
+
+    function updateSelection(data) {
+      const requested = Array.isArray(data && data.included)
+        ? data.included.filter((file) => typeof file === 'string' && ALLOWED.has(file))
+        : [];
+      const requestedSet = new Set(requested);
+      included = OVERLAYS.filter((file) => requestedSet.has(file));
+
+      const candidate = data && data.active;
+      active = typeof candidate === 'string' && included.includes(candidate) ? candidate : null;
+      applySelection();
+    }
+
+    function handleMessage(message) {
+      if (!message || typeof message !== 'object') return;
+
+      if (message.type === 'init' && message.data && message.data.autoOverlay) {
+        updateSelection(message.data.autoOverlay);
+        return;
+      }
+      if (message.type === 'autoOverlay') {
+        updateSelection(message.data);
+        return;
+      }
+      if (message.type === 'show' && typeof message.visible === 'boolean') {
+        visible = message.visible;
+        applySelection();
+      }
+    }
+
+    function connect() {
+      const host = query.get('host');
+      const port = query.get('port');
+      const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+      const target = host || port
+        ? `${host || 'localhost'}:${port || '3001'}`
+        : (location.host || 'localhost:3001');
+      const ws = new WebSocket(`${scheme}://${target}`);
+
+      ws.onopen = () => ws.send(JSON.stringify({ type: 'requestInit' }));
+      ws.onmessage = ({ data }) => {
+        try {
+          handleMessage(JSON.parse(data));
+        } catch (error) {
+          console.error('Auto overlay parse error:', error);
+        }
+      };
+      ws.onclose = () => setTimeout(connect, 2000);
+      ws.onerror = (error) => console.error('Auto overlay WS error:', error);
+    }
+
+    connect();
+  </script>
+</body>
+</html>
