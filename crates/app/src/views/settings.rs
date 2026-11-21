@@ -48,6 +48,8 @@ pub fn SettingsView() -> Element {
 
     let snapshot = state.read();
     let remote_mode = snapshot.settings.overlay.remote_access;
+    let local_enabled = remote_access::is_local_enabled(&snapshot);
+    let tailscale_enabled = remote_access::is_tailscale_enabled(&snapshot);
     let remote_status = remote_access::status_text(
         &snapshot,
         server.is_running(),
@@ -56,11 +58,9 @@ pub fn SettingsView() -> Element {
     );
     let remote_notice = remote_access::pending_notice(remote_mode);
     let remote_base_url = remote_access::base_url(&snapshot, dns_name);
-    let show_urls = remote_mode != RemoteAccessMode::Funnel
-        && (matches!(remote_mode, RemoteAccessMode::Off | RemoteAccessMode::Lan)
-            || dns_name.is_some());
-    let tailscope_scope = remote_mode == RemoteAccessMode::Tailscale;
-    let serve_line = tailscope_scope
+    let show_urls =
+        remote_mode != RemoteAccessMode::Funnel && (!tailscale_enabled || dns_name.is_some());
+    let serve_line = tailscale_enabled
         .then(|| remote_access::serve_text(&store.serve_state(), server.is_running()));
     drop(snapshot);
 
@@ -116,19 +116,6 @@ pub fn SettingsView() -> Element {
                         on_checked_change: move |value| store.set_auto_start(value),
                     }
                 }
-                ToggleRow {
-                    title: "Allow LAN connections".to_owned(),
-                    hint: Some(
-                        "Bind on all interfaces so another machine on the network can render overlays. \
-                         Mirrors Local network in Remote access; loopback-only is safer."
-                            .to_owned(),
-                    ),
-                    Switch {
-                        checked: settings.overlay.allow_lan,
-                        aria_label: "Allow LAN connections",
-                        on_checked_change: move |value| store.set_allow_lan(value),
-                    }
-                }
                 Field {
                     label: "Asset URLs".to_owned(),
                     hint: Some(
@@ -154,22 +141,30 @@ pub fn SettingsView() -> Element {
             }
             Panel {
                 title: "Remote access".to_owned(),
-                description: "Who can open the overlays, and where to point OBS.".to_owned(),
-                Field {
-                    label: "Access scope".to_owned(),
-                    hint: Some("Tailscale unlocks when its client is connected and serves overlays at /fgc; Funnel comes later.".to_owned()),
-                    select {
-                        class: "fgc-native-select",
-                        value: remote_access::mode_value(remote_mode),
-                        aria_label: "Remote access scope",
-                        onchange: move |event| {
-                            let mode = remote_access::mode_from_value(&event.value());
-                            store.set_remote_access(mode);
-                        },
-                        option { value: "off", "This PC (loopback only)" }
-                        option { value: "lan", "Local network" }
-                        option { value: "tailscale", disabled: !tailscale_ready, "Tailscale" }
-                        option { value: "funnel", disabled: true, "Funnel (coming later)" }
+                description: "Choose who can open the overlays. Both switches can be on.".to_owned(),
+                ToggleRow {
+                    title: "Local network".to_owned(),
+                    hint: Some(
+                        "Lets other devices on this network open the overlays. Windows firewall must allow the app on private networks."
+                            .to_owned(),
+                    ),
+                    Switch {
+                        checked: local_enabled,
+                        aria_label: "Local network access",
+                        on_checked_change: move |value| store.set_local_network(value),
+                    }
+                }
+                ToggleRow {
+                    title: "Tailscale".to_owned(),
+                    hint: Some(
+                        "Serves overlays on your tailnet at /fgc and /. Needs a connected Tailscale client."
+                            .to_owned(),
+                    ),
+                    Switch {
+                        checked: tailscale_enabled,
+                        disabled: !tailscale_ready,
+                        aria_label: "Tailscale remote access",
+                        on_checked_change: move |value| store.set_tailscale(value),
                     }
                 }
                 Field {

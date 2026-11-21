@@ -468,15 +468,16 @@ because the browser was on the host PC.
 honest UI-first slice for the first C3 item instead of pulling client detection
 and serve lifecycle forward.
 
-- **Persisted scope.** `OverlaySettings.remoteAccess` stores `off`, `lan`,
+- **Persisted mode.** `OverlaySettings.remoteAccess` stores `off`, `lan`,
   `tailscale` or `funnel` in the versioned state file. The existing `allowLan`
   flag stays the bind source of truth; validation maps an older `allowLan: true`
-  save to the LAN scope, and both the LAN switch and the selector keep the two
-  fields in sync.
+  save to LAN mode, and the LAN switch keeps the two fields in sync. The
+  selector used by this first slice was removed in D8-8.
 - **What is live.** Off (loopback) and LAN work exactly as before, including a
-  listener restart when the scope changes. Settings shows the active scope,
-  server state and base URL (the URL stays masked while URLs are hidden), plus
-  the shared Browser Source panel with copy and Open in browser actions.
+  listener restart when access settings change. Settings shows the active
+  access state, server state and base URL (the URL stays masked while URLs are
+  hidden), plus the shared Browser Source panel with copy and Open in browser
+  actions.
 - **What was deliberately not live at the time.** Funnel stayed disabled and
   Tailscale was disabled until detection landed in D8-3. Neither mode bound a
   different interface or generated a remote URL, and no `tailscale serve` or
@@ -494,9 +495,9 @@ and serve lifecycle forward.
   `BackendState` plus `Self.DNSName` and `Self.Online` become not installed,
   stopped, needs login, or connected. Each non-ready state has a plain remedy
   and a Refresh button; nothing is installed or bundled.
-- **Scope unlock.** Tailscale becomes selectable only when the client reports
-  `Running`. Selecting it still left the local server in place at this point:
-  remote serving arrived in D8-4. Funnel stays disabled.
+- **Switch unlock.** The Tailscale switch is enabled only when the client
+  reports `Running`. Turning it on still left the local server in place at this
+  point: remote serving arrived in D8-4. Funnel stays unavailable.
 - **Privacy and safety.** Only the short version, this device's MagicDNS name
   and its online flag are displayed. Peer lists, auth URLs and keys are not.
   No serve, funnel or reset command was issued at this stage.
@@ -507,7 +508,7 @@ and serve lifecycle forward.
 
 **Status: D8-4 done 2026-11-21; the `/` path was added with D8-6 the same day.**
 
-- **Start.** In Tailscale scope, starting or restarting the overlay server runs
+- **Start.** With Tailscale on, starting or restarting the overlay server runs
   `tailscale serve --bg --yes --https=443 --set-path <path> http://127.0.0.1:<port>`
   for `/fgc` and `/` on a blocking task. `--bg` lets the CLI return while
   tailscaled keeps the config; `--yes` prevents an interactive prompt. The local
@@ -526,8 +527,8 @@ and serve lifecycle forward.
   one, but any pre-existing root Serve handler on this node is taken over while
   the app serves and is not restored by teardown. The owner approved this
   tradeoff so all seven overlays work without editing the frozen five.
-- **Teardown.** Stopping the server, changing scope away from Tailscale, and
-  dropping the app root all run
+- **Teardown.** Stopping the server, switching Tailscale off, and dropping the
+  app root all run
   `tailscale serve --yes --https=443 --set-path <path> off` for both paths. Exit
   teardown is synchronous because spawned tasks may not finish during shutdown.
 - **Isolation.** Only these two paths are removed. The port-wide `off` and
@@ -546,21 +547,21 @@ and serve lifecycle forward.
 
 - **Shapes.** Tailscale uses `https://<dnsname>/fgc/overlays/<file>.html` from
   this device's MagicDNS name, with no `?port=`. LAN keeps
-  `http://<lan-ip>:<port>/overlays/<file>.html`; This PC keeps
-  `http://127.0.0.1:<port>/overlays/<file>.html`. The same base URL drives
-  served asset URLs, so an overlay loaded through `/fgc` asks for
+  `http://<lan-ip>:<port>/overlays/<file>.html`; with both switches off,
+  loopback keeps `http://127.0.0.1:<port>/overlays/<file>.html`. The same base
+  URL drives served asset URLs, so an overlay loaded through `/fgc` asks for
   `/fgc/assets/...` instead of a localhost address on the OBS machine.
 - **Timing.** Detection runs once when the store is created, not only when
   Settings mounts, so a launch straight into Overlay still gets remote URLs.
-  A persisted Tailscale scope with auto-start waits for that first result;
+  A persisted Tailscale setting with auto-start waits for that first result;
   otherwise the server would begin with local asset URLs. Until the DNS name is
   known, Settings says "waiting for Tailscale address" instead of inventing a
   URL; when it arrives the base URL is refreshed and projected frames are
   resent. The last known detection is kept during a manual Refresh so URLs do
   not flicker out of the panel.
-- **Funnel stays hidden.** Funnel is still disabled in the selector, so it
-  keeps its pending notice and local URLs. The token belongs only in future
-  Funnel URLs (D8-5) and is never added to Tailscale URLs.
+- **Funnel stays hidden.** Funnel is not offered in the two-switch UI, so a
+  persisted value keeps its pending notice and local URLs. The token belongs
+  only in future Funnel URLs (D8-5) and is never added to Tailscale URLs.
 - **Reachability.** The `/` Serve handler described above is part of making
   these URLs usable: it is what lets the five frozen overlays keep their
   WebSocket after the page loads under `/fgc`.
@@ -569,36 +570,73 @@ and serve lifecycle forward.
 
 ## Remote overlay docs and QA (2026-11-21)
 
-**Status: D8-7 in progress. Wiki source and runbook drafted; three device tests
-await owner results.**
+**Status: D8-7 in progress. A44 now has owner evidence; A42 and A45 await owner
+results. D8-8 completed the settings clean-up after this documentation pass.**
 
 - **Wiki framing.** The public wiki is still the v1.0.0 guide, so the new
   [Remote overlays](wiki/Remote-Overlays) page opens with a clear post-v1 note:
   published v1.0.0 has loopback and LAN behaviour through **Allow LAN
-  connections** but no scope selector, Funnel is not implemented, and Tailscale
-  scope applies to later builds. Settings, Overlays in OBS,
+  connections** but no Remote access panel or Tailscale serving; Funnel is not
+  implemented; Tailscale applies to later builds. Settings, Overlays in OBS,
   Troubleshooting and FAQ keep their v1 wording and cross-link the new page
   instead of claiming that the released version has remote serving.
-- **Content.** The page covers Tailscale detection, tailnet ACLs and HTTPS
-  prerequisites, the Windows firewall rule for LAN, exact `/fgc` URL shapes,
-  why the companion `/` handler exists, the exposure tradeoff where a prior
-  root handler is taken over and not restored, targeted teardown, and the
-  failure modes from the design notes. No public Funnel URL is promised.
-- **Runbook.** §7 adds A42–A46. A42 repeats LAN access through the new scope on
-  a second PC; A44 uses a second tailnet device; A45 uses a phone on cellular.
-  A43 checks the host's URLs, Serve paths and WebSocket. A46 checks that every
-  teardown removes only `/fgc` and `/`. A5 remains the owner's pass for the
-  v1.0.0 LAN UI and is not rewritten as a new result.
+- **Content.** The page describes the two independent **Local network** and
+  **Tailscale** switches, tailnet ACLs and HTTPS prerequisites, the Windows
+  firewall rule for LAN, exact `/fgc` URL shapes, why the companion `/` handler
+  exists, the exposure tradeoff where a prior root handler is taken over and
+  not restored, targeted teardown, and the failure modes from the design notes.
+  No public Funnel URL is promised.
+- **Runbook.** §7 adds A42–A47. A42 repeats LAN access through the **Local
+  network** switch on a second PC; A44 uses a second tailnet device; A45 uses a
+  phone on cellular. A43 checks the host's URLs, Serve paths and WebSocket. A46
+  checks that every teardown removes only `/fgc` and `/`. A47 checks the
+  two-switch settings model and the absence of a CLI console. A5 remains the
+  owner's pass for the v1.0.0 LAN UI and is not rewritten as a new result.
 - **Evidence rule.** Same-host HTTPS and WebSocket probes prove the Serve path
-  and the local server, not a remote device. A43 is marked host-side only, and
-  A42/A44/A45 stay Pending until the owner supplies results from the named
-  environments. The register records the exact QA `app.json` hash before and
-  after so post-v1 checks do not disturb the release fixture.
+  and the local server, not a remote device. A43 is marked host-side only. A44
+  is Pass from the owner's OBS report on another computer: "I have tested the
+  Tailscale overlays on another computer in OBS, and everything seems to be
+  working fine for now." The device/OS, exact URL, screenshot and WebSocket log
+  were not supplied, so those gaps are recorded rather than assumed. A42 and
+  A45 stay Pending until the owner supplies results from the named environments.
+  The register records the exact QA `app.json` hash before and after so post-v1
+  checks do not disturb the release fixture.
 - **Teardown wording.** "Empty" means no app handlers remain. Because the app
   deliberately preserves other Serve paths, `tailscale serve status` only
   reports `No serve config` on a node with no other handlers. The evidence
-  shows an unrelated `/other` handler surviving every teardown.
-- **Next.** Owner results for A42, A44 and A45; D8-5 gated Funnel afterwards.
+  shows an unrelated `/other` handler surviving every teardown and a clean node
+  returning `No serve config` after both Tailscale switch-off and Stop server.
+- **Next.** Owner results for A42 and A45; D8-5 gated Funnel afterwards.
+
+## Remote-access switches and a quiet Tailscale CLI (2026-11-21)
+
+**Status: D8-8 done 2026-11-21. No state schema or overlay change.**
+
+- **Problem.** The owner reported brief CMD popups during Tailscale CLI calls
+  and said the settings were unclear: an **Allow LAN connections** button sat
+  alongside an **Access scope** selector, and Tailscale and local access should
+  be available at the same time.
+- **Settings decision.** One **Remote access** panel now has two independent
+  switches. **Local network** keeps using `overlay.allow_lan` as the bind source
+  of truth; **Tailscale** keeps using `overlay.remote_access == Tailscale` as
+  the Serve gate. `set_local_network` and `set_tailscale` no longer clear each
+  other, and the status line can read **Local network + Tailscale**. The
+  duplicate LAN switch and the **Access scope** selector are gone. No new field
+  was added, so the QA `app.json` hash stays
+  `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+- **Console decision.** On Windows, every Tailscale CLI process is created with
+  `CREATE_NO_WINDOW`. Detection and Serve calls remain direct `tailscale.exe`
+  children, so no `cmd.exe` or `conhost.exe` helper window is created. A
+  process watch during repeated Refresh calls saw only `status --json` and
+  `version` invocations with the app as parent.
+- **What stayed.** The root `/` Serve handler remains because the frozen
+  overlays dial the WebSocket at the page root. Teardown still removes only
+  `/fgc` and `/`, never uses `tailscale serve reset`, and leaves Local network
+  untouched when Tailscale is switched off.
+- **Evidence.** Runbook A47 records CDP checks of both switches and the absence
+  of stale controls, the combined persisted state, the seven `/fgc` URLs, the
+  process watch, and clean Serve teardown. Build, lint and tests pass, as does
+  `dx build --desktop`. Funnel remains unimplemented.
 
 ## Asset cleanup guarded against a failed load (2026-11-15)
 

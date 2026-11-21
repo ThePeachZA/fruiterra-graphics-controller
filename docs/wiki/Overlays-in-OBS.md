@@ -70,7 +70,8 @@ The default is `3001`. Use a port between 1 and 65535.
 
 By default the server accepts connections from this PC only.
 
-1. Open **Settings** and turn on **Allow LAN connections**.
+1. In v1.0.0, open **Settings** and turn on **Allow LAN connections**. In
+   post-v1 builds, turn on **Settings → Remote access → Local network**.
 2. Allow the Windows Firewall prompt for **private networks**. The show network
    must be set to **Private** in Windows, not **Public**.
 3. On the other machine, replace `127.0.0.1` in the overlay URL with this PC's
@@ -85,11 +86,11 @@ port on public networks or to any remote address.
 > the overlay state and load the overlays. Use LAN mode only on a network you
 > trust, and turn it off when you are finished.
 
-In post-v1 builds, **Settings → Remote access → Access scope → Local network**
-does the same job as **Allow LAN connections**. Those builds can also share
-overlays through your own Tailscale client at
-`https://<dnsname>/fgc/overlays/<file>.html`; that scope is **not** in the
-published v1.0.0 release. See [Remote overlays](Remote-Overlays).
+In post-v1 builds, **Settings → Remote access → Local network** does the same
+job as **Allow LAN connections**. **Tailscale** is a separate switch in the
+same panel; both switches can be on at once. Tailscale shares overlays through
+your own client at `https://<dnsname>/fgc/overlays/<file>.html` and is **not**
+in the published v1.0.0 release. See [Remote overlays](Remote-Overlays).
 
 ## Third-party and custom overlays
 

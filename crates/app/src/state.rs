@@ -259,17 +259,24 @@ impl AppStore {
         remote_access::base_url(&self.state.peek(), dns_name.as_deref())
     }
 
-    /// True while auto-start is waiting for the first Tailscale address.
+    /// True while Tailscale-only auto-start is waiting for the first address.
     fn needs_tailscale_address(&self) -> bool {
-        self.state.peek().settings.overlay.remote_access == RemoteAccessMode::Tailscale
-            && self.tailscale_status().is_none()
+        let (tailscale, local) = {
+            let state = self.state.peek();
+            (
+                remote_access::is_tailscale_enabled(&state),
+                remote_access::is_local_enabled(&state),
+            )
+        };
+        tailscale && !local && self.tailscale_status().is_none()
     }
 
     /// True when a Tailscale auto-start can run now that detection has returned.
     fn should_start_after_detection(&self) -> bool {
-        let overlay = &self.state.peek().settings.overlay;
+        let state = self.state.peek();
+        let overlay = &state.settings.overlay;
         overlay.auto_start
-            && overlay.remote_access == RemoteAccessMode::Tailscale
+            && remote_access::is_tailscale_enabled(&state)
             && !self.server.is_running()
             && !self.server.busy()
     }
@@ -383,52 +390,40 @@ impl AppStore {
         self.apply_network_change();
     }
 
-    /// Enables or disables binding on the LAN interface.
-    ///
-    /// The existing switch and the new Remote access selector share one bind
-    /// flag, so both stay in sync.
-    pub fn set_allow_lan(&self, allow_lan: bool) {
-        let scope = if allow_lan {
-            RemoteAccessMode::Lan
-        } else {
-            RemoteAccessMode::Off
-        };
-        let (allow_lan_now, mode_now) = {
-            let state = self.state.peek();
-            (
-                state.settings.overlay.allow_lan,
-                state.settings.overlay.remote_access,
-            )
-        };
-        if allow_lan_now == allow_lan && mode_now == scope {
+    /// Enables or disables local network access without changing Tailscale.
+    pub fn set_local_network(&self, enabled: bool) {
+        let current = self.state.peek().settings.overlay.allow_lan;
+        if current == enabled {
             return;
         }
         self.mutate(move |state| {
-            state.settings.overlay.allow_lan = allow_lan;
-            state.settings.overlay.remote_access = scope;
+            let overlay = &mut state.settings.overlay;
+            overlay.allow_lan = enabled;
+            if !enabled && overlay.remote_access == RemoteAccessMode::Lan {
+                overlay.remote_access = RemoteAccessMode::Off;
+            } else if enabled && overlay.remote_access == RemoteAccessMode::Off {
+                overlay.remote_access = RemoteAccessMode::Lan;
+            }
         });
         self.apply_network_change();
     }
 
-    /// Selects who can reach the overlay server.
-    ///
-    /// Tailscale and Funnel are visible but disabled in the UI until their
-    /// detection and serve-lifecycle items land.
-    pub fn set_remote_access(&self, mode: RemoteAccessMode) {
-        let (allow_lan_now, mode_now) = {
-            let state = self.state.peek();
-            (
-                state.settings.overlay.allow_lan,
-                state.settings.overlay.remote_access,
-            )
-        };
-        let lan = matches!(mode, RemoteAccessMode::Lan);
-        if mode_now == mode && allow_lan_now == lan {
+    /// Enables or disables Tailscale Serve without changing local network access.
+    pub fn set_tailscale(&self, enabled: bool) {
+        let active =
+            self.state.peek().settings.overlay.remote_access == RemoteAccessMode::Tailscale;
+        if active == enabled {
             return;
         }
         self.mutate(move |state| {
-            state.settings.overlay.remote_access = mode;
-            state.settings.overlay.allow_lan = lan;
+            let overlay = &mut state.settings.overlay;
+            overlay.remote_access = if enabled {
+                RemoteAccessMode::Tailscale
+            } else if overlay.allow_lan {
+                RemoteAccessMode::Lan
+            } else {
+                RemoteAccessMode::Off
+            };
         });
         self.apply_network_change();
     }
@@ -2152,17 +2147,17 @@ impl AppStore {
     }
 
     /// Installs or removes this app's Serve handlers to match the current
-    /// scope. `server_will_run` is the desired listener state; handlers are
-    /// only installed when the server is running and Tailscale is selected.
+    /// switches. `server_will_run` is the desired listener state; handlers are
+    /// only installed when the server is running and Tailscale is enabled.
     fn sync_tailscale_serve(&self, server_will_run: bool) {
-        let (mode, port) = {
+        let (tailscale, port) = {
             let state = self.state.peek();
             (
-                state.settings.overlay.remote_access,
+                remote_access::is_tailscale_enabled(&state),
                 state.settings.overlay.port,
             )
         };
-        if mode == RemoteAccessMode::Tailscale && server_will_run {
+        if tailscale && server_will_run {
             let mut serve = self.serve;
             spawn(async move {
                 let result = tokio::task::spawn_blocking(move || {
@@ -2334,7 +2329,8 @@ impl AppStore {
         let cleanup_allowed = self.cleanup_allowed;
         use_drop(move || {
             // Released before the runtime shuts down so a Tailscale handler
-            // cannot outlive the app. Only `/fgc` is touched.
+            // cannot outlive the app. Only this app's `/fgc` and `/` paths are
+            // touched.
             crate::tailscale::find_executable()
                 .and_then(|executable| crate::tailscale::stop_serve(&executable).err())
                 .inspect(|error| warn!(%error, "failed to tear down Tailscale Serve on exit"));

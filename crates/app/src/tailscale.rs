@@ -107,6 +107,22 @@ fn program_files_roots() -> Vec<PathBuf> {
     Vec::new()
 }
 
+/// Builds a CLI command that does not open a console window on Windows.
+fn new_cli_command(executable: &Path) -> Command {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+
+        let mut command = Command::new(executable);
+        command.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
+        command
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Command::new(executable)
+    }
+}
+
 /// Reads the installed client once. Callers run this on a blocking task.
 #[must_use]
 pub fn detect() -> TailscaleStatus {
@@ -132,7 +148,7 @@ fn detect_from(executable: &Path) -> TailscaleStatus {
 }
 
 fn read_version(executable: &Path) -> Option<String> {
-    let output = Command::new(executable).arg("version").output().ok()?;
+    let output = new_cli_command(executable).arg("version").output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -144,7 +160,7 @@ fn read_version(executable: &Path) -> Option<String> {
 }
 
 fn read_status(executable: &Path) -> Result<Value, String> {
-    let output = Command::new(executable)
+    let output = new_cli_command(executable)
         .args(["status", "--json"])
         .output()
         .map_err(|error| format!("could not start Tailscale: {error}"))?;
@@ -243,7 +259,7 @@ fn set_serve_path(executable: &Path, path: &str, target: Option<u16>) -> Result<
         None => arguments.push("off".to_owned()),
     }
 
-    let output = Command::new(executable)
+    let output = new_cli_command(executable)
         .args(&arguments)
         .output()
         .map_err(|error| format!("could not configure Tailscale Serve at {path}: {error}"))?;
