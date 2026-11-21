@@ -915,7 +915,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | §C group | IDE-022 | idea | triaged | UI and UX roadmap (§C) |
 | §C group | IDE-023 | idea | triaged | Platform and delivery roadmap (§C) |
 | Follow-up note | CHR-004 | chore | closed · done | Font A/B review checkpoint |
-| Owner request | IDE-004 | idea | started | Auto-overlay scene switcher (auto.html) |
+| Owner request | IDE-004 | idea | closed · done | Auto-overlay scene switcher (auto.html) |
 | Follow-up note | IDE-024 | idea | triaged | Protocol v2 review checkpoint |
 | Follow-up note | IDE-025 | idea | triaged | Tournament overlay review checkpoint |
 | Follow-up note | IMP-032 | improvement | triaged | Placeholder TAG image for empty slots |
@@ -983,3 +983,44 @@ unchanged, `tailscale serve status` was `No serve config`, and no screenshots
 were taken or published. The authoritative hashes remain
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`.
+
+## AA. Post-v1 auto-overlay scene switcher — IDE-004 / IMP-022 (2026-11-21)
+
+IDE-004 is closed · done. IMP-022 (B4, basic hotkeys) was closed · promoted
+into it, so there is one merged feature and no separate hotkey work elsewhere.
+One OBS Browser Source now loads the new `auto.html` page and shows exactly one
+iframe from the owner's included subset of the seven bundled overlays. The
+default session starts with only `game-overlay.html` included and active.
+
+`autoOverlay` is an additive wire section,
+`{ "type": "autoOverlay", "data": { "included": [...], "active": "..." | null } }`.
+The app broadcasts it on start, restart and every selection change, so it is
+also present in `init` and `/state` while the server runs. Nothing is added to
+`AppState` or `app.json`: selection and active state stay in Dioxus signals for
+the session. The seven frozen v1 overlays are unchanged; `auto.html` is a new
+post-v1 page that allow-lists only those seven filenames and sanitises both
+`included` and `active`.
+
+The Overlay view uses native checkboxes, native radios, a `role="status"` scene
+line and the existing `Panel` / `CollapsiblePanel` / `Disclosure` patterns. Keys
+`1`–`7` activate the overlay at that fixed bundled position when it is
+included; `ArrowLeft` and `ArrowRight` cycle the included subset. Handlers live
+only on the controller container, ignore form-control events, call
+`stop_propagation()` only for handled keys, and never install a global OS hook.
+Removing the active scene falls back to the first remaining included scene; an
+empty subset clears the active scene and hides every frame. The auto URL follows
+the same hidden/reveal and access-group rules as the other Browser Source
+URLs.
+
+A52 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real desktop
+WebView evidence at 1280×800 and 375×812: seeded state, connect and reconnect
+client counts, scoped hotkeys and excluded-scene no-ops, active-scene fallback
+and empty subset, restart reseeding, status and disclosure accessibility, hidden
+and revealed URL, eight-source count, and no feature overflow at either width.
+Two defects found in that run were fixed and re-verified before sign-off. No
+schema, persisted state, v1 overlay, Funnel setting or public exposure changed.
+No screenshots were taken or published; the authoritative QA hashes remain
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` remained `No serve config`.

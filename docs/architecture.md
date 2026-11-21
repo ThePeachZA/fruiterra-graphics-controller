@@ -107,6 +107,8 @@ pub fn timer_tick(settings: &TimerSettings, hours: u32, minutes: u32, seconds: u
     -> Message<TimerPayload>;
 pub fn timer_action(action: TimerActionDto) -> Message<TimerPayload>;
 pub fn show(visible: bool) -> ShowMessage;
+pub fn auto_overlay(included: Vec<String>, active: Option<String>)
+    -> Message<AutoOverlayDto>;
 
 pub struct SectionCache { /* BTreeMap<String, Value> */ }
 impl SectionCache {

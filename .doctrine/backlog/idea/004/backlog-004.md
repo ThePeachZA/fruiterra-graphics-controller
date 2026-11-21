@@ -45,3 +45,14 @@ useful only in that controller, so the two requests are one feature.
 - Verify in the real desktop WebView at 1280×800 and 375×812, including the
   hotkeys, hidden URL state, reconnect after server restart and no horizontal
   overflow.
+
+## Result
+
+Closed · done on 2026-11-21. The merged feature adds one post-v1 `auto.html`
+Browser Source, the session-only `autoOverlay` wire section and the scoped
+in-app controller. The seven v1 overlays and the persisted schema are unchanged.
+A52 in `docs/manual-qa.md` and `docs/manual-qa-runbook.md` records the real
+desktop WebView evidence at both viewports, including scoped hotkeys, excluded
+no-ops, active fallback, empty subset, restart reseed and reconnect, hidden and
+revealed URL, status/disclosure accessibility and no feature overflow. Two
+defects found in that run were fixed and re-verified before sign-off.

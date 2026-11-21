@@ -3217,3 +3217,71 @@ scroll they were hit-testable and Stop worked. The isolated and authoritative
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
 `tailscale serve status` was `No serve config`, and the harness was deleted.
+
+---
+
+### A52 — Auto-overlay scene switcher and controller hotkeys
+
+**Covers:** IDE-004, IMP-022 (B4 merged into IDE-004)
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Use an
+   isolated `APPDATA` and WebView user-data folder copied from the QA fixture
+   so the authoritative `app.json` files are never opened by the run.
+2. At 1280×800, confirm the Overlay view's controller starts with only
+   `game-overlay.html` included and active; `/state` reports
+   `autoOverlay: {included:["game-overlay.html"],active:"game-overlay.html"}`.
+   Start the server and open one Browser Source target for
+   `http://127.0.0.1:3001/overlays/auto.html`. Confirm the page connects,
+   `/health` moves from `0` to `2` clients (auto page plus its iframe), and only
+   the active frame has `data-visible="true"`.
+3. Include `map-select.html` and confirm its hidden iframe is added. Focus the
+   controller container, press `2`, and confirm the active scene, radio, status
+   and visible frame all follow. Press `4` while that file is excluded and
+   confirm no state or frame changes. Use `ArrowRight` and `ArrowLeft` and
+   confirm wrapping through the included subset. Focus a control outside the
+   controller and press `1`; confirm the scene does not change.
+4. Uncheck the active scene and confirm the active scene falls back to the
+   first remaining included file. Uncheck every scene and confirm no frame is
+   visible and the status reads `Active scene: none — include at least one
+   overlay`. Verify the status has `role="status"` and that the AX tree exposes
+   the controller, group, checkbox, radio and status names. Real-click the
+   native `details` summary and confirm the shortcut text opens.
+5. Include `hero-bans.html` and `row-casters.html`, press `7` with the
+   controller focused, then press **Restart**. Confirm the server reseeds the
+   same session-only selection, `/health` briefly drops to `0` and returns to
+   `5`, the UI reads `Running · 5 clients`, and the auto page again shows only
+   `row-casters.html`.
+6. Confirm the auto Browser Source row renders `URL hidden` before reveal and
+   `http://192.168.50.121:3001/overlays/auto.html` after **Show URLs**, and
+   that the count reads `8 sources`.
+7. Check 1280×800 and 375×812. Confirm `document.scrollWidth == innerWidth`,
+   the scene grid is two columns at 1280 and one at 375, and the controller and
+   status stay inside the viewport. Confirm the only horizontal offender at
+   375 is the pre-existing debug hot-reload toast.
+8. Stop the server and app, recheck the authoritative hashes and
+   `tailscale serve status`, then delete the isolated harness.
+
+**Evidence:** CDP DOM, computed-style, accessibility-tree, `role="status"`,
+`/state`, `/health` and real keyboard/pointer snapshots at 1280×800 and
+375×812; no screenshots were taken or published.
+
+**Result: Pass — assistant 2026-11-21.** The run used WebView2 158.0.4370.33
+and app PID 38348. The default seed, connect, fixed-position hotkey `2`,
+excluded `4` no-op, arrow wrapping, outside-controller no-op, active-scene
+fallback, empty subset, native `details` and labelled AX nodes all matched the
+design. Restart reseeded `hero-bans.html` and `row-casters.html` with
+`row-casters.html` active while `/health` went `5` → `0` → `5` and the UI showed
+`Running · 5 clients`. The hidden auto URL, eight-source count and responsive
+layout were verified at both widths: `scrollWidth == innerWidth == 1280` with
+grid `589.328px 294.656px`, and `scrollWidth == innerWidth == 375` with scene
+and URL grids `207px`. Two real defects found during the run were fixed and
+re-verified before this result: removing the active scene left no active scene
+despite remaining included files, and excluded frames could retain
+`data-visible="true"`. The isolated and authoritative
+`app.json`/`app.json.bak` hashes stayed at
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
+`tailscale serve status` was `No serve config`, and no screenshots were taken.
