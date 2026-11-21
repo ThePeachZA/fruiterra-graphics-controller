@@ -402,16 +402,17 @@
     };
 
     let gameModeIcons = {};
-    let firstTo = 3;
     let currentMapIndex = -1;
     let loserPicks = true;
     let animationsTriggered = false;
     const TIEBREAKER_INDEX = 7;
 
-    function getMapsToShow(maps, firstToValue, currentIdx) {
-      const baseMaps = (firstToValue || 3) * 2 - 1;
-      const isTiebreakerCurrent = currentIdx === TIEBREAKER_INDEX;
-      return isTiebreakerCurrent ? baseMaps + 1 : baseMaps;
+    // The projected maps array is the source of truth. The legacy tiebreaker
+    // only adds a card when the old seven-map boundary is selected as current.
+    function projectedMapCardCount(maps) {
+      const isLegacyTiebreaker =
+        maps.length === TIEBREAKER_INDEX && currentMapIndex === TIEBREAKER_INDEX;
+      return isLegacyTiebreaker ? TIEBREAKER_INDEX + 1 : maps.length;
     }
 
     function triggerAnimations() {
@@ -518,7 +519,7 @@
     function updateMapsContainer(maps, teamAData, teamBData) {
       el.mapsContainer.innerHTML = '';
 
-      const mapsToShow = getMapsToShow(maps, firstTo, currentMapIndex);
+      const mapsToShow = projectedMapCardCount(maps);
 
       for (let i = 0; i < mapsToShow; i++) {
         const mapData = maps[i] || { name: '', type: '', scoreA: 0, scoreB: 0, mapImageUrl: '', completed: false, chosenByName: null };
@@ -572,10 +573,6 @@
       }
 
       if (data.type === 'scoreboard' || data.type === 'gameOverlay' || data.type === 'mapSelect') {
-        if (d.firstTo) {
-          firstTo = d.firstTo;
-        }
-
         if (d.currentMapIndex !== undefined) {
           currentMapIndex = d.currentMapIndex;
         }

@@ -140,7 +140,7 @@ part.
 | D8-4 | Serve lifecycle | **Done 2026-11-21.** With the Tailscale switch on, starting the server installs two handlers, `/fgc` for pages and assets and `/` for the WebSocket endpoint that five frozen overlays dial at the root: `tailscale serve --bg --yes --https=443 --set-path <path> http://127.0.0.1:<port>`. Stopping the server, switching Tailscale off, or exiting removes only those two paths with targeted `--set-path <path> off`, leaving other handlers intact. A missing handler is treated as success and `tailscale serve reset` is never used. Settings shows the active/failed state. See `docs/decisions.md`. |
 | D8-5 | Funnel (explicit opt-in) | The same path prefix through `tailscale funnel` on 443. Requires HTTPS certificates and Funnel permission in the ACL. Confirmation dialog naming the public exposure, plus an unguessable path token. Resets to off on every launch. |
 | D8-6 | URL generation | **Done 2026-11-21.** Tailscale: `https://<dnsname>/fgc/overlays/<file>.html` with no `?port=`, shown once detection supplies the MagicDNS name and on the Overlay, Settings and Match Controller → Config pages. LAN: `http://<lan-ip>:<port>/overlays/<file>.html`; both switches off: `http://127.0.0.1:<port>/overlays/<file>.html`. When both switches are on, both URL sets are listed side by side. Served asset URLs continue to use the single primary base. Funnel is not offered in the two-switch UI; a persisted value only shows a pending notice and local URLs until D8-5 is designed, and no token appears in Tailscale URLs. A companion `/` Serve handler is installed so the five frozen overlays can still reach their root WebSocket. See `docs/decisions.md`. |
-| D8-7 | Docs and QA | **Done 2026-11-21.** Wiki source page "Remote overlays" added and clearly labelled post-v1; LAN, Settings, OBS, Troubleshooting and FAQ pages cross-link it without claiming v1.0.0 has Tailscale. Runbook §7 adds A42–A47 for a second LAN PC, a tailnet device, a phone on cellular, host-side URL/Serve checks, teardown and the two-switch/console clean-up. A42–A48 are now Pass: A42 from the owner's Windows 11/OBS 33.0.1 LAN result, A44 from the owner's second-tailnet-device OBS report with noted evidence gaps, A45 from the owner's Samsung S25 FE cellular result, and A43/A46/A47/A48 from assistant evidence. Teardown evidence shows only `/fgc` and `/` are removed and a clean node reports `No serve config`. The A45 map-count observation is post-v1 work tracked as **ISS-001** (§W). |
+| D8-7 | Docs and QA | **Done 2026-11-21.** Wiki source page "Remote overlays" added and clearly labelled post-v1; LAN, Settings, OBS, Troubleshooting and FAQ pages cross-link it without claiming v1.0.0 has Tailscale. Runbook §7 adds A42–A47 for a second LAN PC, a tailnet device, a phone on cellular, host-side URL/Serve checks, teardown and the two-switch/console clean-up. A42–A48 are now Pass: A42 from the owner's Windows 11/OBS 33.0.1 LAN result, A44 from the owner's second-tailnet-device OBS report with noted evidence gaps, A45 from the owner's Samsung S25 FE cellular result, and A43/A46/A47/A48 from assistant evidence. Teardown evidence shows only `/fgc` and `/` are removed and a clean node reports `No serve config`. The A45 map-count observation is post-v1 work tracked as **ISS-001** (§W), closed fixed after the later overlay verification. |
 | D8-8 | Remote-access settings clean-up | **Done 2026-11-21.** Replaced the duplicate LAN switch and **Access scope** selector with one **Remote access** panel containing two independent switches: **Local network** (existing `allowLan`) and **Tailscale** (existing `remoteAccess = Tailscale`). Both may be on; the status reads **Local network + Tailscale**. Windows Tailscale CLI calls now use `CREATE_NO_WINDOW`, so no CMD/CONHOST window pops during status/version/serve checks. No schema change; the QA `app.json` hash is preserved. Runbook A47 records CDP, process-watch and Serve evidence. |
 | D8-9 | Dual Browser Source URL sets and UI pass | **Done 2026-11-21.** `OverlayUrls` now derives every enabled URL set from state, so Local network and Tailscale appear as separate labelled groups when both switches are on. The served-asset base is unchanged. Remote access gained a two-card overview; Browser sources use per-path cards with hidden URLs and disabled copy/open actions until revealed. Native `details` disclosures were added to secondary sections across Settings, Overlay, Match Controller, Teams, Talent, Tournament and Assets. No schema, protocol or overlay change. |
 
@@ -791,15 +791,39 @@ reported:
 > was changed (the overlay should show based on how many maps are on the
 > "Maps & Bans" view.
 
-Tracked as Doctrine **ISS-001**, triaged/tagged `user-reported`, `post-v1`,
-`qa:a45`, `area:overlay`, `area:ui`, `map-count`, `needs-fix`. The current code
-labels every slot beyond `default_map_slots(first_to)` as `Tiebreaker`
-(`crates/app/src/views/match_controller.rs`) and `map-select.html` derives its
-card count from `firstTo` rather than the projected `maps` array
-(`getMapsToShow`). `crates/protocol/src/projection.rs` already sends every map,
-so no schema or payload change is expected.
+Tracked as Doctrine **ISS-001**, now closed · fixed and tagged `user-reported`,
+`post-v1`, `qa:a45`, `area:overlay`, `area:ui`, `map-count`, `fixed`, `verified`.
+The original code labelled every slot beyond `default_map_slots(first_to)` as
+`Tiebreaker` (`crates/app/src/views/match_controller.rs`) and `map-select.html`
+derived its card count from `firstTo` rather than the projected `maps` array
+(`getMapsToShow`). `crates/protocol/src/projection.rs` already sent every map,
+so no schema or payload change was needed.
 
-This is post-v1 work. The seven bundled overlay files remain frozen for v1.0.0;
-any edit needs the same explicit scoped-freeze decision used for A8/A9, or waits
-for a post-v1 release. A45 stays Pass — this is a separate map-count/label
-defect, not a remote-access failure.
+The post-v1 fix labels every slot `Map {index + 1}`, makes `map-select.html` use
+`maps.length` via `projectedMapCardCount(maps)`, and keeps the legacy extra card
+only for `maps.length === TIEBREAKER_INDEX && currentMapIndex === TIEBREAKER_INDEX`.
+`firstTo` state and `getMapsToShow` were removed from the
+overlay; no protocol, server runtime or v1.0.0 overlay change was made.
+`crates/server/tests/overlays.rs` gained
+`map_select_card_count_follows_projected_maps`, which rejects any return to a
+first-to-derived card count.
+
+Assistant verification: `cargo fmt --all -- --check`,
+`cargo check --workspace --all-targets`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace` and `dx build --desktop` passed. With `firstTo` held at
+1, CDP showed `1 map slot(s)` / `["Map 1"]` / `/state mapCount 1` before adding,
+then `4 map slot(s)` / `Map 1…4` / `mapCount 4` after three **+ Add map** clicks,
+then `8 map slot(s)` / `Map 1…8` / `mapCount 8` after four more; no `Tiebreaker`
+label appeared. The live overlay rendered four and then eight `.map-card`
+elements. At eight cards the 1920×1080 layout occupied `x = 200…1720`,
+`y = 271…871` with 20px gaps, document size `1920×1080` and no overflow. QA
+`app.json` and `app.json.bak` were restored to hashes
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`;
+`tailscale serve status` was `No serve config`, and no screenshots were taken
+or published.
+
+A45 stays Pass — this was a separate post-v1 map-count/label defect and is now
+fixed. The seven bundled overlay files remain frozen for v1.0.0; this edit is
+post-v1 only.

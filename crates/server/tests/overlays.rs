@@ -219,6 +219,26 @@ fn game_overlay_clears_stale_team_logos() {
 }
 
 #[test]
+fn map_select_card_count_follows_projected_maps() {
+    let text = overlay_text("map-select.html");
+
+    assert!(
+        text.contains("function projectedMapCardCount(maps)")
+            && text.contains("return isLegacyTiebreaker ? TIEBREAKER_INDEX + 1 : maps.length;"),
+        "map-select should render the projected maps array"
+    );
+    assert!(
+        !text.contains("getMapsToShow") && !text.contains("firstTo"),
+        "map-select must not derive its card count from first-to"
+    );
+    assert!(
+        text.contains("maps.length === TIEBREAKER_INDEX")
+            && text.contains("currentMapIndex === TIEBREAKER_INDEX"),
+        "map-select should keep the legacy tiebreaker card"
+    );
+}
+
+#[test]
 fn hero_bans_crops_portraits_inside_their_slots() {
     let text = overlay_text("hero-bans.html");
 

@@ -62,3 +62,44 @@ changed. The owner expects the overlay to show every map present in the
   `map-select.html` without changing first-to/format.
 - The legacy tiebreaker case still renders when selected as current map.
 - QA evidence includes before/after CDP or OBS captures plus `/state` excerpts.
+
+## Fix (post-v1, 2026-11-21)
+
+- `crates/app/src/views/match_controller.rs` now labels every slot
+  `Map {index + 1}`. An explicit saved name such as `Tiebreaker` stays in the
+  map-name field; the slot label no longer changes with `firstTo`.
+- `crates/server/overlays/map-select.html` uses the projected `maps.length` as
+  the card-count source of truth. The legacy extra card remains only when
+  `maps.length === TIEBREAKER_INDEX && currentMapIndex === TIEBREAKER_INDEX`.
+  The unused `firstTo` state and `getMapsToShow` are gone; no schema, protocol
+  payload, server runtime or v1.0.0 overlay change was made.
+- `crates/server/tests/overlays.rs` adds
+  `map_select_card_count_follows_projected_maps`, which pins the new function
+  and the legacy condition and rejects any return to `getMapsToShow`/`firstTo`.
+
+## Verification (assistant, 2026-11-21)
+
+- Checks passed: `cargo fmt --all -- --check`,
+  `cargo check --workspace --all-targets`,
+  `cargo clippy --workspace --all-targets -- -D warnings`,
+  `cargo test --workspace` and `dx build --desktop`.
+- CDP against the built app while `firstTo` stayed at 1: before adding maps,
+  Maps & Bans reported `1 map slot(s)` with labels `["Map 1"]` and `/state`
+  `mapSelect.maps.length = 1`. Three **+ Add map** clicks produced
+  `4 map slot(s)` with `["Map 1", "Map 2", "Map 3", "Map 4"]`, no
+  `Tiebreaker`, and `/state` `mapCount = 4`. Four more clicks produced
+  `8 map slot(s)` with `Map 1` through `Map 8`, still no `Tiebreaker`, and
+  `mapCount = 8`.
+- The live overlay at `http://127.0.0.1:3001/overlays/map-select.html` rendered
+  four `.map-card` elements after the first three additions and eight after the
+  next four, without changing format. In the eight-card check the 1920×1080
+  layout had cards at `x = 200…1720`, `y = 271…871`, 20px gaps, document size
+  `1920×1080` and no document overflow.
+- QA state was restored from the authoritative backup to `app.json`
+  `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+  `app.json.bak`
+  `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`.
+  `tailscale serve status` reported `No serve config`. No screenshots were
+  taken or published.
+
+**Status: closed · fixed.** A45 remains Pass; this was separate post-v1 work.

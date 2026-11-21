@@ -2861,6 +2861,24 @@ owner used **Add Map** during the check and reported that new slots were labelle
 changed. That is recorded as Doctrine **ISS-001** and `docs/backlog.md` §W; it
 is a separate post-v1 map-count finding and does not change the A45 Pass.
 
+**ISS-001 follow-up — assistant 2026-11-21.** The post-v1 fix labels every slot
+`Map {index + 1}` and makes `map-select.html` render `maps.length` cards via
+`projectedMapCardCount(maps)`, keeping the legacy extra card only for the old
+seven-map/current-tiebreaker case. With `firstTo` held at 1, CDP showed
+`1 map slot(s)` / `["Map 1"]` / `/state mapCount 1`, then `4 map slot(s)` /
+`Map 1…4` / `mapCount 4` after three **+ Add map** clicks, then `8 map slot(s)` /
+`Map 1…8` / `mapCount 8` after four more; no `Tiebreaker` label appeared. The
+live overlay rendered four and then eight `.map-card` elements; eight cards at
+1920×1080 occupied `x = 200…1720`, `y = 271…871`, 20px gaps, document
+`1920×1080`, no overflow. `map_select_card_count_follows_projected_maps` plus
+`cargo fmt --all -- --check`, `cargo check --workspace --all-targets`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`
+and `dx build --desktop` passed. QA `app.json`/`app.json.bak` were restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` /
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`;
+`tailscale serve status` was `No serve config`, and no screenshots were taken or
+published. A45 remains Pass.
+
 ---
 
 ### A46 — Serve teardown leaves no app handlers

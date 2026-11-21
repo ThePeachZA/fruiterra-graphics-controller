@@ -630,11 +630,7 @@ fn MapSelectionTab(match_state: Match) -> Element {
                         } else {
                             map.game_mode_name.clone()
                         };
-                        let label = if index >= expected_maps {
-                            "Tiebreaker".to_owned()
-                        } else {
-                            format!("Map {}", index + 1)
-                        };
+                        let label = format!("Map {}", index + 1);
                         rsx! {
                             Panel {
                                 key: "{index}",
