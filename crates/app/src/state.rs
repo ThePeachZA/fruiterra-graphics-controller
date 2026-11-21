@@ -45,7 +45,7 @@ use tracing::{debug, info, warn};
 
 use crate::assets_io::format_bytes;
 use crate::server::{ServerController, base_url_for, project_outbound, server_config};
-use crate::tailscale::{TailscaleState, TailscaleStatus};
+use crate::tailscale::{ServeState, TailscaleState, TailscaleStatus};
 
 /// How often dirty state is written to disk.
 const SAVE_INTERVAL: Duration = Duration::from_millis(500);
@@ -69,6 +69,8 @@ pub struct AppStore {
     notice: Signal<Option<String>>,
     /// Cached Tailscale client detection; `None` before the first result.
     tailscale: Signal<Option<TailscaleStatus>>,
+    /// State of this app's Tailscale Serve `/fgc` handler.
+    serve: Signal<ServeState>,
     /// Ephemeral UI state for revealing Browser Source URLs.
     reveal_urls: Signal<bool>,
     /// Cached data URLs for thumbnails, keyed by `hash:ext`.
@@ -112,6 +114,7 @@ impl AppStore {
         let last_error = use_signal(|| error);
         let notice = use_signal(|| None::<String>);
         let tailscale = use_signal(|| None);
+        let serve = use_signal(ServeState::default);
         let reveal_urls = use_signal(|| false);
         let thumb_urls = use_signal(HashMap::<String, String>::new);
 
@@ -128,6 +131,7 @@ impl AppStore {
             last_error,
             notice,
             tailscale,
+            serve,
             reveal_urls,
             thumb_urls,
             server,
@@ -161,6 +165,7 @@ impl AppStore {
             last_error: Signal::new(None),
             notice: Signal::new(None),
             tailscale: Signal::new(None),
+            serve: Signal::new(ServeState::Off),
             reveal_urls: Signal::new(false),
             thumb_urls: Signal::new(HashMap::new()),
             server: ServerController::test_controller(),
@@ -225,6 +230,12 @@ impl AppStore {
     #[must_use]
     pub fn tailscale_status(&self) -> Option<TailscaleStatus> {
         self.tailscale.cloned()
+    }
+
+    /// State of this app's Tailscale Serve handler.
+    #[must_use]
+    pub fn serve_state(&self) -> ServeState {
+        self.serve.cloned()
     }
 
     /// Reads the installed Tailscale client off the UI thread.
@@ -2058,11 +2069,13 @@ impl AppStore {
         let (config, base_url, outbound) = self.server_plan();
         self.server.set_base_url(base_url.clone());
         self.server.start(config, base_url, outbound);
+        self.sync_tailscale_serve(true);
     }
 
-    /// Stops the overlay server.
+    /// Stops the overlay server and removes this app's Tailscale handler.
     pub fn stop_server(&self) {
         self.server.stop();
+        self.sync_tailscale_serve(false);
     }
 
     /// Restarts the overlay server with the current settings.
@@ -2070,6 +2083,7 @@ impl AppStore {
         let (config, base_url, outbound) = self.server_plan();
         self.server.set_base_url(base_url.clone());
         self.server.restart(config, base_url, outbound);
+        self.sync_tailscale_serve(true);
     }
 
     fn apply_network_change(&self) {
@@ -2085,7 +2099,63 @@ impl AppStore {
 
         if self.server.is_running() {
             self.restart_server();
+        } else {
+            self.sync_tailscale_serve(false);
         }
+    }
+
+    /// Installs or removes this app's `/fgc` handler to match the current
+    /// scope. `server_will_run` is the desired listener state; a handler is
+    /// only installed when the server is running and the Tailscale scope is chosen.
+    fn sync_tailscale_serve(&self, server_will_run: bool) {
+        let (mode, port) = {
+            let state = self.state.peek();
+            (
+                state.settings.overlay.remote_access,
+                state.settings.overlay.port,
+            )
+        };
+        if mode == RemoteAccessMode::Tailscale && server_will_run {
+            let mut serve = self.serve;
+            spawn(async move {
+                let result = tokio::task::spawn_blocking(move || {
+                    match crate::tailscale::find_executable() {
+                        Some(executable) => crate::tailscale::start_serve(&executable, port),
+                        None => Err("Tailscale CLI not found".to_owned()),
+                    }
+                })
+                .await;
+                match result {
+                    Ok(Ok(())) => serve.set(ServeState::Active),
+                    Ok(Err(error)) => serve.set(ServeState::Failed(error)),
+                    Err(error) => {
+                        serve.set(ServeState::Failed(format!("Serve task failed: {error}")))
+                    }
+                }
+            });
+        } else {
+            self.remove_tailscale_serve();
+        }
+    }
+
+    /// Removes this app's handler on a blocking task.
+    fn remove_tailscale_serve(&self) {
+        let mut serve = self.serve;
+        spawn(async move {
+            let result =
+                tokio::task::spawn_blocking(|| match crate::tailscale::find_executable() {
+                    Some(executable) => crate::tailscale::stop_serve(&executable),
+                    None => Ok(()),
+                })
+                .await;
+            match result {
+                Ok(Ok(())) => serve.set(ServeState::Off),
+                Ok(Err(error)) => serve.set(ServeState::Failed(error)),
+                Err(error) => {
+                    serve.set(ServeState::Failed(format!("Teardown task failed: {error}")))
+                }
+            }
+        });
     }
 
     fn server_plan(&self) -> (ServerConfig, String, Vec<Outbound>) {
@@ -2216,6 +2286,11 @@ impl AppStore {
         let dirty = self.dirty;
         let cleanup_allowed = self.cleanup_allowed;
         use_drop(move || {
+            // Released before the runtime shuts down so a Tailscale handler
+            // cannot outlive the app. Only `/fgc` is touched.
+            crate::tailscale::find_executable()
+                .and_then(|executable| crate::tailscale::stop_serve(&executable).err())
+                .inspect(|error| warn!(%error, "failed to tear down Tailscale Serve on exit"));
             if *dirty.peek() {
                 let store = store.peek().clone();
                 let snapshot = state.cloned();

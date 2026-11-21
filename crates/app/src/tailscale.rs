@@ -1,12 +1,14 @@
-//! Tailscale client detection for the Remote access settings panel.
+//! Tailscale client detection and Serve lifecycle for Remote access.
 //!
 //! The app never bundles or installs Tailscale. It looks for the user's own
-//! CLI and reads only `tailscale status --json` and `tailscale version`. Every
-//! failure is a plain state the UI can explain, and no serve or funnel command
-//! is run here.
+//! CLI and reads only `tailscale status --json` and `tailscale version` for
+//! detection. Serve is limited to this app's `/fgc` path: starting installs a
+//! handler for the local overlay port, and stopping removes only that path.
+//! `tailscale serve reset` is never used because it would discard other
+//! services' configuration.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output};
 
 use serde_json::Value;
 
@@ -14,6 +16,23 @@ use serde_json::Value;
 const CLI_NAME: &str = "tailscale.exe";
 #[cfg(not(target_os = "windows"))]
 const CLI_NAME: &str = "tailscale";
+
+/// Path prefix this app owns on Tailscale Serve.
+pub const SERVE_PATH: &str = "/fgc";
+
+const SERVE_HTTPS_PORT: &str = "443";
+
+/// Result of the last Tailscale Serve operation for this app's path.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum ServeState {
+    /// No handler installed by this app.
+    #[default]
+    Off,
+    /// `/fgc` forwards to the local overlay server.
+    Active,
+    /// The last start or stop attempt failed.
+    Failed(String),
+}
 
 /// What the installed Tailscale client is doing.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -169,6 +188,72 @@ fn classify(value: &Value) -> TailscaleState {
     }
 }
 
+/// Installs this app's `/fgc` handler, forwarding to the local overlay server.
+///
+/// `--bg` lets the CLI return while tailscaled keeps the config. `--yes`
+/// prevents an interactive prompt. Callers must run this on a blocking task.
+pub fn start_serve(executable: &Path, port: u16) -> Result<(), String> {
+    let output = Command::new(executable)
+        .args([
+            "serve",
+            "--bg",
+            "--yes",
+            &format!("--https={SERVE_HTTPS_PORT}"),
+            &format!("--set-path={SERVE_PATH}"),
+            &format!("http://127.0.0.1:{port}/"),
+        ])
+        .output()
+        .map_err(|error| format!("could not start Tailscale Serve: {error}"))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(serve_error(&output))
+    }
+}
+
+/// Removes only this app's `/fgc` handler.
+///
+/// This deliberately targets one path instead of using `tailscale serve
+/// reset` or a port-wide `off`, so handlers installed by other software are
+/// preserved. A missing handler is treated as success, making teardown safe
+/// to call more than once.
+pub fn stop_serve(executable: &Path) -> Result<(), String> {
+    let output = Command::new(executable)
+        .args([
+            "serve",
+            "--yes",
+            &format!("--https={SERVE_HTTPS_PORT}"),
+            &format!("--set-path={SERVE_PATH}"),
+            "off",
+        ])
+        .output()
+        .map_err(|error| format!("could not stop Tailscale Serve: {error}"))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let error = serve_error(&output);
+    if missing_handler(&error) {
+        Ok(())
+    } else {
+        Err(error)
+    }
+}
+
+fn serve_error(output: &Output) -> String {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = stderr.trim();
+    if stderr.is_empty() {
+        format!("Tailscale Serve exited with status {}", output.status)
+    } else {
+        stderr.to_owned()
+    }
+}
+
+fn missing_handler(error: &str) -> bool {
+    let lowered = error.to_ascii_lowercase();
+    lowered.contains("handler does not exist") || lowered.contains("no serve config")
+}
+
 /// Short status line for the settings panel.
 #[must_use]
 pub fn summary(status: &TailscaleStatus) -> String {
@@ -258,6 +343,20 @@ mod tests {
             classify(&json!({ "BackendState": "Starting" })),
             TailscaleState::Unavailable { .. }
         ));
+    }
+
+    #[test]
+    fn missing_handler_errors_are_treated_as_a_successful_teardown() {
+        assert!(missing_handler(
+            "error: failed to remove web serve: handler does not exist"
+        ));
+        assert!(missing_handler("No serve config"));
+        assert!(!missing_handler("permission denied"));
+    }
+
+    #[test]
+    fn serve_state_starts_off() {
+        assert_eq!(ServeState::default(), ServeState::Off);
     }
 
     #[test]

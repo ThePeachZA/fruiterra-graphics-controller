@@ -1,12 +1,13 @@
 //! Pure helpers for the Remote access settings panel.
 //!
-//! Tailscale detection, serve lifecycle and Funnel are separate backlog items.
-//! This module keeps the scope labels, status text and per-scope URLs together
-//! so D8-2 can render an honest UI before that plumbing exists.
+//! This module keeps the scope labels, status text and per-scope URLs together.
+//! Off and LAN bind the local listener; Tailscale adds a Serve handler for
+//! `/fgc` (see [`crate::tailscale`]) and Funnel remains a later item.
 
 use fgc_core::{AppState, RemoteAccessMode};
 
 use crate::server::base_url_for;
+use crate::tailscale::{SERVE_PATH, ServeState};
 
 /// HTML `select` value for a scope.
 #[must_use]
@@ -45,13 +46,25 @@ pub fn mode_label(mode: RemoteAccessMode) -> &'static str {
 #[must_use]
 pub fn pending_notice(mode: RemoteAccessMode) -> Option<&'static str> {
     match mode {
-        RemoteAccessMode::Tailscale => Some(
-            "Tailscale is detected, but remote serving is not wired up yet. Overlays still use the local server until the next item lands.",
-        ),
         RemoteAccessMode::Funnel => Some(
             "Funnel is not available yet. It needs Tailscale, HTTPS and an explicit public-exposure opt-in.",
         ),
-        RemoteAccessMode::Off | RemoteAccessMode::Lan => None,
+        RemoteAccessMode::Off | RemoteAccessMode::Lan | RemoteAccessMode::Tailscale => None,
+    }
+}
+
+/// Serve status line rendered only in Tailscale scope.
+#[must_use]
+pub fn serve_text(serve: &ServeState, running: bool) -> String {
+    if !running {
+        return "Tailscale Serve is off because the overlay server is stopped.".to_owned();
+    }
+    match serve {
+        ServeState::Off => "Tailscale Serve is preparing…".to_owned(),
+        ServeState::Active => {
+            format!("Tailscale Serve is active at {SERVE_PATH} on your tailnet.")
+        }
+        ServeState::Failed(error) => format!("Tailscale Serve failed: {error}"),
     }
 }
 
@@ -123,13 +136,17 @@ mod tests {
     }
 
     #[test]
-    fn tailscale_and_funnel_statuses_explain_that_they_are_pending() {
+    fn funnel_still_explains_that_it_is_pending() {
         let mut state = AppState::default();
-
-        state.settings.overlay.remote_access = RemoteAccessMode::Tailscale;
-        assert!(status_text(&state, true, true).contains("not wired up yet"));
-
         state.settings.overlay.remote_access = RemoteAccessMode::Funnel;
         assert!(status_text(&state, true, false).contains("not available yet"));
+    }
+
+    #[test]
+    fn tailscale_serve_status_covers_every_state() {
+        assert!(serve_text(&ServeState::Active, true).contains("/fgc"));
+        assert!(serve_text(&ServeState::Off, true).contains("preparing"));
+        assert!(serve_text(&ServeState::Off, false).contains("stopped"));
+        assert!(serve_text(&ServeState::Failed("denied".to_owned()), true).contains("denied"));
     }
 }

@@ -484,9 +484,9 @@ and serve lifecycle forward.
 - **Next.** D8-3 detection, D8-4 serve lifecycle with teardown, D8-5 gated
   Funnel, D8-6 remote URL generation and D8-7 docs/QA finish the feature.
 
-## Tailscale detection landed; serving still pending (2026-11-21)
+## Tailscale detection landed (2026-11-21)
 
-**Status: D8-3 done 2026-11-21; D8-4 to D8-7 remain open.**
+**Status: D8-3 done 2026-11-21; D8-4 to D8-7 followed.**
 
 - **Detection only.** Settings reads the user's installed CLI — PATH first,
   then `%ProgramFiles%\Tailscale` and `%ProgramFiles(x86)\Tailscale` — and runs
@@ -495,13 +495,36 @@ and serve lifecycle forward.
   stopped, needs login, or connected. Each non-ready state has a plain remedy
   and a Refresh button; nothing is installed or bundled.
 - **Scope unlock.** Tailscale becomes selectable only when the client reports
-  `Running`. Selecting it still leaves the local server in place: remote
-  serving is D8-4. Funnel stays disabled.
+  `Running`. Selecting it still left the local server in place at this point:
+  remote serving arrived in D8-4. Funnel stays disabled.
 - **Privacy and safety.** Only the short version, this device's MagicDNS name
   and its online flag are displayed. Peer lists, auth URLs and keys are not.
-  No serve, funnel or reset command is issued.
+  No serve, funnel or reset command was issued at this stage.
 - **Next.** D8-4 serve lifecycle with teardown, D8-5 gated Funnel, D8-6 remote
   URL generation and D8-7 docs/QA.
+
+## Tailscale Serve limited to /fgc (2026-11-21)
+
+**Status: D8-4 done 2026-11-21. D8-5 Funnel, D8-6 URLs and D8-7 docs/QA remain open.**
+
+- **Start.** In Tailscale scope, starting or restarting the overlay server runs
+  `tailscale serve --bg --yes --https=443 --set-path /fgc http://127.0.0.1:<port>`
+  on a blocking task. `--bg` lets the CLI return while tailscaled keeps the
+  handler; `--yes` prevents an interactive prompt. The local server still binds
+  loopback only, so `/fgc` is the sole remote entry point.
+- **Teardown.** Stopping the server, changing scope away from Tailscale, and
+  dropping the app root all run
+  `tailscale serve --yes --https=443 --set-path /fgc off`. Exit teardown is
+  synchronous because spawned tasks may not finish during shutdown.
+- **Isolation.** Only the `/fgc` path is removed. The port-wide `off` and
+  `tailscale serve reset` are never used, so handlers installed by other
+  software survive. A "handler does not exist" result is treated as success,
+  making teardown idempotent. Named services were evaluated and rejected: this
+  tailnet node is not tagged, so `--service svc:fgc` is unavailable.
+- **Honesty.** The app does not install or bundle Tailscale. Settings shows
+  whether `/fgc` is active, preparing or failed, with the raw CLI error on
+  failure. No per-overlay remote URLs are generated yet; that is D8-6.
+- **Next.** D8-5 gated Funnel, D8-6 remote URL generation and D8-7 docs/QA.
 
 ## Asset cleanup guarded against a failed load (2026-11-15)
 

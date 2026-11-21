@@ -41,6 +41,9 @@ pub fn SettingsView() -> Element {
     let remote_notice = remote_access::pending_notice(remote_mode);
     let remote_base_url = remote_access::base_url(&snapshot);
     let local_scope = matches!(remote_mode, RemoteAccessMode::Off | RemoteAccessMode::Lan);
+    let tailscope_scope = remote_mode == RemoteAccessMode::Tailscale;
+    let serve_line = tailscope_scope
+        .then(|| remote_access::serve_text(&store.serve_state(), server.is_running()));
     drop(snapshot);
 
     let tailscale: Option<TailscaleStatus> = store.tailscale_status();
@@ -142,7 +145,7 @@ pub fn SettingsView() -> Element {
                 description: "Who can open the overlays, and where to point OBS.".to_owned(),
                 Field {
                     label: "Access scope".to_owned(),
-                    hint: Some("Tailscale unlocks when its client is connected; Funnel and remote serving come later.".to_owned()),
+                    hint: Some("Tailscale unlocks when its client is connected and serves overlays at /fgc; Funnel comes later.".to_owned()),
                     select {
                         class: "fgc-native-select",
                         value: remote_access::mode_value(remote_mode),
@@ -174,6 +177,9 @@ pub fn SettingsView() -> Element {
                     p { class: "fgc-note", "{remedy}" }
                 }
                 p { class: "fgc-note", role: "status", "{remote_status}" }
+                if let Some(line) = serve_line {
+                    p { class: "fgc-note", role: "status", "{line}" }
+                }
                 if let Some(notice) = remote_notice {
                     p { class: "fgc-note", "{notice}" }
                 }
