@@ -746,6 +746,7 @@
       "settings": {
         "alignment": "center",
         "leadingZeroes": true,
+        "showHours": true,
         "standalone": false
       }
     },

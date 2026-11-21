@@ -71,6 +71,7 @@
       const query = new URLSearchParams(location.search);
       const root = document.getElementById('timer-root');
       const value = document.getElementById('timer-value');
+      let lastSettings = {};
 
       function nonNegativeInteger(input) {
         const number = Number(input);
@@ -84,16 +85,18 @@
       function renderTimer(data) {
         if (!data || typeof data !== 'object') return;
 
-        const settings = data.settings && typeof data.settings === 'object' ? data.settings : {};
+        if (data.settings && typeof data.settings === 'object') lastSettings = data.settings;
+        const settings = lastSettings;
         const pad = settings.leadingZeroes !== false;
+        const showHours = settings.showHours !== false;
         const alignment = settings.alignment;
 
         root.dataset.align = alignment === 'left' || alignment === 'right' ? alignment : 'center';
-        value.textContent = [
-          formatPart(nonNegativeInteger(data.hours), pad),
-          formatPart(nonNegativeInteger(data.minutes), pad),
-          formatPart(nonNegativeInteger(data.seconds), pad),
-        ].join(':');
+        const hours = nonNegativeInteger(data.hours);
+        const minutes = nonNegativeInteger(data.minutes);
+        const parts = showHours ? [hours, minutes] : [hours * 60 + minutes];
+        parts.push(nonNegativeInteger(data.seconds));
+        value.textContent = parts.map((part) => formatPart(part, pad)).join(':');
       }
 
       function handleMessage(message) {

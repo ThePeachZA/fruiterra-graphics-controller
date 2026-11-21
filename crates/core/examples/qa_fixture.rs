@@ -52,6 +52,7 @@ fn main() -> Result<()> {
     state.settings.display.team_colors_enabled = true;
     state.settings.timer.mode = TimerMode::CountDown;
     state.settings.timer.leading_zeroes = true;
+    state.settings.timer.show_hours = true;
     state.settings.timer.standalone = false;
 
     let repairs = validate_and_repair(&mut state);

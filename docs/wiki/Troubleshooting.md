@@ -44,6 +44,7 @@
 |---|---|
 | There is no timer on screen | Add the standalone `/overlays/timer.html` as its own Browser Source. It is separate from the seven match overlays and is not in the auto-overlay scene list. |
 | The timer runs but nothing changes in OBS | Check that the Browser Source points at `/overlays/timer.html` or that your third-party overlay subscribes to `matchTimer`. Start and pause are action frames; a pause shows as the last rendered tick. |
+| Hours are showing when I want total minutes | Turn **Show hours** off in Timer settings. The bundled `timer.html` then folds hours into the minutes, so `01:12:00` appears as `72:00`. Turn it back on to restore hour digits. |
 | Overlay text looks different from older graphics | Version 1 uses Archivo behind the `FGC Display*` family names. The layout is unchanged; the typeface is not Apotek. |
 
 ## Getting help

@@ -352,6 +352,7 @@ pub fn fixture_state() -> AppState {
                 mode: fgc_core::TimerMode::CountUp,
                 alignment: TimerAlignment::Center,
                 leading_zeroes: true,
+                show_hours: true,
                 standalone: false,
             },
         },

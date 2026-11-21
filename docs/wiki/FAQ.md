@@ -23,10 +23,12 @@ generator; those are separate post-v1 work.
 
 Yes, as a separate simple source. The app still owns the timer controls, and a
 standalone `timer.html` at `/overlays/timer.html` renders the broadcast time.
-It uses the existing `matchTimer` ticks and applies the sent alignment and
-leading-zeroes settings; it does not run its own clock or appear in the
-auto-overlay scene list. Third-party overlays still receive the same ticks and
-start, pause and reset actions.
+It uses the existing `matchTimer` ticks and applies the sent alignment,
+leading-zeroes and show-hours settings; it does not run its own clock or appear
+in the auto-overlay scene list. Turn **Show hours** off in Timer settings and
+the overlay adds the hours to the minutes (`01:12:00` appears as `72:00`).
+Third-party overlays still receive the same ticks and start, pause and reset
+actions.
 
 ### Is there a bracket overlay?
 

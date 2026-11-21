@@ -323,6 +323,7 @@ pub struct Settings {
       "mode": "countup",
       "alignment": "center",
       "leadingZeroes": true,
+      "showHours": true,
       "standalone": false
     }
   }
@@ -334,6 +335,7 @@ pub struct Settings {
 - `app.json.bak` holds the previous good file. Writes are temp-file + rename.
 - `schemaVersion` newer than the binary is refused with a readable error and a "back up and continue" path rather than silent data loss.
 - `SCHEMA_VERSION` is 2. Migration 0→1 adds the version field; migration 1→2 removes `talents[].type` and writes `role` on every occupied match talent assignment. Legacy `panelist`/`observer` values map to `analyst`/`other`; otherwise the slot supplies a default (`caster1`/`caster2` → caster, panel slots → analyst, interviewer → interviewer).
+- `settings.timer.showHours` defaults to `true`, so older state files keep showing hours. When `false`, `timer.html` adds the hours to the minutes (`01:12:00` → `72:00`) while the wire tick still carries the real components.
 - A talent assignment is `{ "talentId": "…uuid…", "role": "caster" }`. The role belongs to the assignment, not the person, so the same talent can have a different role in another match. Accepted role slugs are `caster`, `host`, `analyst`, `interviewer` and `other`.
 
 ---

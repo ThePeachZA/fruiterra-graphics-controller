@@ -617,6 +617,14 @@ impl AppStore {
         self.mutate(|state| state.settings.timer.leading_zeroes = leading_zeroes);
     }
 
+    /// Toggles hour digits on the timer overlay.
+    pub fn set_timer_show_hours(&self, show_hours: bool) {
+        if self.state.peek().settings.timer.show_hours == show_hours {
+            return;
+        }
+        self.mutate(|state| state.settings.timer.show_hours = show_hours);
+    }
+
     /// Toggles the standalone timer layout.
     pub fn set_timer_standalone(&self, standalone: bool) {
         if self.state.peek().settings.timer.standalone == standalone {

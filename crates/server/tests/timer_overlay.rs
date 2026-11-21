@@ -17,6 +17,9 @@ fn timer_overlay_is_embedded_and_renders_match_timer_ticks() {
     assert!(text.contains("message.type === 'matchTimer'"));
     assert!(text.contains("message.data.action === 'reset'"));
     assert!(text.contains("settings.leadingZeroes !== false"));
+    assert!(text.contains("settings.showHours !== false"));
+    assert!(text.contains("hours * 60 + minutes"));
+    assert!(text.contains("lastSettings = data.settings"));
     assert!(text.contains("aria-live=\"off\""));
 }
 

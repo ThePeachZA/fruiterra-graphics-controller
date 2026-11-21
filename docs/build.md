@@ -181,7 +181,7 @@ This validates the packaged binary, embedded overlays, embedded assets and the s
 4. **Quick start** — start the server, add teams/assets, create a match, copy the overlay URL into OBS at 1920×1080.
 5. **Overlay URLs** — the seven bundled match files, the standalone `timer.html`, the `?port=` parameter, and the default port 3001.
 6. **Migrating from the Google Sheets workflow** - **no automatic import**: teams, talent, matches and assets must be re-entered. This is stated plainly, not buried.
-7. **Timer** - v1 was control-only. Post-v1, the standalone `timer.html` reads the existing `matchTimer` ticks without a new protocol; third-party timer overlays still receive the same ticks and actions.
+7. **Timer** - v1 was control-only. Post-v1, the standalone `timer.html` reads the existing `matchTimer` message types; the tick's `showHours` setting folds hours into minutes when off. Third-party timer overlays still receive the same ticks and actions.
 8. **Network and security** - localhost by default; "Allow LAN access" binds `0.0.0.0`; CORS is `*`; there is no authentication in v1. LAN access relies on a Windows Firewall rule scoped to the **Private** profile and the **local subnet**; the app never asks for a public-network rule.
 9. **Fonts and licences** - Archivo (overlay), Saira (retained fallback) and Inter (UI) are OFL 1.1; local only; no runtime font requests.
 10. **Build from source** — Rust stable, `dioxus-cli` 0.7.10, `cargo test`, `dx bundle`.

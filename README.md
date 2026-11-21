@@ -75,9 +75,11 @@ overlay may pass `?port=<port>` when it connects from a different origin.
 
 The in-app timer remains the operator control. The standalone `timer.html` is a
 plain renderer: it shows the last `matchTimer` tick, applies the sent alignment
-and leading-zeroes settings, and does not run its own clock. It is not part of
-the auto-overlay scene list; add it as its own Browser Source. Third-party
-overlays still receive `matchTimer` ticks and actions.
+and leading-zeroes settings, and does not run its own clock. The timer settings
+popup also has **Show hours**; turning it off adds the hours to the minutes, so
+`01:12:00` displays as `72:00`. It is not part of the auto-overlay scene list;
+add it as its own Browser Source. Third-party overlays still receive
+`matchTimer` ticks and actions.
 
 ## Requirements
 

@@ -1161,3 +1161,25 @@ docs list the data a match bug carries. The proposed direction is a transparent
 existing overlay projection as its data source, a still fallback, explicit
 empty states and no remote assets. Official marks remain out of scope without
 permission.
+
+## AG. Timer hour-display setting (2026-11-21)
+
+The owner asked to customise whether hours show, with hidden hours folded into
+the minutes (`1 hour 12 minutes` → `72 minutes`). The timer stays plain: this
+adds one **Show hours** switch beside Leading zeroes and Standalone timer, and
+one persisted `settings.timer.showHours` field. It adds no countdown logic,
+visual treatment, extra overlay or new message type to `timer.html`.
+
+`showHours` defaults to `true`, so existing state files and third-party overlays
+keep the previous behaviour. A `matchTimer` tick still carries the true `hours`
+and `minutes`; `timer.html` does the roll-up only for display and keeps the last
+tick settings so a `reset` frame without `settings` still renders correctly.
+Changing the switch rebroadcasts one tick so a paused overlay updates at once.
+
+A56 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: `01:12:00` toggled to `72:00` and back, `/state` and `app.json` stored
+`showHours: false`, a live tick rendered `71:59`, pause held it, Stop reset to
+`72:00`, and `show`, transparency, font and network/console checks stayed clean.
+Authoritative QA hashes and `No serve config` were rechecked and no screenshots
+were taken or published.

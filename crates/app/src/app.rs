@@ -17,8 +17,8 @@ use crate::state::AppStore;
 use crate::status::{status_text, status_tone};
 use crate::theme::Destination;
 use crate::timer::{
-    TimerController, TimerState, format_clock, join_time, parse_non_negative, send_timer_action,
-    split_time, target_countdown_script,
+    TimerController, TimerState, broadcast_tick, format_clock, join_time, parse_non_negative,
+    send_timer_action, split_time, target_countdown_script,
 };
 use crate::views::DestinationView;
 
@@ -556,6 +556,19 @@ fn FloatingTimer() -> Element {
                             option { value: "left", "Left" }
                             option { value: "center", "Centre" }
                             option { value: "right", "Right" }
+                        }
+                    }
+                    ToggleRow {
+                        title: "Show hours".to_owned(),
+                        hint: Some("When off, hours are added to the minutes.".to_owned()),
+                        Switch {
+                            checked: settings.show_hours,
+                            aria_label: "Show hours",
+                            on_checked_change: move |checked| {
+                                store.set_timer_show_hours(checked);
+                                let settings = store.state().peek().settings.timer.clone();
+                                broadcast_tick(&store, &settings, timer.state.peek().total_seconds);
+                            },
                         }
                     }
                     ToggleRow {

@@ -3451,3 +3451,55 @@ the authoritative files restored to
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`.
 `tailscale serve status` was `No serve config`, and the harness was deleted.
+
+### A56 — Timer hour-display setting
+
+**Covers:** owner request 2026-11-21, `showHours`
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. The app
+   resolves state through Windows Known Folders, so restore the authoritative
+   `app.json`/`app.json.bak` fixture before the run and again afterwards rather
+   than relying on an isolated `APPDATA`.
+2. Start the overlay server through the real app UI. Open
+   `http://127.0.0.1:3001/overlays/timer.html` as a CDP target, set a 1920×1080
+   device metrics override, reload, await `document.fonts.ready`, and record the
+   text, computed styles, document size and background.
+3. In **Timer settings**, select **Count down** and set 1 hour, 12 minutes and
+   0 seconds. Confirm the overlay shows `01:12:00`. Toggle **Show hours** off;
+   the overlay must change to `72:00` without waiting for another clock tick.
+   Toggle it back on and off again to confirm both directions and that the final
+   state is hidden.
+4. After the 500 ms save window, read `/state` and `app.json` and confirm
+   `matchTimer.settings.showHours` and `settings.timer.showHours` are both
+   `false`.
+5. Start the timer and wait for one tick. Confirm `71:59` (1 hour 11 minutes
+   59 seconds), then pause and confirm the overlay holds that value across a
+   1.4 s wait. Stop the timer and confirm the reset frame still renders `72:00`
+   using the retained settings.
+6. Use **Hide overlays** / **Show overlays** and confirm `#timer-root` changes
+   between `display: none` and `display: flex`. Record all overlay requests,
+   failed responses and console/log errors. Stop the app, restore the
+   authoritative fixture, recheck its hashes and `tailscale serve status`, then
+   delete the isolated harness.
+
+**Evidence:** CDP DOM and computed-style JSON for eleven states, `/state`, the
+saved `app.json`, network/console capture and `/health`; no screenshots were
+taken or published.
+
+**Result: Pass — assistant 2026-11-21.** WebView2 158.0.4370.33 drove the real
+app controls and overlay page. The countdown rendered `01:12:00`; hiding hours
+changed it immediately to `72:00`, showing restored `01:12:00`, and hiding again
+returned `72:00`. Both `/state` and `app.json` reported `showHours: false`. A
+running tick rendered `71:59`, pause held it across 1.4 s, and Stop returned
+`72:00`. `show` toggled `display` between `none` and `flex`. The value computed
+to `rgb(255, 255, 255)`, `"FGC Display", Arial, sans-serif`, `160px` and
+`tabular-nums`; the body background was `rgba(0, 0, 0, 0)`, the document was
+1920×1080 with no overflow, and the bundled font was loaded. Only the local
+overlay HTML and font were requested; `externalRequests`, `failedResponses` and
+`consoleErrors` were all empty. Authoritative hashes were restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
+`tailscale serve status` was `No serve config`, and the harness was deleted.

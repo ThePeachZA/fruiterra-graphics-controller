@@ -1216,6 +1216,9 @@ pub struct TimerSettings {
     /// Whether single-digit values are padded.
     #[serde(default = "default_true")]
     pub leading_zeroes: bool,
+    /// Whether hour digits are shown on the overlay.
+    #[serde(default = "default_true")]
+    pub show_hours: bool,
     /// Whether the timer is shown standalone.
     #[serde(default)]
     pub standalone: bool,
@@ -1227,6 +1230,7 @@ impl Default for TimerSettings {
             mode: TimerMode::default(),
             alignment: TimerAlignment::default(),
             leading_zeroes: true,
+            show_hours: true,
             standalone: false,
         }
     }
@@ -1427,6 +1431,18 @@ mod tests {
         assert_eq!(json, "\"scheduled\"");
         let mode: TimerMode = serde_json::from_str("\"scheduled\"").expect("load timer mode");
         assert_eq!(mode, TimerMode::Scheduled);
+    }
+
+    #[test]
+    fn timer_show_hours_defaults_on_and_round_trips() {
+        let legacy: TimerSettings = serde_json::from_str("{}").expect("legacy timer settings");
+        assert!(legacy.show_hours);
+
+        let hidden: TimerSettings =
+            serde_json::from_str(r#"{"showHours":false}"#).expect("hidden-hour timer settings");
+        assert!(!hidden.show_hours);
+        let json = serde_json::to_string(&hidden).expect("serialise timer settings");
+        assert!(json.contains("\"showHours\":false"), "{json}");
     }
 
     #[test]

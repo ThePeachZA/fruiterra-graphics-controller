@@ -20,8 +20,10 @@ default is `http://127.0.0.1:3001`.
 | Casters row | `<base>/overlays/row-casters.html` | The assigned casters, panel and their social handles |
 
 The timer is a separate plain source: `<base>/overlays/timer.html`. It shows the
-last broadcast timer value with the sent alignment and leading-zeroes settings.
-It is not part of the auto-overlay scene list; add it as its own Browser Source.
+last broadcast timer value with the sent alignment, leading-zeroes and
+show-hours settings. With **Show hours** off, hours are added to the minutes
+(`01:12:00` appears as `72:00`). It is not part of the auto-overlay scene list;
+add it as its own Browser Source.
 
 The **Overlay** page lists the same match-overlay URLs with a **Copy URL** button for each.
 URLs are hidden by default; select **Show URLs** to reveal them and **Hide
@@ -118,7 +120,9 @@ Third-party overlays receive the same messages as the bundled ones. This
 includes `matchTimer` ticks and the start, pause and reset actions.
 
 The in-app timer remains the operator control. The bundled `timer.html` renders
-those ticks directly and does not run its own clock.
+those ticks directly and does not run its own clock. Its **Show hours** setting
+is carried in each tick; turning it off folds hours into the minutes for display
+without changing the underlying broadcast values.
 
 For the WebSocket contract, message types, payload fields and a copyable
 listener, see [Custom overlays](Custom-Overlays).

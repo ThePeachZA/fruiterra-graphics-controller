@@ -114,6 +114,32 @@ fn timer_tick_message() {
 }
 
 #[test]
+fn timer_tick_can_hide_hours() {
+    let (mut state, _, _) = full_projector_parts();
+    state.settings.timer.show_hours = false;
+    let actual = serde_json::to_value(timer_tick(&state.settings.timer, 1, 12, 0))
+        .expect("hidden-hour tick JSON");
+
+    assert_eq!(
+        actual,
+        serde_json::json!({
+            "type": "matchTimer",
+            "data": {
+                "hours": 1,
+                "minutes": 12,
+                "seconds": 0,
+                "settings": {
+                    "alignment": "center",
+                    "leadingZeroes": true,
+                    "showHours": false,
+                    "standalone": false,
+                },
+            },
+        })
+    );
+}
+
+#[test]
 fn timer_action_start() {
     let actual = serde_json::to_value(timer_action(TimerActionDto::start())).expect("start JSON");
 

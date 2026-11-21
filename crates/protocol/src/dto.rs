@@ -282,6 +282,8 @@ pub struct TimerSettingsDto {
     pub alignment: TimerAlignment,
     /// Whether single-digit values are padded.
     pub leading_zeroes: bool,
+    /// Whether hour digits are shown by the timer overlay.
+    pub show_hours: bool,
     /// Whether the timer is shown standalone.
     pub standalone: bool,
 }
@@ -291,6 +293,7 @@ impl From<&TimerSettings> for TimerSettingsDto {
         Self {
             alignment: settings.alignment,
             leading_zeroes: settings.leading_zeroes,
+            show_hours: settings.show_hours,
             standalone: settings.standalone,
         }
     }

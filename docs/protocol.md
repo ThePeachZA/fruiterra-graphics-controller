@@ -190,7 +190,7 @@ Two shapes, exactly as the original sends them:
 
 ```json
 { "type": "matchTimer", "data": { "hours": 0, "minutes": 12, "seconds": 34,
-  "settings": { "alignment": "center", "leadingZeroes": true, "standalone": false } } }
+  "settings": { "alignment": "center", "leadingZeroes": true, "showHours": true, "standalone": false } } }
 ```
 
 ```json
@@ -199,7 +199,8 @@ Two shapes, exactly as the original sends them:
 { "type": "matchTimer", "data": { "action": "reset", "hours": 0, "minutes": 0, "seconds": 0 } }
 ```
 
-- v1 was control-only (C13): no bundled overlay consumed `matchTimer`. Post-v1, the standalone `timer.html` renders the last tick and the `reset` payload; it adds no new wire field. The app still sends the same frames so third-party timer overlays keep working.
+- v1 was control-only (C13): no bundled overlay consumed `matchTimer`. Post-v1, the standalone `timer.html` renders the last tick and the `reset` payload. The only post-v1 tick field is `showHours`; when `false`, the bundled overlay folds hours into the minutes (`01:12:00` → `72:00`). The wire still carries the true hour/minute components, so third-party timer overlays that ignore the field keep working.
+- The timer overlay retains the last tick settings for `reset` frames, which carry no `settings` object. The app rebroadcasts a tick when `showHours` changes so a paused overlay updates immediately.
 - `action` messages do **not** include `hours`/`minutes`/`seconds` except `reset`. The timer overlay ignores `start` and `pause` frames: a pause is represented by the absence of further ticks.
 
 ### 3.4 `show`
