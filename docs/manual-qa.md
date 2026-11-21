@@ -823,3 +823,37 @@ are closed.**
 - Release record: commit `c244d29ef1980e5619f7fbeb1dd9c827ec7c81bb`; annotated
   tag `v1.0.0`; [Release run 44826182532](https://github.com/ThePeachZA/fruiterra-graphics-controller/actions/runs/44826182532);
   [v1.0.0 release](https://github.com/ThePeachZA/fruiterra-graphics-controller/releases/tag/v1.0.0).
+
+---
+
+## 7. Post-v1 remote overlay access (D8-7)
+
+The v1.0.0 sign-off above is unchanged. These checks cover the post-v1
+remote-access scope on `main`; the runbook is §7 of
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md), and the user guide is
+[Remote overlays](wiki/Remote-Overlays).
+
+### 7.1 A-series results
+
+| ID | Test | Covers | Result | Evidence |
+|---|---|---|---|---|
+| A42 | LAN scope from a second PC | D8-2, D8-6 | **Pending — awaiting owner result** | No second LAN PC was available in this pass. The v1.0.0 UI remains covered by A5; the post-v1 scope uses the same bind flag but needs a fresh remote check. Runbook §7 A42 records the steps and required evidence. |
+| A43 | Tailscale scope on the host | D8-3, D8-4, D8-6 | **Pass — assistant 2026-11-21** | `dx build --desktop` app, Tailscale CLI `1.104.7`, DNS `sekhmet.note-hydra.ts.net`. Settings reported `v1.104.7 — Connected as sekhmet.note-hydra.ts.net (online)` and, after start, `Tailscale Serve is active at /fgc and / (WebSocket) on your tailnet.` Overlay and Settings both showed all seven URLs as `https://sekhmet.note-hydra.ts.net/fgc/overlays/<file>.html` with no `?port=`. Serve paths while running were `/`, `/fgc` and the deliberately installed unrelated `/other`; `https://sekhmet.note-hydra.ts.net/fgc/overlays/game-overlay.html` returned 200 and `wss://sekhmet.note-hydra.ts.net/` opened. A persisted Tailscale scope with auto-start showed `Running · 0 clients` and the same seven HTTPS URLs, with Serve paths `/, /fgc`. QA `app.json` was restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` after both UI runs. This is host-side evidence only; it does not replace A44. |
+| A44 | Tailscale overlay from a second tailnet device | D8-1, D8-4, D8-6 | **Pending — awaiting owner result** | No second tailnet peer was available in this pass. Runbook §7 A44 requires a signed-in device, the exact generated URL, a live score edit and a successful root WebSocket. |
+| A45 | Phone on cellular | D8-1, D8-4, D8-6 | **Pending — awaiting owner result** | No phone was available in this pass. Runbook §7 A45 requires cellular data, the Tailscale client, HTTPS certificate acceptance and a live score edit. |
+| A46 | Serve teardown leaves no app handlers | D8-4 | **Pass — assistant 2026-11-21** | With an unrelated `/other` handler installed first: `RunningServePaths=/, /fgc, /other`, then `StoppedServePaths=/other` after **Stop server**, `AfterExitServePaths=/other` after app exit, and `FinalServeStatus=No serve config` after removing the test handler. The auto-start run showed `AutoStartServePaths=/, /fgc` and also finished at `No serve config`. Teardown targets only `/fgc` and `/`; `tailscale serve reset` was never used. |
+
+### 7.2 Sign-off entries
+
+| Date | Version | Environment | Items completed | Tester | Notes |
+|---|---|---|---|---|---|
+| 2026-11-21 | post-v1 `main` (`816c144`) | Windows 11 Pro 10.0.26200, `dx build --desktop` debug binary, Tailscale CLI `1.104.7`, DNS `sekhmet.note-hydra.ts.net` | A43, A46 | Run by the assistant | Host-side Tailscale scope passed: exact `/fgc` URLs on both views, both Serve paths, HTTP 200, root WebSocket open, unrelated `/other` handler preserved, auto-start with remote URLs, and clean teardown to `No serve config`. QA state hash unchanged. |
+| 2026-11-21 | post-v1 `main` (`816c144`) | Second LAN PC, second tailnet device, phone on cellular | A42, A44, A45 | Awaiting repository owner | Device-dependent checks are written in runbook §7 but have no result yet. A5 remains the owner's LAN evidence for the v1.0.0 UI; host-side A43 is not a substitute for a second device. |
+
+### 7.3 Outstanding owner checks
+
+A42, A44 and A45 remain **Pending**. For each, record the exact URL, a screenshot
+before and after a host edit, the WebSocket state where applicable, and any
+ACL, DNS or certificate error text. Do not mark them Pass from a same-host
+request; a second LAN PC, a second tailnet device and a phone on cellular are
+separate environments.

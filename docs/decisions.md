@@ -567,6 +567,39 @@ and serve lifecycle forward.
 - **Next.** D8-5 gated Funnel with an explicit public-exposure confirmation and
   unguessable token, then D8-7 docs/QA.
 
+## Remote overlay docs and QA (2026-11-21)
+
+**Status: D8-7 in progress. Wiki source and runbook drafted; three device tests
+await owner results.**
+
+- **Wiki framing.** The public wiki is still the v1.0.0 guide, so the new
+  [Remote overlays](wiki/Remote-Overlays) page opens with a clear post-v1 note:
+  published v1.0.0 has loopback and LAN behaviour through **Allow LAN
+  connections** but no scope selector, Funnel is not implemented, and Tailscale
+  scope applies to later builds. Settings, Overlays in OBS,
+  Troubleshooting and FAQ keep their v1 wording and cross-link the new page
+  instead of claiming that the released version has remote serving.
+- **Content.** The page covers Tailscale detection, tailnet ACLs and HTTPS
+  prerequisites, the Windows firewall rule for LAN, exact `/fgc` URL shapes,
+  why the companion `/` handler exists, the exposure tradeoff where a prior
+  root handler is taken over and not restored, targeted teardown, and the
+  failure modes from the design notes. No public Funnel URL is promised.
+- **Runbook.** §7 adds A42–A46. A42 repeats LAN access through the new scope on
+  a second PC; A44 uses a second tailnet device; A45 uses a phone on cellular.
+  A43 checks the host's URLs, Serve paths and WebSocket. A46 checks that every
+  teardown removes only `/fgc` and `/`. A5 remains the owner's pass for the
+  v1.0.0 LAN UI and is not rewritten as a new result.
+- **Evidence rule.** Same-host HTTPS and WebSocket probes prove the Serve path
+  and the local server, not a remote device. A43 is marked host-side only, and
+  A42/A44/A45 stay Pending until the owner supplies results from the named
+  environments. The register records the exact QA `app.json` hash before and
+  after so post-v1 checks do not disturb the release fixture.
+- **Teardown wording.** "Empty" means no app handlers remain. Because the app
+  deliberately preserves other Serve paths, `tailscale serve status` only
+  reports `No serve config` on a node with no other handlers. The evidence
+  shows an unrelated `/other` handler surviving every teardown.
+- **Next.** Owner results for A42, A44 and A45; D8-5 gated Funnel afterwards.
+
 ## Asset cleanup guarded against a failed load (2026-11-15)
 
 **Status: fixed 2026-11-21; v1 correctness item C15.** Found while recovering the test fixture.

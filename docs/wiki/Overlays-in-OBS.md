@@ -85,6 +85,12 @@ port on public networks or to any remote address.
 > the overlay state and load the overlays. Use LAN mode only on a network you
 > trust, and turn it off when you are finished.
 
+In post-v1 builds, **Settings → Remote access → Access scope → Local network**
+does the same job as **Allow LAN connections**. Those builds can also share
+overlays through your own Tailscale client at
+`https://<dnsname>/fgc/overlays/<file>.html`; that scope is **not** in the
+published v1.0.0 release. See [Remote overlays](Remote-Overlays).
+
 ## Third-party and custom overlays
 
 An overlay served from a different origin can pass the port explicitly:

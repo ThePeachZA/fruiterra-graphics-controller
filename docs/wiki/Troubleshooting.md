@@ -23,6 +23,7 @@
 | The entrance animation does not replay when a scene opens | Turn on **Refresh browser when scene becomes active**. With **Shutdown source when not visible** off, OBS keeps the page loaded and the animation only plays once. |
 | An overlay reconnects in a loop | The server is stopped or restarting. Start it and reload the Browser Source once. |
 | A second PC cannot load an overlay | Turn on **Allow LAN connections**, allow the Windows Firewall prompt for **private** networks, and use this PC's LAN IP instead of `127.0.0.1`. Both machines must be on the same network, and that network must be set to **Private** in Windows. If it is still blocked, add an inbound **TCP** rule for the app on the **Private** profile limited to the **local subnet**. Do not open the port to public networks. |
+| A Tailscale URL loads but the overlay does not update | In post-v1 builds, select **Refresh** in Settings until the client reports connected, then check that `tailscale serve status` has both `/fgc` and `/`. The root path carries the WebSocket. See [Remote overlays](Remote-Overlays). |
 | The overlay shows old images | Content-addressed URLs change when the image changes. Reload the Browser Source once if OBS cached the old frame. |
 
 ## Data and editing

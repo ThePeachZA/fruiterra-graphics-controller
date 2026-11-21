@@ -46,6 +46,18 @@ No. Version 1 has no HTTP control API and no Stream Deck integration.
 No. There is no authentication in version 1. Use **Allow LAN connections** only
 on a trusted network, and turn it off when you are done.
 
+### Can I share overlays over Tailscale?
+
+Not in the published v1.0.0 release. Post-v1 builds add a **Tailscale** scope
+that uses your own client and generates `https://<dnsname>/fgc/overlays/…`
+URLs. The tailnet is the access boundary; the app does not install Tailscale or
+manage ACLs. See [Remote overlays](Remote-Overlays).
+
+### Can I share overlays publicly?
+
+No. Funnel is still pending, and no build generates a public URL. Do not expose
+the overlay port through a router or a third-party tunnel.
+
 ### Why does Windows warn about the app?
 
 Version 1 is unsigned. Verify the download against `SHA256SUMS.txt`, then choose

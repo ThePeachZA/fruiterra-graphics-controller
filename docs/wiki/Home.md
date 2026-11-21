@@ -41,12 +41,13 @@ protocol as before.
 | [Installation](Installation) | Installer, portable build, SmartScreen, checksums, uninstall |
 | [Quick Start](Quick-Start) | A first broadcast from an empty install |
 | [Overlays in OBS](Overlays-in-OBS) | The seven overlays, OBS settings, reconnect and overrides |
+| [Remote overlays (post-v1)](Remote-Overlays) | Tailscale Serve, LAN URLs, firewall, teardown and troubleshooting |
 | [Custom overlays](Custom-Overlays) | Writing your own overlay against the live feed |
 | [Teams and Talent](Teams-and-Talent) | Team identity, rosters, casters and deletion rules |
 | [Match Controller](Match-Controller) | Every match tab, from maps to config, plus the timer widget |
 | [Tournament](Tournament) | Brackets, groups, playoffs and the board |
 | [Assets](Assets) | Importing, organising and moving images |
-| [Settings](Settings) | Port, server startup, LAN access, display options and storage |
+| [Settings](Settings) | Port, server startup, LAN access, display options and storage (plus Remote access in post-v1 builds) |
 | [Data and Backups](Data-and-Backups) | Where your data lives and how to move it |
 | [Troubleshooting](Troubleshooting) | Common problems and fixes |
 | [FAQ](FAQ) | Short answers to common questions |

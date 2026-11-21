@@ -10,8 +10,13 @@ button.
 |---|---|
 | **Port** | The port the overlay server listens on. Default `3001`. Enter a value and select **Apply**. A running server restarts on the new port. |
 | **Start server on launch** | Starts the overlay server automatically when the app opens. Off by default. |
-| **Allow LAN connections** | Binds on all interfaces so another machine can load overlays. Off by default. |
+| **Allow LAN connections** | In v1.0.0, binds on all interfaces so another machine can load overlays. Off by default. Post-v1 builds use **Remote access → Access scope → Local network** instead. |
 | **Asset URLs** | **Served URLs (/assets/…)** keeps messages small. **Inline data URLs** embeds every image in each message. |
+
+> [!NOTE]
+> Post-v1 builds add **Remote access** with **This PC**, **Local network** and
+> **Tailscale** scopes. Tailscale is not available in the published v1.0.0
+> release. See [Remote overlays](Remote-Overlays).
 
 > [!WARNING]
 > Version 1 has no authentication. Turn on **Allow LAN connections** only on a

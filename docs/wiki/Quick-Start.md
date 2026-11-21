@@ -95,5 +95,7 @@ settings.
 - [Tournament](Tournament) — build a bracket or round-robin event.
 - [Settings](Settings) — change the port, start the server automatically, or
   allow LAN connections.
+- [Remote overlays](Remote-Overlays) — post-v1 Tailscale URLs, firewall, teardown
+  and troubleshooting.
 - [Troubleshooting](Troubleshooting) — fix a blank overlay, port conflict or
   SmartScreen warning.

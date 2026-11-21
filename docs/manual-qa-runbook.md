@@ -52,7 +52,9 @@ Update the status and add a row to the sign-off log in
 | Windows 10 or 11 x64 test PC | Main interactive pass |
 | Clean Windows VM, snapshot taken before install | R5, R6, R7 |
 | Windows VM without WebView2 | R8 |
-| Second PC on the same LAN | A5 |
+| Second PC on the same LAN | A5, A42 |
+| Second device signed in to the same tailnet | A44 |
+| Phone with cellular data and the Tailscale client | A45 |
 | Network you can disconnect | R2, A15 |
 | Standard (non-admin) Windows account | Installer and uninstall |
 | Display scaling at 100%, 125% and 150% | A12 |
@@ -91,6 +93,10 @@ The exact pictures do not matter. File names do: use names such as
 - A screenshot tool.
 - A text editor for the save-file tests.
 - Optional: `curl.exe` for `/health`.
+- For remote-access tests: the installed Tailscale CLI (`tailscale version`,
+  `tailscale status --json`, `tailscale serve status --json`). Record the exact
+  DNS name and Serve paths; do not substitute a same-host request for a second
+  device.
 
 ---
 
@@ -810,7 +816,9 @@ excerpt.
 
 **Steps:**
 
-1. On the host PC, open **Settings** and turn on **Allow LAN connections**.
+1. On the host PC, open **Settings** and turn on **Allow LAN connections**. In
+   post-v1 builds, select **Remote access → Access scope → Local network**
+   instead; both names share the same bind flag.
 2. Allow the Windows Firewall prompt for **private networks** only. If Windows
    does not prompt, confirm the inbound rule is **TCP**, **Private** profile,
    `RemoteAddress = LocalSubnet`, for the app executable. Remove any UDP rule or
@@ -819,8 +827,8 @@ excerpt.
 4. On the second PC, open
    `http://<host-ip>:3001/overlays/game-overlay.html`.
 5. Confirm it connects and updates when the host edits the match.
-6. Turn **Allow LAN connections** off. Confirm the second PC can no longer
-   connect after a reload.
+6. Turn **Allow LAN connections** off, or select **This PC (loopback only)** in
+   post-v1 builds. Confirm the second PC can no longer connect after a reload.
 
 **Pass:**
 
@@ -2658,3 +2666,226 @@ A release is ready to tag only when:
 If a test cannot be run, record **Blocked** and say what is missing. Do not
 substitute an automated check for a human gate without recording the
 substitution.
+
+---
+
+## 7. Post-v1 remote overlay access (D8-7)
+
+These tests cover the remote-access scope added after `v1.0.0`. They do not
+change the v1.0.0 release gates in sections 4–6. Record results in §7 of
+[`docs/manual-qa.md`](manual-qa.md).
+
+### A42 — LAN scope from a second PC
+
+**Covers:** D8-2, D8-6
+
+**Steps:**
+
+1. On a post-v1 build, open **Settings → Remote access** and select **Access
+   scope → Local network**. Confirm the status line names **Local network** and
+   the revealed Base URL uses the host's LAN IP, not `127.0.0.1`.
+2. Confirm the show adapter is **Private** and the inbound rule is **TCP**,
+   **Private** profile, `RemoteAddress = LocalSubnet`, for the app executable.
+3. Copy the exact `http://<host-ip>:<port>/overlays/game-overlay.html` URL from
+   the revealed list and open it on a second PC on the same LAN.
+4. Edit a score on the host and confirm the remote overlay updates without a
+   reload.
+5. Select **This PC (loopback only)** on the host, reload the second PC and
+   confirm it can no longer connect.
+
+**Pass:**
+
+- The second PC loads the exact generated URL and receives live updates.
+- The generated URL uses the LAN IP and the configured port, with no Tailscale
+  hostname.
+- Firewall access stays limited to the Private profile and local subnet.
+- Loopback-only mode closes remote access.
+
+**Fail:**
+
+- The second PC cannot connect with the LAN scope selected and the firewall
+  allowed.
+- The URL uses `127.0.0.1`, a wrong port or a `?port=` suffix.
+- The overlay loads but does not update.
+- The scope switch leaves the LAN listener reachable.
+- The firewall rule opens Public or any remote address.
+
+**Evidence:** Host `ipconfig`, the revealed URL list, the firewall rule, a
+remote overlay screenshot before and after a host edit, and the final blocked
+reload. A5 remains the owner's LAN evidence for the v1.0.0 UI.
+
+**Result: Pending — awaiting owner result.** No second LAN PC was available for
+this runbook pass.
+
+---
+
+### A43 — Tailscale scope on the host
+
+**Covers:** D8-3, D8-4, D8-6
+
+**Steps:**
+
+1. With a connected Tailscale client, confirm Settings shows the short CLI
+   version and `Connected as <dnsname> (online)`. The **Tailscale** option is
+   enabled; **Funnel (coming later)** is disabled.
+2. Select **Tailscale** and start the server. Confirm Settings reports that
+   Serve is active at `/fgc` and `/`.
+3. Reveal the URL list on **Overlay** and confirm **Settings → Remote access**
+   shows the same list. Confirm all seven URLs are exactly
+   `https://<dnsname>/fgc/overlays/<file>.html` in the bundled order, with no
+   `?port=` and no LAN IP.
+4. Run `tailscale serve status --json`. Confirm both `/fgc` and `/` point at the
+   local overlay port and that an unrelated handler installed before the test
+   is still present.
+5. Request `https://<dnsname>/fgc/overlays/game-overlay.html` from the host and
+   confirm HTTP 200. Open `wss://<dnsname>/` and confirm the WebSocket upgrade
+   reaches the local server.
+6. Repeat with a persisted Tailscale scope and auto-start enabled: launching
+   straight into **Overlay** must still show the running server and the HTTPS
+   URLs once detection returns.
+
+**Pass:**
+
+- Detection reports the MagicDNS name and unlocks Tailscale only when connected.
+- Both views show the seven exact `/fgc` URLs with no `?port=`.
+- Serve contains `/fgc` and `/`, and an unrelated handler survives.
+- The overlay page returns 200 and the root WebSocket opens through Serve.
+- A persisted Tailscale scope auto-starts with remote URLs, not local ones.
+
+**Fail:**
+
+- Any URL contains a local address or `?port=`.
+- Only one Serve path is installed, or an unrelated handler is removed.
+- The page loads but the root WebSocket fails.
+- Auto-start keeps local URLs after detection.
+
+**Evidence:** Settings/Overlay URL excerpts, `tailscale serve status --json`,
+HTTP status and WebSocket probe output, plus the QA `app.json` hash before and
+after. This is a host-side check; it does not replace A44.
+
+**Result: Pass — assistant 2026-11-21.** With CLI `1.104.7` and DNS
+`sekhmet.note-hydra.ts.net`, Settings showed `Connected as sekhmet.note-hydra.ts.net
+(online)`, all seven URLs matched `https://sekhmet.note-hydra.ts.net/fgc/overlays/<file>.html`
+on both views, Serve paths were `/`, `/fgc` and `/other`, the overlay request
+returned 200, `wss://sekhmet.note-hydra.ts.net/` opened, and the auto-start run
+showed `Running · 0 clients` with the same seven URLs. The QA `app.json` hash
+was restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`.
+
+---
+
+### A44 — Tailscale overlay from a second tailnet device
+
+**Covers:** D8-1, D8-4, D8-6
+
+**Steps:**
+
+1. On another device signed in to the same tailnet, confirm the tailnet ACL
+   allows it to reach the host on port 443.
+2. Copy the exact `https://<dnsname>/fgc/overlays/game-overlay.html` URL from
+   the host's Overlay page and open it on that device.
+3. Confirm the overlay paints and has no `?port=` or local IP in its address.
+4. Edit a score on the host and confirm the remote overlay updates without a
+   reload.
+5. In the browser developer tools, confirm a successful WebSocket connection to
+   `wss://<dnsname>/`.
+
+**Pass:**
+
+- The second device loads the exact generated HTTPS URL and receives live
+  updates.
+- The WebSocket connects at the tailnet root.
+- No local address or port override appears in the URL.
+
+**Fail:**
+
+- The device is blocked by ACL, DNS or certificate errors.
+- The page loads but does not update, or the root WebSocket fails.
+- The tester has to replace the hostname with a local IP or add `?port=`.
+
+**Evidence:** Device and OS name, the exact URL, a remote overlay screenshot
+before and after a host edit, the WebSocket status, and any ACL or certificate
+error text.
+
+**Result: Pending — awaiting owner result.** No second tailnet device was
+available for this runbook pass; host-side A43 is not a substitute.
+
+---
+
+### A45 — Phone on cellular
+
+**Covers:** D8-1, D8-4, D8-6
+
+**Steps:**
+
+1. On a phone with Wi-Fi off and cellular data active, sign in to the same
+   tailnet.
+2. Open the exact `https://<dnsname>/fgc/overlays/game-overlay.html` URL from
+   the host's Overlay page.
+3. Confirm the HTTPS certificate is accepted, the overlay paints at the browser
+   viewport and there is no `?port=` or local IP in the address.
+4. Edit a score on the host and confirm the phone overlay updates without a
+   reload.
+5. Confirm the connection survives switching the phone off cellular and back,
+   or record the reconnection behaviour.
+
+**Pass:**
+
+- The overlay loads and updates over cellular through the tailnet.
+- The HTTPS certificate is valid for the MagicDNS name.
+- No local address or port override is needed.
+
+**Fail:**
+
+- The phone cannot resolve or reach the HTTPS URL on cellular.
+- The certificate is rejected.
+- The page loads but does not update, or needs a manual port override.
+
+**Evidence:** Phone model/OS, Tailscale client version, exact URL, a screenshot
+before and after a host edit, and any certificate or connection error text.
+
+**Result: Pending — awaiting owner result.** No phone was available for this
+runbook pass.
+
+---
+
+### A46 — Serve teardown leaves no app handlers
+
+**Covers:** D8-4
+
+**Steps:**
+
+1. Before starting, run `tailscale serve status --json` and record every
+   existing handler. Install an unrelated `/other` handler if the node is clean.
+2. Start the server in Tailscale scope. Confirm `/fgc` and `/` appear alongside
+   the unrelated handler.
+3. Select **Stop server** and re-read the status. Confirm `/fgc` and `/` are
+   gone and the unrelated handler remains.
+4. Start again, change **Access scope** away from Tailscale and confirm the same
+   result.
+5. Start once more, close the app and read the status from a fresh terminal.
+   Confirm both app paths are gone and no port-wide `off` or
+   `tailscale serve reset` was used.
+6. On a node with no other Serve handlers, confirm `tailscale serve status`
+   reports `No serve config`.
+
+**Pass:**
+
+- Every teardown path removes exactly `/fgc` and `/`.
+- Unrelated handlers survive each teardown.
+- A clean node reports `No serve config`.
+
+**Fail:**
+
+- Either app path remains after a teardown.
+- An unrelated handler disappears.
+- The result depends on `tailscale serve reset` or port-wide `off`.
+
+**Evidence:** Status excerpts labelled before, running, stopped, scope-change,
+after-exit and final, with the exact handler names.
+
+**Result: Pass — assistant 2026-11-21.** Running state was
+`RunningServePaths=/, /fgc, /other`; after **Stop server** it was
+`StoppedServePaths=/other`; after app exit it was `AfterExitServePaths=/other`;
+the final status was `FinalServeStatus=No serve config`. The auto-start run
+showed `AutoStartServePaths=/, /fgc` and also finished at `No serve config`.
+The unrelated `/other` handler survived every teardown.
