@@ -128,7 +128,103 @@
     font-style: italic;
 }
 
+.fgc-auto-scenes {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
+    gap: var(--fgc-space-4);
+    min-width: 0;
+}
+
+.fgc-auto-scenes:focus-visible {
+    outline: 2px solid var(--fgc-accent);
+    outline-offset: 4px;
+}
+
+.fgc-auto-scenes__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--fgc-space-2);
+    min-width: 0;
+}
+
+.fgc-auto-scene {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+    padding: var(--fgc-space-3);
+    border: 1px solid var(--fgc-line);
+    border-radius: var(--fgc-radius-md);
+    background: var(--fgc-bg-elevated);
+}
+
+.fgc-auto-scene--excluded {
+    opacity: 0.58;
+}
+
+.fgc-auto-scene__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-auto-scene__include,
+.fgc-auto-scene__active {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--fgc-space-1);
+    color: var(--fgc-text-muted);
+    cursor: pointer;
+    font-size: var(--fgc-text-xs);
+    font-weight: 600;
+}
+
+.fgc-auto-scene input {
+    accent-color: var(--fgc-accent);
+}
+
+.fgc-auto-scene__key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4rem;
+    padding: 0.1rem var(--fgc-space-1);
+    border: 1px solid var(--fgc-line-strong);
+    border-radius: var(--fgc-radius-sm);
+    color: var(--fgc-text-faint);
+    font-family: var(--fgc-font-mono);
+    font-size: var(--fgc-text-xs);
+}
+
+.fgc-auto-scene__file {
+    color: var(--fgc-text);
+    font-size: var(--fgc-text-sm);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.fgc-auto-scenes__side {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--fgc-space-3);
+}
+
+.fgc-auto-scenes__status {
+    padding: var(--fgc-space-2) var(--fgc-space-3);
+    border-left: 3px solid var(--fgc-accent);
+    border-radius: var(--fgc-radius-sm);
+    background: var(--fgc-accent-soft);
+    font-size: var(--fgc-text-sm);
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 1000px) {
+    .fgc-auto-scenes {
+        grid-template-columns: 1fr;
+    }
+
     .fgc-url-groups {
         grid-template-columns: 1fr;
     }

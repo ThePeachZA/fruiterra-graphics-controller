@@ -424,6 +424,14 @@ pub const OVERLAY_FILES: [&str; 7] = [
     "row-casters.html",
 ];
 
+/// The post-v1 Browser Source that switches between bundled overlays.
+pub const AUTO_OVERLAY_FILE: &str = "auto.html";
+
+/// Every Browser Source file shown in the Overlay view, auto page first.
+pub fn overlay_source_files() -> impl Iterator<Item = &'static str> {
+    std::iter::once(AUTO_OVERLAY_FILE).chain(OVERLAY_FILES)
+}
+
 /// Builds the full Browser Source URL for one overlay file.
 #[must_use]
 pub fn overlay_url(base_url: &str, file: &str) -> String {

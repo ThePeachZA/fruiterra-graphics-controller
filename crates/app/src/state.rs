@@ -39,13 +39,13 @@ use fgc_core::{
     set_map_mode, set_map_name, set_map_scores, set_slot as core_set_slot, toggle_map_pool,
     validate_and_repair,
 };
-use fgc_protocol::{AssetCatalog, data_url_for};
+use fgc_protocol::{AssetCatalog, auto_overlay, data_url_for};
 use fgc_server::{AssetMode, Outbound, ServerConfig};
 use tracing::{debug, info, warn};
 
 use crate::assets_io::format_bytes;
 use crate::remote_access;
-use crate::server::{ServerController, project_outbound, server_config};
+use crate::server::{OVERLAY_FILES, ServerController, project_outbound, server_config};
 use crate::tailscale::{ServeState, TailscaleState, TailscaleStatus};
 
 /// How often dirty state is written to disk.
@@ -53,6 +53,41 @@ const SAVE_INTERVAL: Duration = Duration::from_millis(500);
 
 /// Notice shown when cleanup is refused because state cannot be trusted.
 const CLEANUP_PAUSED_NOTICE: &str = "Asset cleanup is paused because the saved state could not be read. Restore app.json or import a project before cleaning up.";
+
+fn auto_overlay_outbound(included: &[String], active: Option<&str>) -> Option<Outbound> {
+    let message = auto_overlay(included.to_vec(), active.map(str::to_owned));
+    match Outbound::from_message(&message) {
+        Ok(frame) => Some(frame),
+        Err(error) => {
+            warn!(%error, "failed to project the auto-overlay selection");
+            None
+        }
+    }
+}
+
+fn default_auto_overlay() -> (Vec<String>, Option<String>) {
+    let first = OVERLAY_FILES[0].to_owned();
+    (vec![first.clone()], Some(first))
+}
+
+/// Canonicalises a scene selection and clears an inactive active scene.
+fn canonical_auto_overlay(
+    included: Vec<String>,
+    active: Option<String>,
+) -> (Vec<String>, Option<String>) {
+    let requested: BTreeSet<String> = included
+        .into_iter()
+        .filter(|file| OVERLAY_FILES.contains(&file.as_str()))
+        .collect();
+    let included: Vec<String> = OVERLAY_FILES
+        .iter()
+        .copied()
+        .filter(|file| requested.contains(*file))
+        .map(str::to_owned)
+        .collect();
+    let active = active.filter(|file| included.contains(file));
+    (included, active)
+}
 
 /// UI-facing owner of the domain state and the overlay server.
 #[derive(Clone, Copy)]
@@ -76,6 +111,10 @@ pub struct AppStore {
     reveal_urls: Signal<bool>,
     /// Ephemeral live visibility state broadcast to connected overlays.
     overlay_visible: Signal<bool>,
+    /// Session-only bundled overlays included in the auto-overlay switcher.
+    auto_overlay_included: Signal<Vec<String>>,
+    /// Session-only active scene in the auto-overlay switcher.
+    auto_overlay_active: Signal<Option<String>>,
     /// Cached data URLs for thumbnails, keyed by `hash:ext`.
     thumb_urls: Signal<HashMap<String, String>>,
     server: ServerController,
@@ -120,6 +159,9 @@ impl AppStore {
         let serve = use_signal(ServeState::default);
         let reveal_urls = use_signal(|| false);
         let overlay_visible = use_signal(|| true);
+        let (auto_included, auto_active) = default_auto_overlay();
+        let auto_overlay_included = use_signal(|| auto_included);
+        let auto_overlay_active = use_signal(|| auto_active);
         let thumb_urls = use_signal(HashMap::<String, String>::new);
 
         let app = Self {
@@ -138,6 +180,8 @@ impl AppStore {
             serve,
             reveal_urls,
             overlay_visible,
+            auto_overlay_included,
+            auto_overlay_active,
             thumb_urls,
             server,
         };
@@ -161,6 +205,7 @@ impl AppStore {
     pub(crate) fn test_store(initial: AppState) -> Self {
         let catalog = build_catalog(&initial);
         let store: Arc<dyn Store> = Arc::new(MemoryStore::new(AppState::default()));
+        let (auto_included, auto_active) = default_auto_overlay();
         Self {
             state: Signal::new(initial),
             catalog: Signal::new(catalog),
@@ -177,6 +222,8 @@ impl AppStore {
             serve: Signal::new(ServeState::Off),
             reveal_urls: Signal::new(false),
             overlay_visible: Signal::new(true),
+            auto_overlay_included: Signal::new(auto_included),
+            auto_overlay_active: Signal::new(auto_active),
             thumb_urls: Signal::new(HashMap::new()),
             server: ServerController::test_controller(),
         }
@@ -346,6 +393,88 @@ impl AppStore {
         let mut overlay_visible = self.overlay_visible;
         overlay_visible.set(visible);
         self.server.broadcast(Outbound::Show { visible });
+    }
+
+    /// Bundled overlays currently included in the auto scene switcher.
+    #[must_use]
+    pub fn auto_overlay_included(&self) -> Vec<String> {
+        self.auto_overlay_included.read().clone()
+    }
+
+    /// Included overlay currently shown by the auto scene switcher.
+    #[must_use]
+    pub fn auto_overlay_active(&self) -> Option<String> {
+        self.auto_overlay_active.read().clone()
+    }
+
+    /// Includes or removes one bundled overlay from the scene switcher.
+    pub fn set_auto_overlay_included(&self, file: &str, include: bool) {
+        if !OVERLAY_FILES.contains(&file) {
+            return;
+        }
+
+        let mut included = self.auto_overlay_included();
+        if include {
+            if !included.iter().any(|item| item == file) {
+                included.push(file.to_owned());
+            }
+        } else {
+            included.retain(|item| item != file);
+        }
+
+        let active = self
+            .auto_overlay_active()
+            .filter(|active| included.contains(active))
+            .or_else(|| included.first().cloned());
+        self.update_auto_overlay(included, active);
+    }
+
+    /// Makes an included overlay the active scene.
+    pub fn set_auto_overlay_active(&self, file: &str) {
+        let included = self.auto_overlay_included();
+        if included.iter().any(|item| item == file) {
+            self.update_auto_overlay(included, Some(file.to_owned()));
+        }
+    }
+
+    /// Activates the fixed bundled-overlay position for controller key `1`–`7`.
+    pub fn activate_auto_overlay_number(&self, number: u8) {
+        if number == 0 {
+            return;
+        }
+        let Some(file) = OVERLAY_FILES.get(usize::from(number - 1)) else {
+            return;
+        };
+        self.set_auto_overlay_active(file);
+    }
+
+    /// Cycles through the included scenes by one position.
+    pub fn cycle_auto_overlay(&self, direction: i8) {
+        let included = self.auto_overlay_included();
+        if included.is_empty() {
+            return;
+        }
+
+        let current = self.auto_overlay_active();
+        let index = current
+            .as_deref()
+            .and_then(|active| included.iter().position(|file| file == active))
+            .unwrap_or(0);
+        let len = i64::try_from(included.len()).unwrap_or(i64::MAX);
+        let next = (index as i64 + i64::from(direction)).rem_euclid(len) as usize;
+        self.set_auto_overlay_active(&included[next]);
+    }
+
+    fn update_auto_overlay(&self, included: Vec<String>, active: Option<String>) {
+        let (included, active) = canonical_auto_overlay(included, active);
+        let mut included_signal = self.auto_overlay_included;
+        let mut active_signal = self.auto_overlay_active;
+        included_signal.set(included.clone());
+        active_signal.set(active.clone());
+
+        if let Some(frame) = auto_overlay_outbound(&included, active.as_deref()) {
+            self.server.broadcast(frame);
+        }
     }
 
     /// Number of bundled and user assets in the current catalogue.
@@ -2240,6 +2369,11 @@ impl AppStore {
             self.server.asset_mode(),
             blob_root.as_deref(),
         );
+        let included = self.auto_overlay_included();
+        let active = self.auto_overlay_active();
+        if let Some(frame) = auto_overlay_outbound(&included, active.as_deref()) {
+            outbound.push(frame);
+        }
         outbound.push(Outbound::Show {
             visible: self.overlays_visible(),
         });
@@ -2990,6 +3124,121 @@ mod tests {
             store.set_overlays_visible(false);
             let (_config, _base_url, outbound) = store.server_plan();
             assert_eq!(outbound.last(), Some(&Outbound::Show { visible: false }));
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
+    }
+
+    #[test]
+    fn auto_overlay_selection_is_ephemeral_and_canonical() {
+        fn scenario() -> Element {
+            let store = AppStore::test_store(AppState::default());
+            assert_eq!(store.auto_overlay_included(), ["game-overlay.html"]);
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("game-overlay.html")
+            );
+
+            store.set_auto_overlay_included("map-select.html", true);
+            store.set_auto_overlay_included("map-select.html", true);
+            store.set_auto_overlay_included("bad.html", true);
+            assert_eq!(
+                store.auto_overlay_included(),
+                ["game-overlay.html", "map-select.html"]
+            );
+
+            store.set_auto_overlay_active("map-select.html");
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("map-select.html")
+            );
+            assert!(!*store.dirty.peek());
+
+            store.set_auto_overlay_included("map-select.html", false);
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("game-overlay.html")
+            );
+
+            store.set_auto_overlay_included("game-overlay.html", false);
+            assert!(store.auto_overlay_included().is_empty());
+            assert_eq!(store.auto_overlay_active(), None);
+            assert!(!*store.dirty.peek());
+
+            store.set_auto_overlay_included("hero-bans.html", true);
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("hero-bans.html")
+            );
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
+    }
+
+    #[test]
+    fn auto_overlay_hotkeys_follow_fixed_positions_and_included_order() {
+        fn scenario() -> Element {
+            let store = AppStore::test_store(AppState::default());
+            for file in ["map-select.html", "row-casters.html"] {
+                store.set_auto_overlay_included(file, true);
+            }
+
+            store.activate_auto_overlay_number(2);
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("map-select.html")
+            );
+
+            store.activate_auto_overlay_number(7);
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("row-casters.html")
+            );
+
+            store.activate_auto_overlay_number(3);
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("row-casters.html")
+            );
+
+            store.cycle_auto_overlay(1);
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("game-overlay.html")
+            );
+
+            store.cycle_auto_overlay(-1);
+            assert_eq!(
+                store.auto_overlay_active().as_deref(),
+                Some("row-casters.html")
+            );
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
+    }
+
+    #[test]
+    fn server_plan_seeds_auto_overlay_and_show() {
+        fn scenario() -> Element {
+            let store = AppStore::test_store(AppState::default());
+            store.set_auto_overlay_included("map-select.html", true);
+            store.set_auto_overlay_active("map-select.html");
+
+            let (_config, _base_url, outbound) = store.server_plan();
+            let expected = auto_overlay_outbound(
+                &["game-overlay.html".to_owned(), "map-select.html".to_owned()],
+                Some("map-select.html"),
+            )
+            .expect("auto overlay frame");
+
+            assert!(outbound.contains(&expected));
+            assert_eq!(outbound.last(), Some(&Outbound::Show { visible: true }));
             VNode::empty()
         }
 

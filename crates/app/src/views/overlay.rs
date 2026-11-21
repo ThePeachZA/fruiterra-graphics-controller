@@ -8,9 +8,9 @@ use fgc_server::ServerStatus;
 
 use crate::assets_io::open_browser;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
-use crate::components::{CollapsiblePanel, KeyValue, KeyValues, Panel};
+use crate::components::{CollapsiblePanel, Disclosure, KeyValue, KeyValues, Panel};
 use crate::remote_access::{self, OverlayUrlGroup};
-use crate::server::{OVERLAY_FILES, overlay_url};
+use crate::server::{OVERLAY_FILES, overlay_source_files, overlay_url};
 use crate::state::AppStore;
 use crate::status::{broadcast_age_text, client_count_text, status_text, status_tone};
 
@@ -145,7 +145,121 @@ pub fn OverlayView() -> Element {
                     }
                 }
             }
+            AutoOverlayController {}
             OverlayUrls {}
+        }
+    }
+}
+
+/// Session-only scene switcher for the single auto Browser Source.
+#[component]
+fn AutoOverlayController() -> Element {
+    let store = use_context::<AppStore>();
+    let included = store.auto_overlay_included();
+    let active = store.auto_overlay_active();
+    let hotkey_included = included.clone();
+    let active_text = active.clone().unwrap_or_else(|| "None".to_owned());
+    let status_text = if active.is_some() {
+        format!("Active scene: {active_text}")
+    } else {
+        "Active scene: none — include at least one overlay".to_owned()
+    };
+
+    rsx! {
+        Panel {
+            title: "Auto-overlay scenes".to_owned(),
+            description: "Use one Browser Source and switch between a chosen subset of overlays.".to_owned(),
+            div {
+                class: "fgc-auto-scenes",
+                tabindex: 0,
+                aria_label: "Auto-overlay scene controller",
+                onkeydown: move |event: KeyboardEvent| {
+                    match event.key() {
+                        Key::Character(key) if key.len() == 1 && key.as_bytes()[0].is_ascii_digit() => {
+                            let Some(number) = key.parse::<u8>().ok() else {
+                                return;
+                            };
+                            let Some(file) = OVERLAY_FILES.get(usize::from(number.saturating_sub(1))) else {
+                                return;
+                            };
+                            if number == 0 || !hotkey_included.iter().any(|item| item == file) {
+                                return;
+                            }
+                            event.prevent_default();
+                            event.stop_propagation();
+                            store.activate_auto_overlay_number(number);
+                        }
+                        Key::ArrowLeft | Key::ArrowRight if !hotkey_included.is_empty() => {
+                            event.prevent_default();
+                            event.stop_propagation();
+                            let direction = if event.key() == Key::ArrowLeft { -1 } else { 1 };
+                            store.cycle_auto_overlay(direction);
+                        }
+                        _ => {}
+                    }
+                },
+                div { class: "fgc-auto-scenes__list", role: "group", aria_label: "Overlay scenes",
+                    for (index, file) in OVERLAY_FILES.iter().enumerate() {
+                        {
+                            let file = (*file).to_owned();
+                            let is_included = included.contains(&file);
+                            let is_active = active.as_deref() == Some(file.as_str());
+                            let include_label = format!("Include {file} in the auto scene switcher");
+                            let active_label = format!("Make {file} the active scene");
+                            let active_file = file.clone();
+                            rsx! {
+                                div {
+                                    key: "{file}",
+                                    class: if is_included { "fgc-auto-scene" } else { "fgc-auto-scene fgc-auto-scene--excluded" },
+                                    div { class: "fgc-auto-scene__head",
+                                        label { class: "fgc-auto-scene__include",
+                                            input {
+                                                r#type: "checkbox",
+                                                checked: is_included,
+                                                aria_label: include_label,
+                                                onkeydown: |event: KeyboardEvent| event.stop_propagation(),
+                                                onchange: {
+                                                    let file = file.clone();
+                                                    move |event: FormEvent| {
+                                                        store.set_auto_overlay_included(&file, event.checked());
+                                                    }
+                                                },
+                                            }
+                                            span { "Include" }
+                                        }
+                                        span { class: "fgc-auto-scene__key", aria_hidden: "true", "{index + 1}" }
+                                    }
+                                    p { class: "fgc-auto-scene__file", "{file}" }
+                                    label { class: "fgc-auto-scene__active",
+                                        input {
+                                            r#type: "radio",
+                                            name: "auto-overlay-active",
+                                            checked: is_active,
+                                            disabled: !is_included,
+                                            aria_label: active_label,
+                                            onkeydown: |event: KeyboardEvent| event.stop_propagation(),
+                                            onchange: move |_| store.set_auto_overlay_active(&active_file),
+                                        }
+                                        span { "Active" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                div { class: "fgc-auto-scenes__side",
+                    p { class: "fgc-auto-scenes__status", role: "status", "{status_text}" }
+                    Disclosure {
+                        title: "Keyboard shortcuts".to_owned(),
+                        hint: Some("while this controller has focus".to_owned()),
+                        p { class: "fgc-note", "Press 1–7 to activate that numbered overlay when it is included." }
+                        p { class: "fgc-note", "Use Left and Right arrow keys to cycle through the included overlays." }
+                    }
+                    p { class: "fgc-note",
+                        "Selection and active scene last for this app session only. The auto Browser Source is listed under Browser sources below."
+                    }
+                }
+            }
         }
     }
 }
@@ -189,7 +303,7 @@ pub(crate) fn OverlayUrls() -> Element {
                 }
             }
             p { class: "fgc-note",
-                "Each set contains all seven overlays. Use the URLs for the network your OBS computer can reach."
+                "Each set contains the auto scene switcher plus all seven overlays. Use the URLs for the network your OBS computer can reach."
             }
         }
     }
@@ -200,7 +314,7 @@ pub(crate) fn OverlayUrls() -> Element {
 fn UrlGroupCard(group: OverlayUrlGroup, visible: bool) -> Element {
     let key = group.key;
     let base_url = group.base_url.clone();
-    let count = format!("{} sources", OVERLAY_FILES.len());
+    let count = format!("{} sources", overlay_source_files().count());
 
     rsx! {
         section { class: "fgc-url-group fgc-url-group--{key}",
@@ -219,7 +333,7 @@ fn UrlGroupCard(group: OverlayUrlGroup, visible: bool) -> Element {
                 }
             }
             div { class: "fgc-source-list",
-                for file in OVERLAY_FILES {
+                for file in overlay_source_files() {
                     SourceRow {
                         key: "{file}",
                         file: file.to_owned(),
