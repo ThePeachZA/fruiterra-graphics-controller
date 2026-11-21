@@ -35,6 +35,8 @@ On connect the server sends:
 - The five scoreboard-bearing keys hold the **same** scoreboard payload object. This duplication is deliberate: each overlay reads a different key.
 - `casters` holds `{ "castersData": [...] }` — **not** the scoreboard payload.
 - `matchTimer` holds the timer payload.
+- When the app's auto-overlay controller is active, `autoOverlay` holds the
+  session-only scene selection described in §3.5.
 - `requestInit` triggers the same message again at any time.
 
 **Compatibility rules**
@@ -209,6 +211,30 @@ Two shapes, exactly as the original sends them:
 - Implemented by all seven overlays; **not sent by the app in v1** (no UI toggle). The B1 backlog item turns it on.
 - Must remain supported server-side; no schema change.
 
+### 3.5 `autoOverlay`
+
+Post-v1 section used only by `auto.html` and the app's auto-overlay controller:
+
+```json
+{
+  "type": "autoOverlay",
+  "data": {
+    "included": ["game-overlay.html", "map-select.html"],
+    "active": "map-select.html"
+  }
+}
+```
+
+- `included` contains zero or more bundled overlay filenames in fixed bundled
+  order. It is session-only and is never read from or written to `/state` or
+  `app.json`.
+- `active` is either a filename present in `included` or `null` when nothing is
+  included.
+- The app broadcasts this section on server start/restart and on every
+  inclusion or active-scene change, so it is also present in `init` while the
+  server is running. Clients that do not implement `auto.html` ignore the key.
+- `show` still applies to every iframe loaded by the auto page.
+
 ---
 
 ## 4. Broadcast policy
@@ -253,6 +279,7 @@ Fixtures live in `protocol/tests/fixtures/`:
 | `timer_tick.json` | Timer tick shape |
 | `timer_action_start.json`, `timer_action_pause.json`, `timer_action_reset.json` | All three timer control shapes |
 | `show.json` | Top-level `visible` boolean, no `data` envelope |
+| `auto_overlay.json` | `included` filenames and the active scene |
 
 Fixture provenance: the fixtures were derived field-by-field from the original
 Electron projection (`src/views/MatchController.tsx`, `electron/main.ts` and the

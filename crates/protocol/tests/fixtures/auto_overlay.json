@@ -1,0 +1,7 @@
+{
+  "type": "autoOverlay",
+  "data": {
+    "included": ["game-overlay.html", "map-select.html"],
+    "active": "map-select.html"
+  }
+}

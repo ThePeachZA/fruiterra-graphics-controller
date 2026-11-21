@@ -15,13 +15,14 @@ mod url;
 pub use cache::SectionCache;
 pub use catalog::AssetCatalog;
 pub use dto::{
-    CasterDto, CastersDto, HeroBansDto, MapDto, MapPoolGroupDto, MapPoolMapDto, Message, PlayerDto,
-    ScoreboardDto, ShowMessage, SideIconsDto, TeamDto, TimerActionDto, TimerActionKind,
-    TimerPayload, TimerSettingsDto, TimerTickDto,
+    AUTO_OVERLAY_SECTION, AutoOverlayDto, CasterDto, CastersDto, HeroBansDto, MapDto,
+    MapPoolGroupDto, MapPoolMapDto, Message, PlayerDto, ScoreboardDto, ShowMessage, SideIconsDto,
+    TeamDto, TimerActionDto, TimerActionKind, TimerPayload, TimerSettingsDto, TimerTickDto,
 };
 pub use error::ProtocolError;
 pub use projection::{
-    DEFAULT_WATERMARK_NAME, Projector, SCOREBOARD_TYPES, scores, show, timer_action, timer_tick,
+    DEFAULT_WATERMARK_NAME, Projector, SCOREBOARD_TYPES, auto_overlay, scores, show, timer_action,
+    timer_tick,
 };
 pub use url::{
     AssetUrlResolver, DataUrlResolver, ServedAssetResolver, data_url_for, font_url,

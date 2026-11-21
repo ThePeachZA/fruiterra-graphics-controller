@@ -12,7 +12,8 @@ use std::path::PathBuf;
 
 use fgc_core::AppState;
 use fgc_protocol::{
-    AssetCatalog, Message, Projector, SectionCache, TimerActionDto, show, timer_action, timer_tick,
+    AssetCatalog, Message, Projector, SectionCache, TimerActionDto, auto_overlay, show,
+    timer_action, timer_tick,
 };
 use serde_json::Value;
 
@@ -139,6 +140,28 @@ fn show_message() {
     let actual = serde_json::to_value(show(true)).expect("show JSON");
 
     assert_fixture("show.json", &actual);
+}
+
+#[test]
+fn auto_overlay_message() {
+    let actual = serde_json::to_value(auto_overlay(
+        vec!["game-overlay.html".to_owned(), "map-select.html".to_owned()],
+        Some("map-select.html".to_owned()),
+    ))
+    .expect("autoOverlay JSON");
+
+    assert_fixture("auto_overlay.json", &actual);
+}
+
+#[test]
+fn auto_overlay_allows_no_active_scene() {
+    let actual =
+        serde_json::to_value(auto_overlay(Vec::new(), None)).expect("empty autoOverlay JSON");
+
+    assert_eq!(
+        actual,
+        serde_json::json!({ "type": "autoOverlay", "data": { "included": [], "active": null } })
+    );
 }
 
 #[test]

@@ -5,9 +5,10 @@ use fgc_core::{
 };
 
 use crate::{
-    AssetCatalog, AssetUrlResolver, CasterDto, CastersDto, HeroBansDto, MapDto, MapPoolGroupDto,
-    MapPoolMapDto, Message, PlayerDto, ScoreboardDto, ShowMessage, SideIconsDto, TeamDto,
-    TimerActionDto, TimerPayload, TimerSettingsDto, TimerTickDto,
+    AUTO_OVERLAY_SECTION, AssetCatalog, AssetUrlResolver, AutoOverlayDto, CasterDto, CastersDto,
+    HeroBansDto, MapDto, MapPoolGroupDto, MapPoolMapDto, Message, PlayerDto, ScoreboardDto,
+    ShowMessage, SideIconsDto, TeamDto, TimerActionDto, TimerPayload, TimerSettingsDto,
+    TimerTickDto,
 };
 
 /// Message types that carry the identical scoreboard payload.
@@ -523,6 +524,12 @@ pub fn timer_action(action: TimerActionDto) -> Message<TimerPayload> {
 #[must_use]
 pub fn show(visible: bool) -> ShowMessage {
     ShowMessage::new(visible)
+}
+
+/// Builds the session-only `autoOverlay` scene-selection message.
+#[must_use]
+pub fn auto_overlay(included: Vec<String>, active: Option<String>) -> Message<AutoOverlayDto> {
+    Message::new(AUTO_OVERLAY_SECTION, AutoOverlayDto::new(included, active))
 }
 
 fn team_dto(team: &Team, logo_url: Option<String>) -> TeamDto {

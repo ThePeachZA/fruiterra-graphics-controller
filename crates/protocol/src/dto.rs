@@ -53,6 +53,27 @@ impl ShowMessage {
     }
 }
 
+/// Section key for the session-only auto-overlay scene selection.
+pub const AUTO_OVERLAY_SECTION: &str = "autoOverlay";
+
+/// Session-only scene selection for the `autoOverlay` page.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutoOverlayDto {
+    /// Bundled overlay filenames included in the scene switcher.
+    pub included: Vec<String>,
+    /// Included filename currently shown by the scene switcher.
+    pub active: Option<String>,
+}
+
+impl AutoOverlayDto {
+    /// Creates an auto-overlay payload.
+    #[must_use]
+    pub fn new(included: Vec<String>, active: Option<String>) -> Self {
+        Self { included, active }
+    }
+}
+
 /// The scoreboard payload shared by five message types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
