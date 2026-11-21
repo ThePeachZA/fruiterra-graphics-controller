@@ -11,7 +11,8 @@ Owner request, 2026-11-21. Two submitted entries were merged here:
 
 `docs/backlog.md` P5 already sketches a Stream Deck / HTTP control API for
 score changes, next map, show/hide, timer start/stop, and Bitfocus Companion.
-This item expands that intent to Touch Portal profiles as well.
+This item expands that intent to Touch Portal profiles as well. Legacy P5 is
+migrated here and is not duplicated as a separate Doctrine item.
 
 ## Scope
 

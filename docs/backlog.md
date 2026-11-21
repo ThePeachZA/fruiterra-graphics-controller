@@ -827,3 +827,98 @@ or published.
 A45 stays Pass — this was a separate post-v1 map-count/label defect and is now
 fixed. The seven bundled overlay files remain frozen for v1.0.0; this edit is
 post-v1 only.
+
+<!-- doctrine-migration-map:start -->
+
+## X. Doctrine backlog migration map (2026-11-21)
+
+Every legacy ID in this document and its companion design/QA records now has a
+Doctrine backlog record. Legacy IDs remain provenance labels only: they are
+not canonical IDs and are tagged on each record as `legacy:<id>` or
+`prior-art:<source>`. P5 was already migrated to Doctrine **IMP-003** and was
+not duplicated. The unnumbered §C bullets were migrated as seven grouped
+umbrella records to be split when promoted.
+
+Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed · done × 1, improvement/closed · done × 22, improvement/triaged × 7, idea/triaged × 22, chore/closed · done × 2, chore/triaged × 3, issue/triaged × 1, chore/closed · accepted × 1.
+
+| Legacy | Doctrine | Kind | Status | Title |
+|---|---|---|---|---|
+| C1 | ISS-002 | issue | closed · fixed | Local overlay fonts |
+| C2 | ISS-003 | issue | closed · fixed | `currentMapIndex` off-by-one |
+| C3 | ISS-004 | issue | closed · fixed | Stale asset caches |
+| C4 | ISS-005 | issue | closed · fixed | Port source of truth |
+| C5 | ISS-006 | issue | closed · fixed | Broken menu URL |
+| C6 | ISS-007 | issue | closed · fixed | `init` compatibility |
+| C7 | ISS-008 | issue | closed · fixed | Atomic saves |
+| C8 | ISS-009 | issue | closed · fixed | Import validation |
+| C9 | ISS-010 | issue | closed · fixed | Schema version |
+| C10 | ISS-011 | issue | closed · fixed | Portable exports |
+| C11 | ISS-012 | issue | closed · fixed | Safe path handling |
+| C12 | ISS-013 | issue | closed · fixed | Remove dead/incorrect state |
+| C13 | ISS-014 | issue | closed · done | Timer overlay decision |
+| C14 | ISS-015 | issue | closed · fixed | Map game modes |
+| C15 | ISS-016 | issue | closed · fixed | Asset cleanup after a failed load |
+| T1 | IMP-004 | improvement | closed · done | Generate a valid single-elimination bracket |
+| T2 | IMP-005 | improvement | closed · done | Generate a valid double-elimination board |
+| T3 | IMP-006 | improvement | closed · done | Generate round-robin fixtures and standings |
+| T4 | IMP-007 | improvement | closed · done | Preview and adjust generated placements |
+| T5 | IMP-008 | improvement | closed · done | Auto-advance without overwriting manual placements |
+| T6 | IMP-009 | improvement | closed · done | Recursive downstream clear on result edit |
+| T7 | IMP-010 | improvement | closed · done | Grand-final reset and champion override |
+| T8 | IMP-011 | improvement | closed · done | Automatic champion from final |
+| T9 | IMP-012 | improvement | closed · done | Configurable round-robin tiebreakers |
+| T10 | IMP-013 | improvement | closed · done | Optional playoff generation with preview |
+| T11 | IMP-014 | improvement | closed · done | Match modal editing |
+| T12 | IMP-015 | improvement | closed · done | Tournament persistence and repair |
+| T13 | IMP-016 | improvement | closed · done | Tournament unit tests |
+| T14 | IMP-017 | improvement | closed · done | Keyboard access and 1080p 32-team board |
+| T15 | IMP-018 | improvement | closed · done | Multi-stage groups, playoff restore and Push to overlay |
+| B1 | IMP-019 | improvement | triaged | Show/hide overlay control |
+| B2 | IMP-020 | improvement | triaged | All overlay URLs with copy buttons |
+| B3 | IMP-021 | improvement | triaged | Overlay health/reconnect indicator |
+| B4 | IMP-022 | improvement | triaged | Basic hotkeys |
+| B5 | IMP-023 | improvement | triaged | Timer overlay |
+| B6 | IMP-024 | improvement | closed · done | Bulk asset import |
+| P1 | IDE-006 | idea | triaged | Undo / redo |
+| P2 | IDE-007 | idea | triaged | Presets / show templates |
+| P3 | IDE-008 | idea | triaged | Multiple OBS scenes / overlay sets |
+| P4 | IDE-009 | idea | triaged | Tournament / bracket overlay |
+| D1 | IDE-010 | idea | triaged | Hero-ban redesign |
+| D2 | IDE-011 | idea | triaged | Merged Map Selection / Hero Bans tab |
+| D3 | IDE-012 | idea | triaged | Map-mode icons on map select |
+| D4 | IDE-013 | idea | triaged | Caster camera and audio via VDO Ninja |
+| D5 | IDE-014 | idea | triaged | Map-pool row animation |
+| D6 | IDE-015 | idea | triaged | Roster card autofill |
+| D7 | IDE-016 | idea | triaged | Hero-ban strip polish |
+| D8-1 | ISS-017 | issue | closed · fixed | Origin-aware overlay connection |
+| D8-2 | IMP-025 | improvement | closed · done | Remote-access settings |
+| D8-3 | IMP-026 | improvement | closed · done | Tailscale detection |
+| D8-4 | IMP-027 | improvement | closed · done | Serve lifecycle |
+| D8-5 | IMP-028 | improvement | triaged | Funnel (explicit opt-in) |
+| D8-6 | IMP-029 | improvement | closed · done | URL generation |
+| D8-7 | CHR-002 | chore | closed · done | Docs and QA |
+| D8-8 | IMP-030 | improvement | closed · done | Remote-access settings clean-up |
+| D8-9 | IMP-031 | improvement | closed · done | Dual Browser Source URL sets and UI pass |
+| D9 | CHR-003 | chore | closed · done | Custom overlay author documentation |
+| D10 | CHR-001 | chore | triaged | Wiki screenshots for the v1 guide |
+| M9-7 | ISS-018 | issue | triaged | six-caster row clips social row |
+| R3 | CHR-006 | chore | closed · accepted | original pre-rebuild overlay HTML |
+| A17 | CHR-005 | chore | triaged | A17 second-machine project import |
+| §C group | IDE-017 | idea | triaged | Protocol and server roadmap (§C) |
+| §C group | IDE-018 | idea | triaged | Overlays and presentation roadmap (§C) |
+| §C group | IDE-019 | idea | triaged | Match and show control roadmap (§C) |
+| §C group | IDE-020 | idea | triaged | Tournament roadmap (§C) |
+| §C group | IDE-021 | idea | triaged | Assets and data roadmap (§C) |
+| §C group | IDE-022 | idea | triaged | UI and UX roadmap (§C) |
+| §C group | IDE-023 | idea | triaged | Platform and delivery roadmap (§C) |
+| Follow-up note | CHR-004 | chore | triaged | Font A/B review checkpoint |
+| Follow-up note | IDE-024 | idea | triaged | Protocol v2 review checkpoint |
+| Follow-up note | IDE-025 | idea | triaged | Tournament overlay review checkpoint |
+| Follow-up note | IMP-032 | improvement | triaged | Placeholder TAG image for empty slots |
+| Follow-up note | IDE-026 | idea | triaged | In-app variable and script inspector |
+| Follow-up note | IDE-027 | idea | triaged | Legacy Electron app.json importer |
+
+No v1.0.0 content, schema, protocol or QA state was changed by the migration.
+Screenshots remain unpublished; D10 is parked, not approved.
+
+<!-- doctrine-migration-map:end -->

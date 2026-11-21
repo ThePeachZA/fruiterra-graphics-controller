@@ -1,0 +1,22 @@
+schema = "doctrine.backlog"
+version = 1
+
+id = 26
+slug = "in-app-variable-and-script-inspector"
+title = "In-app variable and script inspector"
+kind = "idea"
+status = "triaged"
+resolution = ""
+created = "2026-11-21"
+updated = "2026-11-21"
+tags = ["docs", "needs-design", "post-v1", "prior-art:docs-c4"]
+
+# outbound-only. Cross-kind structural edges (e.g. references with a role
+# — `originates_from` for backlog→slice provenance — governed_by, related, drift) are
+# uniform `[[relation]]` rows — author them with
+# `doctrine link ITEM-NNN <label> <target>`; `doctrine inspect ITEM-NNN` renders
+# them. The dep/seq axes below stay typed (they carry per-edge payloads).
+[relationships]
+needs    = []                   # item→item hard prerequisite
+after    = [{ to = "CHR-003", rank = 0 }]                   # item→item soft sequence: { to, rank? }
+triggers = []                   # watched source globs: { globs, note? }
