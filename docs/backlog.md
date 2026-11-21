@@ -72,7 +72,7 @@ These are small, isolated additions that would be cheap to pull forward *after* 
 | ID | Item | Why it might be worth pulling forward later |
 |---|---|---|
 | B1 | Show/hide overlay control | All overlays already implement `{type:"show", visible}`; a UI toggle is low effort and useful live. |
-| B2 | All overlay URLs with copy buttons | Current UI exposes only the game overlay URL; the rest are hidden in the menu. |
+| B2 | ~~All overlay URLs with copy buttons~~ | **Done 2026-11-21.** D8-6/D8-9 added labelled Browser Source groups for each enabled access path; every group lists all seven overlay URLs with Open and Copy actions. A48 verified the groups and hidden state; Doctrine IMP-020 closed · done. |
 | B3 | Overlay health/reconnect indicator | Surface connected client count and last broadcast time. |
 | B4 | Basic hotkeys | Score +/-, next map, show/hide — high value during a live show. |
 | B5 | Timer overlay | The timer is control-only in v1; a bundled broadcast timer can read the existing `matchTimer` messages. |
