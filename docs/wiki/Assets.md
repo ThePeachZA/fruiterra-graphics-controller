@@ -59,13 +59,20 @@ Bundled assets cannot be renamed or deleted.
 
 Some assets have properties that tell the overlay which variant to use.
 
-- A **Hero** asset has **Properties…**. Use **Upload ban icon…** to attach a
-  small image to that hero; the button becomes **Replace ban icon…** once one
-  exists, and **Remove ban icon** clears it. The **Ban icon** preview updates as
-  soon as a replacement is chosen, without closing the dialog. The ban icon is
-  owned by that hero: it is hidden from the library, hero pickers and ban lists,
-  and is deleted when you replace/remove it or delete the hero. Without one, the
-  hero-bans overlay uses the hero's own art.
+- A **Hero** asset has **Properties…**. It has three optional attachments:
+  - **Ban icon** - a small image used where the hero is banned. The button
+    becomes **Replace ban icon…** once one exists, and **Remove ban icon**
+    clears it. Without one, the hero-bans overlay uses the hero's own art.
+  - **Transparent art** - a cut-out of the hero on a transparent background.
+    The hero-bans overlay prefers it over the normal art and stands it on the
+    bottom of the screen. Without one, the normal art is used.
+  - **Badge** - a small hexagonal emblem for the hero, shown next to the role.
+  - **Role** - Tank, Damage or Support. The hero-bans overlay draws the role
+    as a hexagon next to the hero's name.
+  Each attachment is owned by that hero: it is hidden from the library, hero
+  pickers and ban lists, and is deleted when you replace or remove it, or when
+  you delete the hero. The previews update as soon as a replacement is chosen,
+  without closing the dialog.
 - A **Map** asset has an inline **Game mode** select. The map-pool overlay groups
   maps by that mode, and Match Controller fills **Game mode** on map slots that
   use the map. Choose **No game mode** to clear it.
@@ -75,14 +82,27 @@ still show the derived value. If you type a mode by hand, that value is kept
 until you choose a different map name, which re-derives the mode from the map's
 current game mode.
 
-Library thumbnails load lazily and are cached by content hash, so revisiting the
-page does not decode every image again. Long asset names show a tooltip and
-wrap to at most two lines.
+## Browsing the library
 
-## Project bundles
+The library opens with the assets themselves, not a wall of panels.
 
-A project bundle copies the project and the user images it references to another
-machine.
+- The **search** box and the **Sort assets** list sit on the toolbar, with the
+  category chips underneath. Sort by **Name (A-Z)**, **Name (Z-A)**,
+  **Category**, **Newest first** or **Oldest first**.
+- The library is **paged**, 24 assets at a time, so a large collection loads
+  quickly. The pager under the grid shows what is on screen and how many pages
+  there are.
+- **Import files…**, **Import from URL…** and the import **Category** sit on one
+  row under the toolbar.
+- Thumbnails are fetched from the running overlay server, so the application
+  never holds a copy of every image in memory. A placeholder shows while a
+  thumbnail loads. If the overlay server is stopped, the image is inlined
+  instead.
+
+## Project backup
+
+A project backup copies the project and the user images it references to
+another machine. It lives in **Settings → Project backup**.
 
 - **Export project…** writes a folder named `fruiterra-project-<unix-timestamp>`
   containing `app.json`, `export.json` and the referenced blobs.
@@ -90,6 +110,10 @@ machine.
   be undone.
 
 Bundled art is never copied because every installation already has it.
+
+A project backup and a **content pack** are different things. A backup moves
+*your* project - teams, matches, settings and images. A pack carries artwork
+only, so installing one adds images and changes nothing else.
 
 ## Clean up storage
 

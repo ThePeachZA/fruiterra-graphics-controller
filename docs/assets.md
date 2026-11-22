@@ -167,8 +167,9 @@ exactly as they are.
     `<prefix>/<hash>.<ext>` paths.
 - Each entry in `assets` carries the asset's `id`, `name`, `category`, `hash`,
   `ext`, `originalFilename` and its links (`icon`, `portrait`, `transparent`,
-  `gameMode`), its `role` and its `attachment`. A pack can therefore carry a
-  hero's ban icon or transparent cut-out together with the hero that owns it.
+  `badge`, `gameMode`), its `role` and its `attachment`. A pack can therefore
+  carry a hero's ban icon, cut-out or badge together with the hero that owns
+  it.
 - **Installing** validates every blob before writing anything: size limit,
   file type, SVG sanitising and the SHA-256. An asset whose id is already in
   the project with the same content is left alone. A link that no longer

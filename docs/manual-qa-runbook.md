@@ -4418,3 +4418,56 @@ all five icons loaded and 13 maps, the wire carried all five game-mode icons,
 the three role icons and the two side icons, and the overlay stayed
 transparent at 1920x1080. All ten assertions passed. The operator's release
 and development projects were not written to.
+
+### A71 - Assets library paging, sorting and hero artwork
+
+**Covers:** owner request 2026-11-23 (pagination, skeleton, the cleanup of the
+options at the top of the assets page, project bundles versus content packs, the
+sort order and the hero artwork sync).
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary with `--data-dir` pointing
+   at a **copy** of the project and
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222
+   --remote-allow-origins=* --user-data-dir=<harness>\webview`. Copying the
+   project first is what keeps the operator's own folders untouched.
+2. Open **Assets** and check that the **Library** panel is the first thing on
+   the page, that the toolbar carries the search box, the **Sort assets** list
+   and the category chips, and that the import controls sit on one row under
+   the toolbar.
+3. Count the cards, read the pager text, press **Next** and confirm the cards
+   changed. Change **Sort assets** to each order and confirm the order
+   changes. Press the **Hero** chip and confirm the library narrows and the
+   page count drops.
+4. Read the `src` of every visible `img.fgc-asset-card__image` and confirm they
+   are `http://127.0.0.1:<port>/assets/<hash>.<ext>` and that none is a `data:`
+   URL. Confirm the images that have loaded have a non-zero `naturalWidth`.
+5. Open **Settings** and confirm the **Project backup** panel is there with
+   **Export project…** and **Import project…**.
+6. Open a hero's **Properties…** and confirm the **Badge**, **Transparent art**
+   and **Role** sections are present.
+7. Record any console errors, then stop the app and delete the harness.
+
+**Gotchas:**
+
+- In a Node template literal `\\d` is a literal backslash followed by `d`, so a
+  regular expression that needs a digit class must be written `\d`. Two
+  assertions failed for that reason alone on the first run.
+- The app window is a WebView2 page on a custom `dioxus://` origin, so the
+  `http://127.0.0.1` thumbnail source only works while the overlay server is
+  running. That is also why the inlined fallback still exists.
+
+**Evidence:** CDP DOM samples of the library, the pager text, the sort list, the
+thumbnail sources, the Settings panel list and the hero dialog, plus the
+console capture. No screenshots were taken or published.
+
+**Result: Pass - assistant 2026-11-23.** All fifteen assertions were true:
+`libraryComesFirst`, `pageHoldsTwentyFour`, `pagerShowsRange`, `pagerShowsPageCount`,
+`nextPageChangesTheCards`, `sortDropdownHasFiveOrders`, `sortingChangesTheOrder`,
+`filterNarrowsTheLibrary`, `thumbnailsComeFromTheServer`, `thumbnailsActuallyLoad`,
+`importControlsAreInOneRow`, `settingsHasProjectBackup`, `heroDialogHasBadgeSection`
+and `noConsoleErrors`. The library is the first panel, the pager reads "Showing
+1-24 of 104" and "Page 1 of 5", page 2 starts Domina, Doomfist and Dorado, the
+Hero filter narrows to 54 assets over 3 pages, and all 24 thumbnails were served
+over HTTP with no data URL among them.

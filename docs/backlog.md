@@ -1647,3 +1647,70 @@ all five icons loaded and 13 maps. The wire carried all five game-mode icons,
 the three role icons and the two side icons. The QA ran against a copy of the
 project in a separate `--data-dir`, so the operator's own projects were never
 written to.
+
+## AJ. Assets library rework and the hero artwork sync (2026-11-23)
+
+Four owner requests on 2026-11-23: paginate the assets view because it took
+forever to load, stop the application freezing while the image previews
+loaded, clean up the option fields at the top of the assets page and define
+project bundles against content packs, and finally add a sort order.
+
+### Why the page froze
+
+Every visible card asked the application for the whole blob of its image and
+it was base64-encoded into a `data:` URL. Nothing was downscaled, and the
+cache of those strings was never emptied, so a library of 150 assets at around
+3.7 MB each held roughly 740 MB of base64 text for the lifetime of the
+process. The encoding also ran on the application's own task, so the window
+stopped responding while the previews appeared.
+
+The overlay server already serves every asset at `/assets/<hash>.<ext>` with a
+one-year immutable cache header, and that route does not depend on the asset
+mode. The thumbnails now use it: the application hands the WebView a URL and
+the image is fetched and decoded by the browser instead of by the application.
+The inlined path is still there as a fallback for when the server is stopped,
+and its cache is now capped.
+
+### The page
+
+- The library is the **first** panel on the page. The import controls moved
+  onto one row under the toolbar, so the page opens with the assets rather
+  than with a wall of panels.
+- The library is **paged**, 24 assets at a time, with a pager that shows the
+  range and the page count. A filter, a search or a new order returns to the
+  first page.
+- A **Sort assets** list offers Name (A-Z), Name (Z-A), Category, Newest first
+  and Oldest first.
+- A **skeleton** placeholder holds the space of a thumbnail that is still
+  loading, and it respects `prefers-reduced-motion`.
+- **Project bundles** moved out of the assets page and became **Settings ->
+  Project backup**, where a whole-project move belongs. The assets page keeps
+  **Content packs** and now says plainly that a pack adds artwork while a
+  backup moves the project.
+
+### The hero artwork
+
+The owner pointed at `D:\Game Assets\Overwatch\Heroes` and a Google Sheet of
+roles and map modes. A new `--sync-heroes <folder>` command reads the sheet
+and the art folder and sets, for every hero, the ban icon from
+`Icons\Square`, the badge from `Icons\Hexagon`, the transparent cut-out from
+`Transparent\` and the role from the sheet, and it links every map to its game
+mode. The project now has 54 heroes with a role, 54 with a cut-out, 54 with the
+square ban icon and 49 with a badge - Dmon, Doctrine, Echo, Shion and Sierra
+have no hexagonal source file - and all 29 maps resolve to a game mode.
+
+The badge is a new optional attachment on a hero, `Asset.badge`, carried on
+the wire as `heroBadges`, so the hero bans overlay can show it.
+
+### The pack
+
+The published pack was rebuilt from the synced project and now carries 250
+assets: 211 hero files, 29 maps and the 10 game-mode, role and side icons.
+Team logos and player portraits are deliberately left out; they belong to a
+team, not to shared artwork. The repository README was corrected to match.
+
+A71 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the library pages and sorts and filters, all 24 thumbnails served
+over HTTP with no data URL among them, the project backup in Settings and the
+badge, transparent art and role sections in the hero dialog.
