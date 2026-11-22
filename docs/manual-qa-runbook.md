@@ -4021,3 +4021,75 @@ were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A1
 and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` was `No serve config`. The temporary QA harness lives
 outside the repository and is removed when the overlay review work completes.
+
+### A65 - Hero bans redesign
+
+**Covers:** owner review list 2026-11-22 (slice F), `hero-bans.html`
+
+**Steps:**
+
+1. `dx build --desktop` after stopping any running `fruiterra-gc`, then launch
+   the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Restore
+   the authoritative `app.json`/`app.json.bak` fixture before and after the run.
+2. Build a QA fixture whose match names a single map (Ilios, Control) and sets
+   `currentMap` to it. `currentMap` is the index, so write the number 0, and
+   the map name comes from `maps[0].name` while the mode comes from
+   `maps[0].gameModeName`. Fill the first hero-ban slot with
+   `{ firstBanTeam: 'A', teamA: ['Ana', 'Tracer'], teamB: ['Kiriko'] }` so the
+   home panel is the first ban and also has to render a second ban in the
+   extra row. Leave `settings.display.showHeroBans` on.
+3. Open `hero-bans.html` at 1920x1080 over CDP, wait for both panel images,
+   then let the reveal settle. Sample the panel geometry, the tag text and
+   colour, the panel names, the extra row and the map strip.
+4. Confirm the two panels are the same width and side by side, that the home
+   art is the first ban and the away art the second, that the tags read
+   `1ST BAN` and `2ND BAN`, and that the panel names hold the hero names.
+5. Confirm the map strip reads the mode, `MAP N` and the map name, and that
+   the mode icon resolved. The icon map is keyed by the lower-case mode name
+   while the match stores the mode as typed, so the lookup lower-cases it.
+6. Confirm the 30px overflow is gone: the container's bottom edge must land
+   on or before 1080px and the document must not scroll. The old column was
+   1110px tall in a 1080px canvas.
+7. Record the transparency, document size, font state, requests, failed
+   responses and console errors. Stop the app, restore the authoritative
+   fixture, recheck its hashes and `tailscale serve status`.
+
+**Gotchas:**
+
+- `text-transform: uppercase` is a display transform, so `textContent` still
+  holds the authored casing. Compare the names case-insensitively.
+- `--fgc-surface-inverse` is the near-white plate (`rgb(238, 242, 248)`), not
+  a dark one, so the ban tags are white with dark text, matching the OWCS27
+  reference.
+- `document.fonts.check` only reports a font the page actually paints. The
+  hero-bans page loads Archivo 500 and 600, so assert
+  `500 20px "FGC Display Medium"` and `600 20px "FGC Display SemiBold"`.
+- The QA fixture swaps `app.json` only, not the blobs. All the hero blobs are
+  present, so the banned heroes resolve.
+
+**Evidence:** CDP DOM and computed-style JSON for the panel geometry, the tags,
+the extra row, the map strip and the document size, `/state`, the saved
+`app.json`, the network and console capture and `/health`; no screenshots were
+taken or published.
+
+**Result: Pass - assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay page. The two panels measured 747.5px each with a
+25px gap, the home panel at x = 200 and the away panel at x = 972.5. The home
+art resolved to Ana and the away art to Kiriko, both loaded, with
+`object-fit: cover` over a 747.5x550 art box. The tags read `1ST BAN` and
+`2ND BAN` on a `rgb(238, 242, 248)` plate, the second home ban sat as a
+52x52 portrait in the extra row, and the panel names read Ana and Kiriko. The
+dark bottom strip read `CONTROL`, `MAP 1` and `Ilios`, with the mode icon
+resolved to a 40x40 image. The strip sat below the panels at y = 880 and the
+container bottom edge landed exactly on 1080px, so the 30px overflow is gone
+and the document did not scroll. The body was `rgba(0, 0, 0, 0)`, the bundled
+fonts were loaded, and the run recorded 0 external requests, 0 failed
+responses, 0 bad statuses and 0 console errors.
+`cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`git diff --check` and `dx build --desktop` passed. The authoritative hashes
+were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`
+and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` was `No serve config`. The temporary QA harness lives
+outside the repository and is removed when the overlay review work completes.

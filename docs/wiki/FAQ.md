@@ -30,6 +30,15 @@ the overlay adds the hours to the minutes (`01:12:00` appears as `72:00`).
 Third-party overlays still receive the same ticks and start, pause and reset
 actions.
 
+### What does the hero bans overlay show?
+
+Two large hero-art panels side by side, one per team, for the map that is
+currently selected. Each panel carries a `1ST BAN` or `2ND BAN` tag so you can
+see which team banned first, and the hero's name sits in a band under the art.
+The game mode and the map name are in a dark strip along the bottom, not over
+the hero art. If a team banned more than one hero, the extra portraits sit in
+the corner of the panel.
+
 ### Which overlay shows which people?
 
 Three separate talent overlays, so you put only the row you need in OBS:

@@ -135,7 +135,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 150px 200px;
+      padding: 120px 200px;
       row-gap: 25px;
     }
 
@@ -219,112 +219,91 @@
       text-transform: uppercase;
     }
 
-    /* === HERO BANS SECTION === */
+    /* === HERO BAN PANELS === */
     .hero-bans-section {
       width: 100%;
-      height: 600px;
+      height: 630px;
       display: flex;
       align-items: stretch;
       justify-content: center;
       gap: 25px;
     }
 
-    .hero-ban-column {
+    .hero-panel {
       flex: 1;
       min-width: 0;
       min-height: 0;
       display: flex;
       flex-direction: column;
-      align-items: stretch;
-      justify-content: space-around;
-      gap: 20px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--fgc-surface);
     }
 
-    .hero-ban-portrait {
+    .hero-panel__art {
+      position: relative;
       flex: 1;
       min-width: 0;
       min-height: 0;
       overflow: hidden;
-      border-radius: 6px;
+      background: var(--fgc-surface-muted);
     }
 
-    .hero-ban-portrait img {
+    .hero-panel__art img {
       display: block;
       width: 100%;
       height: 100%;
       object-fit: cover;
       object-position: center;
-      border-radius: 6px;
     }
 
-    /* === FOOTER === */
-    .footer {
-      width: 100%;
-      height: 80px;
-      display: flex;
-      align-items: center;
-      gap: 25px;
-    }
-
-    .ban-order {
-      width: 100px;
-      height: 80px;
-      background: var(--fgc-accent);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .ban-order-text {
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 24px;
-      color: var(--fgc-on-accent);
-      text-transform: uppercase;
-    }
-
-    .ban-hero-name {
-      height: 80px;
+    /* The ordinal tag sits on the art, like the OWCS27 ban panels. */
+    .hero-panel__tag {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      z-index: 2;
+      padding: 8px 16px;
       background: var(--fgc-surface-inverse);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-      padding: 0 20px;
-    }
-
-    .ban-hero-name-text {
-      display: block;
-      width: 100%;
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 36px;
       color: var(--fgc-text-inverse);
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      text-align: center;
+      border-radius: var(--fgc-radius-sm);
     }
 
-    .map-info {
-      height: 80px;
-      background: var(--fgc-surface);
-      border-radius: 6px;
+    /* Extra bans for the same team are small portraits on the art corner, so a
+       second ban is never dropped by the two-panel layout. */
+    .hero-panel__extra {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      z-index: 2;
       display: flex;
-      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hero-panel__extra img {
+      width: 52px;
+      height: 52px;
+      object-fit: cover;
+      border-radius: var(--fgc-radius-sm);
+      box-shadow: 0 4px 14px rgb(0 0 0 / 45%);
+    }
+
+    .hero-panel__band {
+      height: 80px;
+      flex-shrink: 0;
+      display: flex;
       align-items: center;
       justify-content: center;
       padding: 0 20px;
-      min-width: 311px;
+      background: var(--fgc-surface);
     }
 
-    .map-info-type {
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 24px;
-      color: var(--fgc-accent);
-      text-transform: uppercase;
-    }
-
-    .map-info-name {
+    .hero-panel__name {
       display: block;
       width: 100%;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
@@ -332,6 +311,56 @@
       color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
+    }
+
+    /* === MAP STRIP === */
+    .map-strip {
+      width: 100%;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      gap: 25px;
+      padding: 0 25px;
+      background: var(--fgc-surface);
+      border-radius: 6px;
+    }
+
+    .map-strip__mode {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .map-strip__mode-icon {
+      width: 40px;
+      height: 40px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    .map-strip__mode-text {
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 24px;
+      color: var(--fgc-accent);
+      text-transform: uppercase;
+    }
+
+    .map-strip__index {
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 24px;
+      color: var(--fgc-text-muted);
+      text-transform: uppercase;
+    }
+
+    .map-strip__name {
+      display: block;
+      flex: 1;
+      text-align: right;
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 36px;
+      color: var(--fgc-text);
+      text-transform: uppercase;
     }
 
     /* === ICON VISIBILITY === */
@@ -372,44 +401,37 @@
 
       <!-- Hero Bans Section -->
       <div class="hero-bans-section" id="hero-bans-section" style="opacity: 0;">
-        <!-- Home Bans -->
-        <div class="hero-ban-column" id="home-bans">
-          <!-- Hero bans will be populated here -->
+        <!-- Home Ban Panel -->
+        <div class="hero-panel" id="home-panel">
+          <div class="hero-panel__art" id="home-panel-art">
+            <span class="hero-panel__tag" id="home-panel-tag">1ST BAN</span>
+            <div class="hero-panel__extra" id="home-panel-extra"></div>
+          </div>
+          <div class="hero-panel__band">
+            <span class="hero-panel__name" id="home-panel-name">-</span>
+          </div>
         </div>
 
-        <!-- Away Bans -->
-        <div class="hero-ban-column" id="away-bans">
-          <!-- Hero bans will be populated here -->
+        <!-- Away Ban Panel -->
+        <div class="hero-panel" id="away-panel">
+          <div class="hero-panel__art" id="away-panel-art">
+            <span class="hero-panel__tag" id="away-panel-tag">2ND BAN</span>
+            <div class="hero-panel__extra" id="away-panel-extra"></div>
+          </div>
+          <div class="hero-panel__band">
+            <span class="hero-panel__name" id="away-panel-name">-</span>
+          </div>
         </div>
       </div>
 
-      <!-- Footer -->
-      <div class="footer" id="footer" style="opacity: 0;">
-        <!-- First Ban Indicator -->
-        <div class="ban-order" id="ban-order-1-container">
-          <span class="ban-order-text" id="ban-order-1">FIRST</span>
+      <!-- Map Strip -->
+      <div class="map-strip" id="map-strip" style="opacity: 0;">
+        <div class="map-strip__mode">
+          <div class="map-strip__mode-icon" id="map-mode-icon"></div>
+          <span class="map-strip__mode-text" id="map-mode">MODE</span>
         </div>
-
-        <!-- Home Banned Hero -->
-        <div class="ban-hero-name">
-          <span class="ban-hero-name-text" id="home-ban-hero">-</span>
-        </div>
-
-        <!-- Map Info -->
-        <div class="map-info">
-          <span class="map-info-type" id="map-type">MAP 1</span>
-          <span class="map-info-name" id="map-name">MAP NAME</span>
-        </div>
-
-        <!-- Away Banned Hero -->
-        <div class="ban-hero-name">
-          <span class="ban-hero-name-text" id="away-ban-hero">-</span>
-        </div>
-
-        <!-- Second Ban Indicator -->
-        <div class="ban-order" id="ban-order-2-container">
-          <span class="ban-order-text" id="ban-order-2">SECOND</span>
-        </div>
+        <span class="map-strip__index" id="map-index">MAP 1</span>
+        <span class="map-strip__name" id="map-name">MAP NAME</span>
       </div>
     </div>
   </div>
@@ -450,8 +472,8 @@
     function fitHeroBanText() {
       fitText(el.homeName, 36, 20);
       fitText(el.awayName, 36, 20);
-      fitText(el.homeBanHero, 36, 20);
-      fitText(el.awayBanHero, 36, 20);
+      fitText(el.homePanelName, 36, 20);
+      fitText(el.awayPanelName, 36, 20);
       fitText(el.mapName, 36, 18);
     }
 
@@ -472,24 +494,28 @@
     const el = {
       header: document.getElementById('header'),
       heroBansSection: document.getElementById('hero-bans-section'),
-      footer: document.getElementById('footer'),
+      mapStrip: document.getElementById('map-strip'),
       homeSection: document.getElementById('home-section'),
       homeLogo: document.getElementById('home-logo'),
       homeName: document.getElementById('home-name'),
       homeScore: document.getElementById('home-score'),
-      homeBans: document.getElementById('home-bans'),
-      homeBanHero: document.getElementById('home-ban-hero'),
+      homePanelArt: document.getElementById('home-panel-art'),
+      homePanelTag: document.getElementById('home-panel-tag'),
+      homePanelExtra: document.getElementById('home-panel-extra'),
+      homePanelName: document.getElementById('home-panel-name'),
       awaySection: document.getElementById('away-section'),
       awayLogo: document.getElementById('away-logo'),
       awayName: document.getElementById('away-name'),
       awayScore: document.getElementById('away-score'),
-      awayBans: document.getElementById('away-bans'),
-      awayBanHero: document.getElementById('away-ban-hero'),
+      awayPanelArt: document.getElementById('away-panel-art'),
+      awayPanelTag: document.getElementById('away-panel-tag'),
+      awayPanelExtra: document.getElementById('away-panel-extra'),
+      awayPanelName: document.getElementById('away-panel-name'),
       firstToText: document.getElementById('first-to-text'),
-      mapType: document.getElementById('map-type'),
-      mapName: document.getElementById('map-name'),
-      banOrder1: document.getElementById('ban-order-1'),
-      banOrder2: document.getElementById('ban-order-2')
+      mapMode: document.getElementById('map-mode'),
+      mapModeIcon: document.getElementById('map-mode-icon'),
+      mapIndex: document.getElementById('map-index'),
+      mapName: document.getElementById('map-name')
     };
 
     let heroPortraits = {};
@@ -506,69 +532,56 @@
       }, 1200);
 
       setTimeout(() => {
-        el.footer.style.animation = 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both';
+        el.mapStrip.style.animation = 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both';
       }, 1500);
     }
 
-    function createHeroBanPortrait(heroName, portraitUrl) {
-      const container = document.createElement('div');
-      container.className = 'hero-ban-portrait';
+    // Renders one ban panel. The first ban fills the art, and any further bans
+    // for the same team become small portraits beside the ordinal tag, so the
+    // two-panel layout never drops a ban.
+    function renderBanPanel(art, extra, name, bans) {
+      art.querySelectorAll('img').forEach((image) => image.remove());
+      extra.innerHTML = '';
+
+      const heroName = bans[0] || '';
+      name.textContent = heroName || '-';
+      if (!heroName) return;
+
+      const portraitUrl = heroPortraits[heroName];
       if (portraitUrl) {
         const img = document.createElement('img');
         img.src = portraitUrl;
         img.loading = 'lazy';
-        img.alt = heroName || 'Hero';
-        container.appendChild(img);
+        img.alt = heroName;
+        art.insertBefore(img, art.firstChild);
       }
-      return container;
+
+      bans.slice(1).forEach((extraName) => {
+        const extraUrl = heroPortraits[extraName];
+        if (!extraUrl) return;
+        const img = document.createElement('img');
+        img.src = extraUrl;
+        img.loading = 'lazy';
+        img.alt = extraName;
+        img.title = extraName;
+        extra.appendChild(img);
+      });
     }
 
     function updateHeroBans(teamABans, teamBBans) {
-      el.homeBans.innerHTML = '';
-      el.awayBans.innerHTML = '';
-
-      const maxBans = Math.max(teamABans.length, teamBBans.length);
-      
-      for (let i = 0; i < maxBans; i++) {
-        if (teamABans[i]) {
-          const portraitUrl = heroPortraits[teamABans[i]] || null;
-          const banElement = createHeroBanPortrait(teamABans[i], portraitUrl);
-          el.homeBans.appendChild(banElement);
-        }
-        if (teamBBans[i]) {
-          const portraitUrl = heroPortraits[teamBBans[i]] || null;
-          const banElement = createHeroBanPortrait(teamBBans[i], portraitUrl);
-          el.awayBans.appendChild(banElement);
-        }
-      }
-
-      // Update footer with current ban info
-      if (teamABans[currentMapIndex]) {
-        el.homeBanHero.textContent = teamABans[currentMapIndex];
-      } else {
-        el.homeBanHero.textContent = '-';
-      }
-
-      if (teamBBans[currentMapIndex]) {
-        el.awayBanHero.textContent = teamBBans[currentMapIndex];
-      } else {
-        el.awayBanHero.textContent = '-';
-      }
+      renderBanPanel(el.homePanelArt, el.homePanelExtra, el.homePanelName, teamABans);
+      renderBanPanel(el.awayPanelArt, el.awayPanelExtra, el.awayPanelName, teamBBans);
     }
 
     function updateBanOrder(firstBan) {
-      // Layout: [FIRST/LEFT] [Home Ban] [Map] [Away Ban] [SECOND/RIGHT]
-      // If home (A) banned first, LEFT shows FIRST, RIGHT shows SECOND
-      // If away (B) banned first, LEFT shows SECOND, RIGHT shows FIRST
-      if (firstBan === 'A') {
-        el.banOrder1.textContent = 'FIRST';
-        el.banOrder2.textContent = 'SECOND';
-      } else if (firstBan === 'B') {
-        el.banOrder1.textContent = 'SECOND';
-        el.banOrder2.textContent = 'FIRST';
+      // The team that banned first carries the 1ST BAN tag, the other one
+      // carries 2ND BAN.
+      if (firstBan === 'B') {
+        el.homePanelTag.textContent = '2ND BAN';
+        el.awayPanelTag.textContent = '1ST BAN';
       } else {
-        el.banOrder1.textContent = 'FIRST';
-        el.banOrder2.textContent = 'SECOND';
+        el.homePanelTag.textContent = '1ST BAN';
+        el.awayPanelTag.textContent = '2ND BAN';
       }
     }
 
@@ -646,9 +659,13 @@
           el.firstToText.textContent = `FIRST TO ${d.firstTo}`;
         }
 
+        // Current map index, used for the ban slots and the map strip.
+        if (d.currentMapIndex !== undefined && d.currentMapIndex !== null) {
+          currentMapIndex = d.currentMapIndex;
+        }
+
         // Hero bans
         if (d.heroBans && Array.isArray(d.heroBans)) {
-          currentMapIndex = d.currentMapIndex || 0;
           const currentMapBans = d.heroBans[currentMapIndex] || { firstBanTeam: null, teamA: [], teamB: [] };
           firstBanTeam = currentMapBans.firstBanTeam;
           updateHeroBans(currentMapBans.teamA, currentMapBans.teamB);
@@ -665,12 +682,16 @@
           }
         }
 
-        // Map info
-        if (d.maps && d.maps[currentMapIndex] !== undefined) {
-          const mapIndex = currentMapIndex + 1;
-          el.mapType.textContent = `MAP ${mapIndex}`;
-          el.mapName.textContent = d.maps[currentMapIndex]?.name || 'TBD';
-        }
+        // Map strip: the mode and the map name sit in the bottom strip, never
+        // over the hero art.
+        el.mapIndex.textContent = `MAP ${currentMapIndex + 1}`;
+        el.mapName.textContent = d.currentMap || 'TBD';
+        const modeName = d.mapType || '';
+        el.mapMode.textContent = modeName.toUpperCase();
+        // The icon map is keyed by the lower-case mode name, while the match
+        // stores the mode as it was typed.
+        const modeIcon = modeName ? (d.gameModeIcons || {})[modeName.toLowerCase()] : null;
+        el.mapModeIcon.style.backgroundImage = modeIcon ? `url(${modeIcon})` : '';
 
         document.fonts.ready.then(fitHeroBanText);
 
@@ -680,7 +701,7 @@
         } else {
           el.header.style.opacity = '1';
           el.heroBansSection.style.opacity = '1';
-          el.footer.style.opacity = '1';
+          el.mapStrip.style.opacity = '1';
         }
       }
 

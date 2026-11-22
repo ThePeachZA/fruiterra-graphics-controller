@@ -151,6 +151,61 @@ Team-section fallback colour: replace hardcoded `'#090909'` with `var(--fgc-surf
 - `#090909` → `--fgc-surface` / `--fgc-text-inverse` context (`.team-score` color, `.first-to-section`, `.ban-hero-name-text`, `.map-info`, JS fallback `'#090909'` ×2).
 - `#ac46f7` → `--fgc-accent` (`.ban-order` background, `.map-info-type` color).
 
+### 1.9 Owner-requested redesign - two ordinal hero panels (2026-11-22)
+
+The owner reviewed the overlay and asked for a bigger redesign, following the
+OWCS27 and OWWC27 references: two large hero-art panels side by side, each
+carrying an ordinal ban tag, with the mode and the map name in a dark bottom
+strip instead of over the art. The review also found that the content
+overflowed the canvas by 30px.
+
+**Overflow fix.** `.main-container` padding changed from `150px 200px` to
+`120px 200px` and the hero-bans section grew from 600px to 630px, so the
+column now totals 120 + 80 + 25 + 630 + 25 + 80 + 120 = **1080px**, exactly
+the canvas height.
+
+**New surface plan.** The old `.hero-ban-column`, `.hero-ban-portrait`,
+`.ban-order`, `.ban-hero-name` and `.map-info` rules are gone.
+
+| Element selector | Token value | Treatment |
+|---|---|---|
+| `.hero-panel` | background `var(--fgc-surface)` | two equal panels, 25px apart |
+| `.hero-panel__art` | background `var(--fgc-surface-muted)` | the hero art, `object-fit: cover` |
+| `.hero-panel__tag` | background `var(--fgc-surface-inverse)` → `rgb(238, 242, 248)`; color `var(--fgc-text-inverse)` → `rgb(11, 13, 18)` | the white `1ST BAN` / `2ND BAN` tag, bottom-left of the art |
+| `.hero-panel__extra` | - | 52px portraits for any further bans, bottom-right of the art |
+| `.hero-panel__band` | background `var(--fgc-surface)` | 80px band under the art |
+| `.hero-panel__name` | color `var(--fgc-text)` | the banned hero's name |
+| `.map-strip` | background `var(--fgc-surface)` | the dark bottom strip |
+| `.map-strip__mode-text` | color `var(--fgc-accent)` | the game mode |
+| `.map-strip__index` | color `var(--fgc-text-muted)` | `MAP N` |
+| `.map-strip__name` | color `var(--fgc-text)` | the map name |
+
+**State matrix.** The tag follows the first-ban team: when `firstBanTeam` is
+`A` the home panel reads `1ST BAN` and the away panel `2ND BAN`; when it is
+`B` the two swap. A side with no ban shows `-` in its band and an empty art
+box.
+
+**JS helpers.** `renderBanPanel(art, extra, name, bans)` puts the first ban
+into the art and any further bans into the extra row; `updateBanOrder(firstBan)`
+writes the two tags. `updateOverlay` reads `d.currentMapIndex`,
+`d.currentMap`, `d.mapType` and `d.gameModeIcons` for the strip. The icon map
+is keyed by the lower-case mode name while the match stores the mode as it was
+typed, so the lookup lower-cases the mode first.
+
+### 1.10 CDP-verifiable assertions (redesign)
+
+- Two `.hero-panel` elements side by side with equal widths (747.5px each at
+  1920x1080 with a 25px gap).
+- `#home-panel-art img` and `#away-panel-art img` resolve to the first ban of
+  each side and load; the art computes `object-fit: cover`.
+- `#home-panel-tag` and `#away-panel-tag` read `1ST BAN` and `2ND BAN`, and
+  compute to `rgb(238, 242, 248)`.
+- `#home-panel-name` and `#away-panel-name` hold the banned hero's name.
+- `#map-mode`, `#map-index` and `#map-name` hold the mode, `MAP N` and the map
+  name; `#map-mode-icon` has a `background-image`.
+- The map strip sits below the panels and the container's bottom edge is
+  `<= 1080px`; the document does not scroll.
+
 ---
 
 ## 2. map-pool.html

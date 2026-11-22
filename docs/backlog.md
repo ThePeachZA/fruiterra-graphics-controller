@@ -1238,7 +1238,7 @@ on top of it afterwards.
 | C | Map pool: stagger each game-mode column so the reveal animates column by column | **Done — A62** |
 | D | Map select: show the ban thumbnails over the bottom of the map image, minimal | **Done - A63** |
 | E | Game overlay: drop the outline rings, put the team logo on the outer end, move the ban icon next to the score, add a team-abbreviation toggle, review gradients and background textures | **Done - A64** |
-| F | Hero bans: bigger redesign — two large hero-art panels with `1ST BAN` / `2ND BAN` tags and the mode and map name in a dark bottom strip | Next |
+| F | Hero bans: bigger redesign - two large hero-art panels with `1ST BAN` / `2ND BAN` tags and the mode and map name in a dark bottom strip | **Done - A65** |
 | G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | Last |
 
 The theme model was chosen as a **built-in Light theme plus JSON import**: the
@@ -1378,3 +1378,33 @@ the real UI toggle changed them to the NWS and LONG tags and `/state` reported
 `teamAbbreviations: true`. The overlay stayed transparent, 1920×1080,
 font-loaded and free of external requests, failed responses and console
 errors.
+
+### Slice F - hero bans redesign (A65, 2026-11-22)
+
+The hero bans overlay was the last one to keep its old layout. Following the
+OWCS27 and OWWC27 references, the two ban portraits became two large hero-art
+panels side by side. Each panel carries a white ordinal tag at the bottom-left
+of the art, reading `1ST BAN` for the team that banned first and `2ND BAN` for
+the other, and the hero's name sits in a dark band under the art. A team with
+more than one ban keeps the rest as small portraits in the bottom-right corner
+of the art.
+
+The mode and the map name moved out of the old map-info block and into a dark
+bottom strip, which reads the game mode with its icon, `MAP N` and the map
+name. The wire was not changed: the overlay already receives `currentMap`,
+`currentMapIndex`, `mapType`, `gameModeIcons`, `heroBans` and `heroPortraits`
+in the scoreboard payload.
+
+The review also found that the content overflowed the canvas by 30px: the
+column was 1110px tall in a 1080px canvas. The padding dropped from 150px to
+120px and the panel row grew to 630px, so the column is now exactly 1080px.
+
+A65 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the two panels measured 747.5px each with a 25px gap, the home art
+showed Ana and the away art Kiriko, the tags read `1ST BAN` and `2ND BAN` on a
+`rgb(238, 242, 248)` plate, the second home ban sat in the extra row, the strip
+read `CONTROL`, `MAP 1` and `ILIOS` with the mode icon, and the container's
+bottom edge landed exactly on 1080px with no document scroll. The overlay
+stayed transparent, font-loaded and free of external requests, failed
+responses and console errors.

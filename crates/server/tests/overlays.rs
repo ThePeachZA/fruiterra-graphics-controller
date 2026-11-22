@@ -345,12 +345,52 @@ fn hero_bans_crops_portraits_inside_their_slots() {
     let text = overlay_text("hero-bans.html");
 
     assert!(
-        text.contains(".hero-ban-portrait {\n      flex: 1;\n      min-width: 0;\n      min-height: 0;\n      overflow: hidden;"),
+        text.contains(".hero-panel__art {\n      position: relative;\n      flex: 1;\n      min-width: 0;\n      min-height: 0;\n      overflow: hidden;"),
         "hero ban slots should clip images to their flex dimensions"
     );
     assert!(
         text.contains("object-fit: cover"),
         "hero ban portraits should be cropped rather than stretched"
+    );
+}
+
+#[test]
+fn hero_bans_shows_two_ordinal_panels_over_a_map_strip() {
+    let text = overlay_text("hero-bans.html");
+
+    assert!(
+        text.contains("id=\"home-panel-art\"") && text.contains("id=\"away-panel-art\""),
+        "hero bans should render one large art panel per team"
+    );
+    assert!(
+        text.contains("id=\"home-panel-tag\"") && text.contains("id=\"away-panel-tag\""),
+        "each ban panel should carry an ordinal tag"
+    );
+    assert!(
+        text.contains("el.homePanelTag.textContent = '1ST BAN';")
+            && text.contains("el.awayPanelTag.textContent = '2ND BAN';")
+            && text.contains("el.homePanelTag.textContent = '2ND BAN';")
+            && text.contains("el.awayPanelTag.textContent = '1ST BAN';"),
+        "the team that banned first should carry the 1ST BAN tag"
+    );
+    assert!(
+        text.contains(".hero-panel__tag {") && text.contains(".map-strip {"),
+        "hero bans should tag the art and carry the map in a bottom strip"
+    );
+    assert!(
+        text.contains("id=\"map-mode\"")
+            && text.contains("id=\"map-index\"")
+            && text.contains("id=\"map-name\""),
+        "the map strip should carry the mode, the map number and the map name"
+    );
+    assert!(
+        text.contains("el.mapMode.textContent = modeName.toUpperCase();")
+            && text.contains("el.mapName.textContent = d.currentMap || 'TBD';"),
+        "the map strip should read the mode and the current map"
+    );
+    assert!(
+        !text.contains("hero-ban-column") && !text.contains("map-info"),
+        "the old ban columns and map info block should be gone"
     );
 }
 
@@ -795,16 +835,18 @@ fn hero_bans_overlay_uses_night_broadcast_tokens() {
         "the score chip should keep the inverse plate with inverse text"
     );
     assert!(
-        text.contains(".ban-order {\n      width: 100px;\n      height: 80px;\n      background: var(--fgc-accent);"),
-        "the ban order marker should carry the orange accent"
+        text.contains(".hero-panel__tag {"),
+        "the ordinal ban tag should sit on the art"
     );
     assert!(
-        text.contains(".ban-order-text {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 24px;\n      color: var(--fgc-on-accent);"),
-        "the ban order text should sit on the accent with inverse text"
+        text.contains(
+            "background: var(--fgc-surface-inverse);\n      color: var(--fgc-text-inverse);"
+        ),
+        "the ordinal ban tag should use the inverse plate with inverse text"
     );
     assert!(
-        text.contains(".map-info-type {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 24px;\n      color: var(--fgc-accent);"),
-        "the map type label should carry the orange accent"
+        text.contains(".map-strip__mode-text {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 24px;\n      color: var(--fgc-accent);"),
+        "the map mode label should carry the orange accent"
     );
     assert!(
         text.contains("return luminance > 0.5 ? '#0b0d12' : '#eef2f8';"),
