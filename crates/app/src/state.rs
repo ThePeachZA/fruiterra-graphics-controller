@@ -2364,6 +2364,159 @@ impl AppStore {
         });
     }
 
+    /// Exports the project's user artwork as a distributable content pack.
+    ///
+    /// A pack carries artwork only. Teams, players, talent and tournaments stay
+    /// in the project that made it, so installing a pack never changes
+    /// anybody's roster.
+    pub fn export_content_pack(&self, info: fgc_core::PackInfo) {
+        if self.asset_busy() {
+            return;
+        }
+        let Some(asset_store) = self.asset_store.peek().clone() else {
+            self.report_error("Asset storage is unavailable.");
+            return;
+        };
+        let state = self.state.peek().clone();
+
+        self.set_asset_busy(true);
+        let this = *self;
+        spawn(async move {
+            let picked = tokio::task::spawn_blocking(|| {
+                crate::assets_io::pick_bundle_folder("Choose where to create the content pack")
+            })
+            .await;
+            let parent = match picked {
+                Ok(Some(parent)) => parent,
+                Ok(None) => {
+                    this.set_asset_busy(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The folder picker failed: {error}"));
+                    this.set_asset_busy(false);
+                    return;
+                }
+            };
+
+            let directory = crate::assets_io::unique_pack_directory(&parent);
+            let export_directory = directory.clone();
+            let exported = tokio::task::spawn_blocking(move || {
+                asset_store.export_content_pack(&state, &export_directory, &info)
+            })
+            .await;
+
+            match exported {
+                Ok(Ok(report)) => this.notify(format!(
+                    "Exported a content pack with {} asset(s) ({} file(s), {}) to {}.",
+                    report.assets,
+                    report.files,
+                    format_bytes(report.bytes),
+                    directory.display()
+                )),
+                Ok(Err(error)) => {
+                    this.report_error(format!("Could not export the content pack: {error}"))
+                }
+                Err(error) => this.report_error(format!("The export task failed: {error}")),
+            }
+            this.set_asset_busy(false);
+        });
+    }
+
+    /// Installs a content pack from a folder, adding its artwork to the
+    /// project without touching teams, players, settings or the current match.
+    pub fn import_content_pack(&self) {
+        if self.asset_busy() {
+            return;
+        }
+        let Some(asset_store) = self.asset_store.peek().clone() else {
+            self.report_error("Asset storage is unavailable.");
+            return;
+        };
+
+        self.set_asset_busy(true);
+        let this = *self;
+        spawn(async move {
+            let picked = tokio::task::spawn_blocking(|| {
+                crate::assets_io::pick_bundle_folder("Choose a content pack folder")
+            })
+            .await;
+            let directory = match picked {
+                Ok(Some(directory)) => directory,
+                Ok(None) => {
+                    this.set_asset_busy(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The folder picker failed: {error}"));
+                    this.set_asset_busy(false);
+                    return;
+                }
+            };
+
+            install_content_pack(this, asset_store, directory).await;
+        });
+    }
+
+    /// Downloads a content pack archive and installs it.
+    pub fn import_content_pack_from_url(&self, raw_url: &str) {
+        if self.asset_busy() {
+            return;
+        }
+        let url = match crate::assets_io::validate_import_url(raw_url) {
+            Ok(url) => url,
+            Err(error) => {
+                self.report_error(error);
+                return;
+            }
+        };
+        let Some(asset_store) = self.asset_store.peek().clone() else {
+            self.report_error("Asset storage is unavailable.");
+            return;
+        };
+
+        self.set_asset_busy(true);
+        let this = *self;
+        spawn(async move {
+            let fetched = crate::assets_io::fetch_pack(url).await;
+            let bytes = match fetched {
+                Ok(bytes) => bytes,
+                Err(error) => {
+                    this.report_error(error);
+                    this.set_asset_busy(false);
+                    return;
+                }
+            };
+
+            let directory = std::env::temp_dir().join(format!(
+                "fgc-pack-{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|duration| duration.as_nanos())
+                    .unwrap_or_default()
+            ));
+            let extracted = tokio::task::spawn_blocking(move || {
+                crate::assets_io::extract_pack_archive(bytes, &directory)
+            })
+            .await;
+            let directory = match extracted {
+                Ok(Ok(directory)) => directory,
+                Ok(Err(error)) => {
+                    this.report_error(error);
+                    this.set_asset_busy(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The unpack task failed: {error}"));
+                    this.set_asset_busy(false);
+                    return;
+                }
+            };
+
+            install_content_pack(this, asset_store, directory).await;
+        });
+    }
+
     /// Deletes unreferenced blobs, keeping anything the saved or current state
     /// still points at.
     pub fn clean_up_unused(&self) {
@@ -2969,6 +3122,20 @@ fn bootstrap() -> Bootstrap {
 
     let (state, load_error) = load_state(store.as_ref());
     let loaded = load_error.is_none();
+    // A state file that cannot be parsed is moved aside rather than left in
+    // place, so the next save cannot silently overwrite the operator's work.
+    let load_error = load_error.map(|error| {
+        let moved = fgc_core::quarantine_state_files();
+        if moved.is_empty() {
+            return error;
+        }
+        let paths = moved
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("{error}. The unreadable file was kept as {paths}.")
+    });
     Bootstrap {
         state,
         store,
@@ -2984,6 +3151,56 @@ async fn persist(store: Arc<dyn Store>, state: AppState) -> Result<(), String> {
         Ok(Err(error)) => Err(error.to_string()),
         Err(error) => Err(format!("save task failed: {error}")),
     }
+}
+
+/// Installs a content pack folder into the project.
+///
+/// Only the artwork is added. Teams, players, talent, tournaments, the
+/// settings and the current match are left exactly as they are, so a pack
+/// can be installed into a live broadcast without disturbing it.
+async fn install_content_pack(
+    this: AppStore,
+    asset_store: AssetStore,
+    directory: std::path::PathBuf,
+) {
+    let installed = this.state.peek().assets.clone();
+    let imported = tokio::task::spawn_blocking(move || {
+        asset_store.import_content_pack(&installed, &directory)
+    })
+    .await;
+
+    match imported {
+        Ok(Ok(outcome)) => {
+            let count = outcome.added.len();
+            let repaired = outcome.repaired.len();
+            this.mutate(move |state| {
+                for asset in &outcome.repaired {
+                    if let Some(current) = state.assets.iter_mut().find(|a| a.id == asset.id) {
+                        *current = asset.clone();
+                    }
+                }
+                state.assets.extend(outcome.added);
+            });
+            this.refresh_unused();
+            if count == 0 && repaired == 0 {
+                this.notify("The content pack was already installed.");
+            } else {
+                this.notify(format!(
+                    "Installed {count} asset(s) from the content pack ({} file(s), {}){}.",
+                    outcome.report.files,
+                    format_bytes(outcome.report.bytes),
+                    if repaired == 0 {
+                        String::new()
+                    } else {
+                        format!(" Repaired {repaired} link(s)")
+                    }
+                ));
+            }
+        }
+        Ok(Err(error)) => this.report_error(format!("Could not install the content pack: {error}")),
+        Err(error) => this.report_error(format!("The import task failed: {error}")),
+    }
+    this.set_asset_busy(false);
 }
 
 async fn finish_import(

@@ -1587,3 +1587,63 @@ pointy-top hexagon and its artwork in the inscribed band; the role badge
 measured 60x68 with the same hexagon; and the banner computed to a gradient
 between the two team colours. The overlay stayed transparent, 1920x1080 and
 free of external requests, failed responses and console errors.
+
+## AI. Content packs and the project folder (2026-11-22)
+
+Two owner requests on 2026-11-22: publish a fully functional Overwatch project
+as extra content on GitHub, and stop the terminal build from resetting the
+project that was being used for testing.
+
+### The reset
+
+The application always resolved its data root through `ProjectDirs`, with no
+environment variable and no command-line flag, so the debug build and the
+shipped build shared one project folder. Every QA run swapped `app.json` in
+and out of that folder and put the fixture back at the end, which is why the
+terminal build kept opening the testing state.
+
+`crates/core/src/paths.rs` now resolves the root in this order: `--data-dir`,
+the `FGC_DATA_DIR` variable, a debug-only `Fruiterra Graphics Controller (dev)`
+folder beside the release folder, and finally the platform project folder. The
+active folder is shown in **Settings → Project folder**. A second bug was
+fixed at the same time: `load_state` used to fall back to an empty project
+when `app.json` could not be parsed, and the saver then wrote that empty
+project over the operator's file. An unreadable file is now moved aside as
+`app.json.broken-<n>` and reported.
+
+### Content packs
+
+A content pack is artwork you can share without sharing a project.
+`crates/core/src/content_pack.rs` defines the format: a `pack.json` manifest
+plus the `blobs/` folder, hash-verified on the way in. Installing a pack
+**adds** images to the library and leaves teams, players, talent, tournaments,
+settings and the running match untouched. A link that no longer resolves, for
+example one that pointed at an icon the application used to bundle, is repaired
+from the pack; a link the operator set themselves is never overwritten.
+
+The Assets tab gained **Export pack…**, **Import pack…** and **Import pack
+from URL…**; the URL route downloads a zip release, unpacks it and installs it
+in one step. The command line gained `--import-pack <folder>`.
+
+### A generic binary
+
+The application used to bundle the Overwatch game-mode, role and side icons.
+They now live in the pack, so the binary ships only its placeholder watermark
+and the overlays resolve those icons from whatever the project holds. Because
+the project stored links to the old bundled icons, the pack repairs them.
+
+The pack is published at
+[`ThePeachZA/fruiterra-overwatch`](https://github.com/ThePeachZA/fruiterra-overwatch)
+with release `v1`: 157 assets, 139,159,747 bytes, 29 repaired map links and
+none left dangling. It is installed in the operator's project, which holds the
+four real teams, the tournament and the 13-map pool.
+A70 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: before the install the map pool rendered one "Other" column with no
+mode icons, the install toast read `Installed 10 asset(s) from the content
+pack (10 file(s), 166.3 KB) Repaired 29 link(s).`, and afterwards the pool
+rendered five columns - Control, Escort, Hybrid, Flashpoint and Push - with
+all five icons loaded and 13 maps. The wire carried all five game-mode icons,
+the three role icons and the two side icons. The QA ran against a copy of the
+project in a separate `--data-dir`, so the operator's own projects were never
+written to.

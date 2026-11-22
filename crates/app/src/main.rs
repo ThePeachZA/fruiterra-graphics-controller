@@ -32,8 +32,37 @@ use tracing_subscriber::EnvFilter;
 const ICON_PNG: &[u8] = include_bytes!("../assets/icons/icon.png");
 
 fn main() {
-    if std::env::args().any(|argument| argument == "--smoke-test") {
+    let arguments: Vec<String> = std::env::args().collect();
+    if arguments.iter().any(|argument| argument == "--smoke-test") {
         run_smoke_test();
+    }
+
+    apply_data_root_override(&arguments);
+
+    if let Some(index) = arguments
+        .iter()
+        .position(|argument| argument == "--import-bundle")
+    {
+        match arguments.get(index + 1) {
+            Some(path) => run_import_bundle(path),
+            None => {
+                eprintln!("--import-bundle needs the bundle folder");
+                std::process::exit(2);
+            }
+        }
+    }
+
+    if let Some(index) = arguments
+        .iter()
+        .position(|argument| argument == "--import-pack")
+    {
+        match arguments.get(index + 1) {
+            Some(path) => run_import_pack(path),
+            None => {
+                eprintln!("--import-pack needs the pack folder");
+                std::process::exit(2);
+            }
+        }
     }
 
     let _log_guard = init_logging();
@@ -42,8 +71,125 @@ fn main() {
         tracing::info!("another instance is already running; exiting");
         return;
     }
-    tracing::info!(version = fgc_core::VERSION, "starting application");
+    tracing::info!(
+        version = fgc_core::VERSION,
+        data_root = %fgc_core::data_root_description(),
+        "starting application"
+    );
     launch();
+}
+
+/// Points the application at the project folder given by `--data-dir <path>`.
+///
+/// Without the flag a debug build uses its own `Fruiterra Graphics Controller
+/// (dev)` folder, so a development build never overwrites the shipped build's
+/// project.
+fn apply_data_root_override(arguments: &[String]) {
+    let Some(index) = arguments
+        .iter()
+        .position(|argument| argument == "--data-dir")
+    else {
+        return;
+    };
+    let Some(path) = arguments.get(index + 1) else {
+        eprintln!("--data-dir needs a folder path");
+        return;
+    };
+    let path = std::path::PathBuf::from(path);
+    if let Err(error) = std::fs::create_dir_all(&path) {
+        eprintln!("could not create {}: {error}", path.display());
+        return;
+    }
+    fgc_core::set_data_root(path);
+}
+
+/// Imports a content pack into the active project folder and exits.
+///
+/// A content pack holds artwork only. The pack's assets are added to the
+/// open project and the teams, talent, tournaments, settings and the current
+/// match are left exactly as they are. Every blob is hash-verified before
+/// anything is written.
+fn run_import_pack(path: &str) -> ! {
+    use fgc_core::{AssetStore, JsonStore, Store};
+
+    let directory = std::path::PathBuf::from(path);
+    let outcome = (|| -> Result<String, String> {
+        let assets_root = fgc_core::assets_root().map_err(|error| error.to_string())?;
+        let asset_store = AssetStore::new(assets_root);
+        let state_file = fgc_core::state_file().map_err(|error| error.to_string())?;
+        let store = JsonStore::new(state_file.clone());
+        let mut state = store.load().unwrap_or_default();
+        let outcome = asset_store
+            .import_content_pack(&state.assets, &directory)
+            .map_err(|error| error.to_string())?;
+        for asset in &outcome.repaired {
+            if let Some(current) = state.assets.iter_mut().find(|a| a.id == asset.id) {
+                *current = asset.clone();
+            }
+        }
+        state.assets.extend(outcome.added);
+        store.save(&state).map_err(|error| error.to_string())?;
+        Ok(format!(
+            "Installed {} asset(s) and repaired {} link(s) from the content pack ({} file(s), {} bytes) into {}.",
+            outcome.report.added,
+            outcome.report.repaired,
+            outcome.report.files,
+            outcome.report.bytes,
+            fgc_core::data_root_description()
+        ))
+    })();
+
+    match outcome {
+        Ok(message) => {
+            println!("{message}");
+            std::process::exit(0);
+        }
+        Err(error) => {
+            eprintln!("could not import the content pack: {error}");
+            std::process::exit(1);
+        }
+    }
+}
+
+/// Imports a project bundle into the active project folder and exits.
+///
+/// The bundle is the folder an export produced: `app.json`, `export.json` and
+/// `blobs/`. Every blob is hash-verified before anything is written, and the
+/// import replaces the open project.
+fn run_import_bundle(path: &str) -> ! {
+    use fgc_core::{AssetStore, JsonStore, Store};
+
+    let directory = std::path::PathBuf::from(path);
+    let outcome = (|| -> Result<String, String> {
+        let assets_root = fgc_core::assets_root().map_err(|error| error.to_string())?;
+        let asset_store = AssetStore::new(assets_root);
+        let (state, report) = asset_store
+            .import_bundle(&directory)
+            .map_err(|error| error.to_string())?;
+        let state_file = fgc_core::state_file().map_err(|error| error.to_string())?;
+        JsonStore::new(state_file)
+            .save(&state)
+            .map_err(|error| error.to_string())?;
+        Ok(format!(
+            "Imported {} team(s), {} asset(s) and {} blob file(s) ({} bytes) into {}.",
+            state.teams.len(),
+            state.assets.len(),
+            report.files,
+            report.bytes,
+            fgc_core::data_root_description()
+        ))
+    })();
+
+    match outcome {
+        Ok(message) => {
+            println!("{message}");
+            std::process::exit(0);
+        }
+        Err(error) => {
+            eprintln!("Could not import the bundle: {error}");
+            std::process::exit(1);
+        }
+    }
 }
 
 /// Claims the single-instance mutex.

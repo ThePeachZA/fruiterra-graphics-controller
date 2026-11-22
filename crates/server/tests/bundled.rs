@@ -62,13 +62,21 @@ fn catalog_contains_every_category_and_resolves_links() {
         .map(|asset| asset.id.as_str().to_owned())
         .collect();
     let categories: Vec<AssetCategory> = catalog.iter().map(|asset| asset.category).collect();
+    // The application ships only the placeholder watermark. Game-mode, role
+    // and side art belongs to a content pack, so the binary stays generic.
+    assert!(
+        categories.contains(&AssetCategory::Logo),
+        "the placeholder watermark must be bundled"
+    );
     for category in [
-        AssetCategory::Logo,
         AssetCategory::GameMode,
         AssetCategory::Role,
         AssetCategory::Side,
     ] {
-        assert!(categories.contains(&category), "missing {category:?}");
+        assert!(
+            !categories.contains(&category),
+            "{category:?} art belongs to a content pack, not the binary"
+        );
     }
 
     for asset in &catalog {

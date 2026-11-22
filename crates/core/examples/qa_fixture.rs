@@ -17,15 +17,13 @@
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::io;
-use std::path::Path;
 
 use fgc_core::{
     AppState, AssetCategory, AssetId, BracketFormat, IntervieweeRef, JsonStore, MapHeroBans,
     MapSlot, Match, MatchStatus, MatchTalent, Player, PlayerId, Position, Role, Scoring, Side,
     SocialLink, SocialPlatform, Store, Talent, TalentId, TalentRef, TalentType, Team, TeamId,
     TeamSide, TimerMode, empty_hero_bans, generate_double_elimination, generate_round_robin,
-    generate_single_elimination, new_match, new_tournament, set_entrants, sha256_hex,
-    validate_and_repair,
+    generate_single_elimination, new_match, new_tournament, set_entrants, validate_and_repair,
 };
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
@@ -40,7 +38,7 @@ fn main() -> Result<()> {
     let mut state = store.load()?;
 
     rename_map(&mut state, "Kings Row", "King's Row");
-    link_map_modes(&mut state)?;
+    link_map_modes(&mut state);
 
     state.teams = build_teams(&state)?;
     state.talents = build_talent(&state)?;
@@ -109,20 +107,35 @@ fn rename_map(state: &mut AppState, from: &str, to: &str) {
     }
 }
 
-/// Links each map to the bundled game-mode icon so the map pool groups by mode.
-fn link_map_modes(state: &mut AppState) -> Result<()> {
-    let control = bundled_id("game-modes/control.png")?;
-    let hybrid = bundled_id("game-modes/hybrid.png")?;
-    let escort = bundled_id("game-modes/escort.png")?;
-    let modes: BTreeMap<&str, &AssetId> = [
-        ("Ilios", &control),
-        ("Nepal", &control),
-        ("King's Row", &hybrid),
-        ("Dorado", &escort),
-        ("Antarctic Peninsula", &control),
-    ]
-    .into_iter()
-    .collect();
+/// Links each map to the game-mode icon in the project so the map pool groups
+/// by mode.
+///
+/// The game-mode icons are no longer bundled with the application. They come
+/// from the Overwatch content pack, so the fixture links them only when the
+/// project already has them.
+fn link_map_modes(state: &mut AppState) {
+    let modes: BTreeMap<&str, AssetId> = {
+        let find = |name: &str| {
+            state
+                .assets
+                .iter()
+                .find(|asset| asset.category == AssetCategory::GameMode && asset.name == name)
+                .map(|asset| asset.id.clone())
+        };
+        let control = find("Control");
+        let hybrid = find("Hybrid");
+        let escort = find("Escort");
+        [
+            ("Ilios", control.clone()),
+            ("Nepal", control.clone()),
+            ("King's Row", hybrid.clone()),
+            ("Dorado", escort.clone()),
+            ("Antarctic Peninsula", control.clone()),
+        ]
+        .into_iter()
+        .filter_map(|(map, mode)| mode.map(|mode| (map, mode)))
+        .collect()
+    };
 
     for asset in &mut state.assets {
         if asset.category != AssetCategory::Map {
@@ -132,15 +145,6 @@ fn link_map_modes(state: &mut AppState) -> Result<()> {
             asset.game_mode = Some((*mode).clone());
         }
     }
-    Ok(())
-}
-
-fn bundled_id(relative: &str) -> Result<AssetId> {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../server/assets/bundled")
-        .join(relative);
-    let bytes = std::fs::read(&path)?;
-    Ok(AssetId::from_raw(format!("b:{}", sha256_hex(&bytes))))
 }
 
 // ---------------------------------------------------------------------------

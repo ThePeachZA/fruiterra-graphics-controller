@@ -34,6 +34,15 @@ pub fn AssetsView() -> Element {
     let mut url_text = use_signal(String::new);
     let mut url_error = use_signal(|| None::<String>);
     let mut confirm_import = use_signal(|| false);
+    let mut show_pack_export = use_signal(|| false);
+    let mut show_pack_url = use_signal(|| false);
+    let mut pack_name = use_signal(String::new);
+    let mut pack_description = use_signal(String::new);
+    let mut pack_author = use_signal(String::new);
+    let mut pack_license = use_signal(String::new);
+    let mut pack_homepage = use_signal(String::new);
+    let mut pack_url_text = use_signal(String::new);
+    let mut pack_url_error = use_signal(|| None::<String>);
 
     let user_assets = state
         .read()
@@ -164,6 +173,43 @@ pub fn AssetsView() -> Element {
                     }
                     p { class: "fgc-note",
                         "An export is a folder containing app.json, export.json and the referenced user images. Bundled art comes from the application and is never copied."
+                    }
+                }
+                CollapsiblePanel {
+                    title: "Content packs".to_owned(),
+                    description: "Share artwork without touching anybody's teams or settings.".to_owned(),
+                    div { class: "fgc-actions",
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            disabled: busy,
+                            onclick: move |_| {
+                                pack_name.set(String::new());
+                                pack_description.set(String::new());
+                                pack_author.set(String::new());
+                                pack_license.set(String::new());
+                                pack_homepage.set(String::new());
+                                show_pack_export.set(true);
+                            },
+                            "Export pack…"
+                        }
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            disabled: busy,
+                            onclick: move |_| store.import_content_pack(),
+                            "Import pack…"
+                        }
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            disabled: busy,
+                            onclick: move |_| {
+                                pack_url_error.set(None);
+                                show_pack_url.set(true);
+                            },
+                            "Import pack from URL…"
+                        }
+                    }
+                    p { class: "fgc-note",
+                        "A pack holds images only. Installing one adds its artwork to the library and leaves teams, players, tournaments and the running match exactly as they are."
                     }
                 }
             }
@@ -511,6 +557,127 @@ pub fn AssetsView() -> Element {
                         confirm_import.set(false);
                     },
                     "Import project"
+                }
+            }
+        }
+
+        Dialog {
+            open: show_pack_export(),
+            on_open_change: move |open: bool| if !open { show_pack_export.set(false) },
+            DialogTitle { "Export a content pack" }
+            DialogDescription {
+                "The pack holds every image in the library. Teams, players, tournaments and settings are left out, so anybody can install it without changing their project."
+            }
+            Field { label: "Name".to_owned(),
+                Input {
+                    r#type: "text",
+                    placeholder: "Fruiterra Overwatch",
+                    value: "{pack_name}",
+                    aria_label: "Pack name",
+                    oninput: move |event: FormEvent| pack_name.set(event.value()),
+                }
+            }
+            Field { label: "Description".to_owned(),
+                Input {
+                    r#type: "text",
+                    placeholder: "Hero art, map art and game-mode icons",
+                    value: "{pack_description}",
+                    aria_label: "Pack description",
+                    oninput: move |event: FormEvent| pack_description.set(event.value()),
+                }
+            }
+            Field { label: "Author".to_owned(),
+                Input {
+                    r#type: "text",
+                    placeholder: "Your name or studio",
+                    value: "{pack_author}",
+                    aria_label: "Pack author",
+                    oninput: move |event: FormEvent| pack_author.set(event.value()),
+                }
+            }
+            Field { label: "Licence".to_owned(),
+                Input {
+                    r#type: "text",
+                    placeholder: "CC BY 4.0",
+                    value: "{pack_license}",
+                    aria_label: "Pack licence",
+                    oninput: move |event: FormEvent| pack_license.set(event.value()),
+                }
+            }
+            Field { label: "Homepage".to_owned(),
+                Input {
+                    r#type: "url",
+                    placeholder: "https://github.com/your-name/pack",
+                    value: "{pack_homepage}",
+                    aria_label: "Pack homepage",
+                    oninput: move |event: FormEvent| pack_homepage.set(event.value()),
+                }
+            }
+            div { class: "fgc-dialog-actions",
+                Button {
+                    variant: ButtonVariant::Outline,
+                    onclick: move |_| show_pack_export.set(false),
+                    "Cancel"
+                }
+                Button {
+                    variant: ButtonVariant::Primary,
+                    disabled: busy,
+                    onclick: move |_| {
+                        let info = fgc_core::PackInfo {
+                            name: pack_name.read().clone(),
+                            description: pack_description.read().clone(),
+                            author: pack_author.read().clone(),
+                            license: pack_license.read().clone(),
+                            homepage: pack_homepage.read().clone(),
+                        };
+                        store.export_content_pack(info);
+                        show_pack_export.set(false);
+                    },
+                    "Export"
+                }
+            }
+        }
+
+        Dialog {
+            open: show_pack_url(),
+            on_open_change: move |open: bool| if !open { show_pack_url.set(false) },
+            DialogTitle { "Install a content pack from a URL" }
+            DialogDescription {
+                "The archive is downloaded once, unpacked and validated. Only its images are added; nothing in the project is replaced."
+            }
+            Field { label: "Pack URL".to_owned(), error: pack_url_error(),
+                Input {
+                    r#type: "url",
+                    placeholder: "https://github.com/owner/repo/releases/download/v1/pack.zip",
+                    value: "{pack_url_text}",
+                    aria_label: "Pack URL",
+                    oninput: move |event: FormEvent| {
+                        pack_url_text.set(event.value());
+                        pack_url_error.set(None);
+                    },
+                }
+            }
+            div { class: "fgc-dialog-actions",
+                Button {
+                    variant: ButtonVariant::Outline,
+                    onclick: move |_| show_pack_url.set(false),
+                    "Cancel"
+                }
+                Button {
+                    variant: ButtonVariant::Primary,
+                    disabled: busy,
+                    onclick: move |_| {
+                        let raw = pack_url_text.read().clone();
+                        match crate::assets_io::validate_import_url(&raw) {
+                            Ok(_) => {
+                                store.import_content_pack_from_url(&raw);
+                                pack_url_error.set(None);
+                                show_pack_url.set(false);
+                            }
+                            Err(error) => pack_url_error.set(Some(error)),
+                        }
+                    },
+                    "Install"
                 }
             }
         }

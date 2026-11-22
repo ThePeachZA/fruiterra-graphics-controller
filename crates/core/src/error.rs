@@ -107,6 +107,10 @@ pub enum CoreError {
     #[error("invalid project bundle: {0}")]
     InvalidBundle(String),
 
+    /// A content pack was malformed or incomplete.
+    #[error("invalid content pack: {0}")]
+    InvalidPack(String),
+
     /// A match library file was malformed or incomplete.
     #[error("invalid match library: {0}")]
     InvalidMatchLibrary(String),

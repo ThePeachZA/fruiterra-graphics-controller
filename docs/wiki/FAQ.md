@@ -147,6 +147,23 @@ No. Version 1 is Windows x64 only.
 In `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\`. See
 [Data and Backups](Data-and-Backups) for the folder layout and how to move it.
 
+A debug build of the app keeps its own project in `Fruiterra Graphics Controller
+(dev)` beside that folder, so the build you are working on never overwrites the
+project you broadcast with. The folder the app is using is shown in
+**Settings → Project folder**.
+
+### Where do the game-mode, role and side icons come from?
+
+They are **not** built into the app. The app ships only its placeholder
+watermark so it stays usable for any game; the artwork comes in **content
+packs**. Open **Assets → Content packs → Import pack from URL…** and paste the
+pack address, for example
+`https://github.com/ThePeachZA/fruiterra-overwatch/releases/download/v1/fruiterra-overwatch-pack-v1.zip`.
+
+A pack adds images to your library and nothing else: your teams, players,
+tournaments, settings and the running match are left exactly as they were. You
+can also export your own artwork as a pack from the same panel and share it.
+
 ### How do I move to another PC?
 
 Export a project bundle from **Assets**, copy the folder to the new PC, install

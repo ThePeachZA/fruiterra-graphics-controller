@@ -382,7 +382,12 @@ impl AssetStore {
         Ok((state, report))
     }
 
-    fn write_blob(&self, hash: &str, ext: &str, bytes: &[u8]) -> Result<bool, CoreError> {
+    pub(crate) fn write_blob(
+        &self,
+        hash: &str,
+        ext: &str,
+        bytes: &[u8],
+    ) -> Result<bool, CoreError> {
         let path = blob_path(&self.root, hash, ext)?;
         if path.is_file()
             && fs::read(&path)

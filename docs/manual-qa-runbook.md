@@ -4371,3 +4371,50 @@ hashes were restored to
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` was `No serve config`.
+
+### A70 - Content pack install from URL
+
+**Covers:** owner request 2026-11-22, AI
+
+**Steps:**
+
+1. `dx build --desktop`, then copy the operator's shipped project into a
+   scratch folder and launch the debug binary with `--data-dir <scratch>`.
+   Never point the QA at the operator's own project folder.
+2. Start the overlay server. The project has `overlay.autoStart` on, so the
+   button reads "Stop server" once the server is up; poll `/health` first and
+   only click "Start server" when it is not answering.
+3. Open `http://127.0.0.1:3001/overlays/map-pool.html` as a CDP target at
+   1920x1080 and read the mode column names and the mode icons. A project
+   whose map links point at the old bundled icons renders a single column
+   named "Other" with no icons.
+4. In **Assets**, open the **Content packs** panel, choose **Import pack from
+   URL...**, paste the release URL and press **Install**.
+5. Wait for the toast, then reload the map pool and read the column names and
+   the icons again.
+
+**Gotchas:**
+
+- The map pool mode icon is an `<img>` inside `.mode-icon`, not a background
+  image, so the probe counts `.mode-icon img` and checks `naturalWidth`.
+- A click helper must scroll the element into view and only match visible
+  elements; a collapsed panel otherwise yields a zero-size rectangle and the
+  click lands at (0, 0).
+- PowerShell 5.1 turns a native command's stderr into a terminating error
+  when `$ErrorActionPreference` is `Stop`, which discards the pipeline
+  output. Set it to `Continue` around the node call and join the output with
+  a newline.
+- The CDP websocket keeps the node event loop alive; the script must call
+  `process.exit(0)`.
+
+**Evidence:** CDP DOM text and image probes before and after the install, the
+app toast, and the `/state` payload; no screenshots were taken or published.
+
+**Result: Pass - assistant 2026-11-22.** Before the install the map pool
+showed one "Other" column and no mode icons. The toast read `Installed 10
+asset(s) from the content pack (10 file(s), 166.3 KB) Repaired 29 link(s).`.
+Afterwards the pool showed Control, Escort, Hybrid, Flashpoint and Push with
+all five icons loaded and 13 maps, the wire carried all five game-mode icons,
+the three role icons and the two side icons, and the overlay stayed
+transparent at 1920x1080. All ten assertions passed. The operator's release
+and development projects were not written to.

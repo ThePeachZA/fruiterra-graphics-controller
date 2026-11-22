@@ -194,6 +194,29 @@ Application data, settings and the versioned save file live under:
 Logs are written to the `logs\` subfolder. Imported assets are stored by hash,
 and a backup of the previous save is kept as `app.json.bak`.
 
+A **debug** build keeps its own project in `Fruiterra Graphics Controller (dev)`
+beside that folder, so running the build you are working on never overwrites
+the project you broadcast with. `--data-dir <folder>` or the `FGC_DATA_DIR`
+environment variable opens a specific project; the active folder is shown in
+**Settings → Project folder**.
+
+## Content packs
+
+The application bundles only its placeholder watermark. Artwork — game-mode,
+role and side icons, and team, hero and map images — ships in **content
+packs**. Installing a pack adds its images to your library and leaves your
+teams, players, tournaments, settings and the running match exactly as they
+are.
+
+Use **Assets → Content packs** to export a pack from your own library, import
+one from a folder, or import one straight from a URL. The command line takes
+`--import-pack <folder>`.
+
+The Overwatch pack is published at
+[`ThePeachZA/fruiterra-overwatch`](https://github.com/ThePeachZA/fruiterra-overwatch);
+install it from the URL
+`https://github.com/ThePeachZA/fruiterra-overwatch/releases/download/v1/fruiterra-overwatch-pack-v1.zip`.
+
 ## Documentation
 
 | Document | Contents |

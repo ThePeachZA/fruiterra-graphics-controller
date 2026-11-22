@@ -278,6 +278,19 @@ pub fn SettingsView() -> Element {
                 }
             }
             CollapsiblePanel {
+                title: "Project folder".to_owned(),
+                description: "Where this build keeps the open project.".to_owned(),
+                KeyValues {
+                    KeyValue {
+                        label: "Project folder".to_owned(),
+                        value: fgc_core::data_root_description(),
+                    }
+                }
+                p { class: "fgc-note",
+                    "A debug build keeps its own project in a separate folder, so running it from the terminal never overwrites the project of the shipped build. Start the application with --data-dir <folder> to open a specific project instead."
+                }
+            }
+            CollapsiblePanel {
                 title: "Overlay overrides".to_owned(),
                 description: "Tweak one overlay without rebuilding the application.".to_owned(),
                 KeyValues {

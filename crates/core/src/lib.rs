@@ -7,6 +7,7 @@
 
 mod asset_store;
 mod assets;
+mod content_pack;
 mod error;
 mod match_control;
 mod match_library;
@@ -26,14 +27,20 @@ pub use assets::{
     detect_extension, extensions_match, is_allowed_extension, is_valid_hash, sanitize_svg,
     validate_asset_identity,
 };
+pub use content_pack::{
+    PACK_KIND, PACK_MANIFEST_NAME, PACK_VERSION, PackAsset, PackInfo, PackInstall, PackManifest,
+    PackReport, parse_pack_manifest, read_pack_manifest,
+};
 pub use error::CoreError;
 pub use match_control::*;
 pub use match_library::{MATCH_LIBRARY_EXTENSION, read_match_library, write_match_library};
 pub use migrate::migrate;
 pub use model::*;
 pub use paths::{
-    app_data_dir, assets_root, backup_file, blobs_dir, data_dir, ensure_app_dirs, ensure_dirs,
-    logs_dir, overlays_override_dir, state_file,
+    DATA_DIR_ENV, app_data_dir, assets_root, backup_file, blobs_dir, data_dir,
+    data_root_description, data_root_override, ensure_app_dirs, ensure_dirs, logs_dir,
+    overlays_override_dir, quarantine_state_files, quarantine_state_files_in, set_data_root,
+    state_file,
 };
 pub use references::{
     TeamReference, clear_talent_references, remove_team_references, team_references,

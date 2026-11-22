@@ -13,6 +13,15 @@ use reqwest::Url;
 /// Timeout applied to a single URL import.
 const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// Timeout applied to a content pack download.
+///
+/// A pack carries whole artwork libraries, so it is far larger than a single
+/// image and gets a much longer budget.
+const PACK_FETCH_TIMEOUT: Duration = Duration::from_secs(600);
+
+/// Hard size cap for a downloaded content pack.
+const MAX_PACK_BYTES: u64 = 512 * 1024 * 1024;
+
 /// Opens the native file picker for one or more allow-listed images.
 #[must_use]
 pub fn pick_image_files() -> Vec<PathBuf> {
@@ -146,6 +155,118 @@ pub async fn fetch_image(url: Url) -> Result<(Vec<u8>, Option<String>), String> 
     Ok((bytes, filename))
 }
 
+/// Downloads a content pack archive.
+///
+/// The size cap is enforced from `Content-Length` and while streaming, so a
+/// server that lies about the length cannot exhaust memory.
+pub async fn fetch_pack(url: Url) -> Result<Vec<u8>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(PACK_FETCH_TIMEOUT)
+        .build()
+        .map_err(|error| format!("Could not create the HTTP client: {error}"))?;
+
+    let mut response = client
+        .get(url.clone())
+        .send()
+        .await
+        .map_err(|error| format!("Could not download the pack: {error}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("The server returned {}.", response.status()));
+    }
+    if let Some(length) = response.content_length()
+        && length > MAX_PACK_BYTES
+    {
+        return Err(format!(
+            "The pack is larger than the {} limit.",
+            format_bytes(MAX_PACK_BYTES)
+        ));
+    }
+
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|error| format!("Could not read the pack: {error}"))?
+    {
+        if bytes.len() as u64 + chunk.len() as u64 > MAX_PACK_BYTES {
+            return Err(format!(
+                "The pack is larger than the {} limit.",
+                format_bytes(MAX_PACK_BYTES)
+            ));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+
+    Ok(bytes)
+}
+
+/// Extracts a zipped content pack into `directory`.
+///
+/// Entries that try to escape the target directory are skipped, and the
+/// folder that holds `pack.json` is returned. A zip that wraps the pack in a
+/// single folder is accepted as well.
+pub fn extract_pack_archive(bytes: Vec<u8>, directory: &Path) -> Result<PathBuf, String> {
+    std::fs::create_dir_all(directory)
+        .map_err(|error| format!("Could not create {}: {error}", directory.display()))?;
+
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))
+        .map_err(|error| format!("That is not a readable zip archive: {error}"))?;
+
+    for index in 0..archive.len() {
+        let mut entry = archive
+            .by_index(index)
+            .map_err(|error| format!("Could not read the archive: {error}"))?;
+        let Some(relative) = entry.enclosed_name() else {
+            continue;
+        };
+        let target = directory.join(relative);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&target)
+                .map_err(|error| format!("Could not create {}: {error}", target.display()))?;
+            continue;
+        }
+        if let Some(parent) = target.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|error| format!("Could not create {}: {error}", parent.display()))?;
+        }
+        let mut file = std::fs::File::create(&target)
+            .map_err(|error| format!("Could not create {}: {error}", target.display()))?;
+        std::io::copy(&mut entry, &mut file)
+            .map_err(|error| format!("Could not write {}: {error}", target.display()))?;
+    }
+
+    pack_manifest_folder(directory)
+        .ok_or_else(|| "The archive does not contain a content pack.".to_owned())
+}
+
+/// Finds the folder that holds a pack manifest.
+///
+/// The manifest normally sits at the root of the pack, but a zip that wraps
+/// the whole pack in one folder is accepted too.
+#[must_use]
+pub fn pack_manifest_folder(directory: &Path) -> Option<PathBuf> {
+    let manifest = fgc_core::PACK_MANIFEST_NAME;
+    if directory.join(manifest).is_file() {
+        return Some(directory.to_path_buf());
+    }
+    let mut found = None;
+    for entry in std::fs::read_dir(directory).ok()? {
+        let Ok(entry) = entry else { continue };
+        if !entry.path().is_dir() {
+            continue;
+        }
+        if entry.path().join(manifest).is_file() {
+            if found.is_some() {
+                // More than one candidate: the archive is not a pack.
+                return None;
+            }
+            found = Some(entry.path());
+        }
+    }
+    found
+}
+
 /// Formats a byte count for display in Settings and toasts.
 #[must_use]
 pub fn format_bytes(bytes: u64) -> String {
@@ -222,6 +343,29 @@ pub fn unique_bundle_directory(parent: &Path) -> PathBuf {
     }
     for suffix in 1..1000 {
         let candidate = parent.join(format!("fruiterra-project-{stamp}-{suffix}"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    base
+}
+
+/// Creates a timestamped content pack directory beneath `parent`.
+///
+/// A pack folder always starts empty so a previous export can never leave
+/// stale blobs behind.
+#[must_use]
+pub fn unique_pack_directory(parent: &Path) -> PathBuf {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default();
+    let base = parent.join(format!("fruiterra-pack-{stamp}"));
+    if !base.exists() {
+        return base;
+    }
+    for suffix in 1..1000 {
+        let candidate = parent.join(format!("fruiterra-pack-{stamp}-{suffix}"));
         if !candidate.exists() {
             return candidate;
         }

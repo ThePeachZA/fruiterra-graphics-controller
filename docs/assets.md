@@ -152,6 +152,39 @@ such as animations or videos without adding another library category.
 - Import validates `export.json` and `app.json`, then reads, type-checks, sanitises and hash-verifies every referenced user blob before writing anything locally. A hash mismatch, missing blob or unsupported schema aborts the import with no partial store.
 - Import replaces the current project (teams, talent, tournaments, settings and asset library). The UI confirms before doing so.
 
+### 1.8 Content packs
+
+A **content pack** is artwork you can share without sharing a project. It is a
+separate, additive format: installing one adds images to the library and
+leaves teams, players, talent, tournaments, settings and the running match
+exactly as they are.
+
+- A pack is a folder with:
+  - `pack.json` — the manifest: `kind` (`fgc-content-pack`), `version`, the
+    pack's `name`, `description`, `author`, `license` and `homepage`, the
+    `appVersion` and `schemaVersion` it was built with, and the `assets` list;
+  - `blobs/` — only the blobs the pack needs, at the normal
+    `<prefix>/<hash>.<ext>` paths.
+- Each entry in `assets` carries the asset's `id`, `name`, `category`, `hash`,
+  `ext`, `originalFilename` and its links (`icon`, `portrait`, `transparent`,
+  `gameMode`), its `role` and its `attachment`. A pack can therefore carry a
+  hero's ban icon or transparent cut-out together with the hero that owns it.
+- **Installing** validates every blob before writing anything: size limit,
+  file type, SVG sanitising and the SHA-256. An asset whose id is already in
+  the project with the same content is left alone. A link that no longer
+  resolves — for example one that pointed at an icon the application used to
+  bundle — is repaired from the pack, while a link the operator set themselves
+  is never overwritten.
+- **Exporting** writes every user asset in the project into a new pack
+  folder. The Assets tab has *Export pack…*, *Import pack…* and *Import pack
+  from URL…*; the URL route downloads a zip release, unpacks it and installs
+  it in one step.
+- The command line has `--import-pack <folder>` for the same job without the
+  UI.
+
+The shipped Overwatch artwork is published as a pack:
+`https://github.com/ThePeachZA/fruiterra-overwatch`.
+
 ---
 
 ## 2. Overlay rebuild (minimal diff)
