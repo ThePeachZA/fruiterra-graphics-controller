@@ -3743,7 +3743,8 @@ five assignment roles arrived as `caster,caster,analyst,host,interviewer`.
 Authoritative hashes were restored to
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
-`tailscale serve status` was `No serve config`, and the harness was deleted.
+`tailscale serve status` was `No serve config`. The temporary QA harness lives
+outside the repository and is removed when the overlay review work completes.
 
 **Fixture note.** The authoritative fixture's stored Arc portrait asset has no
 blob in the asset store, so that portrait 404s. This is a data condition in the
