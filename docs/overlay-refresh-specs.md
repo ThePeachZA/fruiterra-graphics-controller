@@ -166,16 +166,26 @@ Renders the dark map-pool art grid: a header, then one column per game mode, eac
 | `.mode-header` | background `#090909` | `var(--fgc-surface)` → `rgb(11, 13, 18)` | surface (mode header bar) |
 | `.mode-name` | color `#fff` | `var(--fgc-text)` → `rgb(238, 242, 248)` | text tier |
 | `.map-image` (placeholder, no imageUrl) | background-color `#2d2d2d` | `var(--fgc-surface-muted)` → `rgb(21, 25, 34)` | placeholder surface |
-| `.map-image.chosen::after` | background `rgba(0, 0, 0, 0.3)` | `var(--fgc-accent-soft)` → `rgba(255, 122, 26, 0.16)` | token-derived chosen scrim |
+| `.map-image.chosen::after` | background `rgba(0, 0, 0, 0.3)` | **Replaced 2026-11-22.** The flat scrim became `.map-pick-glow`, a bottom-up accent gradient on its own layer | gradient (picked-map glow) |
 | `.map-name` | background `#090909` | `var(--fgc-surface)` → `rgb(11, 13, 18)` | surface (map name bar) |
 | `.map-name-text` | color `#fff` | `var(--fgc-text)` → `rgb(238, 242, 248)` | text tier |
 | `.empty-pool` | color `#fff` | `var(--fgc-text)` → `rgb(238, 242, 248)` | text tier (empty state) |
 
-Placeholder/empty state: `.empty-pool` shows "No maps in pool" in `--fgc-text` on transparent canvas. Placeholder map image (no `imageUrl`) is `--fgc-surface-muted`; chosen map gets `--fgc-accent-soft` scrim instead of black scrim.
+Placeholder/empty state: `.empty-pool` shows "No maps in pool" in `--fgc-text` on transparent canvas. Placeholder map image (no `imageUrl`) is `--fgc-surface-muted`; a chosen map keeps the greyscale artwork and gains the `.map-pick-glow` gradient.
+
+**Picked-map glow (owner request, 2026-11-22).** The old scrim was a child of the
+greyscaled `.map-image`, so the filter drained the accent out of it and it
+rendered as a flat grey wash. The glow is now its own layer, `.map-pick-glow`,
+sitting above the artwork and below the team logo:
+
+- `linear-gradient(to top, --fgc-pick-glow 0%, --fgc-pick-glow-mid 30%, --fgc-pick-glow-faint 52%, transparent 72%)`.
+- The layer covers the artwork only (`bottom: 42px`, the name-bar height).
+- `.map-card.picked .map-name` adds `box-shadow: inset 0 2px 0 var(--fgc-accent)` as the rule under the artwork, plus a faint accent wash on the bar.
+- The three glow tokens live next to the accent tokens, so the theme system can retune them in one place.
 
 ### 2.3 State matrix
 - Default: all map cards on `--fgc-surface-muted` placeholder surface when no image; name bar `--fgc-surface`; mode header `--fgc-surface`.
-- Chosen/picked: `.map-image.chosen::after` = `--fgc-accent-soft`; team logo overlay shown (user asset, neutral chrome).
+- Chosen/picked: `.map-image.chosen` keeps `filter: grayscale(100%)`; the `.map-pick-glow` layer carries the accent gradient and the `.map-card.picked .map-name` bar carries the accent rule; the team logo overlay sits above the glow (user asset, neutral chrome).
 - Empty pool: `.empty-pool` text `--fgc-text`, no error styling.
 - Team colours: do not spill into map-pool chrome (neutral only). Chosen-by logo is a user asset with no colour change to the card.
 
@@ -197,15 +207,16 @@ No luminance/contrast function exists in this file; none is required (no dynamic
 - `getComputedStyle(document.querySelector('.map-pool-header')).color === 'rgb(238, 242, 248)'`.
 - `getComputedStyle(document.querySelector('.mode-header')).backgroundColor === 'rgb(11, 13, 18)'`; `.mode-name` color === `rgb(238, 242, 248)`.
 - Placeholder `.map-image` background === `rgb(21, 25, 34)`.
-- Chosen `.map-image.chosen::after` background === `rgba(255, 122, 26, 0.16)`.
+- Chosen `.map-pick-glow` background-image contains `linear-gradient` and `255, 122, 26`; the picked `.map-name` box-shadow contains `255, 122, 26`.
 - `.map-name` background === `rgb(11, 13, 18)`; `.map-name-text` color === `rgb(238, 242, 248)`.
 - `@font-face` literal count === 5.
+- Each `.map-column` carries a `columnReveal` animation with its own delay, 0.13s after the previous column.
 
 ### 2.8 Retired-value purge map (map-pool.html)
 - `#fff` → `--fgc-text` (`.map-pool-header`, `.mode-name`, `.map-name-text`, `.empty-pool`).
 - `#090909` → `--fgc-surface` (`.mode-header`, `.map-name`).
 - `#2d2d2d` → `--fgc-surface-muted` (`.map-image` placeholder; JS `background-color: #2d2d2d` fallback).
-- `rgba(0, 0, 0, 0.3)` → `--fgc-accent-soft` (`.map-image.chosen::after`).
+- `rgba(0, 0, 0, 0.3)` → the `.map-pick-glow` accent gradient (replaced 2026-11-22).
 
 ---
 

@@ -3803,3 +3803,69 @@ and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` after
 every run, and `tailscale serve status` was `No serve config`. The temporary QA
 harness lives outside the repository and is removed when the overlay review work
 completes.
+
+### A62 — Map pool stagger and picked-map glow
+
+**Covers:** owner review list 2026-11-22 (slice C), owner glow request
+2026-11-22, `map-pool.html`
+
+**Steps:**
+
+1. `dx build --desktop` after stopping any running `fruiterra-gc`, then launch
+   the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Restore
+   the authoritative `app.json`/`app.json.bak` fixture before and after the run.
+2. Build a QA fixture whose match has a map pool and one picked map
+   (`currentMatch.maps[0] = { name, gameModeName, chosenBy }`).
+3. Start the overlay server through the real app UI and wait until `/state`
+   holds `autoOverlay, casters, gameOverlay, heroBans, mapSelect, scoreboard,
+   teamRoster`.
+4. Open `map-pool.html` as a CDP target with a 1920×1080 device metrics
+   override, reload and wait for the columns. Sample the column opacities every
+   ~80ms from the first frame so the reveal timeline can be measured.
+5. Record the column count and mode names, each column's `columnReveal`
+   animation delay, the first sample at which each column became visible, the
+   picked map's `filter`, its `.map-pick-glow` background and box, its name
+   band's `box-shadow` and background, and the paint order of the logo against
+   the glow.
+6. Assert that the delays strictly increase by the stagger step, that the
+   columns are revealed one at a time, that the picked map keeps its greyscale
+   and gains the gradient wash and accent rule, that the logo paints above the
+   glow, that the container is visible, that the document is 1920×1080, that the
+   body is transparent, that the font is loaded, and that the requests, failed
+   responses, bad statuses and console errors are all empty.
+
+**Gotchas:** `document.elementsFromPoint` skips elements with
+`pointer-events: none`, so the paint-order probe must temporarily set
+`pointerEvents = 'auto'` on the glow and the logo overlay and restore it
+afterwards. The CDP websocket keeps the Node event loop alive, so the QA script
+must call `process.exit(0)` when it is done. The fixture enables LAN access, so
+asset requests resolve against the LAN base URL — the "external request" filter
+must accept the app's own address on port 3001.
+
+**Evidence:** CDP DOM and computed-style JSON for the pool, the opacity
+timeline, network/console capture and `/health`; no screenshots were taken or
+published.
+
+**Result: Pass — assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay page. The pool rendered four mode columns
+(`Control`, `Escort`, `Hybrid`, `Push`), each with cards, and the columns became
+visible at 1611, 1798, 1891 and 1985ms — about 190ms apart — with
+`columnReveal` delays of 1100, 1230, 1360 and 1490ms; a mid-reveal sample
+showed the first column at opacity 0.237 while the later three were still at 0.
+The picked map kept `filter: grayscale(1)` under a bottom-weighted
+`linear-gradient(to top, rgba(255, 122, 26, 0.45) 0%, rgba(255, 122, 26, 0.22)
+30%, rgba(255, 122, 26, 0.08) 52%, rgba(255, 122, 26, 0) 72%)` glow covering
+the 361.25×657 art box, its name band resolved to `inset 0 2px 0 rgb(255, 122,
+26)` over `linear-gradient(to top, rgba(255, 122, 26, 0.08) 0%, rgba(255, 122,
+26, 0) 100%)`, and the team logo probed as painting above the glow. The
+overlay had a transparent `rgba(0, 0, 0, 0)` body, a 1920×1080 document, its
+bundled font loaded, and recorded 0 external requests, 0 failed responses, 0 bad
+statuses and 0 console errors. `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`git diff --check` and `dx build --desktop` passed. The authoritative hashes
+were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`
+and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` after
+every run, and `tailscale serve status` was `No serve config`. The temporary QA
+harness lives outside the repository and is removed when the overlay review work
+completes.

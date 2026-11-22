@@ -478,8 +478,8 @@ fn map_pool_overlay_uses_night_broadcast_tokens() {
         "empty map art should fall back to the muted surface in CSS and JS"
     );
     assert!(
-        text.contains("background: var(--fgc-accent-soft);"),
-        "the chosen map scrim should use the accent-soft token"
+        text.contains("var(--fgc-pick-glow)") && text.contains("var(--fgc-pick-glow-mid)"),
+        "the chosen map should be lit by the pick glow gradient"
     );
     assert!(
         text.contains("color: var(--fgc-text);"),
@@ -510,6 +510,60 @@ fn map_pool_overlay_uses_night_broadcast_tokens() {
     assert!(
         text.contains("ws.send(JSON.stringify({ type: 'requestInit' }));"),
         "map-pool must keep asking the server for its initial frame"
+    );
+}
+
+#[test]
+fn map_pool_staggers_each_mode_column() {
+    let text = overlay_text("map-pool.html");
+
+    assert!(
+        text.contains("@keyframes columnReveal {")
+            && text.contains(".animate-column {")
+            && text.contains(
+                "animation: columnReveal var(--pool-anim-duration) var(--fgc-ease-out) forwards;"
+            )
+            && text.contains("animation-delay: var(--column-delay, var(--pool-anim-delay));"),
+        "map-pool should reveal each mode column with its own animation"
+    );
+    assert!(
+        text.contains("column.style.setProperty(")
+            && text.contains("'--column-delay',")
+            && text.contains("COLUMN_STAGGER_SECONDS"),
+        "each mode column should get its own delay"
+    );
+    assert!(
+        !text.contains(".animate-container {") && !text.contains("@keyframes fadeIn {"),
+        "map-pool should not fade the whole pool as one block any more"
+    );
+    assert!(
+        text.contains("column.style.opacity = '1';"),
+        "a later pool update should show the new columns straight away"
+    );
+}
+
+#[test]
+fn map_pool_lights_the_picked_map() {
+    let text = overlay_text("map-pool.html");
+
+    assert!(
+        text.contains(".map-image.chosen {") && text.contains("filter: grayscale(100%)"),
+        "the picked map should stay greyscale"
+    );
+    assert!(
+        text.contains(".map-pick-glow {")
+            && text.contains("var(--fgc-pick-glow)")
+            && text.contains("linear-gradient("),
+        "the picked map should carry a gradient wash above the artwork"
+    );
+    assert!(
+        text.contains(".map-card.picked .map-name {")
+            && text.contains("box-shadow: inset 0 2px 0 var(--fgc-accent);"),
+        "the picked map should keep an accent rule under the artwork"
+    );
+    assert!(
+        !text.contains(".map-image.chosen::after"),
+        "the old flat wash behind the greyscale filter should be gone"
     );
 }
 
