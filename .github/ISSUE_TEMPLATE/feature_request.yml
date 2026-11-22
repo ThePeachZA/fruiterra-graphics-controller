@@ -1,7 +1,7 @@
 name: Feature request
 description: A scoped change or addition to existing behaviour.
 title: "[Feature]: "
-labels: ["kind:improvement"]
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:

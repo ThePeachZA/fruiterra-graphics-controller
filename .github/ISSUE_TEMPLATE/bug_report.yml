@@ -1,7 +1,7 @@
 name: Bug report
 description: Something is broken — wrong overlay output, a crash, or a save that will not load.
 title: "[Bug]: "
-labels: ["kind:issue"]
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
