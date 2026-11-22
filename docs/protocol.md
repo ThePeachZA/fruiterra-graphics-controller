@@ -139,6 +139,7 @@ All five carry **the identical scoreboard payload**. The type name selects the s
     "tournamentLogoUrl": "<url>",
     "watermarkLogoUrl": "<url>",
     "teamColorsEnabled": false,
+    "teamAbbreviations": false,
     "showPlayerPortraits": true
   }
 }
@@ -153,6 +154,7 @@ All five carry **the identical scoreboard payload**. The type name selects the s
 - `record` defaults to `"0-0"`.
 - `heroBans` is always an array; entries may be missing for maps that have none. When **Hero bans** is off, `heroBans` is `[]` and `heroIcons` is `{}` so no ban icons remain on any overlay.
 - `mapPoolData` is `[]` when the pool is empty.
+- `teamAbbreviations` mirrors the **Team abbreviations** switch in Match Controller. When it is `true`, the bundled game overlay shows the team's short `tag` instead of the full `name`. It defaults to `false`, and an overlay that does not recognise the field keeps showing the full name.
 
 **Key-name quirks preserved:**
 

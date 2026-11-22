@@ -1237,7 +1237,7 @@ on top of it afterwards.
 | B | Team roster: core player cards fill the container width instead of a fixed 284px (substitutes keep their fixed width) | **Done — A61** |
 | C | Map pool: stagger each game-mode column so the reveal animates column by column | **Done — A62** |
 | D | Map select: show the ban thumbnails over the bottom of the map image, minimal | **Done - A63** |
-| E | Game overlay: drop the outline rings, put the team logo on the outer end, move the ban icon next to the score, add a team-abbreviation toggle, review gradients and background textures | Next |
+| E | Game overlay: drop the outline rings, put the team logo on the outer end, move the ban icon next to the score, add a team-abbreviation toggle, review gradients and background textures | **Done - A64** |
 | F | Hero bans: bigger redesign — two large hero-art panels with `1ST BAN` / `2ND BAN` tags and the mode and map name in a dark bottom strip | Next |
 | G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | Last |
 
@@ -1345,3 +1345,36 @@ the image area, the portraits were not greyscaled, the badge resolved to a 45°
 rotation with a counter-rotated label, and the overlay stayed transparent,
 1920×1080, font-loaded and free of external requests, failed responses and
 console errors.
+
+### Slice E - game overlay rework (A64, 2026-11-22)
+
+The owner reviewed the game overlay and asked for four changes. The three
+hairline `inset 0 0 0 1px var(--fgc-line)` rings on the team bars, the top bars
+and the centre bug are gone; the panels now carry a soft drop shadow instead.
+The file never had gradients or background textures, so that part of the
+review resolved to keeping the panels flat and opaque rather than adding any.
+
+The team logo moved to the outer end of each bar and the ban block moved in
+next to the score, following the OWWC27 and OWCS27 references: the home bar
+reads Logo | Name | Ban | Score | Side and the away bar reads Side | Score |
+Ban | Name | Logo. The team name now hugs the logo, so its alignment flipped
+with the order.
+
+A new **Team abbreviations** switch in Match Controller -> Config -> Overlay
+appearance shows the short team tag instead of the full name. It is a persisted
+display setting, `settings.display.teamAbbreviations`, defaulting to off so
+existing broadcasts keep the full name. The wire carries it as
+`teamAbbreviations` in the scoreboard payload, alongside the existing
+`teamColorsEnabled` flag, and the overlay falls back to the full name when the
+field is absent.
+
+A64 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the home bar measured Logo | Name | Ban | Score | Side at x = 43,
+118, 466 and 513, the away bar measured Score | Ban | Name | Logo at x = 1348,
+1403, 1450 and 1798, no ring remained and the panels computed to
+`rgba(0, 0, 0, 0.38) 0px 6px 22px 0px`. The full names rendered first, then
+the real UI toggle changed them to the NWS and LONG tags and `/state` reported
+`teamAbbreviations: true`. The overlay stayed transparent, 1920×1080,
+font-loaded and free of external requests, failed responses and console
+errors.

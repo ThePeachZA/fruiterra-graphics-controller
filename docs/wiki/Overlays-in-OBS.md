@@ -11,7 +11,7 @@ default is `http://127.0.0.1:3001`.
 
 | Overlay | URL | What it shows |
 |---|---|---|
-| Game overlay | `<base>/overlays/game-overlay.html` | Score, team names, title, subtitle, current map, first-to and side indicators |
+| Game overlay | `<base>/overlays/game-overlay.html` | Score, team names, title, subtitle, current map, first-to and side indicators. The team logo sits on the outer end of each bar and the ban block next to the score. Turn on **Team abbreviations** in Match Controller → Config to show the short team tag instead of the full name |
 | Map select | `<base>/overlays/map-select.html` | The map picks and who chose each map, with the banned heroes inside the map image |
 | Hero bans | `<base>/overlays/hero-bans.html` | The banned hero for each team on each map |
 | Map pool | `<base>/overlays/map-pool.html` | The map pool in the order set on the Map Pool tab. Each game-mode column enters on its own beat, and a picked map is greyscale with an accent glow rising from the bottom of the card |

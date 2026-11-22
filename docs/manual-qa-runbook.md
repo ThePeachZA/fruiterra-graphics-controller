@@ -3942,3 +3942,82 @@ and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` after
 every run, and `tailscale serve status` was `No serve config`. The temporary QA
 harness lives outside the repository and is removed when the overlay review work
 completes.
+
+### A64 - Game overlay rework
+
+**Covers:** owner review list 2026-11-22 (slice E), `game-overlay.html`,
+`settings.display.teamAbbreviations`
+
+**Steps:**
+
+1. `dx build --desktop` after stopping any running `fruiterra-gc`, then launch
+   the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Restore
+   the authoritative `app.json`/`app.json.bak` fixture before and after the run.
+2. Build a QA fixture whose match uses the teams tagged **NWS** (Northwind
+   Sentinels) and **LONG** (Long Team Name That Overflows). Look the teams up
+   by tag, not by name: the other team's name holds non-ASCII characters that
+   the console cannot render. Name the first map Ilios/Control, set
+   `currentMap` to 0 and fill the first hero-ban slot with
+   `{ firstBanTeam: 'A', teamA: ['Ana'], teamB: ['Kiriko'] }`. Leave
+   `settings.display.showHeroBans` on and `teamAbbreviations` off.
+3. Open `game-overlay.html` at 1920x1080 over CDP, wait for the bars, then
+   sample the geometry of both bars. Sort each bar's children by x to read the
+   visual order, and drop the zero-width blocks the side indicator leaves
+   behind. Match the logo on its first class token, because the element also
+   carries `animate-logo`.
+4. Confirm the home bar reads Logo | Name | Ban | Score | Side and the away bar
+   reads Side | Score | Ban | Name | Logo, that the logo sits at the outer
+   end of both, that the ban block sits directly against the score on both, and
+   that the name hugs the logo. The ban is left of the score on the home bar
+   and right of it on the away bar, so the adjacency check accepts either
+   direction.
+5. Confirm no `inset 0 0 0 1px var(--fgc-line)` ring remains on the team bars,
+   the top bars or the centre bug, and that the bars and the smaller panels
+   compute to a drop shadow. The computed `box-shadow` serialises as
+   `rgba(0, 0, 0, 0.38) 0px 6px 22px 0px`.
+6. Drive the real app: open **Match Controller**, then the **Config** tab, and
+   flip the **Team abbreviations** switch. Re-sample the overlay and confirm
+   the names become the NWS and LONG tags, and that `/state` reports
+   `teamAbbreviations: true`.
+7. Record the transparency, document size, font state, requests, failed
+   responses and console errors. Stop the app, restore the authoritative
+   fixture, recheck its hashes and `tailscale serve status`.
+
+**Gotchas:**
+
+- The DOM order is unchanged; the bars use the CSS `order` property, so the
+  visual order has to be derived from the rendered x positions.
+- The logo element's className is `team-bar__logo animate-logo`, so match on
+  the first class token.
+- `document.fonts.check` only reports a font the page actually paints. The game
+  overlay loads Archivo 400 and 500, so assert
+  `400 20px "FGC Display"` and `500 20px "FGC Display Medium"` rather than the
+  900 weight.
+- The QA fixture swaps `app.json` only, not the blobs. Several team logos in
+  the authoritative fixture have no blob on disk, so the away team must use a
+  logo that is actually present.
+
+**Evidence:** CDP DOM and computed-style JSON for the bar geometry before and
+after the toggle, `/state`, the saved `app.json`, the network and console
+capture and `/health`; no screenshots were taken or published.
+
+**Result: Pass - assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay page. The home bar measured Logo | Name | Ban |
+Score | Side at x = 43, 118, 466 and 513 and the away bar Side | Score | Ban |
+Name | Logo at x = 1348, 1403, 1450 and 1798. The logo sat on the outer end of
+both bars, the ban block sat against the score on both and showed hero art, and
+the name hugged the logo. No ring remained; the bars computed to
+`rgba(0, 0, 0, 0.38) 0px 6px 22px 0px` and the top bar and bug to
+`rgba(0, 0, 0, 0.32) 0px 4px 16px 0px`. The full names rendered first, then
+the real switch changed them to NWS and LONG and `/state` reported
+`teamAbbreviations: true`. The body was `rgba(0, 0, 0, 0)`, the document was
+1920x1080, the bundled fonts were loaded, and the run recorded 0 external
+requests, 0 failed responses, 0 bad statuses and 0 console errors.
+`cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`git diff --check` and `dx build --desktop` passed. The authoritative hashes
+were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`
+and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` was `No serve config`. The temporary QA harness lives
+outside the repository and is removed when the overlay review work completes.

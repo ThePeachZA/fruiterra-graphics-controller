@@ -538,3 +538,66 @@ None. This spec changes surface, colour, text tier and state treatment only; no 
 
 ### Retired values — final check
 After the refresh, none of the following may appear in any in-scope file (CSS, inline SVG `fill`, or JS string literal): `#fff`, `#ffffff`, `#090909`, `#151515`, `#eeeeee`, `#eee`, `#ac46f7`, `#444444`, `#2d2d2d`, `#1a1a1a`, `#666`, `rgba(172, 70, 247, ...)`, `rgba(9, 9, 9, 0.6)`, `rgba(0, 0, 0, 0.3)`. Exception: `rgba(0, 0, 0, 0.65)` remains only in `timer.html`.
+
+## 8. game-overlay.html (owner review, 2026-11-22)
+
+The owner reviewed the game overlay and asked for four changes. This section
+records them; it is the first spec section for `game-overlay.html`, because the
+file was already in the Night Broadcast token style before the review.
+
+### 8.1 Outline rings removed
+
+The three hairline rings are gone:
+
+| Selector | Before | After |
+|---|---|---|
+| `.team-bar` | `box-shadow: inset 0 0 0 1px var(--fgc-line);` | `box-shadow: 0 6px 22px rgb(0 0 0 / 38%);` |
+| `.top-bar` | `box-shadow: inset 0 0 0 1px var(--fgc-line);` | `box-shadow: 0 4px 16px rgb(0 0 0 / 32%);` |
+| `.match-bug` | `box-shadow: inset 0 0 0 1px var(--fgc-line);` | `box-shadow: 0 4px 16px rgb(0 0 0 / 32%);` |
+
+### 8.2 Bar order and alignment
+
+The DOM order is unchanged; the visual order comes from the CSS `order`
+property, so a third-party override of the DOM still works.
+
+| Bar | Visual order |
+|---|---|
+| Home | Logo 1, Name 2, Ban 3, Score 4, Side 5 |
+| Away | Side 1, Score 2, Ban 3, Name 4, Logo 5 |
+| Home, swapped | the away order |
+| Away, swapped | the home order |
+
+The team logo therefore sits on the outer end of each bar, the ban block sits
+next to the score, and the name hugs the logo. The name alignment flipped with
+the order: home is `justify-content: flex-start; text-align: left`, away is
+`justify-content: flex-end; text-align: right`, and the `.swapped` variants
+invert those.
+
+### 8.3 Team abbreviations
+
+A new persisted display setting, `settings.display.teamAbbreviations`,
+defaults to `false`. It reaches the overlay as `teamAbbreviations` in the
+scoreboard payload, next to `teamColorsEnabled`. The overlay keeps the full
+name when the field is absent or `false`, and shows the team's short `tag`
+when it is `true`. The switch lives in Match Controller → Config → Overlay
+appearance.
+
+### 8.4 Gradients and background textures
+
+The file never had gradients or background textures, and the house style forbids
+"no full opaque panels, no large gradients, no centre-frame decoration" and
+"no heavy gradients, no oversized glows". The review therefore resolved to
+keeping the panels flat and opaque, with the removed rings replaced by a soft
+drop shadow. No gradient or texture was added.
+
+### 8.5 CDP-verifiable assertions
+
+- No `inset 0 0 0 1px var(--fgc-line)` remains in the file.
+- The bars compute to `rgba(0, 0, 0, 0.38) 0px 6px 22px 0px` and the top bar
+  and bug to `rgba(0, 0, 0, 0.32) 0px 4px 16px 0px`.
+- Sorting each bar's visible children by x yields the order in §8.2.
+- The logo is the outermost block on both bars.
+- The ban block is directly adjacent to the score on both bars.
+- The name's computed `text-align` is `left` on the home bar and `right` on the
+  away bar.
+- With `teamAbbreviations` on, the rendered name equals the team's `tag`.

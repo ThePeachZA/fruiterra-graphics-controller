@@ -69,6 +69,11 @@ executable. A standalone timer overlay is bundled as well.
 | Casters row | `/overlays/row-casters.html` |
 | Hosts and analysts row | `/overlays/row-hosts.html` |
 | Interview row | `/overlays/row-interviews.html` |
+
+The game overlay puts the team logo on the outer end of each bar and the ban
+block next to the score. Match Controller → Config → Overlay appearance has a
+**Team abbreviations** switch that shows the short team tag instead of the full
+name; it is off by default.
 | Timer (standalone) | `/overlays/timer.html` |
 
 Add each one to OBS as a Browser Source at 1920×1080 with a transparent

@@ -180,7 +180,9 @@
       height: 55px;
       background: var(--fgc-surface);
       border-radius: 6px;
-      box-shadow: inset 0 0 0 1px var(--fgc-line);
+      /* A soft drop shadow reads as a floating panel. The old hairline ring
+         boxed the bar in and competed with the team logo. */
+      box-shadow: 0 6px 22px rgb(0 0 0 / 38%);
       display: flex;
       overflow: hidden;
       clip-path: inset(0 round 6px);
@@ -194,32 +196,34 @@
       left: 1348px;
     }
 
-    /* Home team order: Ban | Name | Logo | Score | Side */
-    .team-bar--home .team-bar__ban { order: 1; }
+    /* Home team order: Logo | Name | Ban | Score | Side
+       The logo sits on the outer end of the bar and the ban sits next to the
+       score, so the two score-adjacent blocks always read together. */
+    .team-bar--home .team-bar__logo { order: 1; }
     .team-bar--home .team-bar__name { order: 2; }
-    .team-bar--home .team-bar__logo { order: 3; }
+    .team-bar--home .team-bar__ban { order: 3; }
     .team-bar--home .team-bar__score { order: 4; }
     .team-bar--home .team-bar__side { order: 5; }
 
-    /* Away team order (reversed): Side | Score | Logo | Name | Ban */
+    /* Away team order (reversed): Side | Score | Ban | Name | Logo */
     .team-bar--away .team-bar__side { order: 1; }
     .team-bar--away .team-bar__score { order: 2; }
-    .team-bar--away .team-bar__logo { order: 3; }
+    .team-bar--away .team-bar__ban { order: 3; }
     .team-bar--away .team-bar__name { order: 4; }
-    .team-bar--away .team-bar__ban { order: 5; }
+    .team-bar--away .team-bar__logo { order: 5; }
 
     /* Swapped state: swap the flex orders so info stays consistent */
-    /* Home bar with swapped gets away's order (Side | Score | Logo | Name | Ban) */
+    /* Home bar with swapped gets away's order (Side | Score | Ban | Name | Logo) */
     .team-bar--home.swapped .team-bar__side { order: 1; }
     .team-bar--home.swapped .team-bar__score { order: 2; }
-    .team-bar--home.swapped .team-bar__logo { order: 3; }
+    .team-bar--home.swapped .team-bar__ban { order: 3; }
     .team-bar--home.swapped .team-bar__name { order: 4; }
-    .team-bar--home.swapped .team-bar__ban { order: 5; }
+    .team-bar--home.swapped .team-bar__logo { order: 5; }
 
-    /* Away bar with swapped gets home's order (Ban | Name | Logo | Score | Side) */
-    .team-bar--away.swapped .team-bar__ban { order: 1; }
+    /* Away bar with swapped gets home's order (Logo | Name | Ban | Score | Side) */
+    .team-bar--away.swapped .team-bar__logo { order: 1; }
     .team-bar--away.swapped .team-bar__name { order: 2; }
-    .team-bar--away.swapped .team-bar__logo { order: 3; }
+    .team-bar--away.swapped .team-bar__ban { order: 3; }
     .team-bar--away.swapped .team-bar__score { order: 4; }
     .team-bar--away.swapped .team-bar__side { order: 5; }
 
@@ -302,25 +306,26 @@
       padding: 0 15px;
     }
 
+    /* The name sits next to the logo, so it hugs the logo side. */
     .team-bar--home .team-bar__name {
-      justify-content: flex-end;
-      text-align: right;
+      justify-content: flex-start;
+      text-align: left;
     }
 
     .team-bar--away .team-bar__name {
-      justify-content: flex-start;
-      text-align: left;
+      justify-content: flex-end;
+      text-align: right;
     }
 
     /* Swapped state: swap text alignment */
     .team-bar--home.swapped .team-bar__name {
-      justify-content: flex-start;
-      text-align: left;
+      justify-content: flex-end;
+      text-align: right;
     }
 
     .team-bar--away.swapped .team-bar__name {
-      justify-content: flex-end;
-      text-align: right;
+      justify-content: flex-start;
+      text-align: left;
     }
 
     .team-bar__logo {
@@ -409,7 +414,7 @@
       height: 25px;
       background: var(--fgc-surface);
       border-radius: 6px;
-      box-shadow: inset 0 0 0 1px var(--fgc-line);
+      box-shadow: 0 4px 16px rgb(0 0 0 / 32%);
       display: flex;
       align-items: center;
       overflow: hidden;
@@ -524,7 +529,7 @@
       height: 50px;
       background: var(--fgc-surface-raised);
       border-radius: 6px;
-      box-shadow: inset 0 0 0 1px var(--fgc-line);
+      box-shadow: 0 4px 16px rgb(0 0 0 / 32%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -690,6 +695,14 @@
       fitText(el.awayName, 30, 18);
     }
 
+    // The match controller can show the short team tag instead of the full
+    // name. A team without a tag keeps its name.
+    function teamDisplayName(team) {
+      if (!team) return '';
+      if (teamAbbreviations && team.tag) return team.tag;
+      return team.name || '';
+    }
+
     const el = {
       title: document.getElementById('title'),
       subtitle: document.getElementById('subtitle'),
@@ -729,6 +742,7 @@
     let heroIcons = {};
     let currentMapIndex = 0;
     let animationsTriggered = false;
+    let teamAbbreviations = false;
 
     function triggerAnimations() {
       el.matchBug.style.animation = 'slideFromCenter 0.6s cubic-bezier(0.3, 1, 0.4, 1) 0.8s both';
@@ -962,8 +976,12 @@
         if (d.subtitle) el.subtitle.textContent = d.subtitle;
 
         // Teams
+        if (d.teamAbbreviations !== undefined) {
+          teamAbbreviations = !!d.teamAbbreviations;
+        }
         if (d.teamA) {
-          if (d.teamA.name) el.homeName.textContent = d.teamA.name;
+          const homeLabel = teamDisplayName(d.teamA);
+          if (homeLabel) el.homeName.textContent = homeLabel;
           el.homeLogo.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : 'none';
           setTeamLogoPlaceholder(el.homeLogo, el.homeLogoPlaceholder, d.teamA);
         } else if (d.teamA === null) {
@@ -971,7 +989,8 @@
           setTeamLogoPlaceholder(el.homeLogo, el.homeLogoPlaceholder, null);
         }
         if (d.teamB) {
-          if (d.teamB.name) el.awayName.textContent = d.teamB.name;
+          const awayLabel = teamDisplayName(d.teamB);
+          if (awayLabel) el.awayName.textContent = awayLabel;
           el.awayLogo.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : 'none';
           setTeamLogoPlaceholder(el.awayLogo, el.awayLogoPlaceholder, d.teamB);
         } else if (d.teamB === null) {

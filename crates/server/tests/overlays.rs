@@ -293,6 +293,34 @@ fn game_overlay_uses_night_broadcast_tokens() {
 }
 
 #[test]
+fn game_overlay_drops_the_outline_rings_and_moves_the_logo_outward() {
+    let text = overlay_text("game-overlay.html");
+
+    assert!(
+        !text.contains("inset 0 0 0 1px var(--fgc-line)"),
+        "the game overlay must not draw the hairline outline rings"
+    );
+    assert!(
+        text.contains("box-shadow: 0 6px 22px rgb(0 0 0 / 38%);")
+            && text.contains("box-shadow: 0 4px 16px rgb(0 0 0 / 32%);"),
+        "the panels should read as floating surfaces instead of outlined boxes"
+    );
+    assert!(
+        text.contains(".team-bar--home .team-bar__logo { order: 1; }")
+            && text.contains(".team-bar--home .team-bar__ban { order: 3; }")
+            && text.contains(".team-bar--home .team-bar__score { order: 4; }")
+            && text.contains(".team-bar--away .team-bar__ban { order: 3; }")
+            && text.contains(".team-bar--away .team-bar__logo { order: 5; }"),
+        "the team logo belongs on the outer end and the ban next to the score"
+    );
+    assert!(
+        text.contains("if (teamAbbreviations && team.tag) return team.tag;")
+            && text.contains("if (d.teamAbbreviations !== undefined) {"),
+        "the overlay should show the team tag when abbreviations are switched on"
+    );
+}
+
+#[test]
 fn map_select_card_count_follows_projected_maps() {
     let text = overlay_text("map-select.html");
 

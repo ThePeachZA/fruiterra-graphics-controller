@@ -30,6 +30,7 @@
     "teamB": null,
     "teamBPlayers": [],
     "teamColorsEnabled": false,
+    "teamAbbreviations": false,
     "title": "",
     "tournamentLogoUrl": null,
     "watermarkLogoUrl": null

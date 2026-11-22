@@ -136,6 +136,8 @@ pub struct ScoreboardDto {
     pub watermark_logo_url: Option<String>,
     /// Whether team colours are used.
     pub team_colors_enabled: bool,
+    /// Whether the overlays show the short team tag instead of the full name.
+    pub team_abbreviations: bool,
     /// Whether player portraits are shown.
     pub show_player_portraits: bool,
 }

@@ -50,6 +50,7 @@ fn main() -> Result<()> {
     state.settings.overlay.port = 3001;
     state.settings.overlay.allow_lan = false;
     state.settings.display.team_colors_enabled = true;
+    state.settings.display.team_abbreviations = false;
     state.settings.timer.mode = TimerMode::CountDown;
     state.settings.timer.leading_zeroes = true;
     state.settings.timer.show_hours = true;

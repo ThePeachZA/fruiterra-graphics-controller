@@ -114,6 +114,7 @@ impl<'a> Projector<'a> {
                 .and_then(|id| self.resolve(id)),
             watermark_logo_url: self.watermark_logo_url(),
             team_colors_enabled: self.state.settings.display.team_colors_enabled,
+            team_abbreviations: self.state.settings.display.team_abbreviations,
             show_player_portraits: match_state.show_player_portraits,
         }
     }

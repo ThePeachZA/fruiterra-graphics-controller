@@ -1228,6 +1228,23 @@ fn ConfigTab(match_state: Match) -> Element {
                     }
                     div { class: "fgc-toggle-row",
                         div { class: "fgc-toggle-row__text",
+                            p { class: "fgc-toggle-row__title", "Team abbreviations" }
+                            p { class: "fgc-toggle-row__hint",
+                                "Show the short team tag instead of the full name."
+                            }
+                        }
+                        Switch {
+                            checked: settings.display.team_abbreviations,
+                            aria_label: "Team abbreviations",
+                            on_checked_change: move |checked| {
+                                store.mutate(|state| {
+                                    state.settings.display.team_abbreviations = checked;
+                                });
+                            },
+                        }
+                    }
+                    div { class: "fgc-toggle-row",
+                        div { class: "fgc-toggle-row__text",
                             p { class: "fgc-toggle-row__title", "Player portraits" }
                             p { class: "fgc-toggle-row__hint",
                                 "Show portraits on the team roster overlays."

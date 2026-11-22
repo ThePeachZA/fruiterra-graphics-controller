@@ -235,6 +235,7 @@
       }
     ],
     "teamColorsEnabled": true,
+    "teamAbbreviations": false,
     "title": "Grand Final",
     "tournamentLogoUrl": "http://127.0.0.1:3001/assets/1212121212121212121212121212121212121212121212121212121212121212.png",
     "watermarkLogoUrl": "http://127.0.0.1:3001/assets/1313131313131313131313131313131313131313131313131313131313131313.png"

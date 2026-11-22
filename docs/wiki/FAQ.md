@@ -44,6 +44,13 @@ The on-air role is set per assignment in Match Controller → Talent, so the sam
 person can be a caster in one match and an analyst in the next. Each overlay
 filters that list itself, and all three are separate Browser Sources.
 
+### Can the game overlay show short team names?
+
+Yes. Match Controller → Config → Overlay appearance has a **Team
+abbreviations** switch. Turn it on and the game overlay shows each team's short
+tag (`NWS`) instead of its full name. It is off by default, and it is saved
+with your settings.
+
 ### Is there a bracket overlay?
 
 Not in version 1. The bracket board is for the operator; it is not a broadcast

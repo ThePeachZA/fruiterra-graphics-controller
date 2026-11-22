@@ -345,6 +345,7 @@ pub fn fixture_state() -> AppState {
             display: DisplaySettings {
                 team_colors_enabled: true,
                 show_hero_bans: true,
+                team_abbreviations: false,
                 tournament_logo: Some(AssetId::from_raw("asset-logo-t")),
                 watermark_logo: None,
             },

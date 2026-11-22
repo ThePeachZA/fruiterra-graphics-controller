@@ -1184,6 +1184,9 @@ pub struct DisplaySettings {
     /// Whether the Hero Bans section is shown in Map Selection.
     #[serde(default = "default_true")]
     pub show_hero_bans: bool,
+    /// Whether the overlays show the short team tag instead of the full name.
+    #[serde(default)]
+    pub team_abbreviations: bool,
     /// Tournament logo asset.
     #[serde(default)]
     pub tournament_logo: Option<AssetId>,
@@ -1197,6 +1200,7 @@ impl Default for DisplaySettings {
         Self {
             team_colors_enabled: false,
             show_hero_bans: true,
+            team_abbreviations: false,
             tournament_logo: None,
             watermark_logo: None,
         }
@@ -1443,6 +1447,20 @@ mod tests {
         assert!(!hidden.show_hours);
         let json = serde_json::to_string(&hidden).expect("serialise timer settings");
         assert!(json.contains("\"showHours\":false"), "{json}");
+    }
+
+    #[test]
+    fn team_abbreviations_default_off_and_round_trip() {
+        assert!(!DisplaySettings::default().team_abbreviations);
+
+        let legacy: DisplaySettings = serde_json::from_str("{}").expect("legacy display settings");
+        assert!(!legacy.team_abbreviations);
+
+        let abbreviated: DisplaySettings =
+            serde_json::from_str(r#"{"teamAbbreviations":true}"#).expect("abbreviated settings");
+        assert!(abbreviated.team_abbreviations);
+        let json = serde_json::to_string(&abbreviated).expect("serialise display settings");
+        assert!(json.contains("\"teamAbbreviations\":true"), "{json}");
     }
 
     #[test]
