@@ -5,6 +5,7 @@ use fgc_server::AssetMode;
 
 use crate::assets_io::format_bytes;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
+use crate::components::dialog::{Dialog, DialogDescription, DialogTitle};
 use crate::components::input::Input;
 use crate::components::switch::Switch;
 use crate::components::{CollapsiblePanel, Field, KeyValue, KeyValues, Panel, ToggleRow};
@@ -32,6 +33,7 @@ pub fn SettingsView() -> Element {
 
     let port_text = use_signal(|| settings.overlay.port.to_string());
     let port_error = use_signal(|| None::<String>);
+    let mut confirm_backup = use_signal(|| false);
 
     let tailscale: Option<TailscaleStatus> = store.tailscale_status();
     let tailscale_ready = matches!(
@@ -291,6 +293,27 @@ pub fn SettingsView() -> Element {
                 }
             }
             CollapsiblePanel {
+                title: "Project backup".to_owned(),
+                description: "Move this project and its images to another machine.".to_owned(),
+                div { class: "fgc-actions",
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        disabled: store.asset_busy(),
+                        onclick: move |_| store.export_bundle(),
+                        "Export project…"
+                    }
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        disabled: store.asset_busy(),
+                        onclick: move |_| confirm_backup.set(true),
+                        "Import project…"
+                    }
+                }
+                p { class: "fgc-note",
+                    "An export is a folder with app.json, export.json and the referenced images. Importing one replaces teams, talent, tournaments, settings and the asset library with what the folder holds. To add artwork without touching the project, install a content pack in the Assets tab instead."
+                }
+            }
+            CollapsiblePanel {
                 title: "Overlay overrides".to_owned(),
                 description: "Tweak one overlay without rebuilding the application.".to_owned(),
                 KeyValues {
@@ -298,6 +321,31 @@ pub fn SettingsView() -> Element {
                 }
                 p { class: "fgc-note",
                     "Place a copy of any of the nine overlay HTML files in this folder to override it. A missing or broken override falls back to the embedded file, and the other eight overlays are unaffected."
+                }
+            }
+        }
+
+        Dialog {
+            open: confirm_backup(),
+            on_open_change: move |open: bool| if !open { confirm_backup.set(false) },
+            DialogTitle { "Replace the current project?" }
+            DialogDescription {
+                "Importing a backup replaces teams, talent, tournaments, settings and the asset library. The current project is not kept."
+            }
+            div { class: "fgc-dialog-actions",
+                Button {
+                    variant: ButtonVariant::Outline,
+                    onclick: move |_| confirm_backup.set(false),
+                    "Cancel"
+                }
+                Button {
+                    variant: ButtonVariant::Destructive,
+                    disabled: store.asset_busy(),
+                    onclick: move |_| {
+                        store.import_bundle();
+                        confirm_backup.set(false);
+                    },
+                    "Import project"
                 }
             }
         }

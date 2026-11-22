@@ -93,6 +93,7 @@ impl<'a> Projector<'a> {
             },
             hero_portraits: self.hero_portraits(match_state),
             hero_transparent: self.hero_transparent(match_state),
+            hero_badges: self.hero_badges(match_state),
             hero_roles: self.hero_roles(match_state),
             side_icons: self.side_icons(),
             role_icons: self.role_icons(),
@@ -502,6 +503,29 @@ impl<'a> Projector<'a> {
             transparent.insert(name.to_owned(), url);
         }
         transparent
+    }
+
+    /// The hexagonal badge art of the banned heroes, keyed by hero name.
+    ///
+    /// A hero may link a badge image for the hero bans overlay. The overlay
+    /// falls back to the square art when the link is absent.
+    fn hero_badges(&self, match_state: &Match) -> BTreeMap<String, String> {
+        let banned = banned_hero_names(match_state);
+
+        let mut badges = BTreeMap::new();
+        for (name, asset) in self.banned_heroes(&banned) {
+            let Some(id) = asset.badge.as_ref() else {
+                continue;
+            };
+            let Some(linked) = self.catalog.get(id) else {
+                continue;
+            };
+            let Some(url) = self.resolver.url(linked) else {
+                continue;
+            };
+            badges.insert(name.to_owned(), url);
+        }
+        badges
     }
 
     /// The roles of the banned heroes, keyed by hero name.

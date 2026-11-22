@@ -114,6 +114,8 @@ pub struct ScoreboardDto {
     pub hero_portraits: std::collections::BTreeMap<String, String>,
     /// Transparent hero art keyed by case-sensitive hero name.
     pub hero_transparent: std::collections::BTreeMap<String, String>,
+    /// Hexagonal badge art keyed by case-sensitive hero name.
+    pub hero_badges: std::collections::BTreeMap<String, String>,
     /// Hero roles keyed by case-sensitive hero name; the value is the role slug.
     pub hero_roles: std::collections::BTreeMap<String, String>,
     /// Attack and defend icons; values may be `null`.

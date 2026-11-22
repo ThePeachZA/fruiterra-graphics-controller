@@ -840,6 +840,8 @@ pub enum AssetAttachmentKind {
     HeroBanIcon,
     /// Transparent cut-out art owned by a hero.
     HeroTransparent,
+    /// Hexagonal badge art owned by a hero.
+    HeroBadge,
 }
 
 /// Marks an asset as owned by another asset instead of listed in the library.
@@ -870,6 +872,15 @@ impl AssetAttachment {
             kind: AssetAttachmentKind::HeroTransparent,
         }
     }
+
+    /// Creates a hero badge-art attachment.
+    #[must_use]
+    pub const fn hero_badge(owner: AssetId) -> Self {
+        Self {
+            owner,
+            kind: AssetAttachmentKind::HeroBadge,
+        }
+    }
 }
 
 /// Metadata for a content-addressed asset.
@@ -898,6 +909,9 @@ pub struct Asset {
     /// Hero icon asset.
     #[serde(default)]
     pub icon: Option<AssetId>,
+    /// Hexagonal badge art for the hero bans overlay.
+    #[serde(default)]
+    pub badge: Option<AssetId>,
     /// Hero portrait asset.
     #[serde(default)]
     pub portrait: Option<AssetId>,
@@ -1564,6 +1578,27 @@ mod tests {
         assert_eq!(ThemePreset::NightBroadcast.as_str(), "nightBroadcast");
         assert_eq!(ThemePreset::Light.as_str(), "light");
         assert_eq!(ThemePreset::all().len(), 2);
+    }
+
+    #[test]
+    fn hero_badge_round_trips() {
+        let badge = AssetId::from_raw("asset-badge");
+        let mut asset = Asset::new_user("Ana", AssetCategory::Hero, "a".repeat(64), "png", None)
+            .expect("badge asset");
+        asset.badge = Some(badge);
+
+        let json = serde_json::to_string(&asset).expect("serialise asset");
+        assert!(json.contains("\"badge\":\"asset-badge\""), "{json}");
+
+        let legacy: Asset = serde_json::from_value(serde_json::json!({
+            "id": "asset-legacy",
+            "category": "hero",
+            "hash": "a".repeat(64),
+            "ext": "png",
+            "origin": "user",
+        }))
+        .expect("legacy asset");
+        assert_eq!(legacy.badge, None);
     }
 
     #[test]

@@ -51,6 +51,13 @@ use crate::tailscale::{ServeState, TailscaleState, TailscaleStatus};
 /// How often dirty state is written to disk.
 const SAVE_INTERVAL: Duration = Duration::from_millis(500);
 
+/// How many inlined thumbnails are kept in memory at once.
+///
+/// The cache exists to spare a repeated read of the same bytes. A large
+/// library would otherwise keep every image in the app process as base64
+/// text, so it is dropped rather than grown without bound.
+const THUMB_URL_CACHE_LIMIT: usize = 64;
+
 /// Notice shown when cleanup is refused because state cannot be trusted.
 const CLEANUP_PAUSED_NOTICE: &str = "Asset cleanup is paused because the saved state could not be read. Restore app.json or import a project before cleaning up.";
 
@@ -1973,6 +1980,131 @@ impl AppStore {
         self.notify("Transparent art removed.");
     }
 
+    /// Uploads a hexagonal badge for a hero.
+    ///
+    /// The badge is the framed portrait used by the hero bans overlay. Like the
+    /// transparent cut-out it is stored as an attached Hero asset, so it never
+    /// appears in the library or in another hero's picker.
+    pub fn upload_hero_badge(&self, hero_id: AssetId) {
+        let Some(hero) = self
+            .state
+            .peek()
+            .assets
+            .iter()
+            .find(|asset| asset.id == hero_id)
+            .cloned()
+        else {
+            self.report_error("That hero is unavailable.");
+            return;
+        };
+        if hero.is_attachment() || hero.origin == AssetOrigin::Bundled {
+            self.report_error("Bundled heroes cannot be edited.");
+            return;
+        }
+        if self.asset_busy() {
+            return;
+        }
+        let Some(asset_store) = self.asset_store.peek().clone() else {
+            self.report_error("Asset storage is unavailable.");
+            return;
+        };
+
+        let previous_badge = hero.badge.clone();
+        let badge_name = format!("{} badge", hero.name);
+        self.set_asset_busy(true);
+        let this = *self;
+        spawn(async move {
+            let picked = tokio::task::spawn_blocking(crate::assets_io::pick_image_file).await;
+            let path = match picked {
+                Ok(Some(path)) => path,
+                Ok(None) => {
+                    this.set_asset_busy(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The file picker failed: {error}"));
+                    this.set_asset_busy(false);
+                    return;
+                }
+            };
+
+            let read = tokio::task::spawn_blocking(move || read_image_file(&path)).await;
+            let (_, bytes, filename) = match read {
+                Ok(Ok(value)) => value,
+                Ok(Err(error)) => {
+                    this.report_error(error);
+                    this.set_asset_busy(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The file read task failed: {error}"));
+                    this.set_asset_busy(false);
+                    return;
+                }
+            };
+
+            let inserted = tokio::task::spawn_blocking(move || {
+                asset_store.insert(badge_name, AssetCategory::Hero, &bytes, filename)
+            })
+            .await;
+            match inserted {
+                Ok(Ok(mut outcome)) => {
+                    outcome.asset.attachment = Some(AssetAttachment::hero_badge(hero_id.clone()));
+                    let new_id = outcome.asset.id.clone();
+                    this.mutate(move |state| {
+                        if let Some(previous) = previous_badge.as_ref() {
+                            remove_attached_asset(
+                                state,
+                                previous,
+                                &hero_id,
+                                AssetAttachmentKind::HeroBadge,
+                            );
+                        }
+                        if let Some(hero) =
+                            state.assets.iter_mut().find(|asset| asset.id == hero_id)
+                        {
+                            hero.badge = Some(new_id);
+                        }
+                        state.assets.push(outcome.asset);
+                    });
+                    this.refresh_unused();
+                    this.notify("Badge art updated for this hero.");
+                }
+                Ok(Err(error)) => this.report_error(format!("Could not upload the image: {error}")),
+                Err(error) => this.report_error(format!("The upload task failed: {error}")),
+            }
+            this.set_asset_busy(false);
+        });
+    }
+
+    /// Removes a hero's badge and deletes it when it is attached.
+    pub fn clear_hero_badge(&self, hero_id: AssetId) {
+        let previous_badge = self
+            .state
+            .peek()
+            .assets
+            .iter()
+            .find(|asset| asset.id == hero_id)
+            .and_then(|hero| hero.badge.clone());
+        let Some(previous_badge) = previous_badge else {
+            return;
+        };
+
+        self.mutate(move |state| {
+            remove_attached_asset(
+                state,
+                &previous_badge,
+                &hero_id,
+                AssetAttachmentKind::HeroBadge,
+            );
+            if let Some(hero) = state.assets.iter_mut().find(|asset| asset.id == hero_id) {
+                hero.badge = None;
+            }
+        });
+        self.refresh_unused();
+        self.notify("Badge art removed.");
+    }
+
     /// Sets the role of a hero, shown as a hexagon on the hero bans overlay.
     ///
     /// Passing `None` clears the role, and the overlay then hides the hexagon.
@@ -2595,6 +2727,17 @@ impl AppStore {
         });
     }
 
+    /// The URL the overlay server serves an asset's bytes from.
+    ///
+    /// The app window prefers this over a data URL so a large library does not
+    /// copy every image into the app process as base64 text. The server serves
+    /// the bytes straight from disk and the WebView caches them by content
+    /// hash. Returns `None` while the listener is not running.
+    #[must_use]
+    pub fn asset_served_url(&self, asset: &CoreAsset) -> Option<String> {
+        self.server.local_asset_url(&asset.hash, &asset.ext)
+    }
+
     /// Loads an asset's bytes and returns a data URL for previews and thumbnails.
     ///
     /// Results are cached by content hash so repeated thumbnail renders do not
@@ -2624,7 +2767,11 @@ impl AppStore {
         .ok()??;
 
         let mut cache = self.thumb_urls;
-        cache.write().insert(key, url.clone());
+        let mut entries = cache.write();
+        if entries.len() >= THUMB_URL_CACHE_LIMIT {
+            entries.clear();
+        }
+        entries.insert(key, url.clone());
         Some(url)
     }
 
@@ -3014,6 +3161,9 @@ pub fn clear_asset_references(state: &mut AppState, id: &AssetId) {
         }
         if asset.transparent.as_ref() == Some(id) {
             asset.transparent = None;
+        }
+        if asset.badge.as_ref() == Some(id) {
+            asset.badge = None;
         }
     }
 

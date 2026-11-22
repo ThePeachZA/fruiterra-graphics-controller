@@ -34,6 +34,7 @@ fn asset(
         original_filename: None,
         added_at: None,
         icon: None,
+        badge: None,
         portrait: None,
         transparent: None,
         role: None,

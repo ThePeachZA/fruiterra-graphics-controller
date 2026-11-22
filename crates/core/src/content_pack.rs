@@ -84,6 +84,9 @@ pub struct PackAsset {
     /// Transparent cut-out art for the hero bans overlay.
     #[serde(default)]
     pub transparent: Option<AssetId>,
+    /// Hexagonal badge art for the hero bans overlay.
+    #[serde(default)]
+    pub badge: Option<AssetId>,
     /// Role of the hero.
     #[serde(default)]
     pub role: Option<Role>,
@@ -210,6 +213,7 @@ fn manifest_for(assets: &[&Asset], info: &PackInfo) -> PackManifest {
                 icon: asset.icon.clone(),
                 portrait: asset.portrait.clone(),
                 transparent: asset.transparent.clone(),
+                badge: asset.badge.clone(),
                 role: asset.role,
                 game_mode: asset.game_mode.clone(),
                 attachment: asset.attachment.clone(),
@@ -437,6 +441,7 @@ impl AssetStore {
                 original_filename: asset.original_filename.clone(),
                 added_at: None,
                 icon: resolve(&asset.icon),
+                badge: resolve(&asset.badge),
                 portrait: resolve(&asset.portrait),
                 transparent: resolve(&asset.transparent),
                 role: asset.role,
@@ -475,6 +480,7 @@ impl AssetStore {
             };
 
             changed |= repair(&mut fixed.icon, &asset.icon);
+            changed |= repair(&mut fixed.badge, &asset.badge);
             changed |= repair(&mut fixed.portrait, &asset.portrait);
             changed |= repair(&mut fixed.transparent, &asset.transparent);
             changed |= repair(&mut fixed.game_mode, &asset.game_mode);

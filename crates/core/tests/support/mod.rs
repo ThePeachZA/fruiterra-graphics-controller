@@ -65,6 +65,7 @@ pub fn asset(id: &str, hash: &str, ext: &str) -> Asset {
         original_filename: None,
         added_at: None,
         icon: None,
+        badge: None,
         portrait: None,
         transparent: None,
         role: None,

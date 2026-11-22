@@ -175,6 +175,15 @@ pub fn AssetPicker(
     }
 }
 
+/// Where a thumbnail's bytes come from.
+#[derive(Clone)]
+enum ThumbSource {
+    /// The overlay server is serving the bytes, so the WebView fetches them.
+    Served(String),
+    /// The bytes had to be inlined because the server is not running.
+    Inline(String),
+}
+
 /// An image thumbnail resolved from the asset library.
 #[component]
 pub fn AssetThumb(
@@ -193,7 +202,16 @@ pub fn AssetThumb(
     }
     let url = use_resource(move || {
         let asset = current.read().clone();
-        async move { store.asset_data_url(asset).await }
+        // The overlay server already serves the bytes and the WebView caches
+        // them by content hash, so a thumbnail costs one request instead of a
+        // multi-megabyte base64 string kept in the app process for ever.
+        let served = store.asset_served_url(&asset);
+        async move {
+            match served {
+                Some(url) => Some(ThumbSource::Served(url)),
+                None => store.asset_data_url(asset).await.map(ThumbSource::Inline),
+            }
+        }
     });
     let label = asset.category.label();
     let placeholder = if placeholder_class.is_empty() {
@@ -201,9 +219,16 @@ pub fn AssetThumb(
     } else {
         placeholder_class
     };
+    let resolved = url();
+    let src = match &resolved {
+        Some(Some(ThumbSource::Served(src))) => Some(src.clone()),
+        Some(Some(ThumbSource::Inline(src))) => Some(src.clone()),
+        _ => None,
+    };
+    let loading = resolved.is_none();
 
     rsx! {
-        if let Some(Some(src)) = url() {
+        if let Some(src) = src {
             img {
                 class: "{class}",
                 src: "{src}",
@@ -211,6 +236,8 @@ pub fn AssetThumb(
                 loading: "lazy",
                 decoding: "async",
             }
+        } else if loading {
+            div { class: "{placeholder} fgc-skeleton", "{label}" }
         } else {
             div { class: "{placeholder}", "{label}" }
         }

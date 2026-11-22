@@ -5,6 +5,8 @@
 //! deleted. Deleting an asset clears every reference to it and lets garbage
 //! collection reclaim the bytes after the next save.
 
+use std::cmp::Reverse;
+
 use dioxus::prelude::*;
 use fgc_core::{Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin, Role};
 
@@ -15,7 +17,66 @@ use crate::components::input::Input;
 use crate::components::{CollapsiblePanel, Field, Panel};
 use crate::state::AppStore;
 
-/// The asset library with filtering, import, preview and bundle controls.
+/// How many asset cards one page holds.
+///
+/// A large library is slow to draw and slow to scroll, so the grid is cut
+/// into pages the operator can step through.
+const ASSETS_PER_PAGE: usize = 24;
+
+/// The order the asset library is listed in.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum AssetSort {
+    /// Alphabetical by name, A to Z.
+    NameAsc,
+    /// Alphabetical by name, Z to A.
+    NameDesc,
+    /// Grouped by category, then by name.
+    Category,
+    /// The most recently imported first.
+    Newest,
+    /// The oldest import first.
+    Oldest,
+}
+
+impl AssetSort {
+    /// The label shown in the sort dropdown.
+    const fn label(self) -> &'static str {
+        match self {
+            Self::NameAsc => "Name (A-Z)",
+            Self::NameDesc => "Name (Z-A)",
+            Self::Category => "Category",
+            Self::Newest => "Newest first",
+            Self::Oldest => "Oldest first",
+        }
+    }
+
+    /// The value the sort dropdown uses.
+    const fn slug(self) -> &'static str {
+        match self {
+            Self::NameAsc => "name-asc",
+            Self::NameDesc => "name-desc",
+            Self::Category => "category",
+            Self::Newest => "newest",
+            Self::Oldest => "oldest",
+        }
+    }
+
+    /// Every order, in the order the dropdown lists them.
+    const ALL: [Self; 5] = [
+        Self::NameAsc,
+        Self::NameDesc,
+        Self::Category,
+        Self::Newest,
+        Self::Oldest,
+    ];
+
+    /// The order a dropdown value names.
+    fn from_slug(slug: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|order| order.slug() == slug)
+    }
+}
+
+/// The asset library with filtering, sorting, paging, import and preview.
 #[component]
 pub fn AssetsView() -> Element {
     let store = use_context::<AppStore>();
@@ -24,6 +85,8 @@ pub fn AssetsView() -> Element {
 
     let mut category = use_signal(|| None::<AssetCategory>);
     let mut search = use_signal(String::new);
+    let mut sort = use_signal(|| AssetSort::NameAsc);
+    let mut page = use_signal(|| 0usize);
     let mut preview = use_signal(|| None::<CoreAsset>);
     let mut rename_target = use_signal(|| None::<CoreAsset>);
     let mut rename_text = use_signal(String::new);
@@ -33,7 +96,6 @@ pub fn AssetsView() -> Element {
     let mut show_url_dialog = use_signal(|| false);
     let mut url_text = use_signal(String::new);
     let mut url_error = use_signal(|| None::<String>);
-    let mut confirm_import = use_signal(|| false);
     let mut show_pack_export = use_signal(|| false);
     let mut show_pack_url = use_signal(|| false);
     let mut pack_name = use_signal(String::new);
@@ -43,6 +105,14 @@ pub fn AssetsView() -> Element {
     let mut pack_homepage = use_signal(String::new);
     let mut pack_url_text = use_signal(String::new);
     let mut pack_url_error = use_signal(|| None::<String>);
+
+    // A different filter, search or order starts the library at the first page.
+    use_effect(move || {
+        let _ = category();
+        let _ = search();
+        let _ = sort();
+        page.set(0);
+    });
 
     let user_assets = state
         .read()
@@ -68,7 +138,7 @@ pub fn AssetsView() -> Element {
 
     let search_text = search.read().trim().to_lowercase();
     let selected = category();
-    let filtered: Vec<CoreAsset> = all_assets
+    let mut filtered: Vec<CoreAsset> = all_assets
         .iter()
         .filter(|asset| {
             selected.is_none_or(|category| asset.category == category)
@@ -76,6 +146,29 @@ pub fn AssetsView() -> Element {
         })
         .cloned()
         .collect();
+    match sort() {
+        AssetSort::NameAsc => {
+            filtered.sort_by_key(|asset| asset.name.to_lowercase());
+        }
+        AssetSort::NameDesc => {
+            filtered.sort_by_key(|asset| Reverse(asset.name.to_lowercase()));
+        }
+        AssetSort::Category => {
+            filtered.sort_by_key(|asset| (asset.category.label(), asset.name.to_lowercase()));
+        }
+        AssetSort::Newest => {
+            filtered.sort_by_key(|asset| Reverse(asset.added_at.clone()));
+        }
+        AssetSort::Oldest => {
+            filtered.sort_by_key(|asset| asset.added_at.clone());
+        }
+    }
+
+    let page_count = filtered.len().div_ceil(ASSETS_PER_PAGE).max(1);
+    let current_page = page().min(page_count - 1);
+    let first = current_page * ASSETS_PER_PAGE;
+    let last = (first + ASSETS_PER_PAGE).min(filtered.len());
+    let visible: Vec<CoreAsset> = filtered[first..last].to_vec();
 
     let mode_options: Vec<CoreAsset> = all_assets
         .iter()
@@ -83,7 +176,7 @@ pub fn AssetsView() -> Element {
         .cloned()
         .collect();
 
-    let (property_asset, property_icon, property_transparent) = {
+    let (property_asset, property_icon, property_transparent, property_badge) = {
         let assets = &state.read().assets;
         let asset = property_target()
             .and_then(|id| assets.iter().find(|candidate| candidate.id == id).cloned());
@@ -95,7 +188,11 @@ pub fn AssetsView() -> Element {
             .as_ref()
             .and_then(|asset| asset.transparent.as_ref())
             .and_then(|id| assets.iter().find(|candidate| &candidate.id == id).cloned());
-        (asset, icon, transparent)
+        let badge = asset
+            .as_ref()
+            .and_then(|asset| asset.badge.as_ref())
+            .and_then(|id| assets.iter().find(|candidate| &candidate.id == id).cloned());
+        (asset, icon, transparent, badge)
     };
 
     let preview_url = use_resource(move || {
@@ -110,71 +207,153 @@ pub fn AssetsView() -> Element {
 
     rsx! {
         div { class: "fgc-view",
-            div { class: "fgc-grid fgc-grid--two",
-                Panel {
-                    title: "Import".to_owned(),
-                    description: "Add an image to the library. Identical bytes are stored once.".to_owned(),
-                    Field { label: "Category".to_owned(),
-                        select {
-                            class: "fgc-native-select",
-                            value: "{import_category().slug()}",
-                            aria_label: "Import category",
-                            onchange: move |event| {
-                                if let Some(category) = AssetCategory::from_slug(&event.value()) {
-                                    import_category.set(category);
-                                }
-                            },
-                            for category in AssetCategory::ALL {
-                                option {
-                                    value: "{category.slug()}",
-                                    selected: category == import_category(),
-                                    "{category.label()}"
+            Panel {
+                title: format!("Library ({})", filtered.len()),
+                description: "Bundled assets ship with the application; imported assets are content-addressed and read-only once stored.".to_owned(),
+                div { class: "fgc-asset-toolbar",
+                    Input {
+                        r#type: "search",
+                        placeholder: "Search assets by name",
+                        value: "{search}",
+                        aria_label: "Search assets",
+                        oninput: move |event: FormEvent| search.set(event.value()),
+                    }
+                    select {
+                        class: "fgc-native-select",
+                        value: "{sort().slug()}",
+                        aria_label: "Sort assets",
+                        onchange: move |event| {
+                            if let Some(order) = AssetSort::from_slug(&event.value()) {
+                                sort.set(order);
+                            }
+                        },
+                        for order in AssetSort::ALL {
+                            option {
+                                value: "{order.slug()}",
+                                selected: order == sort(),
+                                "{order.label()}"
+                            }
+                        }
+                    }
+                    div { class: "fgc-asset-filters",
+                        button {
+                            r#type: "button",
+                            class: chip_class(selected.is_none()),
+                            onclick: move |_| category.set(None),
+                            "All ({all_assets.len()})"
+                        }
+                        for (option, count) in counts {
+                            button {
+                                key: "{option.slug()}",
+                                r#type: "button",
+                                class: chip_class(selected == Some(option)),
+                                onclick: move |_| category.set(Some(option)),
+                                "{option.label()} ({count})"
+                            }
+                        }
+                    }
+                }
+                div { class: "fgc-asset-import",
+                    select {
+                        class: "fgc-native-select",
+                        value: "{import_category().slug()}",
+                        aria_label: "Import category",
+                        onchange: move |event| {
+                            if let Some(category) = AssetCategory::from_slug(&event.value()) {
+                                import_category.set(category);
+                            }
+                        },
+                        for option in AssetCategory::ALL {
+                            option {
+                                value: "{option.slug()}",
+                                selected: option == import_category(),
+                                "{option.label()}"
+                            }
+                        }
+                    }
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        size: ButtonSize::Sm,
+                        disabled: busy,
+                        onclick: move |_| store.import_assets_from_files(import_category()),
+                        if busy { "Working…" } else { "Import files…" }
+                    }
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        size: ButtonSize::Sm,
+                        disabled: busy,
+                        onclick: move |_| {
+                            url_error.set(None);
+                            show_url_dialog.set(true);
+                        },
+                        "Import from URL…"
+                    }
+                    span { class: "fgc-asset-import__note",
+                        "PNG, JPEG, WebP, GIF and SVG up to 20 MB. Identical bytes are stored once."
+                    }
+                }
+                if filtered.is_empty() {
+                    div { class: "fgc-asset-empty",
+                        p { class: "fgc-asset-empty__title", "No assets match this filter." }
+                        p { class: "fgc-note", "Try another category, clear the search, or import an image above." }
+                    }
+                } else {
+                    div { class: "fgc-asset-grid",
+                        for asset in visible {
+                            {
+                                rsx! {
+                                    AssetCard {
+                                        key: "{asset.id}",
+                                        asset: asset.clone(),
+                                        mode_options: mode_options.clone(),
+                                        on_preview: move |asset: CoreAsset| preview.set(Some(asset)),
+                                        on_rename: move |asset: CoreAsset| {
+                                            rename_text.set(asset.name.clone());
+                                            rename_target.set(Some(asset));
+                                        },
+                                        on_delete: move |asset: CoreAsset| delete_target.set(Some(asset)),
+                                        on_game_mode: move |(asset, value): (CoreAsset, Option<AssetId>)| {
+                                            store.set_asset_game_mode(asset.id, value);
+                                        },
+                                        on_properties: move |asset: CoreAsset| {
+                                            property_target.set(Some(asset.id));
+                                        },
+                                    }
                                 }
                             }
                         }
                     }
-                    div { class: "fgc-actions",
-                        Button {
-                            variant: ButtonVariant::Primary,
-                            disabled: busy,
-                            onclick: move |_| store.import_assets_from_files(import_category()),
-                            if busy { "Working…" } else { "Import files…" }
+                    div { class: "fgc-asset-pager",
+                        span { class: "fgc-asset-pager__count",
+                            "Showing {first + 1}-{last} of {filtered.len()}"
                         }
-                        Button {
-                            variant: ButtonVariant::Outline,
-                            disabled: busy,
-                            onclick: move |_| {
-                                url_error.set(None);
-                                show_url_dialog.set(true);
-                            },
-                            "Import from URL…"
+                        div { class: "fgc-asset-pager__controls",
+                            Button {
+                                variant: ButtonVariant::Outline,
+                                size: ButtonSize::Sm,
+                                disabled: current_page == 0,
+                                onclick: move |_| {
+                                    page.set(current_page.saturating_sub(1));
+                                },
+                                "Previous"
+                            }
+                            span { class: "fgc-asset-pager__page",
+                                "Page {current_page + 1} of {page_count}"
+                            }
+                            Button {
+                                variant: ButtonVariant::Outline,
+                                size: ButtonSize::Sm,
+                                disabled: current_page + 1 >= page_count,
+                                onclick: move |_| {
+                                    page.set((current_page + 1).min(page_count - 1));
+                                },
+                                "Next"
+                            }
                         }
-                    }
-                    p { class: "fgc-note",
-                        "PNG, JPEG, WebP, GIF and SVG up to 20 MB. SVG files are checked for script and external references before they are stored."
                     }
                 }
-                CollapsiblePanel {
-                    title: "Project bundles".to_owned(),
-                    description: "Move a project and its referenced images to another machine.".to_owned(),
-                    div { class: "fgc-actions",
-                        Button {
-                            variant: ButtonVariant::Outline,
-                            disabled: busy,
-                            onclick: move |_| store.export_bundle(),
-                            "Export project…"
-                        }
-                        Button {
-                            variant: ButtonVariant::Outline,
-                            disabled: busy,
-                            onclick: move |_| confirm_import.set(true),
-                            "Import project…"
-                        }
-                    }
-                    p { class: "fgc-note",
-                        "An export is a folder containing app.json, export.json and the referenced user images. Bundled art comes from the application and is never copied."
-                    }
-                }
+            }
+            div { class: "fgc-grid",
                 CollapsiblePanel {
                     title: "Content packs".to_owned(),
                     description: "Share artwork without touching anybody's teams or settings.".to_owned(),
@@ -209,69 +388,7 @@ pub fn AssetsView() -> Element {
                         }
                     }
                     p { class: "fgc-note",
-                        "A pack holds images only. Installing one adds its artwork to the library and leaves teams, players, tournaments and the running match exactly as they are."
-                    }
-                }
-            }
-            Panel {
-                title: format!("Library ({})", filtered.len()),
-                description: "Bundled assets ship with the application; imported assets are content-addressed and read-only once stored.".to_owned(),
-                div { class: "fgc-asset-toolbar",
-                    Input {
-                        r#type: "search",
-                        placeholder: "Search assets by name",
-                        value: "{search}",
-                        aria_label: "Search assets",
-                        oninput: move |event: FormEvent| search.set(event.value()),
-                    }
-                    div { class: "fgc-asset-filters",
-                        button {
-                            r#type: "button",
-                            class: chip_class(selected.is_none()),
-                            onclick: move |_| category.set(None),
-                            "All ({all_assets.len()})"
-                        }
-                        for (option, count) in counts {
-                            button {
-                                key: "{option.slug()}",
-                                r#type: "button",
-                                class: chip_class(selected == Some(option)),
-                                onclick: move |_| category.set(Some(option)),
-                                "{option.label()} ({count})"
-                            }
-                        }
-                    }
-                }
-                if filtered.is_empty() {
-                    div { class: "fgc-asset-empty",
-                        p { class: "fgc-asset-empty__title", "No assets match this filter." }
-                        p { class: "fgc-note", "Try another category, clear the search, or import an image above." }
-                    }
-                } else {
-                    div { class: "fgc-asset-grid",
-                        for asset in filtered {
-                            {
-                                rsx! {
-                                    AssetCard {
-                                        key: "{asset.id}",
-                                        asset: asset.clone(),
-                                        mode_options: mode_options.clone(),
-                                        on_preview: move |asset: CoreAsset| preview.set(Some(asset)),
-                                        on_rename: move |asset: CoreAsset| {
-                                            rename_text.set(asset.name.clone());
-                                            rename_target.set(Some(asset));
-                                        },
-                                        on_delete: move |asset: CoreAsset| delete_target.set(Some(asset)),
-                                        on_game_mode: move |(asset, value): (CoreAsset, Option<AssetId>)| {
-                                            store.set_asset_game_mode(asset.id, value);
-                                        },
-                                        on_properties: move |asset: CoreAsset| {
-                                            property_target.set(Some(asset.id));
-                                        },
-                                    }
-                                }
-                            }
-                        }
+                        "A pack holds images only. Installing one adds its artwork to the library and leaves teams, players, tournaments and the running match exactly as they are. To move a whole project - teams, matches, settings and images - use Settings -> Project backup instead."
                     }
                 }
             }
@@ -457,6 +574,43 @@ pub fn AssetsView() -> Element {
                         }
                     }
                     div { class: "fgc-asset-properties__section",
+                        h3 { "Badge" }
+                        if let Some(badge) = property_badge.clone() {
+                            div { class: "fgc-asset-properties__icon",
+                                AssetThumb {
+                                    asset: badge,
+                                    class: "fgc-asset-properties__icon-image".to_owned(),
+                                }
+                                p { class: "fgc-note", "The hexagonal badge for this hero. The hero bans overlay shows it beside the role hexagon." }
+                            }
+                        } else {
+                            p { class: "fgc-note", "No badge yet. The hero bans overlay falls back to the regular art." }
+                        }
+                        div { class: "fgc-actions",
+                            Button {
+                                variant: ButtonVariant::Outline,
+                                size: ButtonSize::Sm,
+                                disabled: busy,
+                                onclick: {
+                                    let hero_id = asset.id.clone();
+                                    move |_| store.upload_hero_badge(hero_id.clone())
+                                },
+                                if property_badge.is_some() { "Replace badge…" } else { "Upload badge…" }
+                            }
+                            if property_badge.is_some() {
+                                Button {
+                                    variant: ButtonVariant::Ghost,
+                                    size: ButtonSize::Sm,
+                                    onclick: {
+                                        let hero_id = asset.id.clone();
+                                        move |_| store.clear_hero_badge(hero_id.clone())
+                                    },
+                                    "Remove badge"
+                                }
+                            }
+                        }
+                    }
+                    div { class: "fgc-asset-properties__section",
                         h3 { "Role" }
                         p { class: "fgc-note", "The hero bans overlay shows the role hexagon above the hero name." }
                         select {
@@ -532,31 +686,6 @@ pub fn AssetsView() -> Element {
                         }
                     },
                     "Import"
-                }
-            }
-        }
-
-        Dialog {
-            open: confirm_import(),
-            on_open_change: move |open: bool| if !open { confirm_import.set(false) },
-            DialogTitle { "Replace the current project?" }
-            DialogDescription {
-                "Importing a bundle replaces teams, talent, tournaments, settings and the asset library. The current project is not kept."
-            }
-            div { class: "fgc-dialog-actions",
-                Button {
-                    variant: ButtonVariant::Outline,
-                    onclick: move |_| confirm_import.set(false),
-                    "Cancel"
-                }
-                Button {
-                    variant: ButtonVariant::Destructive,
-                    disabled: busy,
-                    onclick: move |_| {
-                        store.import_bundle();
-                        confirm_import.set(false);
-                    },
-                    "Import project"
                 }
             }
         }

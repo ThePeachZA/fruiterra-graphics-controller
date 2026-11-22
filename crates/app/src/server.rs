@@ -102,6 +102,20 @@ impl ServerController {
         self.base_url.cloned()
     }
 
+    /// The loopback URL an asset's bytes are served from while the listener runs.
+    ///
+    /// The server binds loopback when LAN access is off and every interface
+    /// when it is on, so the loopback address always reaches it. The port is
+    /// the one the listener actually bound, which differs from the configured
+    /// port when port `0` was requested.
+    #[must_use]
+    pub fn local_asset_url(&self, hash: &str, ext: &str) -> Option<String> {
+        let ServerStatus::Running { port, .. } = self.status.read().clone() else {
+            return None;
+        };
+        Some(format!("http://127.0.0.1:{port}/assets/{hash}.{ext}"))
+    }
+
     /// Current asset URL mode.
     #[must_use]
     pub fn asset_mode(&self) -> AssetMode {

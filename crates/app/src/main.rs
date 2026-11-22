@@ -11,6 +11,7 @@
 mod app;
 mod assets_io;
 mod components;
+mod hero_sync;
 mod logo_colors;
 mod remote_access;
 mod server;
@@ -60,6 +61,19 @@ fn main() {
             Some(path) => run_import_pack(path),
             None => {
                 eprintln!("--import-pack needs the pack folder");
+                std::process::exit(2);
+            }
+        }
+    }
+
+    if let Some(index) = arguments
+        .iter()
+        .position(|argument| argument == "--sync-heroes")
+    {
+        match arguments.get(index + 1) {
+            Some(path) => run_sync_heroes(path),
+            None => {
+                eprintln!("--sync-heroes needs the artwork folder");
                 std::process::exit(2);
             }
         }
@@ -146,6 +160,56 @@ fn run_import_pack(path: &str) -> ! {
         }
         Err(error) => {
             eprintln!("could not import the content pack: {error}");
+            std::process::exit(1);
+        }
+    }
+}
+
+/// Syncs hero artwork, hero roles and map game modes from a local artwork
+/// folder and the owner's reference sheet, then exits.
+///
+/// The artwork folder is expected to contain `Icons/Square`,
+/// `Icons/Hexagon` and `Transparent` subfolders named after each hero.
+fn run_sync_heroes(path: &str) -> ! {
+    use fgc_core::{AssetStore, JsonStore, Store};
+
+    let art_dir = std::path::PathBuf::from(path);
+    let outcome = (|| -> Result<hero_sync::HeroSyncReport, String> {
+        if !art_dir.is_dir() {
+            return Err(format!("{} is not a folder", art_dir.display()));
+        }
+        let csv = hero_sync::fetch_sheet_csv()?;
+        let rows = hero_sync::parse_sheet_csv(&csv);
+        let assets_root = fgc_core::assets_root().map_err(|error| error.to_string())?;
+        let asset_store = AssetStore::new(assets_root);
+        let state_file = fgc_core::state_file().map_err(|error| error.to_string())?;
+        let store = JsonStore::new(state_file);
+        let mut state = store.load().unwrap_or_default();
+        let report = hero_sync::sync(&mut state, &asset_store, &art_dir, &rows);
+        store.save(&state).map_err(|error| error.to_string())?;
+        Ok(report)
+    })();
+
+    match outcome {
+        Ok(report) => {
+            println!("heroes updated: {}", report.heroes_updated);
+            println!("icons set: {}", report.icons_set);
+            println!("badges set: {}", report.badges_set);
+            println!("transparents set: {}", report.transparents_set);
+            println!("roles set: {}", report.roles_set);
+            println!("map modes set: {}", report.map_modes_set);
+            println!("skipped: {}", report.skipped.len());
+            for line in &report.skipped {
+                println!("  - {line}");
+            }
+            println!(
+                "Synced hero artwork and metadata into {}.",
+                fgc_core::data_root_description()
+            );
+            std::process::exit(0);
+        }
+        Err(error) => {
+            eprintln!("Could not sync hero artwork: {error}");
             std::process::exit(1);
         }
     }

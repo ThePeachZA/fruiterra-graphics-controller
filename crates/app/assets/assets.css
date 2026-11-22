@@ -258,3 +258,77 @@
     justify-content: flex-end;
     gap: var(--fgc-space-2);
 }
+/* A thumbnail whose bytes have not arrived yet. The placeholder keeps the
+   card the same size while the image loads, so the grid never jumps. */
+.fgc-skeleton {
+    position: relative;
+    overflow: hidden;
+    color: transparent;
+    background: var(--fgc-bg-elevated);
+}
+
+.fgc-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        rgb(255 255 255 / 0%) 0%,
+        rgb(255 255 255 / 7%) 50%,
+        rgb(255 255 255 / 0%) 100%
+    );
+    animation: fgc-skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes fgc-skeleton-sweep {
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fgc-skeleton::after {
+        animation: none;
+    }
+}
+
+/* The pager under the asset grid. */
+.fgc-asset-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fgc-space-3);
+    flex-wrap: wrap;
+    padding-top: var(--fgc-space-3);
+    border-top: 1px solid var(--fgc-line);
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-sm);
+}
+
+.fgc-asset-pager__controls {
+    display: flex;
+    align-items: center;
+    gap: var(--fgc-space-3);
+}
+
+.fgc-asset-pager__page {
+    color: var(--fgc-text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* The import controls sit in one quiet row under the library toolbar, so the
+   page opens with the library itself rather than a wall of panels. */
+.fgc-asset-import {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fgc-space-2);
+    margin-top: var(--fgc-space-3);
+}
+
+.fgc-asset-import__note {
+    color: var(--fgc-text-faint);
+    font-size: var(--fgc-text-xs);
+}
