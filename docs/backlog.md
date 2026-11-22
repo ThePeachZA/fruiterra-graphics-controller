@@ -1242,6 +1242,7 @@ on top of it afterwards.
 | G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | **Done - A66** |
 | H | Font weights: align every overlay to one type scale and fix the weights that were being ignored | **Done - A67** |
 | I | Hero bans: a full-bleed OWWC27 layout with the team logo in the corner, the role hexagon, the hero name over the art and the ban order in the team colour | **Done - A68** |
+| J | Hero bans: make the hexagons a deliberate shape language instead of a texture that just exists | **Done - A69** |
 
 The theme model was chosen as a **built-in Light theme plus JSON import**: the
 app ships the dark Night Broadcast theme and a Light theme, and the user can
@@ -1522,9 +1523,9 @@ Two new pieces of hero data make the reference possible:
 Both travel on the scoreboard payload as `heroTransparent` and `heroRoles`,
 keyed by the hero name, next to the existing `heroPortraits` and `heroIcons`.
 
-The background is a restrained hexagon texture: a masked accent-coloured fill
-at 14% opacity over the two halves and the centre banner. Because it is a
-masked background colour rather than an image, it follows the theme accent.
+The first version of the background was a restrained hexagon texture: a masked
+accent-coloured fill at 14% opacity over the two halves and the centre
+banner. The owner rejected it in slice J, below.
 
 A68 in [`docs/manual-qa.md`](manual-qa.md) and
 [`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
@@ -1536,3 +1537,53 @@ the ban labels rendered in the two team colours. The transparent slot was
 preferred for the home hero and the regular art was used for the away hero.
 The overlay stayed transparent, 1920x1080 and free of external requests, failed
 responses and console errors.
+
+### Slice J - the honeycomb wall (A69, 2026-11-22)
+
+The owner's verdict on the first hexagons was that they "kind of just exist
+meaninglessly there with no creativity behind it". They were right. The tile
+was 56x98, which is roughly sixteen cells across a half, so it read as a
+screen door rather than as structure. It was uniform, so it had no direction.
+It was painted in the generic accent, the same hue as the ban label, so it
+carried no information. It sat at `z-index: 0` behind the full-bleed art,
+which meant it was invisible on every hero that had regular art and only
+showed through a transparent cut-out. And it had also been pushed into the
+centre banner, the one place the OWWC27 reference has none.
+
+The hexagons are now the overlay's shape language instead of a texture. The
+reference uses the same shape three times - a hexagonal team logo badge, a
+hexagonal role badge and a honeycomb wall behind the hero - so the hexagon now
+appears at three scales in one composition.
+
+- **The wall** sits behind the art. It is a 56x100 tessellating SVG used as a
+  mask at `180px 322px`, which is about five cells across a 905px half. The
+  fill is `var(--fgc-surface-raised)` and the joints are
+  `var(--fgc-line-strong)`, so the wall is neutral and the accent stays
+  reserved for the ban label. A gradient fades it up into the surface from
+  30% down, which clears the caption and gives the field a direction.
+- **The grid** is a faint copy of the same tile in front of the art and the
+  scrim, so the wall reads on regular hero art as well as through a cut-out.
+  It is weighted to the outer edge of the half, where the team logo sits and
+  the hero is not, and it is denser towards the caption. It never reaches the
+  centre of the half, so the hero is never veiled.
+- **The badges** share the wall's pointy-top hexagon. The team logo grew from
+  100x100 to 100x115 and uses a `drop-shadow`, because a `clip-path` clips a
+  box shadow away. Its artwork moved into the band the hexagon inscribes so
+  the badge never cuts into the logo.
+- **The banner** no longer carries a texture. It is the seam where the two
+  teams meet, so it is a gradient from the home team's colour to the away
+  team's colour.
+
+No payload changed. The wall, the grid and the badges are static; only the
+team colours, the logo artwork and the ban order follow the payload.
+
+A69 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the wall, art, grid and caption computed to `z-index` 0, 1, 3 and 4;
+the wall measured `rgb(17, 21, 29)` with `rgb(58, 67, 86)` joints, which is
+not the accent `rgb(255, 122, 26)`; the mask size was `180px 322px`, about
+five cells across a 905px half; the team logo measured 100x115 with the
+pointy-top hexagon and its artwork in the inscribed band; the role badge
+measured 60x68 with the same hexagon; and the banner computed to a gradient
+between the two team colours. The overlay stayed transparent, 1920x1080 and
+free of external requests, failed responses and console errors.

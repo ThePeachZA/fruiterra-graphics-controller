@@ -33,16 +33,22 @@ actions.
 ### What does the hero bans overlay show?
 
 The banned heroes for the map that is currently selected, as two full-bleed
-halves of the screen. The hero art fills each half, the team logo sits in the
-outer top corner, and the role hexagon and the hero's name sit over the lower
-half of the art. Under the name the ban order is written in that team's
-colour, so you can see at a glance which team banned first.
+halves of the screen. The hero art fills each half, the team logo sits in a
+hexagonal badge in the outer top corner, and the role badge and the hero's
+name sit over the lower half of the art. Under the name the ban order is
+written in that team's colour, so you can see at a glance which team banned
+first.
+
+A faint honeycomb wall sits behind the hero and runs along the outer edge of
+each half, so the hexagon is the shape the whole screen is built from: the
+team logo badge, the role badge and the backdrop are all the same shape. The
+banner between the two halves carries both team colours.
 
 Give a hero a **transparent cut-out** in the Assets tab and the overlay uses it
-instead of the regular hero art, so the hexagon texture shows through behind
-the hero. Give the hero a **role** and the role hexagon appears above the
-name. Both are optional; without them the overlay falls back to the regular
-art and hides the role hexagon.
+instead of the regular hero art, so the honeycomb wall shows through behind
+the hero. Give the hero a **role** and the role badge appears above the name.
+Both are optional; without them the overlay falls back to the regular art and
+hides the role badge.
 
 ### Which overlay shows which people?
 

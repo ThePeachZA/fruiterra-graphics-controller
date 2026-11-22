@@ -162,23 +162,80 @@
       background: var(--fgc-surface);
     }
 
-    /* The hexagon tile. A masked background colour keeps the texture on the
-       accent token, so it follows the theme. */
-    .hero-half__texture,
-    .hero-bans__centre::before {
-      background-color: var(--fgc-accent);
-      opacity: 0.14;
-      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9z' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
-      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9z' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
-      -webkit-mask-size: 56px 98px;
-      mask-size: 56px 98px;
-      pointer-events: none;
-    }
+    /* The honeycomb wall.
 
-    .hero-half__texture {
+       The hexagon is the overlay's shape language: the team logo badge and
+       the role badge are hexagons too, so the backdrop repeats that shape at
+       an architectural scale instead of tiling a texture over the hero.
+
+       The cells are large, about five across a half, and drawn as thin joints
+       in a neutral surface tone so the accent stays with the ban label. The
+       wall is lit from the caption and fades up, which leaves the top of the
+       frame plain. */
+    .hero-half__wall {
       position: absolute;
       inset: 0;
       z-index: 0;
+      background-color: var(--fgc-surface-raised);
+    }
+
+    .hero-half__wall::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-color: var(--fgc-line-strong);
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+      -webkit-mask-size: 180px 322px;
+      mask-size: 180px 322px;
+      opacity: 0.85;
+    }
+
+    /* The wall fades up into the surface, so the caption stands on the busiest
+       part of it and the top of the frame stays plain. */
+    .hero-half__wall::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to top,
+        rgb(0 0 0 / 0%) 0%,
+        rgb(0 0 0 / 0%) 30%,
+        var(--fgc-surface) 84%
+      );
+    }
+
+    /* A second copy of the wall in front of the art, so a full-bleed hero
+       image still stands in the same space. It is weighted to the outer edge
+       of the half, where the hero is not, and fades up from the caption. */
+    .hero-half__grid {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      background-image:
+        radial-gradient(
+          46% 130% at 0% 46%,
+          rgb(255 255 255 / 30%) 0%,
+          rgb(255 255 255 / 12%) 46%,
+          rgb(255 255 255 / 0%) 88%
+        ),
+        linear-gradient(to top, rgb(255 255 255 / 10%) 0%, rgb(255 255 255 / 0%) 62%);
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+      -webkit-mask-size: 180px 322px;
+      mask-size: 180px 322px;
+    }
+
+    .hero-half--away .hero-half__grid {
+      background-image:
+        radial-gradient(
+          46% 130% at 100% 46%,
+          rgb(255 255 255 / 30%) 0%,
+          rgb(255 255 255 / 12%) 46%,
+          rgb(255 255 255 / 0%) 88%
+        ),
+        linear-gradient(to top, rgb(255 255 255 / 10%) 0%, rgb(255 255 255 / 0%) 62%);
     }
 
     .hero-half__art {
@@ -195,8 +252,8 @@
       object-position: center;
     }
 
-    /* A transparent cut-out stands on the bottom of the half so the hexagon
-       texture stays visible behind it. */
+    /* A transparent cut-out stands on the bottom of the half so the honeycomb
+       wall stays visible behind it. */
     .hero-half__art--cutout img {
       object-fit: contain;
       object-position: center bottom;
@@ -215,6 +272,8 @@
       pointer-events: none;
     }
 
+    /* The seam is where the two teams meet, so it carries both team colours
+       instead of a texture. */
     .hero-bans__centre {
       position: relative;
       z-index: 2;
@@ -226,6 +285,12 @@
       content: '';
       position: absolute;
       inset: 0;
+      background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--team-a-color, var(--fgc-surface-raised)) 42%, var(--fgc-surface)) 0%,
+        var(--fgc-surface) 50%,
+        color-mix(in srgb, var(--team-b-color, var(--fgc-surface-raised)) 42%, var(--fgc-surface)) 100%
+      );
     }
 
     .hero-bans__centre::after {
@@ -239,21 +304,29 @@
     }
 
     /* === TEAM LOGO === */
+    /* The logo badge is a hexagon, like the role badge and the wall cells, so
+       the shape language holds across the whole overlay. The artwork sits in
+       the inscribed band, so the points of the hexagon never cut into it. */
     .hero-half__logo {
       position: absolute;
       top: var(--fgc-margin);
-      z-index: 3;
+      z-index: 4;
       width: 100px;
-      height: 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      height: 115px;
       background-color: var(--fgc-plate-dark);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      filter: drop-shadow(0 6px 22px rgb(0 0 0 / 38%));
+    }
+
+    .hero-half__logo-art {
+      position: absolute;
+      top: 25%;
+      left: 0;
+      width: 100%;
+      height: 50%;
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
-      border-radius: var(--fgc-radius-md);
-      box-shadow: 0 6px 22px rgb(0 0 0 / 38%);
     }
 
     .hero-half--home .hero-half__logo {
@@ -270,7 +343,7 @@
       left: 0;
       right: 0;
       bottom: 78px;
-      z-index: 3;
+      z-index: 4;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -285,7 +358,7 @@
       align-items: center;
       justify-content: center;
       background: var(--fgc-plate-dark);
-      clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     }
 
     .hero-half__role[hidden] {
@@ -325,10 +398,13 @@
   <div class="overlay">
     <div class="hero-bans" id="hero-bans">
       <section class="hero-half hero-half--home" id="home-half">
-        <div class="hero-half__texture"></div>
+        <div class="hero-half__wall"></div>
         <div class="hero-half__art" id="home-art"></div>
         <div class="hero-half__scrim"></div>
-        <div class="hero-half__logo" id="home-logo"></div>
+        <div class="hero-half__grid"></div>
+        <div class="hero-half__logo" id="home-logo">
+          <div class="hero-half__logo-art" id="home-logo-art"></div>
+        </div>
         <div class="hero-half__caption" id="home-caption">
           <div class="hero-half__role" id="home-role" hidden><img id="home-role-icon" alt=""></div>
           <div class="hero-half__name" id="home-name">-</div>
@@ -339,10 +415,13 @@
       <div class="hero-bans__centre" id="hero-bans-centre"></div>
 
       <section class="hero-half hero-half--away" id="away-half">
-        <div class="hero-half__texture"></div>
+        <div class="hero-half__wall"></div>
         <div class="hero-half__art" id="away-art"></div>
         <div class="hero-half__scrim"></div>
-        <div class="hero-half__logo" id="away-logo"></div>
+        <div class="hero-half__grid"></div>
+        <div class="hero-half__logo" id="away-logo">
+          <div class="hero-half__logo-art" id="away-logo-art"></div>
+        </div>
         <div class="hero-half__caption" id="away-caption">
           <div class="hero-half__role" id="away-role" hidden><img id="away-role-icon" alt=""></div>
           <div class="hero-half__name" id="away-name">-</div>
@@ -400,6 +479,8 @@
       awayArt: document.getElementById('away-art'),
       homeLogo: document.getElementById('home-logo'),
       awayLogo: document.getElementById('away-logo'),
+      homeLogoArt: document.getElementById('home-logo-art'),
+      awayLogoArt: document.getElementById('away-logo-art'),
       homeRole: document.getElementById('home-role'),
       awayRole: document.getElementById('away-role'),
       homeRoleIcon: document.getElementById('home-role-icon'),
@@ -427,7 +508,7 @@
     }
 
     // Renders one half. The transparent cut-out is preferred, because it lets
-    // the hexagon texture show through; without one the regular hero art
+    // the honeycomb wall show through; without one the regular hero art
     // fills the half instead. The role hexagon only appears when the hero has
     // a role and the app has an icon for it.
     function renderHalf(art, role, roleIcon, name, heroName) {
@@ -563,14 +644,17 @@
           roleIcons = d.roleIcons;
         }
 
-        // Team logos and the colour of the ban order.
+        // Team logos and the colour of the ban order. The seam between the
+        // halves carries both team colours, so it is set here as well.
         if (d.teamA) {
-          el.homeLogo.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : '';
+          el.homeLogoArt.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : '';
           applyTeamColour(el.homeOrder, d.teamA.color);
+          el.heroBans.style.setProperty('--team-a-color', d.teamA.color || 'var(--fgc-surface-raised)');
         }
         if (d.teamB) {
-          el.awayLogo.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : '';
+          el.awayLogoArt.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : '';
           applyTeamColour(el.awayOrder, d.teamB.color);
+          el.heroBans.style.setProperty('--team-b-color', d.teamB.color || 'var(--fgc-surface-raised)');
         }
 
         // Hero bans.

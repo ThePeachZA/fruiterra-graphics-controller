@@ -400,8 +400,30 @@ fn hero_bans_fills_the_screen_with_two_hero_halves() {
         "the team that banned first should carry the 1ST BAN label"
     );
     assert!(
-        text.contains("mask-image: url(\"data:image/svg+xml,"),
-        "the halves should carry the hexagon texture"
+        text.contains(".hero-half__wall {")
+            && text.contains(".hero-half__wall::before {")
+            && text.contains(".hero-half__wall::after {")
+            && text.contains(".hero-half__grid {")
+            && text.contains(".hero-half--away .hero-half__grid {")
+            && text.contains("mask-size: 180px 322px;")
+            && text.contains("radial-gradient("),
+        "the halves should carry a honeycomb wall behind the art and a lit copy in front of it"
+    );
+    assert!(
+        !text.contains("hero-half__texture"),
+        "the old accent texture should be gone"
+    );
+    assert!(
+        text.contains("id=\"home-logo-art\"")
+            && text.contains("id=\"away-logo-art\"")
+            && text.contains(".hero-half__logo-art {"),
+        "the team logo artwork should sit in the band of the hexagonal badge"
+    );
+    assert!(
+        text.matches("clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);")
+            .count()
+            == 2,
+        "the logo badge and the role badge should share one hexagon shape"
     );
     assert!(
         text.contains(".hero-half__art--cutout img {"),
@@ -894,8 +916,8 @@ fn hero_bans_overlay_uses_night_broadcast_tokens() {
         "the ban order should carry the orange accent until the team colour lands"
     );
     assert!(
-        text.contains(".hero-half__logo {\n      position: absolute;\n      top: var(--fgc-margin);\n      z-index: 3;\n      width: 100px;\n      height: 100px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      background-color: var(--fgc-plate-dark);"),
-        "the team logo should sit on the dark plate so the white glyph reads"
+        text.contains(".hero-half__logo {\n      position: absolute;\n      top: var(--fgc-margin);\n      z-index: 4;\n      width: 100px;\n      height: 115px;\n      background-color: var(--fgc-plate-dark);"),
+        "the team logo should sit on the dark hexagonal plate so the white glyph reads"
     );
     assert!(
         text.contains("--fgc-plate-dark: #0b0d12;") && text.contains("--fgc-ink-on-art: #eef2f8;"),

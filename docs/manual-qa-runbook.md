@@ -4307,3 +4307,67 @@ responses and 0 console errors. The authoritative hashes were restored to
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` was `No serve config`.
+
+### A69 - Hero bans honeycomb wall
+
+**Covers:** owner review list 2026-11-22, slice J
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. The app
+   resolves state through Windows Known Folders, so restore the authoritative
+   `app.json`/`app.json.bak` fixture before the run and again afterwards
+   rather than relying on an isolated `APPDATA`.
+2. Start the overlay server through the real app UI. Open
+   `http://127.0.0.1:3001/overlays/hero-bans.html` as a CDP target, set a
+   1920x1080 device metrics override and reload.
+3. Check the stacking order by computed `z-index`: the wall at 0, the art at 1,
+   the grid at 3 and the caption at 4.
+4. Check the wall: its background colour and its joint colour, its `mask-size`
+   of `180px 322px` (about five cells across a 905px half) and that it is not
+   the accent.
+5. Check the grid: that it computes to a radial and a linear gradient, and
+   that the away half mirrors the radial to `at 100% 46%`.
+6. Check the badges: the team logo at 100x115 with the pointy-top hexagon and
+   its artwork in the inscribed band, the role badge at 60x68 with the same
+   hexagon, and that the pointy-top hexagon appears exactly twice in the file.
+7. Check the banner: that it computes to a gradient between the two team
+   colours and that no `.hero-half__texture` element remains.
+8. Record the transparency, the document size, the fonts and every network and
+   console entry. Stop the app, restore the authoritative fixture, recheck its
+   hashes and `tailscale serve status`, then delete the isolated harness.
+
+**Gotchas:**
+
+- The fixture's match teams (`Team 1` and `Team 3`) have no logo, so the badge
+  artwork is empty. Point the match at the Northwind Sentinels and Long Team
+  Name teams, whose logo blobs are the ones actually on disk. The Rage Quit and
+  Curro logo blobs are missing from the live asset store.
+- Chrome resolves `color-mix()` to `color(srgb 0-1 floats)`, so a parser that
+  expects `rgb()` for the banner gradient has to accept both forms.
+- `Invoke-Node` in the harness script must take a `[string[]]$Arguments`
+  parameter, otherwise the extra command-line arguments are dropped and node
+  runs with none.
+
+**Evidence:** CDP DOM and computed-style JSON for the wall, the grid, the two
+badges and the banner, plus `/health` and the network and console capture; no
+screenshots were taken or published.
+
+**Result: Pass - assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay page. The two halves measured 905px each with the
+110px banner between them. The computed `z-index` values were 0, 1, 3 and 4 for
+the wall, the art, the grid and the caption. The wall computed to
+`rgb(17, 21, 29)` with `rgb(58, 67, 86)` joints, which is not the accent
+`rgb(255, 122, 26)`, and its mask size was `180px 322px`. The grid computed to
+the radial and linear gradients, with the away half mirrored. The team logo
+measured 100x115 with the pointy-top hexagon and its artwork in the 100x57.5
+band; the role badge measured 60x68 with the same hexagon. The banner computed
+to a gradient between the two team colours. The old texture was gone, the hero
+name and ban order rendered, the art loaded, the body was transparent, the
+document was 1920x1080, the bundled fonts were loaded, and the run recorded 0
+external requests, 0 failed responses and 0 console errors. The authoritative
+hashes were restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` was `No serve config`.

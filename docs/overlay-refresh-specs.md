@@ -172,15 +172,17 @@ further bans stay on the map select cards.
 |---|---|---|
 | `.hero-bans` | - | the full-bleed row, `display: flex` |
 | `.hero-half` | background `var(--fgc-surface)` | one half per team, `flex: 1 1 0` |
-| `.hero-half__texture` | background `var(--fgc-accent)` at `opacity: 0.14`, masked with the hexagon tile | the textured backdrop |
+| `.hero-half__wall` | background `var(--fgc-surface-raised)`, masked with the honeycomb tile | the honeycomb wall behind the art (see §1.11) |
+| `.hero-half__grid` | a white radial and linear gradient, masked with the honeycomb tile | the faint honeycomb in front of the art, weighted to the outer edge (see §1.11) |
 | `.hero-half__art` | - | the hero art, `object-fit: cover` |
 | `.hero-half__art--cutout img` | - | `object-fit: contain; object-position: center bottom` for a transparent cut-out |
 | `.hero-half__scrim` | `linear-gradient(to top, rgb(0 0 0 / 78%) 0%, rgb(0 0 0 / 42%) 24%, rgb(0 0 0 / 0%) 56%)` | legibility under the caption |
-| `.hero-half__logo` | background `var(--fgc-plate-dark)` | the 100x100 team logo plate, outer top corner |
-| `.hero-half__role` | background `var(--fgc-plate-dark)` | the 60x68 role hexagon, `clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)` |
+| `.hero-half__logo` | background `var(--fgc-plate-dark)` | the 100x115 hexagonal team logo badge, outer top corner, `clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)` |
+| `.hero-half__logo-art` | `background-size: contain` | the artwork inside the band the hexagon inscribes, so the badge never cuts into it |
+| `.hero-half__role` | background `var(--fgc-plate-dark)` | the 60x68 role badge, the same pointy-top hexagon as the logo |
 | `.hero-half__name` | color `var(--fgc-ink-on-art)` | the hero name, Display 900 |
 | `.hero-half__order` | color `var(--fgc-accent)`, overridden inline with the team colour | the `1ST BAN` / `2ND BAN` label |
-| `.hero-bans__centre` | background `var(--fgc-surface)` | the 110px banner between the halves |
+| `.hero-bans__centre` | a `linear-gradient` between the two team colours | the 110px banner between the halves (see §1.11) |
 
 `--fgc-plate-dark` and `--fgc-ink-on-art` are local tokens in the same `:root`
 block, because the white role icons, the white team logos and the hero name
@@ -221,12 +223,79 @@ colour)` paints them.
 - `#home-order` and `#away-order` read `1ST BAN` and `2ND BAN` and compute to
   the two team colours.
 - `#home-logo` sits at `left: 43px` and `#away-logo` at `right: 43px`, both
-  100x100 on a `rgb(11, 13, 18)` plate.
-- `#home-role` and `#away-role` are 60x68 with the hexagon `clip-path`, and
-  their icons load.
-- The texture computes to the accent colour at `opacity: 0.14` with the SVG
-  hexagon mask, and the scrim computes to the gradient above.
+  100x115 on a `rgb(11, 13, 18)` plate with the pointy-top hexagon
+  `clip-path`.
+- `#home-role` and `#away-role` are 60x68 with the same hexagon `clip-path`,
+  and their icons load.
+- The scrim computes to the gradient above.
 - No `#header`, no `#map-strip` and no `.hero-panel` remain.
+
+### 1.11 Owner-requested redesign - the honeycomb wall (2026-11-22)
+
+The owner reviewed the first full-bleed version and said the hexagons "kind
+of just exist meaninglessly there with no creativity behind it". They were
+right: the tile was small enough to read as a screen door, it was uniform, it
+was painted in the generic accent (the same hue as the ban label, so it
+carried no information), it sat behind the full-bleed art where it could not
+be seen at all, and it had also been pushed into the centre banner, which is
+the one place the OWWC27 reference has none.
+
+The hexagons are now the overlay's **shape language** instead of a texture.
+The OWWC27 reference uses the same shape three times - the team logo is a
+hexagonal badge, the role badge is a hexagon, and the backdrop is a honeycomb
+wall - so the hexagon now appears at three scales in one composition.
+
+**The wall.** `.hero-half__wall` sits behind the art at `z-index: 0` and is
+built from a 56x100 tessellating SVG used as a mask at `mask-size: 180px
+322px`. That is roughly five cells across a 905px half, which reads as
+architecture rather than noise. The fill is `var(--fgc-surface-raised)` and
+the joints are `var(--fgc-line-strong)`, so the wall is neutral and the
+accent stays reserved for the ban label. A `::after` gradient fades the wall
+up into the surface from 30% down, which keeps the caption area clean and
+gives the field a direction.
+
+**The grid.** `.hero-half__grid` sits in front of the art and the scrim at
+`z-index: 3` and uses the same tile, so the wall reads on regular hero art as
+well as through a transparent cut-out. Its background is a radial gradient
+weighted to the **outer** edge of the half (where the team logo sits and the
+hero is not) plus a linear gradient that is denser towards the caption. The
+away half mirrors the radial. It never reaches the centre of the half, so the
+hero is never veiled.
+
+**The badges.** The team logo and the role badge now share the wall's
+pointy-top hexagon, `clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%,
+0% 75%, 0% 25%)`. The logo grew from 100x100 to 100x115 and uses a
+`drop-shadow` instead of a `box-shadow`, because a box shadow is clipped by a
+`clip-path`. The artwork moved into `.hero-half__logo-art`, the band the
+hexagon inscribes, so the badge never cuts into the logo.
+
+**The banner.** `.hero-bans__centre` no longer carries a texture. It is the
+seam where the two teams meet, so it is a `linear-gradient` from the home
+team's colour to the away team's colour, each blended 42% into the surface.
+The two colours arrive as `--team-a-color` and `--team-b-color`, which the
+overlay sets from the scoreboard payload.
+
+**State matrix.** Nothing about the payload changed. The wall, the grid and
+the badges are static; only the team colours, the team logo artwork and the
+ban order follow the payload, exactly as before.
+
+### 1.12 CDP-verifiable assertions (honeycomb wall)
+
+- `.hero-half__wall` computes to `z-index: 0`, `.hero-half__art` to `1`,
+  `.hero-half__grid` to `3` and `.hero-half__caption` to `4`.
+- The wall computes to `rgb(17, 21, 29)` with `rgb(58, 67, 86)` joints, and
+  its mask size is `180px 322px` (about five cells across a 905px half).
+- The wall is not the accent colour: `rgb(17, 21, 29)` is not
+  `rgb(255, 122, 26)`.
+- The grid computes to a radial and a linear gradient, and the away half
+  mirrors the radial to `at 100% 46%`.
+- `#home-logo` and `#away-logo` are 100x115 with the pointy-top hexagon
+  `clip-path`, and `#home-logo-art` is the inscribed 100x57.5 band.
+- `#home-role` and `#away-role` are 60x68 with the same `clip-path`.
+- The pointy-top hexagon appears exactly twice in the file: the logo badge and
+  the role badge.
+- `.hero-bans__centre` computes to a `linear-gradient` between the two team
+  colours, and no `.hero-half__texture` element remains.
 
 ---
 
