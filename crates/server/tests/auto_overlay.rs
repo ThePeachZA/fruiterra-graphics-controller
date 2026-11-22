@@ -50,6 +50,17 @@ fn auto_overlay_reads_the_auto_overlay_section_and_applies_show() {
 }
 
 #[test]
+fn auto_overlay_suppresses_the_favicon_request() {
+    let bytes = embedded_overlay("auto.html").expect("auto overlay should be embedded");
+    let text = String::from_utf8(bytes.into_owned()).expect("auto overlay should be UTF-8");
+
+    assert!(
+        text.contains(r#"<link rel="icon" href="data:,">"#),
+        "the auto page should suppress the favicon request"
+    );
+}
+
+#[test]
 fn auto_overlay_has_no_external_sources_or_localhost_socket() {
     let bytes = embedded_overlay("auto.html").expect("auto overlay should be embedded");
     let text = String::from_utf8(bytes.into_owned()).expect("auto overlay should be UTF-8");
