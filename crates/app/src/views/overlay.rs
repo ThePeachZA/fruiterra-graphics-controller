@@ -252,7 +252,7 @@ fn AutoOverlayController() -> Element {
                     Disclosure {
                         title: "Keyboard shortcuts".to_owned(),
                         hint: Some("while this controller has focus".to_owned()),
-                        p { class: "fgc-note", "Press 1–7 to activate that numbered overlay when it is included." }
+                        p { class: "fgc-note", "Press 1–9 to activate that numbered overlay when it is included." }
                         p { class: "fgc-note", "Use Left and Right arrow keys to cycle through the included overlays." }
                     }
                     p { class: "fgc-note",
@@ -303,13 +303,13 @@ pub(crate) fn OverlayUrls() -> Element {
                 }
             }
             p { class: "fgc-note",
-                "Each set contains the auto scene switcher plus all seven overlays. Use the URLs for the network your OBS computer can reach."
+                "Each set contains the auto scene switcher plus all nine overlays. Use the URLs for the network your OBS computer can reach."
             }
         }
     }
 }
 
-/// One access path's seven Browser Source URLs.
+/// One access path's nine Browser Source URLs.
 #[component]
 fn UrlGroupCard(group: OverlayUrlGroup, visible: bool) -> Element {
     let key = group.key;

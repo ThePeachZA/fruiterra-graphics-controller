@@ -284,7 +284,7 @@ pub fn SettingsView() -> Element {
                     KeyValue { label: "Overlays folder".to_owned(), value: overlays_path }
                 }
                 p { class: "fgc-note",
-                    "Place a copy of any of the seven overlay HTML files in this folder to override it. A missing or broken override falls back to the embedded file, and the other six overlays are unaffected."
+                    "Place a copy of any of the nine overlay HTML files in this folder to override it. A missing or broken override falls back to the embedded file, and the other eight overlays are unaffected."
                 }
             }
         }

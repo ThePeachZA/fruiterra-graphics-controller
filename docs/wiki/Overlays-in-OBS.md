@@ -1,10 +1,10 @@
 # Overlays in OBS
 
-The app serves seven plain HTML match overlays plus a standalone timer overlay.
+The app serves nine plain HTML match overlays plus a standalone timer overlay.
 Each one is a separate OBS Browser Source at **1920×1080** with a transparent
 background.
 
-## The seven match overlays
+## The nine match overlays
 
 Replace `<base>` with the **Base URL** shown on the **Overlay** page. The
 default is `http://127.0.0.1:3001`.
@@ -17,7 +17,9 @@ default is `http://127.0.0.1:3001`.
 | Map pool | `<base>/overlays/map-pool.html` | The map pool in the order set on the Map Pool tab |
 | Home team roster | `<base>/overlays/team-roster-home.html` | The home team's players, roles, portraits and heroes |
 | Away team roster | `<base>/overlays/team-roster-away.html` | The away team's players, roles, portraits and heroes |
-| Casters row | `<base>/overlays/row-casters.html` | The assigned casters, panel and their social handles |
+| Casters row | `<base>/overlays/row-casters.html` | The assigned casters and their social handles |
+| Hosts and analysts row | `<base>/overlays/row-hosts.html` | The host and the analyst panel |
+| Interview row | `<base>/overlays/row-interviews.html` | The interviewer and the guest |
 
 The timer is a separate plain source: `<base>/overlays/timer.html`. It shows the
 last broadcast timer value with the sent alignment, leading-zeroes and
@@ -133,7 +135,7 @@ You can override a single overlay file:
 
 1. Open **Settings → Overlay overrides** and note the **Overlays folder**, or
    select **Open overlays folder**.
-2. Copy one of the seven HTML files into that folder, keeping the same name.
+2. Copy one of the nine HTML files into that folder, keeping the same name.
 3. Edit the copy.
 4. Reload the Browser Source in OBS.
 

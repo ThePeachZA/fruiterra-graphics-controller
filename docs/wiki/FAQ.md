@@ -30,6 +30,20 @@ the overlay adds the hours to the minutes (`01:12:00` appears as `72:00`).
 Third-party overlays still receive the same ticks and start, pause and reset
 actions.
 
+### Which overlay shows which people?
+
+Three separate talent overlays, so you put only the row you need in OBS:
+
+| Overlay | Shows |
+|---|---|
+| `row-casters.html` | The people assigned as **casters** |
+| `row-hosts.html` | The **host** and the **analyst** panel, each with a role tag |
+| `row-interviews.html` | The **interviewer** and the **guest** |
+
+The on-air role is set per assignment in Match Controller → Talent, so the same
+person can be a caster in one match and an analyst in the next. Each overlay
+filters that list itself, and all three are separate Browser Sources.
+
 ### Is there a bracket overlay?
 
 Not in version 1. The bracket board is for the operator; it is not a broadcast

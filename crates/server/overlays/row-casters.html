@@ -182,6 +182,16 @@
       min-width: 0;
     }
 
+    .talent-role {
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      line-height: 1;
+      color: var(--fgc-text-muted);
+      text-transform: uppercase;
+    }
+
     /* Social Icon */
     .social-icon {
       flex: 0 0 20px;
@@ -353,6 +363,23 @@
       }
     }
 
+    // This overlay is the commentary desk, so it only renders the talent
+    // assigned as a caster. Hosts, analysts and the interviewer have their own
+    // overlays.
+    const ACCEPTED_ROLES = ['caster'];
+    const ROLE_LABELS = {
+      caster: 'Caster',
+      host: 'Host',
+      analyst: 'Analyst',
+      interviewer: 'Interviewer',
+      other: 'Other',
+    };
+    const SHOW_ROLE_BADGE = false;
+
+    // Cards are only rebuilt when the rendered set actually changes, so the
+    // frequent scoreboard frames do not re-create the desk on every message.
+    let renderedSignature = '';
+
     function createCasterCard(caster) {
       const card = document.createElement('div');
       card.className = 'caster-card';
@@ -392,9 +419,14 @@
         </div>
       ` : '';
 
+      const roleChip = SHOW_ROLE_BADGE && ROLE_LABELS[caster.role]
+        ? `<div class="talent-role">${escapeHtml(ROLE_LABELS[caster.role])}</div>`
+        : '';
+
       card.innerHTML = `
         <div class="talent-image" style="${imageStyle}"></div>
         <div class="talent-text">
+          ${roleChip}
           <div class="talent-name">${escapeHtml(caster.displayName || 'TALENT NAME')}</div>
           ${socialHtml}
         </div>
@@ -404,17 +436,20 @@
     }
 
     function updateCasters() {
-      const casters = currentData?.castersData || currentData?.casters?.castersData || [];
+      const all = currentData?.castersData || currentData?.casters?.castersData || [];
+      const casters = all.filter((entry) => entry && ACCEPTED_ROLES.includes(entry.role));
 
-      if (casters.length === 0) {
+      const signature = casters
+        .map((entry) => `${entry.role}:${entry.displayName}:${entry.portraitUrl || ''}`)
+        .join('|');
+      if (signature === renderedSignature) {
         return;
       }
+      renderedSignature = signature;
 
       el.castersContainer.innerHTML = '';
       casters.forEach(caster => {
-        if (caster) {
-          el.castersContainer.appendChild(createCasterCard(caster));
-        }
+        el.castersContainer.appendChild(createCasterCard(caster));
       });
 
       el.castersContainer.classList.toggle('single-caster', casters.length === 1);
@@ -452,9 +487,10 @@
 
     function updateOverlay(data) {
       const d = data.data || data;
-      const casters = d?.castersData || d?.casters?.castersData || [];
 
-      if (casters.length > 0) {
+      // Only frames that carry the talent list update the desk; `show` frames
+      // and the other sections must not clear it.
+      if (Array.isArray(d?.castersData) || Array.isArray(d?.casters?.castersData)) {
         currentData = d;
         updateCasters();
       }

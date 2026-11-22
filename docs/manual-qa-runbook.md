@@ -3687,3 +3687,65 @@ Authoritative hashes were restored to
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
 `tailscale serve status` was `No serve config`, and the harness was deleted.
+
+### A60 — Talent overlay split
+
+**Covers:** owner review list 2026-11-22 (slice A), `row-casters.html`,
+`row-hosts.html`, `row-interviews.html`, the `casters` payload
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Stop any
+   running `fruiterra-gc` first: the debug binary is locked while the app is
+   open and the build fails. The app resolves state through Windows Known
+   Folders, so restore the authoritative `app.json`/`app.json.bak` fixture
+   before the run and again afterwards rather than relying on an isolated
+   `APPDATA`.
+2. Build a QA fixture from the authoritative state that assigns every on-air
+   role: caster1 and caster2 as `caster`, panel1 as `analyst`, panel2 as
+   `host`, interviewer as `interviewer`, plus an interviewee. Give the interviewee
+   a portrait so the guest card can be checked.
+3. Start the overlay server through the real app UI and wait until `/state`
+   holds `autoOverlay, casters, gameOverlay, heroBans, mapSelect, scoreboard,
+   teamRoster`. `matchTimer` is only projected once the timer ticks, so it must
+   not be required.
+4. Open each of `row-casters.html`, `row-hosts.html` and `row-interviews.html`
+   as a CDP target, set a 1920×1080 device metrics override, reload and wait for
+   the cards to render. Record the rendered names, the role tags, the guest tag
+   and the guest card count.
+5. Assert that no overlay renders a person outside its own role group, that
+   every portrait is present, that the body background is transparent, that the
+   document is 1920×1080, that the bundled font is loaded, and that the
+   requests, failed responses, bad statuses and console errors are all empty.
+6. Read `/state` and confirm the `casters` payload carries `interviewee` with the
+   guest name, subtext and portrait, and that the five assignment roles arrive
+   on the wire in order. Stop the app, restore the authoritative fixture,
+   recheck its hashes and `tailscale serve status`, then delete the harness.
+
+**Evidence:** CDP DOM and computed-style JSON for the three overlays, the
+`/state` wire payload, the persisted `app.json` roles, network/console capture
+and `/health`; no screenshots were taken or published.
+
+**Result: Pass — assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay pages. `row-casters.html` rendered exactly
+`["Arc","Priya"]` with no role tag and no guest card. `row-hosts.html` rendered
+`["Marco","Sam"]` with the role tags `["Analyst","Host"]`.
+`row-interviews.html` rendered `["Jordan","Robin"]` with one `Guest` tag and one
+guest card. No overlay rendered a person outside its own role group. Every
+overlay had a transparent `rgba(0, 0, 0, 0)` body, a 1920×1080 document, its
+bundled font loaded and its portraits present, and recorded 0 external requests,
+0 failed responses, 0 bad statuses and 0 console errors. The `/state` wire
+payload carried `interviewee` with the guest name, subtext and portrait, and the
+five assignment roles arrived as `caster,caster,analyst,host,interviewer`.
+`cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace`, `git diff --check` and `dx build --desktop` passed.
+Authoritative hashes were restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
+`tailscale serve status` was `No serve config`, and the harness was deleted.
+
+**Fixture note.** The authoritative fixture's stored Arc portrait asset has no
+blob in the asset store, so that portrait 404s. This is a data condition in the
+fixture, not a code defect; the QA fixture points Arc at an asset whose blob is
+present.

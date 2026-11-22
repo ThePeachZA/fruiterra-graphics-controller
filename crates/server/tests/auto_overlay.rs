@@ -5,7 +5,7 @@
 
 use fgc_server::embedded_overlay;
 
-const SCENES: [&str; 7] = [
+const SCENES: [&str; 9] = [
     "game-overlay.html",
     "map-select.html",
     "hero-bans.html",
@@ -13,6 +13,8 @@ const SCENES: [&str; 7] = [
     "team-roster-home.html",
     "team-roster-away.html",
     "row-casters.html",
+    "row-hosts.html",
+    "row-interviews.html",
 ];
 
 #[test]

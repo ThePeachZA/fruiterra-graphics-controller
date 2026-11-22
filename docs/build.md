@@ -179,7 +179,7 @@ This validates the packaged binary, embedded overlays, embedded assets and the s
 2. **Requirements** — Windows 10/11 x64, WebView2 (installer bootstraps it), OBS Browser Source.
 3. **Install** — installer or portable ZIP; SmartScreen note and checksum verification.
 4. **Quick start** — start the server, add teams/assets, create a match, copy the overlay URL into OBS at 1920×1080.
-5. **Overlay URLs** — the seven bundled match files, the standalone `timer.html`, the `?port=` parameter, and the default port 3001.
+5. **Overlay URLs** — the nine bundled match files, the standalone `timer.html`, the `?port=` parameter, and the default port 3001.
 6. **Migrating from the Google Sheets workflow** - **no automatic import**: teams, talent, matches and assets must be re-entered. This is stated plainly, not buried.
 7. **Timer** - v1 was control-only. Post-v1, the standalone `timer.html` reads the existing `matchTimer` message types; the tick's `showHours` setting folds hours into minutes when off. Third-party timer overlays still receive the same ticks and actions.
 8. **Network and security** - localhost by default; "Allow LAN access" binds `0.0.0.0`; CORS is `*`; there is no authentication in v1. LAN access relies on a Windows Firewall rule scoped to the **Private** profile and the **local subnet**; the app never asks for a public-network rule.

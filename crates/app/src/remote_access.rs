@@ -88,7 +88,7 @@ pub struct OverlayUrlGroup {
     pub label: &'static str,
     /// Where this URL can be opened.
     pub description: &'static str,
-    /// Base URL for the seven overlay files.
+    /// Base URL for the nine overlay files.
     pub base_url: String,
 }
 

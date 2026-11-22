@@ -33,7 +33,7 @@ On connect the server sends:
 - `data` is a **keyed map**, not a snapshot object. Keys are message types.
 - Keys appear only after that section has been broadcast at least once. In practice, once a match is loaded the map contains `scoreboard`, `gameOverlay`, `mapSelect`, `heroBans`, `teamRoster`, `casters` and (if the timer has run) `matchTimer`.
 - The five scoreboard-bearing keys hold the **same** scoreboard payload object. This duplication is deliberate: each overlay reads a different key.
-- `casters` holds `{ "castersData": [...] }` — **not** the scoreboard payload.
+- `casters` holds `{ "castersData": [...], "interviewee": { ... } }` — **not** the scoreboard payload.
 - `matchTimer` holds the timer payload.
 - When the app's auto-overlay controller is active, `autoOverlay` holds the
   session-only scene selection described in §3.5.
@@ -50,6 +50,8 @@ On connect the server sends:
 | `team-roster-home.html` | `data.teamRoster` |
 | `team-roster-away.html` | `data.teamRoster` |
 | `row-casters.html` | `data.casters.castersData` |
+| `row-hosts.html` | `data.casters.castersData` |
+| `row-interviews.html` | `data.casters.castersData` and `data.casters.interviewee` |
 | `timer.html` | `data.matchTimer` (if the timer has run) |
 
 If any of those keys is missing on connect, the corresponding overlay renders blank until the next live broadcast. Our `init` is therefore built from current state and always includes every key the current match can populate.
@@ -171,18 +173,26 @@ All five carry **the identical scoreboard payload**. The type name selects the s
   "data": {
     "castersData": [
       {
+        "role": "caster",
         "displayName": "Caster",
         "pronouns": "he/him",
         "socialMedia": { "platform": "twitter", "handle": "@caster" },
         "portraitUrl": "<url>"
       }
-    ]
+    ],
+    "interviewee": {
+      "displayName": "Guest",
+      "subtext": "she/her",
+      "portraitUrl": "<url>"
+    }
   }
 }
 ```
 
 - Order: `caster1`, `caster2`, `panel1`, `panel2`, `panel3`, `interviewer`.
-- `row-casters.html` also accepts `castersData` at the top level and inside the scoreboard payload, so the same array is embedded in `scoreboard` as well.
+- `role` is the on-air role of the assignment, not of the person: `caster`, `host`, `analyst`, `interviewer` or `other`. The same talent can be a host in one match and a caster in the next.
+- `interviewee` is the interview subject. It is present only when the match has an interviewee, and `subtext` and `portraitUrl` are omitted when they are unknown.
+- `row-casters.html`, `row-hosts.html` and `row-interviews.html` also accept `castersData` at the top level and inside the scoreboard payload, so the same array is embedded in `scoreboard` as well. The bundled overlays split the array by `role`: `row-casters.html` shows `caster`, `row-hosts.html` shows `host` and `analyst`, and `row-interviews.html` shows `interviewer` plus `interviewee`. Third-party overlays can use every entry.
 
 ### 3.3 `matchTimer`
 

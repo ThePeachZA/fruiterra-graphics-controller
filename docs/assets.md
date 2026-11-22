@@ -316,7 +316,7 @@ The checklist lives in `docs/overlay-qa.md` and is completed for every release. 
 | AS4 | Replacing a reference never corrupts the previous asset or its metadata. |
 | AS5 | GC removes only unreferenced user blobs and never removes embedded blobs. |
 | AS6 | Export/import round-trips a project with relative blobs on another machine. |
-| AS7 | All seven overlays load with zero external network requests. |
+| AS7 | All nine overlays load with zero external network requests. |
 | AS8 | A per-file override changes one overlay and leaves the other six untouched. |
 | AS9 | Font swap (Archivo ↔ Saira, or Barlow) requires only replacing five WOFF2 files, five `src:` URLs and the test prefix. |
-| AS10 | The QA checklist passes for all seven overlays at 1920×1080. |
+| AS10 | The QA checklist passes for all nine overlays at 1920×1080. |

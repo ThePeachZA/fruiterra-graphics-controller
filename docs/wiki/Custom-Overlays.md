@@ -131,7 +131,7 @@ no `data` object.
 |---|---|---|
 | `init` | A keyed map of the last payloads | Keys appear once that section has been broadcast at least once. Paint from this on connect. |
 | `scoreboard`, `gameOverlay`, `mapSelect`, `heroBans`, `teamRoster` | The same scoreboard payload | The type name selects the subscriber, not the content. Read the key your overlay needs. |
-| `casters` | `{ "castersData": [...] }` | The same array is also embedded in the scoreboard payload. |
+| `casters` | `{ "castersData": [...], "interviewee": { ... } }` | The same array is also embedded in the scoreboard payload. Each entry carries the on-air `role` (`caster`, `host`, `analyst`, `interviewer`, `other`). |
 | `matchTimer` | A tick (`hours`, `minutes`, `seconds`, `settings.showHours`) or an action (`start`, `pause`, `reset`) | The standalone `timer.html` renders ticks and folds hours into minutes when `showHours` is `false`; third-party timer overlays use the same frames. |
 | `show` | No `data`; top-level `visible` | Supported by the seven bundled match overlays and `timer.html`; added after v1. |
 
@@ -148,7 +148,7 @@ list is in `docs/protocol.md` §3.1; the practical grouping is:
 | Teams | `teamA`, `teamB` → `name`, `tag`, `record`, `color`, `logoBgColor`, `logoUrl` |
 | Match | `scoreA`, `scoreB`, `title`, `subtitle`, `currentMap`, `currentMapIndex`, `firstTo`, `mapType`, `status`, `side`, `swapSides`, `loserPicks` |
 | Maps and bans | `maps[]` (`name`, `type`, `completed`, `scoreA`, `scoreB`, `mapImageUrl`, `chosenBy`, `chosenByName`), `mapPool`, `mapPoolData[]`, `heroBans[]` |
-| People | `teamAPlayers[]`, `teamBPlayers[]` (`name`, `role`, `position`, `pronouns`, `portraitUrl`, `heroImageUrl`), `castersData[]` |
+| People | `teamAPlayers[]`, `teamBPlayers[]` (`name`, `role`, `position`, `pronouns`, `portraitUrl`, `heroImageUrl`), `castersData[]` (`role`, `displayName`, `pronouns`, `socialMedia`, `portraitUrl`) |
 | Icons | `gameModeIcons`, `heroIcons`, `heroPortraits`, `sideIcons`, `roleIcons` |
 | Display | `tournamentLogoUrl`, `watermarkLogoUrl`, `teamColorsEnabled`, `showPlayerPortraits` |
 

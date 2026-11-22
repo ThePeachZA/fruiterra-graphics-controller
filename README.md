@@ -18,7 +18,7 @@ Windows broadcast control for Overwatch, with OBS-compatible HTML overlays.
 
 Fruiterra Graphics Controller is a Rust/Dioxus desktop application for running
 an Overwatch broadcast. It manages teams, talent, matches, maps and tournaments,
-and serves seven plain-HTML overlays for OBS Browser Sources at **1920×1080**.
+and serves nine plain-HTML overlays for OBS Browser Sources at **1920×1080**.
 
 It replaces the earlier Google Sheets-based production workflow with one
 desktop application. The existing overlay WebSocket protocol is unchanged, so
@@ -55,7 +55,7 @@ on Tokio.
 
 ## Overlays
 
-All seven match overlays are served from the overlay server and embedded in the
+All nine match overlays are served from the overlay server and embedded in the
 executable. A standalone timer overlay is bundled as well.
 
 | Overlay | URL |
@@ -67,6 +67,8 @@ executable. A standalone timer overlay is bundled as well.
 | Home team roster | `/overlays/team-roster-home.html` |
 | Away team roster | `/overlays/team-roster-away.html` |
 | Casters row | `/overlays/row-casters.html` |
+| Hosts and analysts row | `/overlays/row-hosts.html` |
+| Interview row | `/overlays/row-interviews.html` |
 | Timer (standalone) | `/overlays/timer.html` |
 
 Add each one to OBS as a Browser Source at 1920×1080 with a transparent

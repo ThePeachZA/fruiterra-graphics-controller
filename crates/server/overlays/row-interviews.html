@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link rel="icon" href="data:,">
+  <title>Interview</title>
+  <style>
+    @font-face {
+      font-family: 'FGC Display Light';
+      font-weight: 300;
+      font-style: normal;
+      font-display: swap;
+      src: url('/assets/fonts/archivo-300.woff2') format('woff2');
+    }
+
+    @font-face {
+      font-family: 'FGC Display';
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+      src: url('/assets/fonts/archivo-400.woff2') format('woff2');
+    }
+
+    @font-face {
+      font-family: 'FGC Display Medium';
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+      src: url('/assets/fonts/archivo-500.woff2') format('woff2');
+    }
+
+    @font-face {
+      font-family: 'FGC Display SemiBold';
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+      src: url('/assets/fonts/archivo-600.woff2') format('woff2');
+    }
+
+    @font-face {
+      font-family: 'FGC Display Black';
+      font-weight: 900;
+      font-style: normal;
+      font-display: swap;
+      src: url('/assets/fonts/archivo-900.woff2') format('woff2');
+    }
+
+    /* === NIGHT BROADCAST TOKENS ===
+       Shared design tokens for the Fruiterra overlay refresh. Each overlay
+       inlines this block, exactly as it inlines its own font faces. */
+    :root {
+      --fgc-canvas: transparent;
+
+      --fgc-surface: #0b0d12;
+      --fgc-surface-raised: #11151d;
+      --fgc-surface-inverse: #eef2f8;
+      --fgc-surface-muted: #151922;
+
+      --fgc-line: #2a3140;
+      --fgc-line-strong: #3a4356;
+      --fgc-line-on-inverse: #0b0d12;
+
+      --fgc-text: #eef2f8;
+      --fgc-text-muted: #8d99ad;
+      --fgc-text-faint: #6b7688;
+      --fgc-text-inverse: #0b0d12;
+
+      --fgc-accent: #ff7a1a;
+      --fgc-accent-strong: #ff9346;
+      --fgc-accent-soft: rgb(255 122 26 / 16%);
+      --fgc-on-accent: #0b0d12;
+
+      --fgc-success: #3ecf8e;
+      --fgc-warning: #f5b84b;
+      --fgc-danger: #ef5b5b;
+
+      --fgc-space-1: 4px;
+      --fgc-space-2: 8px;
+      --fgc-space-3: 12px;
+      --fgc-space-4: 16px;
+      --fgc-radius-sm: 4px;
+      --fgc-radius-md: 6px;
+      --fgc-radius-lg: 10px;
+      --fgc-radius-pill: 999px;
+      --fgc-margin: 43px;
+
+      --fgc-duration-micro: 120ms;
+      --fgc-duration-state: 240ms;
+      --fgc-duration-reveal: 480ms;
+      --fgc-duration-scene: 900ms;
+      --fgc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'FGC Display', 'Apotek', sans-serif;
+      background: transparent;
+    }
+
+    .overlay {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+    }
+
+    .main-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 100px;
+    }
+
+    /* Casters Container */
+    .interview-container {
+      display: flex;
+      gap: 20px;
+      height: 800px;
+      width: 100%;
+      max-width: 1720px;
+    }
+
+    .interview-container.single-panel {
+      max-width: 900px;
+    }
+
+    /* Camera Card */
+    .caster-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-radius: 6px;
+      overflow: hidden;
+      max-width: none;
+      clip-path: inset(0 round 6px);
+    }
+
+    /* Talent Image */
+    .talent-image {
+      flex: 1;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: var(--fgc-surface-muted);
+      border-radius: 6px 6px 0 0;
+    }
+
+    /* Talent Text */
+    .talent-text {
+      background: var(--fgc-surface-raised);
+      padding: 15px 10px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Talent Name */
+    .talent-name {
+      width: 100%;
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 48px;
+      color: var(--fgc-text);
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    /* Subtext Row */
+    .talent-subtext {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .talent-role {
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      line-height: 1;
+      color: var(--fgc-text-muted);
+      text-transform: uppercase;
+    }
+
+    /* Social Icon */
+    .social-icon {
+      flex: 0 0 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .social-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Social icons are neutral metadata, so they take the muted text tier.
+       A stylesheet rule keeps them on the shared token; an SVG presentation
+       attribute could not read a custom property. */
+    .social-icon path {
+      fill: var(--fgc-text-muted);
+    }
+
+    /* Social Handle */
+    .social-handle {
+      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
+      font-size: 24px;
+      color: var(--fgc-text-muted);
+    }
+
+    /* Separator */
+    .separator {
+      flex: 0 0 auto;
+      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
+      font-size: 24px;
+      color: var(--fgc-text-muted);
+    }
+
+    /* Pronouns */
+    .pronouns {
+      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
+      font-size: 24px;
+      color: var(--fgc-text-muted);
+    }
+
+    /* Long handles and pronouns ellipsize inside the card instead of
+       widening the row beyond the card's clipped edge. */
+    .social-handle,
+    .pronouns {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Hidden elements */
+
+    /* The guest is the subject of the segment, so the card carries the accent
+       and a guest tag instead of the shared muted role chip. */
+    .talent-card--guest .talent-name {
+      color: var(--fgc-accent);
+    }
+
+    .talent-tag {
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      line-height: 1;
+      color: var(--fgc-accent);
+      text-transform: uppercase;
+    }
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <div class="main-container">
+      <div class="interview-container" id="interview-container">
+        <!-- Caster cards will be dynamically created -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Escape user-supplied text before interpolating it into innerHTML.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character]);
+    }
+
+    // Shrink text until it fits on one line, then ellipsize at the floor size.
+    function fitText(target, maxSize, minSize) {
+      if (!target) return;
+      target.style.whiteSpace = 'nowrap';
+      target.style.overflow = 'hidden';
+      target.style.textOverflow = 'ellipsis';
+
+      const style = getComputedStyle(target);
+      const available = target.clientWidth
+        - parseFloat(style.paddingLeft)
+        - parseFloat(style.paddingRight);
+      if (!(available > 0)) return;
+
+      // Ancestors animate with a transform, so convert the measured range
+      // back into layout pixels before comparing it with the layout width.
+      const measure = () => {
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const scale = target.offsetWidth
+          ? target.getBoundingClientRect().width / target.offsetWidth
+          : 1;
+        return scale > 0 ? range.getBoundingClientRect().width / scale : 0;
+      };
+
+      let size = maxSize;
+      target.style.fontSize = `${size}px`;
+      while (size > minSize && measure() > available) {
+        size -= 1;
+        target.style.fontSize = `${size}px`;
+      }
+    }
+
+    function fitTalentNames() {
+      el.interviewContainer.querySelectorAll('.talent-name').forEach((name) => {
+        fitText(name, 48, 24);
+      });
+    }
+
+    const el = {
+      interviewContainer: document.getElementById('interview-container'),
+      overlay: document.querySelector('.overlay')
+    };
+
+    let ws = null;
+    let currentData = null;
+    let currentGuest = null;
+
+    function getTwitterIcon() {
+      return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      </svg>`;
+    }
+
+    function getTwitchIcon() {
+      return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+      </svg>`;
+    }
+
+    function getYoutubeIcon() {
+      return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+      </svg>`;
+    }
+
+    function getInstagramIcon() {
+      return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405a1.441 1.441 0 0 1-2.88 0 1.44 1.44 0 0 1 2.88 0z"/>
+      </svg>`;
+    }
+
+    function getTiktokIcon() {
+      return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+      </svg>`;
+    }
+
+    function getSocialIcon(platform) {
+      switch (platform) {
+        case 'twitter':
+          return getTwitterIcon();
+        case 'twitch':
+          return getTwitchIcon();
+        case 'youtube':
+          return getYoutubeIcon();
+        case 'instagram':
+          return getInstagramIcon();
+        case 'tiktok':
+          return getTiktokIcon();
+        default:
+          return '';
+      }
+    }
+
+    // This overlay is the interview, so it renders the interviewer and the
+    // interviewee. The other talent roles have their own overlays.
+    const ACCEPTED_ROLES = ['interviewer'];
+    const ROLE_LABELS = {
+      caster: 'Caster',
+      host: 'Host',
+      analyst: 'Analyst',
+      interviewer: 'Interviewer',
+      other: 'Other',
+    };
+    const SHOW_ROLE_BADGE = false;
+
+    // Cards are only rebuilt when the rendered set actually changes, so the
+    // frequent scoreboard frames do not re-create the desk on every message.
+    let renderedSignature = '';
+
+    function createTalentCard(caster) {
+      const card = document.createElement('div');
+      card.className = 'caster-card';
+
+      const imageStyle = caster.portraitUrl
+        ? `background-image: url('${caster.portraitUrl}')`
+        : 'background-color: var(--fgc-surface-muted)';
+
+      const socialIconSvg = caster.socialMedia?.platform
+        ? getSocialIcon(caster.socialMedia.platform)
+        : '';
+      const socialIcon = socialIconSvg
+        ? `<div class="social-icon">${socialIconSvg}</div>`
+        : '';
+      const handle = String(caster.socialMedia?.handle ?? '').trim();
+      const displayHandle = handle.startsWith('@') ? handle : `@${handle}`;
+      const socialHandle = handle
+        ? `<span class="social-handle" title="${escapeHtml(displayHandle)}">${escapeHtml(displayHandle)}</span>`
+        : '';
+      const separator = (socialIcon || socialHandle) && caster.pronouns 
+        ? '<span class="separator">|</span>' 
+        : '';
+      const pronouns = caster.pronouns 
+        ? `<span class="pronouns">${escapeHtml(caster.pronouns)}</span>`
+        : '';
+
+      const socialHtml = (socialIcon || socialHandle) ? `
+        <div class="talent-subtext">
+          ${socialIcon}
+          ${socialHandle}
+          ${separator}
+          ${pronouns}
+        </div>
+      ` : caster.pronouns ? `
+        <div class="talent-subtext">
+          <span class="pronouns">${escapeHtml(caster.pronouns)}</span>
+        </div>
+      ` : '';
+
+      const roleChip = SHOW_ROLE_BADGE && ROLE_LABELS[caster.role]
+        ? `<div class="talent-role">${escapeHtml(ROLE_LABELS[caster.role])}</div>`
+        : '';
+
+      card.innerHTML = `
+        <div class="talent-image" style="${imageStyle}"></div>
+        <div class="talent-text">
+          ${roleChip}
+          <div class="talent-name">${escapeHtml(caster.displayName || 'TALENT NAME')}</div>
+          ${socialHtml}
+        </div>
+      `;
+
+      return card;
+    }
+
+    function createGuestCard(guest) {
+      const card = document.createElement('div');
+      card.className = 'caster-card talent-card--guest';
+
+      const imageStyle = guest.portraitUrl
+        ? `background-image: url('${guest.portraitUrl}')`
+        : 'background-color: var(--fgc-surface-muted)';
+
+      const subtext = String(guest.subtext ?? '').trim();
+
+      card.innerHTML = `
+        <div class="talent-image" style="${imageStyle}"></div>
+        <div class="talent-text">
+          <div class="talent-tag">Guest</div>
+          <div class="talent-name">${escapeHtml(guest.displayName || 'GUEST')}</div>
+          ${subtext ? `
+            <div class="talent-subtext">
+              <span class="pronouns">${escapeHtml(subtext)}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      return card;
+    }
+
+    function updateInterview() {
+      const all = currentData?.castersData || currentData?.casters?.castersData || [];
+      const interviewers = all.filter((entry) => entry && ACCEPTED_ROLES.includes(entry.role));
+
+      const signature = [
+        ...interviewers.map((entry) => `${entry.role}:${entry.displayName}:${entry.portraitUrl || ''}`),
+        currentGuest
+          ? `guest:${currentGuest.displayName}:${currentGuest.subtext || ''}:${currentGuest.portraitUrl || ''}`
+          : 'guest:none',
+      ].join('|');
+      if (signature === renderedSignature) {
+        return;
+      }
+      renderedSignature = signature;
+
+      el.interviewContainer.innerHTML = '';
+      interviewers.forEach(interviewer => {
+        el.interviewContainer.appendChild(createTalentCard(interviewer));
+      });
+      if (currentGuest) {
+        el.interviewContainer.appendChild(createGuestCard(currentGuest));
+      }
+
+      const panels = interviewers.length + (currentGuest ? 1 : 0);
+      el.interviewContainer.classList.toggle('single-panel', panels === 1);
+      document.fonts.ready.then(fitTalentNames);
+    }
+
+    function connect() {
+      // Reach the server that served this page so a LAN or proxied client does
+      // not dial its own localhost. ?host= and ?port= still override the target
+      // for third-party pages.
+      const query = new URLSearchParams(location.search);
+      const host = query.get('host');
+      const port = query.get('port');
+      const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+      const target = host || port
+        ? `${host || 'localhost'}:${port || '3001'}`
+        : (location.host || 'localhost:3001');
+      ws = new WebSocket(`${scheme}://${target}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'requestInit' }));
+      };
+
+      ws.onmessage = ({ data }) => {
+        try {
+          updateOverlay(JSON.parse(data));
+        } catch (e) {
+          console.error('Parse error:', e);
+        }
+      };
+
+      ws.onclose = () => setTimeout(connect, 2000);
+      ws.onerror = (e) => console.error('WS error:', e);
+    }
+
+    function updateOverlay(data) {
+      const d = data.data || data;
+
+      // Only frames that carry the talent list update the desk; `show` frames
+      // and the other sections must not clear it.
+      if (Array.isArray(d?.castersData) || Array.isArray(d?.casters?.castersData)) {
+        currentData = d;
+        updateInterview();
+      }
+
+      // The guest only travels with the `casters` payload, so it is kept
+      // separately: a scoreboard frame also carries the talent list but never
+      // the guest, and must not drop the guest card.
+      const guestPayload = Object.prototype.hasOwnProperty.call(d || {}, 'interviewee')
+        ? d.interviewee
+        : (d?.casters && Object.prototype.hasOwnProperty.call(d.casters, 'interviewee')
+          ? d.casters.interviewee
+          : undefined);
+      if (guestPayload !== undefined && guestPayload !== currentGuest) {
+        currentGuest = guestPayload || null;
+        updateInterview();
+      }
+
+      if (data.type === 'show') {
+        el.overlay.style.display = data.visible ? 'block' : 'none';
+      }
+    }
+
+    document.fonts.ready.then(fitTalentNames);
+    connect();
+  </script>
+</body>
+</html>

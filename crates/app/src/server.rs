@@ -414,7 +414,7 @@ pub fn base_url_for_host(host: Ipv4Addr, port: u16) -> String {
 }
 
 /// The overlay files served by the embedded router, in display order.
-pub const OVERLAY_FILES: [&str; 7] = [
+pub const OVERLAY_FILES: [&str; 9] = [
     "game-overlay.html",
     "map-select.html",
     "hero-bans.html",
@@ -422,6 +422,8 @@ pub const OVERLAY_FILES: [&str; 7] = [
     "team-roster-home.html",
     "team-roster-away.html",
     "row-casters.html",
+    "row-hosts.html",
+    "row-interviews.html",
 ];
 
 /// The post-v1 Browser Source that switches between bundled overlays.

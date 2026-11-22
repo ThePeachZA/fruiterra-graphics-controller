@@ -1223,3 +1223,54 @@ evidence: `01:12:00` toggled to `72:00` and back, `/state` and `app.json` stored
 `72:00`, and `show`, transparency, font and network/console checks stayed clean.
 Authoritative QA hashes and `No serve config` were rechecked and no screenshots
 were taken or published.
+
+## AH. Owner overlay review list — talent overlays and the Night Broadcast pass (2026-11-22)
+
+The owner reviewed the Night Broadcast rollout and asked for a set of changes.
+The agreed order is **overlays first, theme last**: the theme system touches
+every overlay's tokens, so building it first would mean re-doing each overlay
+on top of it afterwards.
+
+| Slice | Item | State |
+|---|---|---|
+| A | Split the talent row: casters only on `row-casters.html`, plus new `row-hosts.html` (host + analysts) and `row-interviews.html` (interviewer + guest) | **Done — A60** |
+| B | Team roster: core player cards fill the container width instead of a fixed 284px (substitutes keep their fixed width) | Next |
+| C | Map pool: stagger each game-mode column so the reveal animates column by column | Next |
+| D | Map select: show the ban thumbnails over the bottom of the map image, minimal | Next |
+| E | Game overlay: drop the outline rings, put the team logo on the outer end, move the ban icon next to the score, add a team-abbreviation toggle, review gradients and background textures | Next |
+| F | Hero bans: bigger redesign — two large hero-art panels with `1ST BAN` / `2ND BAN` tags and the mode and map name in a dark bottom strip | Next |
+| G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | Last |
+
+The theme model was chosen as a **built-in Light theme plus JSON import**: the
+app ships the dark Night Broadcast theme and a Light theme, and the user can
+import a JSON file of token overrides. A user theme cannot arrive as a `.css`
+file, because the overlay server only serves `/overlays/{file}`,
+`/assets/fonts/{name}` and image assets, so the active theme must travel as a
+payload field like `teamColorsEnabled` does.
+
+### Slice A — talent overlay split (A60, 2026-11-22)
+
+`castersData` already carried the on-air `role` of each assignment, so the
+split needs no change to that array. The only protocol change is additive: the
+`casters` payload gained an optional `interviewee` object, because the
+interviewee was never projected and the new interview overlay needs them.
+
+- `row-casters.html` renders only the `caster` entries.
+- `row-hosts.html` renders the `host` and `analyst` entries, each with a role
+  tag.
+- `row-interviews.html` renders the `interviewer` and the guest card, with the
+  guest in the accent colour and a `Guest` tag.
+- All three now clear the row when the filtered list is empty, which fixes the
+  stale-card behaviour of the old caster row, and they only re-render when the
+  rendered set actually changes.
+
+The app lists nine overlays now, so the auto-overlay scene switcher and the
+`1`–`9` hotkeys cover the two new rows as well.
+
+A60 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the casters row showed only the two casters, the hosts row showed the
+analyst and the host with their role tags, the interview row showed the
+interviewer and the guest, the wire carried the interviewee, and every overlay
+stayed transparent, 1920×1080, font-loaded and free of external requests,
+failed responses and console errors.

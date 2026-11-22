@@ -6,9 +6,9 @@ use fgc_core::{
 
 use crate::{
     AUTO_OVERLAY_SECTION, AssetCatalog, AssetUrlResolver, AutoOverlayDto, CasterDto, CastersDto,
-    HeroBansDto, MapDto, MapPoolGroupDto, MapPoolMapDto, Message, PlayerDto, ScoreboardDto,
-    ShowMessage, SideIconsDto, TeamDto, TimerActionDto, TimerPayload, TimerSettingsDto,
-    TimerTickDto,
+    HeroBansDto, IntervieweeDto, MapDto, MapPoolGroupDto, MapPoolMapDto, Message, PlayerDto,
+    ScoreboardDto, ShowMessage, SideIconsDto, TeamDto, TimerActionDto, TimerPayload,
+    TimerSettingsDto, TimerTickDto,
 };
 
 /// Message types that carry the identical scoreboard payload.
@@ -158,7 +158,46 @@ impl<'a> Projector<'a> {
             })
             .collect();
 
-        CastersDto { casters_data }
+        CastersDto {
+            casters_data,
+            interviewee: self.interviewee(match_state),
+        }
+    }
+
+    /// Builds the interview subject, from the talent library or a custom entry.
+    #[must_use]
+    fn interviewee(&self, match_state: &Match) -> Option<IntervieweeDto> {
+        let interviewee = match_state.talent.interviewee.as_ref()?;
+        let talent = interviewee
+            .talent_id
+            .as_ref()
+            .and_then(|id| self.state.talents.iter().find(|talent| &talent.id == id));
+
+        let (display_name, subtext) = match talent {
+            Some(talent) => (
+                talent.display_name.clone(),
+                talent
+                    .pronouns
+                    .clone()
+                    .or_else(|| interviewee.custom_subtext.clone()),
+            ),
+            None => (
+                interviewee.custom_name.clone()?,
+                interviewee.custom_subtext.clone(),
+            ),
+        };
+
+        if display_name.trim().is_empty() {
+            return None;
+        }
+
+        Some(IntervieweeDto {
+            display_name,
+            subtext: subtext.filter(|text| !text.trim().is_empty()),
+            portrait_url: talent
+                .and_then(|talent| talent.portrait.as_ref())
+                .and_then(|id| self.resolve(id)),
+        })
     }
 
     /// Builds the `casters` message.

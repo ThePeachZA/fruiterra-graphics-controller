@@ -1,4 +1,4 @@
-//! Static compatibility checks for the seven bundled overlays.
+//! Static compatibility checks for the nine bundled overlays.
 //!
 //! These tests run against the same embedded bytes the release build serves, so
 //! a missing overlay, an external network reference or an unported font fails
@@ -11,7 +11,7 @@ struct OverlaySpec {
     message_types: &'static [&'static str],
 }
 
-const OVERLAYS: [OverlaySpec; 7] = [
+const OVERLAYS: [OverlaySpec; 9] = [
     OverlaySpec {
         file: "game-overlay.html",
         message_types: &["'init'", "'scoreboard'", "'gameOverlay'", "'show'"],
@@ -43,6 +43,14 @@ const OVERLAYS: [OverlaySpec; 7] = [
     OverlaySpec {
         file: "row-casters.html",
         message_types: &["castersData", "'show'"],
+    },
+    OverlaySpec {
+        file: "row-hosts.html",
+        message_types: &["castersData", "'show'"],
+    },
+    OverlaySpec {
+        file: "row-interviews.html",
+        message_types: &["castersData", "interviewee", "'show'"],
     },
     OverlaySpec {
         file: "team-roster-home.html",

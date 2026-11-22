@@ -254,6 +254,22 @@ pub struct SideIconsDto {
 pub struct CastersDto {
     /// Casters, panel members and interviewer in display order.
     pub casters_data: Vec<CasterDto>,
+    /// The person being interviewed, omitted when the match has none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interviewee: Option<IntervieweeDto>,
+}
+
+/// The subject of an interview segment.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntervieweeDto {
+    /// On-screen name.
+    pub display_name: String,
+    /// Secondary line, omitted when unset.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subtext: Option<String>,
+    /// Portrait URL, or `null`.
+    pub portrait_url: Option<String>,
 }
 
 /// One on-air talent member.

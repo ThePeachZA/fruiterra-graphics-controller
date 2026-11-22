@@ -15,9 +15,10 @@ mod url;
 pub use cache::SectionCache;
 pub use catalog::AssetCatalog;
 pub use dto::{
-    AUTO_OVERLAY_SECTION, AutoOverlayDto, CasterDto, CastersDto, HeroBansDto, MapDto,
-    MapPoolGroupDto, MapPoolMapDto, Message, PlayerDto, ScoreboardDto, ShowMessage, SideIconsDto,
-    TeamDto, TimerActionDto, TimerActionKind, TimerPayload, TimerSettingsDto, TimerTickDto,
+    AUTO_OVERLAY_SECTION, AutoOverlayDto, CasterDto, CastersDto, HeroBansDto, IntervieweeDto,
+    MapDto, MapPoolGroupDto, MapPoolMapDto, Message, PlayerDto, ScoreboardDto, ShowMessage,
+    SideIconsDto, TeamDto, TimerActionDto, TimerActionKind, TimerPayload, TimerSettingsDto,
+    TimerTickDto,
 };
 pub use error::ProtocolError;
 pub use projection::{
