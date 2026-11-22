@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1920">
+  <link rel="icon" href="data:,">
   <title>Map Select</title>
   <style>
     @font-face {
@@ -45,6 +46,56 @@
       src: url('/assets/fonts/archivo-900.woff2') format('woff2');
     }
 
+    /* === NIGHT BROADCAST TOKENS ===
+       Shared design tokens for the Fruiterra overlay refresh. Each overlay
+       inlines this block, exactly as it inlines its own font faces. */
+    :root {
+      --fgc-canvas: transparent;
+
+      --fgc-surface: #0b0d12;
+      --fgc-surface-raised: #11151d;
+      --fgc-surface-inverse: #eef2f8;
+      --fgc-surface-muted: #151922;
+
+      --fgc-line: #2a3140;
+      --fgc-line-strong: #3a4356;
+      --fgc-line-on-inverse: #0b0d12;
+
+      --fgc-text: #eef2f8;
+      --fgc-text-muted: #8d99ad;
+      --fgc-text-faint: #6b7688;
+      --fgc-text-inverse: #0b0d12;
+
+      --fgc-accent: #ff7a1a;
+      --fgc-accent-strong: #ff9346;
+      --fgc-accent-soft: rgb(255 122 26 / 16%);
+      --fgc-on-accent: #0b0d12;
+
+      --fgc-success: #3ecf8e;
+      --fgc-warning: #f5b84b;
+      --fgc-danger: #ef5b5b;
+
+      --fgc-space-1: 4px;
+      --fgc-space-2: 8px;
+      --fgc-space-3: 12px;
+      --fgc-space-4: 16px;
+      --fgc-radius-sm: 4px;
+      --fgc-radius-md: 6px;
+      --fgc-radius-lg: 10px;
+      --fgc-radius-pill: 999px;
+      --fgc-margin: 43px;
+
+      --fgc-duration-micro: 120ms;
+      --fgc-duration-state: 240ms;
+      --fgc-duration-reveal: 480ms;
+      --fgc-duration-scene: 900ms;
+      --fgc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+      --anim-delay: 0.8s;
+      --anim-duration: 0.5s;
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -64,12 +115,6 @@
     }
 
     /* === ANIMATIONS === */
-    :root {
-      --anim-delay: 0.8s;
-      --anim-duration: 0.5s;
-      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
     @keyframes fadeSlideUp {
       from {
         opacity: 0;
@@ -162,7 +207,7 @@
     .map-select-title {
       font-family: 'FGC Display Black', 'Apotek Black', sans-serif;
       font-size: 128px;
-      color: #fff;
+      color: var(--fgc-text);
       text-transform: uppercase;
       white-space: nowrap;
       flex-shrink: 0;
@@ -183,7 +228,7 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      background: #fff;
+      background: var(--fgc-surface-raised);
       position: relative;
       clip-path: inset(0 round 6px);
       flex: 1;
@@ -219,7 +264,6 @@
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      mix-blend-mode: darken;
       position: relative;
     }
 
@@ -234,19 +278,19 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--fgc-accent-soft);
       pointer-events: none;
     }
 
     .map-card__image--placeholder {
-      background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%);
+      background: var(--fgc-surface-muted);
     }
 
     /* === MAP CARD TEXT === */
     .map-card__text {
       width: 100%;
       min-height: 120px;
-      background: #fff;
+      background: var(--fgc-surface-raised);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -257,7 +301,7 @@
     .map-card__type {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 18px;
-      color: #ac46f7;
+      color: var(--fgc-accent);
       text-transform: uppercase;
       text-align: center;
     }
@@ -265,7 +309,7 @@
     .map-card__name {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 24px;
-      color: #090909;
+      color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
       line-height: 1.15;
@@ -274,7 +318,7 @@
     .map-card__chosen-by {
       font-family: 'FGC Display', 'Apotek', sans-serif;
       font-size: 14px;
-      color: #666;
+      color: var(--fgc-text-muted);
       text-transform: uppercase;
       text-align: center;
       margin-top: 4px;
@@ -292,7 +336,7 @@
       transform: translateX(-50%);
       width: auto;
       height: 60px;
-      background: rgba(9, 9, 9, 0.6);
+      background: rgba(11, 13, 18, 0.6);
       border-radius: 6px;
       display: inline-flex;
       align-items: center;
@@ -309,7 +353,7 @@
     .map-card__score {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 48px;
-      color: #fff;
+      color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
     }
@@ -317,7 +361,7 @@
     .map-card__score-divider {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 48px;
-      color: #fff;
+      color: var(--fgc-text);
       text-align: center;
     }
 
@@ -325,7 +369,7 @@
     .watermark {
       height: 48px;
       min-width: 366px;
-      background: #fff;
+      background: var(--fgc-surface-inverse);
       border-radius: 6px;
       display: flex;
       align-items: center;
@@ -337,7 +381,7 @@
     .watermark__text {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 28px;
-      color: #090909;
+      color: var(--fgc-text-inverse);
       text-transform: uppercase;
       white-space: nowrap;
     }

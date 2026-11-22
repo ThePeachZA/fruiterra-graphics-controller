@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1920">
+  <link rel="icon" href="data:,">
   <title>Hero Bans</title>
   <style>
     @font-face {
@@ -43,6 +44,52 @@
       font-style: normal;
       font-display: swap;
       src: url('/assets/fonts/archivo-900.woff2') format('woff2');
+    }
+
+    /* === NIGHT BROADCAST TOKENS ===
+       Shared design tokens for the Fruiterra overlay refresh. Each overlay
+       inlines this block, exactly as it inlines its own font faces. */
+    :root {
+      --fgc-canvas: transparent;
+
+      --fgc-surface: #0b0d12;
+      --fgc-surface-raised: #11151d;
+      --fgc-surface-inverse: #eef2f8;
+      --fgc-surface-muted: #151922;
+
+      --fgc-line: #2a3140;
+      --fgc-line-strong: #3a4356;
+      --fgc-line-on-inverse: #0b0d12;
+
+      --fgc-text: #eef2f8;
+      --fgc-text-muted: #8d99ad;
+      --fgc-text-faint: #6b7688;
+      --fgc-text-inverse: #0b0d12;
+
+      --fgc-accent: #ff7a1a;
+      --fgc-accent-strong: #ff9346;
+      --fgc-accent-soft: rgb(255 122 26 / 16%);
+      --fgc-on-accent: #0b0d12;
+
+      --fgc-success: #3ecf8e;
+      --fgc-warning: #f5b84b;
+      --fgc-danger: #ef5b5b;
+
+      --fgc-space-1: 4px;
+      --fgc-space-2: 8px;
+      --fgc-space-3: 12px;
+      --fgc-space-4: 16px;
+      --fgc-radius-sm: 4px;
+      --fgc-radius-md: 6px;
+      --fgc-radius-lg: 10px;
+      --fgc-radius-pill: 999px;
+      --fgc-margin: 43px;
+
+      --fgc-duration-micro: 120ms;
+      --fgc-duration-state: 240ms;
+      --fgc-duration-reveal: 480ms;
+      --fgc-duration-scene: 900ms;
+      --fgc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     * {
@@ -116,7 +163,7 @@
       padding: 0 20px;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 36px;
-      color: #fff;
+      color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
       width: 100%;
@@ -148,9 +195,9 @@
       justify-content: center;
       font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
       font-size: 48px;
-      color: #090909;
+      color: var(--fgc-text-inverse);
       text-transform: uppercase;
-      background: #fff;
+      background: var(--fgc-surface-inverse);
       flex-shrink: 0;
     }
 
@@ -158,7 +205,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #090909;
+      background: var(--fgc-surface);
       border-radius: 6px;
       padding: 0 25px;
       min-width: 196px;
@@ -168,7 +215,7 @@
     .first-to-text {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 36px;
-      color: #fff;
+      color: var(--fgc-text);
       text-transform: uppercase;
     }
 
@@ -222,7 +269,7 @@
     .ban-order {
       width: 100px;
       height: 80px;
-      background: #ac46f7;
+      background: var(--fgc-accent);
       border-radius: 6px;
       display: flex;
       align-items: center;
@@ -233,13 +280,13 @@
     .ban-order-text {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 24px;
-      color: #fff;
+      color: var(--fgc-on-accent);
       text-transform: uppercase;
     }
 
     .ban-hero-name {
       height: 80px;
-      background: #fff;
+      background: var(--fgc-surface-inverse);
       border-radius: 6px;
       display: flex;
       align-items: center;
@@ -253,14 +300,14 @@
       width: 100%;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 36px;
-      color: #090909;
+      color: var(--fgc-text-inverse);
       text-transform: uppercase;
       text-align: center;
     }
 
     .map-info {
       height: 80px;
-      background: #090909;
+      background: var(--fgc-surface);
       border-radius: 6px;
       display: flex;
       flex-direction: column;
@@ -273,7 +320,7 @@
     .map-info-type {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 24px;
-      color: #ac46f7;
+      color: var(--fgc-accent);
       text-transform: uppercase;
     }
 
@@ -282,7 +329,7 @@
       width: 100%;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 36px;
-      color: #fff;
+      color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
     }
@@ -406,6 +453,20 @@
       fitText(el.homeBanHero, 36, 20);
       fitText(el.awayBanHero, 36, 20);
       fitText(el.mapName, 36, 18);
+    }
+
+    // Calculate contrast color (black or white) based on background luminance
+    function getContrastColor(hexColor) {
+      // Remove # if present
+      const hex = hexColor.replace('#', '');
+      // Parse RGB values
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      // Calculate luminance
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      // Return the inverse surface for light colors, the surface for dark colors
+      return luminance > 0.5 ? '#0b0d12' : '#eef2f8';
     }
 
     const el = {
@@ -558,8 +619,10 @@
           el.homeScore.textContent = d.scoreA || 0;
           if (teamColorsEnabled && d.teamA.color) {
             el.homeSection.style.backgroundColor = d.teamA.color;
+            el.homeName.style.color = getContrastColor(d.teamA.color);
           } else {
-            el.homeSection.style.backgroundColor = '#090909';
+            el.homeSection.style.backgroundColor = 'var(--fgc-surface)';
+            el.homeName.style.color = '';
           }
         }
 
@@ -571,8 +634,10 @@
           el.awayScore.textContent = d.scoreB || 0;
           if (teamColorsEnabled && d.teamB.color) {
             el.awaySection.style.backgroundColor = d.teamB.color;
+            el.awayName.style.color = getContrastColor(d.teamB.color);
           } else {
-            el.awaySection.style.backgroundColor = '#090909';
+            el.awaySection.style.backgroundColor = 'var(--fgc-surface)';
+            el.awayName.style.color = '';
           }
         }
 

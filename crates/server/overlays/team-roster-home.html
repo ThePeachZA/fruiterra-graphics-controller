@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1920">
+  <link rel="icon" href="data:,">
   <title>Team Roster - Home</title>
   <style>
     @font-face {
@@ -43,6 +44,52 @@
       font-style: normal;
       font-display: swap;
       src: url('/assets/fonts/archivo-900.woff2') format('woff2');
+    }
+
+    /* === NIGHT BROADCAST TOKENS ===
+       Shared design tokens for the Fruiterra overlay refresh. Each overlay
+       inlines this block, exactly as it inlines its own font faces. */
+    :root {
+      --fgc-canvas: transparent;
+
+      --fgc-surface: #0b0d12;
+      --fgc-surface-raised: #11151d;
+      --fgc-surface-inverse: #eef2f8;
+      --fgc-surface-muted: #151922;
+
+      --fgc-line: #2a3140;
+      --fgc-line-strong: #3a4356;
+      --fgc-line-on-inverse: #0b0d12;
+
+      --fgc-text: #eef2f8;
+      --fgc-text-muted: #8d99ad;
+      --fgc-text-faint: #6b7688;
+      --fgc-text-inverse: #0b0d12;
+
+      --fgc-accent: #ff7a1a;
+      --fgc-accent-strong: #ff9346;
+      --fgc-accent-soft: rgb(255 122 26 / 16%);
+      --fgc-on-accent: #0b0d12;
+
+      --fgc-success: #3ecf8e;
+      --fgc-warning: #f5b84b;
+      --fgc-danger: #ef5b5b;
+
+      --fgc-space-1: 4px;
+      --fgc-space-2: 8px;
+      --fgc-space-3: 12px;
+      --fgc-space-4: 16px;
+      --fgc-radius-sm: 4px;
+      --fgc-radius-md: 6px;
+      --fgc-radius-lg: 10px;
+      --fgc-radius-pill: 999px;
+      --fgc-margin: 43px;
+
+      --fgc-duration-micro: 120ms;
+      --fgc-duration-state: 240ms;
+      --fgc-duration-reveal: 480ms;
+      --fgc-duration-scene: 900ms;
+      --fgc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     * {
@@ -101,7 +148,7 @@
     .team-header {
       width: 1500px;
       height: 92px;
-      background: #090909;
+      background: var(--fgc-surface);
       border-radius: 6px;
       display: flex;
       align-items: center;
@@ -117,7 +164,7 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      background-color: #eee;
+      background-color: var(--fgc-surface-inverse);
       flex-shrink: 0;
     }
 
@@ -130,7 +177,7 @@
       font-family: 'FGC Display Black', 'Apotek Black', sans-serif;
       font-size: 72px;
       line-height: 92px;
-      color: #fff;
+      color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
       white-space: nowrap;
@@ -158,7 +205,7 @@
     .player-card-core {
       width: 284px;
       height: 600px;
-      background: #fff;
+      background: var(--fgc-surface-raised);
       border-radius: 6px;
       overflow: hidden;
       display: flex;
@@ -174,7 +221,7 @@
       left: 0;
       width: 55px;
       height: 55px;
-      background: #090909;
+      background: var(--fgc-surface);
       border-end-start-radius: 6px;
       z-index: 1;
       display: flex;
@@ -212,7 +259,7 @@
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 36px;
       line-height: 42px;
-      color: #090909;
+      color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
     }
@@ -221,7 +268,7 @@
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 24px;
       line-height: 28px;
-      color: #444444;
+      color: var(--fgc-text-muted);
       text-transform: uppercase;
       text-align: center;
     }
@@ -230,7 +277,7 @@
     .player-card-sub {
       width: 284px;
       height: 100%;
-      background: #fff;
+      background: var(--fgc-surface-raised);
       border-radius: 6px;
       overflow: hidden;
       display: flex;
@@ -242,7 +289,7 @@
     .player-card-sub .role-badge {
       width: 55px;
       height: 100%;
-      background: #090909;
+      background: var(--fgc-surface);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -273,7 +320,7 @@
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 24px;
       line-height: 26px;
-      color: #090909;
+      color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
     }
@@ -282,7 +329,7 @@
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 18px;
       line-height: 20px;
-      color: #444444;
+      color: var(--fgc-text-muted);
       text-transform: uppercase;
       text-align: center;
     }
@@ -435,7 +482,7 @@
       }
       const heroImageHtml = heroImageUrl
         ? `<div class="hero-image" style="background-image: url('${heroImageUrl}')"></div>`
-        : `<div class="hero-image" style="background-color: #2d2d2d"></div>`;
+        : `<div class="hero-image" style="background-color: var(--fgc-surface-muted)"></div>`;
 
       card.innerHTML = `
         <div class="role-badge">${getRoleIcon(player.role)}</div>
@@ -493,7 +540,7 @@
       }
 
       // Apply logo background color
-      el.teamLogo.style.backgroundColor = teamData.logoBgColor || '#eee';
+      el.teamLogo.style.backgroundColor = teamData.logoBgColor || '#eef2f8';
 
       el.teamName.textContent = teamData.name || 'TEAM NAME';
 
@@ -506,11 +553,11 @@
         const g = parseInt(hex.substr(2, 2), 16);
         const b = parseInt(hex.substr(4, 2), 16);
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        const textColor = luminance > 0.5 ? '#090909' : '#ffffff';
+        const textColor = luminance > 0.5 ? '#0b0d12' : '#eef2f8';
         el.teamName.style.color = textColor;
       } else {
-        el.teamHeader.style.backgroundColor = '#090909';
-        el.teamName.style.color = '#ffffff';
+        el.teamHeader.style.backgroundColor = '#0b0d12';
+        el.teamName.style.color = '#eef2f8';
       }
 
       // Filter and populate core players

@@ -359,3 +359,353 @@ fn every_overlay_declares_exactly_the_five_display_faces() {
         );
     }
 }
+
+#[test]
+fn roster_overlays_use_night_broadcast_tokens() {
+    let home = overlay_text("team-roster-home.html");
+    let away = overlay_text("team-roster-away.html");
+
+    for (file, text) in [
+        ("team-roster-home.html", &home),
+        ("team-roster-away.html", &away),
+    ] {
+        assert!(
+            text.contains("--fgc-surface: #0b0d12;")
+                && text.contains("--fgc-surface-raised: #11151d;")
+                && text.contains("--fgc-surface-inverse: #eef2f8;")
+                && text.contains("--fgc-surface-muted: #151922;")
+                && text.contains("--fgc-text: #eef2f8;")
+                && text.contains("--fgc-text-muted: #8d99ad;")
+                && text.contains("--fgc-accent: #ff7a1a;"),
+            "{file} should inline the canonical Night Broadcast token block"
+        );
+        for retired in [
+            "#fff", "#ffffff", "#090909", "#eeeeee", "#eee", "#444444", "#2d2d2d",
+        ] {
+            assert!(
+                !text.contains(retired),
+                "{file} should have retired the old colour {retired}"
+            );
+        }
+        assert!(
+            text.contains("const textColor = luminance > 0.5 ? '#0b0d12' : '#eef2f8';"),
+            "{file} should resolve team-name contrast to the Night Broadcast palette"
+        );
+        assert!(
+            text.contains(r#"<link rel="icon" href="data:,">"#),
+            "{file} should suppress the favicon request"
+        );
+    }
+
+    let home_norm = home
+        .replace("<title>Team Roster - Home</title>", "<title></title>")
+        .replace("const TEAM_SIDE = 'A';", "const TEAM_SIDE = '';");
+    let away_norm = away
+        .replace("<title>Team Roster - Away</title>", "<title></title>")
+        .replace("const TEAM_SIDE = 'B';", "const TEAM_SIDE = '';");
+    assert_eq!(
+        home_norm, away_norm,
+        "the roster pair must stay byte-identical apart from <title> and TEAM_SIDE"
+    );
+}
+
+#[test]
+fn timer_overlay_uses_night_broadcast_tokens_and_keeps_hour_rollup() {
+    let text = overlay_text("timer.html");
+
+    assert!(
+        text.contains("--fgc-text: #eef2f8;") && text.contains("color: var(--fgc-text);"),
+        "the timer value should use the Night Broadcast text token"
+    );
+    assert!(
+        !text.contains("#fff"),
+        "the timer should have retired the old flat white"
+    );
+    assert!(
+        text.contains("text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);"),
+        "the timer keeps its legibility shadow"
+    );
+    assert!(
+        text.contains("const showHours = settings.showHours !== false;")
+            && text
+                .contains("const parts = showHours ? [hours, minutes] : [hours * 60 + minutes];"),
+        "the showHours roll-up logic must stay intact"
+    );
+    assert!(
+        text.contains("let lastSettings = {};")
+            && text.contains("if (data.settings && typeof data.settings === 'object') lastSettings = data.settings;"),
+        "reset frames must keep reusing the last settings"
+    );
+    assert!(
+        text.contains(r#"aria-live="off""#)
+            && text.contains("message.data.matchTimer")
+            && text.contains("message.data.action === 'reset'"),
+        "the timer keeps its live-region and reset handling"
+    );
+}
+
+#[test]
+fn map_pool_overlay_uses_night_broadcast_tokens() {
+    let text = overlay_text("map-pool.html");
+
+    assert!(
+        text.contains("--fgc-surface: #0b0d12;")
+            && text.contains("--fgc-surface-raised: #11151d;")
+            && text.contains("--fgc-surface-inverse: #eef2f8;")
+            && text.contains("--fgc-surface-muted: #151922;")
+            && text.contains("--fgc-text: #eef2f8;")
+            && text.contains("--fgc-text-muted: #8d99ad;")
+            && text.contains("--fgc-line: #2a3140;")
+            && text.contains("--fgc-accent: #ff7a1a;"),
+        "map-pool should inline the canonical Night Broadcast token block"
+    );
+    assert!(
+        text.contains(".mode-header {")
+            && text.contains(".map-name {\n      background: var(--fgc-surface);"),
+        "the mode header and map name bar should sit on the base surface"
+    );
+    assert!(
+        text.contains("background-color: var(--fgc-surface-muted);")
+            && text.contains(": 'background-color: var(--fgc-surface-muted)';"),
+        "empty map art should fall back to the muted surface in CSS and JS"
+    );
+    assert!(
+        text.contains("background: var(--fgc-accent-soft);"),
+        "the chosen map scrim should use the accent-soft token"
+    );
+    assert!(
+        text.contains("color: var(--fgc-text);"),
+        "map-pool labels should use the Night Broadcast text token"
+    );
+    for retired in [
+        "#fff", "#ffffff", "#090909", "#151515", "#eeeeee", "#eee", "#ac46f7", "#444444",
+        "#2d2d2d", "#1a1a1a", "#666",
+    ] {
+        assert!(
+            !text.contains(retired),
+            "map-pool should have retired the old colour {retired}"
+        );
+    }
+    assert!(
+        !text.contains("mix-blend-mode: darken"),
+        "map-pool should not blend map art against the dark surfaces"
+    );
+    assert!(
+        text.contains(r#"<link rel="icon" href="data:,">"#),
+        "map-pool should suppress the favicon request"
+    );
+    assert_eq!(
+        text.matches("@font-face").count(),
+        FONTS.len(),
+        "map-pool should keep exactly five display faces"
+    );
+    assert!(
+        text.contains("ws.send(JSON.stringify({ type: 'requestInit' }));"),
+        "map-pool must keep asking the server for its initial frame"
+    );
+}
+
+#[test]
+fn map_select_overlay_uses_night_broadcast_tokens() {
+    let text = overlay_text("map-select.html");
+
+    assert!(
+        text.contains("--fgc-surface: #0b0d12;")
+            && text.contains("--fgc-surface-raised: #11151d;")
+            && text.contains("--fgc-surface-inverse: #eef2f8;")
+            && text.contains("--fgc-surface-muted: #151922;")
+            && text.contains("--fgc-text: #eef2f8;")
+            && text.contains("--fgc-text-muted: #8d99ad;")
+            && text.contains("--fgc-text-inverse: #0b0d12;")
+            && text.contains("--fgc-line: #2a3140;")
+            && text.contains("--fgc-accent: #ff7a1a;"),
+        "map-select should inline the canonical Night Broadcast token block"
+    );
+    assert!(
+        text.contains("--anim-delay: 0.8s;")
+            && text.contains("--anim-duration: 0.5s;")
+            && text.contains("--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);"),
+        "the existing animation variables must survive inside the merged token block"
+    );
+    assert_eq!(
+        text.matches("background: var(--fgc-surface-raised);")
+            .count(),
+        2,
+        "both the card and its text panel should sit on the raised surface"
+    );
+    assert!(
+        text.contains(
+            ".map-card__image--placeholder {\n      background: var(--fgc-surface-muted);\n    }"
+        ) && !text.contains("linear-gradient(180deg"),
+        "the placeholder image should be a solid muted surface"
+    );
+    assert!(
+        text.contains("background: var(--fgc-accent-soft);"),
+        "the completed map scrim should use the accent-soft token"
+    );
+    assert!(
+        text.contains("background: rgba(11, 13, 18, 0.6);"),
+        "the score board should be a token-derived translucent surface"
+    );
+    assert!(
+        text.contains(".map-card__type {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 18px;\n      color: var(--fgc-accent);"),
+        "the map mode label should carry the orange accent"
+    );
+    assert!(
+        text.contains(".map-card__chosen-by {\n      font-family: 'FGC Display', 'Apotek', sans-serif;\n      font-size: 14px;\n      color: var(--fgc-text-muted);"),
+        "the chosen-by tag should use muted text"
+    );
+    assert!(
+        text.contains(".watermark {\n      height: 48px;\n      min-width: 366px;\n      background: var(--fgc-surface-inverse);")
+            && text.contains(".watermark__text {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 28px;\n      color: var(--fgc-text-inverse);"),
+        "the watermark band should keep the inverse plate with inverse text"
+    );
+    assert!(
+        !text.contains("mix-blend-mode: darken"),
+        "map-select should not blend map art against the dark surfaces"
+    );
+    for retired in [
+        "#fff", "#ffffff", "#090909", "#151515", "#eeeeee", "#eee", "#ac46f7", "#444444",
+        "#2d2d2d", "#1a1a1a", "#666",
+    ] {
+        assert!(
+            !text.contains(retired),
+            "map-select should have retired the old colour {retired}"
+        );
+    }
+    assert!(
+        text.contains(r#"<link rel="icon" href="data:,">"#),
+        "map-select should suppress the favicon request"
+    );
+    assert_eq!(
+        text.matches("@font-face").count(),
+        FONTS.len(),
+        "map-select should keep exactly five display faces"
+    );
+    assert!(
+        !text.contains("requestInit"),
+        "map-select must not gain an init request it never sent"
+    );
+}
+
+#[test]
+fn row_casters_overlay_uses_night_broadcast_tokens() {
+    let text = overlay_text("row-casters.html");
+
+    assert!(
+        text.contains("--fgc-surface: #0b0d12;")
+            && text.contains("--fgc-surface-raised: #11151d;")
+            && text.contains("--fgc-surface-muted: #151922;")
+            && text.contains("--fgc-text: #eef2f8;")
+            && text.contains("--fgc-text-muted: #8d99ad;")
+            && text.contains("--fgc-line: #2a3140;")
+            && text.contains("--fgc-accent: #ff7a1a;"),
+        "row-casters should inline the canonical Night Broadcast token block"
+    );
+    assert!(
+        text.contains(".talent-text {\n      background: var(--fgc-surface-raised);"),
+        "the caster text panel should sit on the raised surface"
+    );
+    assert!(
+        text.contains(".talent-name {\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 48px;\n      color: var(--fgc-text);"),
+        "the caster name should use the Night Broadcast text token"
+    );
+    assert!(
+        text.contains(".social-handle {\n      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;\n      font-size: 24px;\n      color: var(--fgc-text-muted);"),
+        "social handles should use muted text"
+    );
+    assert!(
+        text.contains(".social-icon path {\n      fill: var(--fgc-text-muted);\n    }"),
+        "social icons should take the muted tier from a stylesheet rule"
+    );
+    assert!(
+        text.contains(": 'background-color: var(--fgc-surface-muted)';"),
+        "a missing portrait should fall back to the muted surface in JS"
+    );
+    for retired in [
+        "#fff", "#ffffff", "#090909", "#151515", "#eeeeee", "#eee", "#ac46f7", "#444444",
+        "#2d2d2d", "#1a1a1a", "#666",
+    ] {
+        assert!(
+            !text.contains(retired),
+            "row-casters should have retired the old colour {retired}"
+        );
+    }
+    assert!(
+        text.contains(r#"<link rel="icon" href="data:,">"#),
+        "row-casters should suppress the favicon request"
+    );
+    assert_eq!(
+        text.matches("@font-face").count(),
+        FONTS.len(),
+        "row-casters should keep exactly five display faces"
+    );
+    assert!(
+        text.contains("ws.send(JSON.stringify({ type: 'requestInit' }));"),
+        "row-casters must keep asking the server for its initial frame"
+    );
+}
+
+#[test]
+fn hero_bans_overlay_uses_night_broadcast_tokens() {
+    let text = overlay_text("hero-bans.html");
+
+    assert!(
+        text.contains("--fgc-surface: #0b0d12;")
+            && text.contains("--fgc-surface-inverse: #eef2f8;")
+            && text.contains("--fgc-text: #eef2f8;")
+            && text.contains("--fgc-text-inverse: #0b0d12;")
+            && text.contains("--fgc-text-muted: #8d99ad;")
+            && text.contains("--fgc-accent: #ff7a1a;")
+            && text.contains("--fgc-on-accent: #0b0d12;")
+            && text.contains("--fgc-line: #2a3140;"),
+        "hero-bans should inline the canonical Night Broadcast token block"
+    );
+    assert!(
+        text.contains(".team-score {\n      width: 80px;\n      height: 80px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;\n      font-size: 48px;\n      color: var(--fgc-text-inverse);\n      text-transform: uppercase;\n      background: var(--fgc-surface-inverse);"),
+        "the score chip should keep the inverse plate with inverse text"
+    );
+    assert!(
+        text.contains(".ban-order {\n      width: 100px;\n      height: 80px;\n      background: var(--fgc-accent);"),
+        "the ban order marker should carry the orange accent"
+    );
+    assert!(
+        text.contains(".ban-order-text {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 24px;\n      color: var(--fgc-on-accent);"),
+        "the ban order text should sit on the accent with inverse text"
+    );
+    assert!(
+        text.contains(".map-info-type {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 24px;\n      color: var(--fgc-accent);"),
+        "the map type label should carry the orange accent"
+    );
+    assert!(
+        text.contains("return luminance > 0.5 ? '#0b0d12' : '#eef2f8';"),
+        "team name contrast should follow the shared surface tokens"
+    );
+    assert!(
+        text.contains("el.homeSection.style.backgroundColor = 'var(--fgc-surface)';")
+            && text.contains("el.awaySection.style.backgroundColor = 'var(--fgc-surface)';"),
+        "the neutral team sections should fall back to the base surface"
+    );
+    for retired in [
+        "#fff", "#ffffff", "#090909", "#151515", "#eeeeee", "#eee", "#ac46f7", "#444444",
+        "#2d2d2d", "#1a1a1a", "#666",
+    ] {
+        assert!(
+            !text.contains(retired),
+            "hero-bans should have retired the old colour {retired}"
+        );
+    }
+    assert!(
+        text.contains(r#"<link rel="icon" href="data:,">"#),
+        "hero-bans should suppress the favicon request"
+    );
+    assert_eq!(
+        text.matches("@font-face").count(),
+        FONTS.len(),
+        "hero-bans should keep exactly five display faces"
+    );
+    assert!(
+        !text.contains("requestInit"),
+        "hero-bans must not gain an init request it never sent"
+    );
+}
