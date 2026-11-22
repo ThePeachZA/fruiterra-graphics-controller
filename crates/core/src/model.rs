@@ -838,6 +838,8 @@ pub enum AssetAttachmentKind {
     /// Small ban-strip image owned by a hero.
     #[default]
     HeroBanIcon,
+    /// Transparent cut-out art owned by a hero.
+    HeroTransparent,
 }
 
 /// Marks an asset as owned by another asset instead of listed in the library.
@@ -857,6 +859,15 @@ impl AssetAttachment {
         Self {
             owner,
             kind: AssetAttachmentKind::HeroBanIcon,
+        }
+    }
+
+    /// Creates a hero transparent-art attachment.
+    #[must_use]
+    pub const fn hero_transparent(owner: AssetId) -> Self {
+        Self {
+            owner,
+            kind: AssetAttachmentKind::HeroTransparent,
         }
     }
 }
@@ -890,6 +901,12 @@ pub struct Asset {
     /// Hero portrait asset.
     #[serde(default)]
     pub portrait: Option<AssetId>,
+    /// Transparent cut-out art for the hero bans overlay.
+    #[serde(default)]
+    pub transparent: Option<AssetId>,
+    /// Role of the hero, shown as a hexagon on the hero bans overlay.
+    #[serde(default)]
+    pub role: Option<Role>,
     /// Game-mode asset for a map.
     #[serde(default)]
     pub game_mode: Option<AssetId>,

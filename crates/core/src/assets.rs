@@ -283,6 +283,8 @@ impl Asset {
             added_at: None,
             icon: None,
             portrait: None,
+            transparent: None,
+            role: None,
             game_mode: None,
             attachment: None,
         })
@@ -309,6 +311,8 @@ impl Asset {
             added_at: None,
             icon: None,
             portrait: None,
+            transparent: None,
+            role: None,
             game_mode: None,
             attachment: None,
         })

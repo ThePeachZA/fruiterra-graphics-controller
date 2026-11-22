@@ -90,6 +90,14 @@
       --fgc-duration-reveal: 480ms;
       --fgc-duration-scene: 900ms;
       --fgc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+      /* === OVERLAY-LOCAL TOKENS ===
+         The role icons and the team logos are white glyphs on transparent, and
+         the hero name sits on top of the hero art. Those need a dark plate
+         and a near-white ink whichever theme is active, so they do not follow
+         the theme tokens. */
+      --fgc-plate-dark: #0b0d12;
+      --fgc-ink-on-art: #eef2f8;
     }
 
     * {
@@ -111,145 +119,75 @@
     }
 
     /* === ANIMATIONS === */
-    @keyframes fadeSlideDown {
+    @keyframes heroReveal {
       from {
         opacity: 0;
-        transform: translateY(-50px) scale(0.9);
+        transform: scale(1.04);
       }
       to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: scale(1);
       }
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    @keyframes captionReveal {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
-    /* === MAIN CONTAINER === */
-    .main-container {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 120px 200px;
-      row-gap: 25px;
-    }
-
-    /* === HEADER === */
-    .header {
-      width: 100%;
-      height: 80px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .team-section {
-      display: flex;
-      align-items: stretch;
-      border-radius: 6px;
-      overflow: hidden;
-      flex: 1;
-    }
-
-    .team-name {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 20px;
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 36px;
-      color: var(--fgc-text);
-      text-transform: uppercase;
-      text-align: center;
-      width: 100%;
-      min-width: 200px;
-    }
-
-    .team-logo-container {
-      width: 100px;
-      height: 80px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .team-logo {
-      width: 80px;
-      height: 80px;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-
-    .team-score {
-      width: 80px;
-      height: 80px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 48px;
-      color: var(--fgc-text-inverse);
-      text-transform: uppercase;
-      background: var(--fgc-surface-inverse);
-      flex-shrink: 0;
-    }
-
-    .first-to-section {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--fgc-surface);
-      border-radius: 6px;
-      padding: 0 25px;
-      min-width: 196px;
-      height: 80px;
-    }
-
-    .first-to-text {
-      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 36px;
-      color: var(--fgc-text);
-      text-transform: uppercase;
-    }
-
-    /* === HERO BAN PANELS === */
-    .hero-bans-section {
-      width: 100%;
-      height: 630px;
+    /* === LAYOUT ===
+       Two full-bleed halves with a narrow banner between them, following the
+       OWWC27 hero bans reference: the hero art fills the screen, the team
+       logo sits in the outer top corner and the name and the ban order hover
+       over the lower half of the art. */
+    .hero-bans {
+      position: absolute;
+      inset: 0;
       display: flex;
       align-items: stretch;
       justify-content: center;
-      gap: 25px;
     }
 
-    .hero-panel {
-      flex: 1;
-      min-width: 0;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      border-radius: 6px;
-      overflow: hidden;
-      background: var(--fgc-surface);
-    }
-
-    .hero-panel__art {
+    .hero-half {
       position: relative;
-      flex: 1;
+      flex: 1 1 0;
       min-width: 0;
-      min-height: 0;
       overflow: hidden;
-      background: var(--fgc-surface-muted);
+      background: var(--fgc-surface);
     }
 
-    .hero-panel__art img {
+    /* The hexagon tile. A masked background colour keeps the texture on the
+       accent token, so it follows the theme. */
+    .hero-half__texture,
+    .hero-bans__centre::before {
+      background-color: var(--fgc-accent);
+      opacity: 0.14;
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9z' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9z' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+      -webkit-mask-size: 56px 98px;
+      mask-size: 56px 98px;
+      pointer-events: none;
+    }
+
+    .hero-half__texture {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .hero-half__art {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    .hero-half__art img {
       display: block;
       width: 100%;
       height: 100%;
@@ -257,182 +195,160 @@
       object-position: center;
     }
 
-    /* The ordinal tag sits on the art, like the OWCS27 ban panels. */
-    .hero-panel__tag {
+    /* A transparent cut-out stands on the bottom of the half so the hexagon
+       texture stays visible behind it. */
+    .hero-half__art--cutout img {
+      object-fit: contain;
+      object-position: center bottom;
+    }
+
+    .hero-half__scrim {
       position: absolute;
-      left: 18px;
-      bottom: 18px;
+      inset: 0;
       z-index: 2;
-      padding: 8px 16px;
-      background: var(--fgc-surface-inverse);
-      color: var(--fgc-text-inverse);
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 20px;
-      line-height: 1;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      border-radius: var(--fgc-radius-sm);
+      background: linear-gradient(
+        to top,
+        rgb(0 0 0 / 78%) 0%,
+        rgb(0 0 0 / 42%) 24%,
+        rgb(0 0 0 / 0%) 56%
+      );
+      pointer-events: none;
     }
 
-    /* Extra bans for the same team are small portraits on the art corner, so a
-       second ban is never dropped by the two-panel layout. */
-    .hero-panel__extra {
+    .hero-bans__centre {
+      position: relative;
+      z-index: 2;
+      flex: 0 0 110px;
+      background: var(--fgc-surface);
+    }
+
+    .hero-bans__centre::before {
+      content: '';
       position: absolute;
-      right: 18px;
-      bottom: 18px;
-      z-index: 2;
-      display: flex;
-      gap: 10px;
+      inset: 0;
     }
 
-    .hero-panel__extra img {
-      width: 52px;
-      height: 52px;
-      object-fit: cover;
-      border-radius: var(--fgc-radius-sm);
-      box-shadow: 0 4px 14px rgb(0 0 0 / 45%);
+    .hero-bans__centre::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: var(--fgc-line-strong);
     }
 
-    .hero-panel__band {
-      height: 80px;
-      flex-shrink: 0;
+    /* === TEAM LOGO === */
+    .hero-half__logo {
+      position: absolute;
+      top: var(--fgc-margin);
+      z-index: 3;
+      width: 100px;
+      height: 100px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 20px;
-      background: var(--fgc-surface);
+      background-color: var(--fgc-plate-dark);
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: var(--fgc-radius-md);
+      box-shadow: 0 6px 22px rgb(0 0 0 / 38%);
     }
 
-    .hero-panel__name {
-      display: block;
-      width: 100%;
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 36px;
-      color: var(--fgc-text);
+    .hero-half--home .hero-half__logo {
+      left: var(--fgc-margin);
+    }
+
+    .hero-half--away .hero-half__logo {
+      right: var(--fgc-margin);
+    }
+
+    /* === CAPTION === */
+    .hero-half__caption {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 78px;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--fgc-space-3);
+      padding: 0 var(--fgc-space-4);
+    }
+
+    .hero-half__role {
+      width: 60px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--fgc-plate-dark);
+      clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+    }
+
+    .hero-half__role[hidden] {
+      display: none;
+    }
+
+    .hero-half__role img {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+    }
+
+    .hero-half__name {
+      width: 86%;
+      font-family: 'FGC Display Black', 'Apotek Black', sans-serif;
+      font-size: 92px;
+      line-height: 1.02;
+      color: var(--fgc-ink-on-art);
       text-transform: uppercase;
       text-align: center;
+      text-shadow: 0 4px 26px rgb(0 0 0 / 55%);
     }
 
-    /* === MAP STRIP === */
-    .map-strip {
-      width: 100%;
-      height: 80px;
-      display: flex;
-      align-items: center;
-      gap: 25px;
-      padding: 0 25px;
-      background: var(--fgc-surface);
-      border-radius: 6px;
-    }
-
-    .map-strip__mode {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .map-strip__mode-icon {
-      width: 40px;
-      height: 40px;
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-
-    .map-strip__mode-text {
+    .hero-half__order {
+      max-width: 70%;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 24px;
+      font-size: 30px;
+      line-height: 1;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
       color: var(--fgc-accent);
-      text-transform: uppercase;
-    }
-
-    .map-strip__index {
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 24px;
-      color: var(--fgc-text-muted);
-      text-transform: uppercase;
-    }
-
-    .map-strip__name {
-      display: block;
-      flex: 1;
-      text-align: right;
-      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 36px;
-      color: var(--fgc-text);
-      text-transform: uppercase;
-    }
-
-    /* === ICON VISIBILITY === */
-    .icon-hidden {
-      display: none !important;
+      text-shadow: 0 2px 14px rgb(0 0 0 / 55%);
     }
   </style>
 </head>
 <body>
-    <div class="overlay">
-    <!-- Main container -->
-    <div class="main-container">
-      <!-- Header -->
-      <div class="header" id="header" style="opacity: 0;">
-        <!-- Home Team -->
-        <div class="team-section" id="home-section">
-          <div class="team-name" id="home-name">HOME TEAM</div>
-          <div class="team-logo-container">
-            <div class="team-logo" id="home-logo"></div>
-          </div>
-          <div class="team-score" id="home-score">0</div>
+  <div class="overlay">
+    <div class="hero-bans" id="hero-bans">
+      <section class="hero-half hero-half--home" id="home-half">
+        <div class="hero-half__texture"></div>
+        <div class="hero-half__art" id="home-art"></div>
+        <div class="hero-half__scrim"></div>
+        <div class="hero-half__logo" id="home-logo"></div>
+        <div class="hero-half__caption" id="home-caption">
+          <div class="hero-half__role" id="home-role" hidden><img id="home-role-icon" alt=""></div>
+          <div class="hero-half__name" id="home-name">-</div>
+          <div class="hero-half__order" id="home-order">1ST BAN</div>
         </div>
+      </section>
 
-        <!-- First To -->
-        <div class="first-to-section">
-          <span class="first-to-text" id="first-to-text">FIRST TO 3</span>
-        </div>
+      <div class="hero-bans__centre" id="hero-bans-centre"></div>
 
-        <!-- Away Team -->
-        <div class="team-section" id="away-section" style="flex-direction: row-reverse;">
-          <div class="team-name" id="away-name">AWAY TEAM</div>
-          <div class="team-logo-container">
-            <div class="team-logo" id="away-logo"></div>
-          </div>
-          <div class="team-score" id="away-score">0</div>
+      <section class="hero-half hero-half--away" id="away-half">
+        <div class="hero-half__texture"></div>
+        <div class="hero-half__art" id="away-art"></div>
+        <div class="hero-half__scrim"></div>
+        <div class="hero-half__logo" id="away-logo"></div>
+        <div class="hero-half__caption" id="away-caption">
+          <div class="hero-half__role" id="away-role" hidden><img id="away-role-icon" alt=""></div>
+          <div class="hero-half__name" id="away-name">-</div>
+          <div class="hero-half__order" id="away-order">2ND BAN</div>
         </div>
-      </div>
-
-      <!-- Hero Bans Section -->
-      <div class="hero-bans-section" id="hero-bans-section" style="opacity: 0;">
-        <!-- Home Ban Panel -->
-        <div class="hero-panel" id="home-panel">
-          <div class="hero-panel__art" id="home-panel-art">
-            <span class="hero-panel__tag" id="home-panel-tag">1ST BAN</span>
-            <div class="hero-panel__extra" id="home-panel-extra"></div>
-          </div>
-          <div class="hero-panel__band">
-            <span class="hero-panel__name" id="home-panel-name">-</span>
-          </div>
-        </div>
-
-        <!-- Away Ban Panel -->
-        <div class="hero-panel" id="away-panel">
-          <div class="hero-panel__art" id="away-panel-art">
-            <span class="hero-panel__tag" id="away-panel-tag">2ND BAN</span>
-            <div class="hero-panel__extra" id="away-panel-extra"></div>
-          </div>
-          <div class="hero-panel__band">
-            <span class="hero-panel__name" id="away-panel-name">-</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Map Strip -->
-      <div class="map-strip" id="map-strip" style="opacity: 0;">
-        <div class="map-strip__mode">
-          <div class="map-strip__mode-icon" id="map-mode-icon"></div>
-          <span class="map-strip__mode-text" id="map-mode">MODE</span>
-        </div>
-        <span class="map-strip__index" id="map-index">MAP 1</span>
-        <span class="map-strip__name" id="map-name">MAP NAME</span>
-      </div>
+      </section>
     </div>
   </div>
 
@@ -470,119 +386,101 @@
     }
 
     function fitHeroBanText() {
-      fitText(el.homeName, 36, 20);
-      fitText(el.awayName, 36, 20);
-      fitText(el.homePanelName, 36, 20);
-      fitText(el.awayPanelName, 36, 20);
-      fitText(el.mapName, 36, 18);
-    }
-
-    // Calculate contrast color (black or white) based on background luminance
-    function getContrastColor(hexColor) {
-      // Remove # if present
-      const hex = hexColor.replace('#', '');
-      // Parse RGB values
-      const r = parseInt(hex.substr(0, 2), 16);
-      const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
-      // Calculate luminance
-      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      // Return the inverse surface for light colors, the surface for dark colors
-      return luminance > 0.5 ? '#0b0d12' : '#eef2f8';
+      fitText(el.homeName, 92, 44);
+      fitText(el.awayName, 92, 44);
+      fitText(el.homeOrder, 30, 16);
+      fitText(el.awayOrder, 30, 16);
     }
 
     const el = {
-      header: document.getElementById('header'),
-      heroBansSection: document.getElementById('hero-bans-section'),
-      mapStrip: document.getElementById('map-strip'),
-      homeSection: document.getElementById('home-section'),
+      heroBans: document.getElementById('hero-bans'),
+      homeHalf: document.getElementById('home-half'),
+      awayHalf: document.getElementById('away-half'),
+      homeArt: document.getElementById('home-art'),
+      awayArt: document.getElementById('away-art'),
       homeLogo: document.getElementById('home-logo'),
-      homeName: document.getElementById('home-name'),
-      homeScore: document.getElementById('home-score'),
-      homePanelArt: document.getElementById('home-panel-art'),
-      homePanelTag: document.getElementById('home-panel-tag'),
-      homePanelExtra: document.getElementById('home-panel-extra'),
-      homePanelName: document.getElementById('home-panel-name'),
-      awaySection: document.getElementById('away-section'),
       awayLogo: document.getElementById('away-logo'),
+      homeRole: document.getElementById('home-role'),
+      awayRole: document.getElementById('away-role'),
+      homeRoleIcon: document.getElementById('home-role-icon'),
+      awayRoleIcon: document.getElementById('away-role-icon'),
+      homeCaption: document.getElementById('home-caption'),
+      awayCaption: document.getElementById('away-caption'),
+      homeName: document.getElementById('home-name'),
       awayName: document.getElementById('away-name'),
-      awayScore: document.getElementById('away-score'),
-      awayPanelArt: document.getElementById('away-panel-art'),
-      awayPanelTag: document.getElementById('away-panel-tag'),
-      awayPanelExtra: document.getElementById('away-panel-extra'),
-      awayPanelName: document.getElementById('away-panel-name'),
-      firstToText: document.getElementById('first-to-text'),
-      mapMode: document.getElementById('map-mode'),
-      mapModeIcon: document.getElementById('map-mode-icon'),
-      mapIndex: document.getElementById('map-index'),
-      mapName: document.getElementById('map-name')
+      homeOrder: document.getElementById('home-order'),
+      awayOrder: document.getElementById('away-order')
     };
 
     let heroPortraits = {};
+    let heroTransparent = {};
+    let heroRoles = {};
+    let roleIcons = {};
     let currentMapIndex = 0;
-    let firstBanTeam = null;
-    let teamColorsEnabled = false;
     let animationsTriggered = false;
 
     function triggerAnimations() {
-      el.header.style.animation = 'fadeSlideDown 1.2s cubic-bezier(0.3, 1, 0.4, 1) 0.8s both';
-
-      setTimeout(() => {
-        el.heroBansSection.style.animation = 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both';
-      }, 1200);
-
-      setTimeout(() => {
-        el.mapStrip.style.animation = 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both';
-      }, 1500);
+      el.homeHalf.style.animation = 'heroReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) both';
+      el.awayHalf.style.animation = 'heroReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both';
+      el.homeCaption.style.animation = 'captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both';
+      el.awayCaption.style.animation = 'captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.47s both';
     }
 
-    // Renders one ban panel. The first ban fills the art, and any further bans
-    // for the same team become small portraits beside the ordinal tag, so the
-    // two-panel layout never drops a ban.
-    function renderBanPanel(art, extra, name, bans) {
+    // Renders one half. The transparent cut-out is preferred, because it lets
+    // the hexagon texture show through; without one the regular hero art
+    // fills the half instead. The role hexagon only appears when the hero has
+    // a role and the app has an icon for it.
+    function renderHalf(art, role, roleIcon, name, heroName) {
       art.querySelectorAll('img').forEach((image) => image.remove());
-      extra.innerHTML = '';
+      art.classList.remove('hero-half__art--cutout');
 
-      const heroName = bans[0] || '';
       name.textContent = heroName || '-';
-      if (!heroName) return;
 
-      const portraitUrl = heroPortraits[heroName];
-      if (portraitUrl) {
+      const cutout = heroName ? heroTransparent[heroName] : null;
+      const fallback = heroName ? heroPortraits[heroName] : null;
+      const source = cutout || fallback;
+      if (source) {
         const img = document.createElement('img');
-        img.src = portraitUrl;
-        img.loading = 'lazy';
+        img.src = source;
         img.alt = heroName;
-        art.insertBefore(img, art.firstChild);
+        if (cutout) {
+          art.classList.add('hero-half__art--cutout');
+        }
+        art.appendChild(img);
       }
 
-      bans.slice(1).forEach((extraName) => {
-        const extraUrl = heroPortraits[extraName];
-        if (!extraUrl) return;
-        const img = document.createElement('img');
-        img.src = extraUrl;
-        img.loading = 'lazy';
-        img.alt = extraName;
-        img.title = extraName;
-        extra.appendChild(img);
-      });
+      const slug = heroName ? heroRoles[heroName] : null;
+      const icon = slug ? roleIcons[slug] : null;
+      if (icon) {
+        roleIcon.src = icon;
+        roleIcon.alt = slug;
+        role.hidden = false;
+      } else {
+        roleIcon.removeAttribute('src');
+        role.hidden = true;
+      }
     }
 
     function updateHeroBans(teamABans, teamBBans) {
-      renderBanPanel(el.homePanelArt, el.homePanelExtra, el.homePanelName, teamABans);
-      renderBanPanel(el.awayPanelArt, el.awayPanelExtra, el.awayPanelName, teamBBans);
+      renderHalf(el.homeArt, el.homeRole, el.homeRoleIcon, el.homeName, teamABans[0] || '');
+      renderHalf(el.awayArt, el.awayRole, el.awayRoleIcon, el.awayName, teamBBans[0] || '');
     }
 
     function updateBanOrder(firstBan) {
-      // The team that banned first carries the 1ST BAN tag, the other one
+      // The team that banned first carries the 1ST BAN label, the other one
       // carries 2ND BAN.
       if (firstBan === 'B') {
-        el.homePanelTag.textContent = '2ND BAN';
-        el.awayPanelTag.textContent = '1ST BAN';
+        el.homeOrder.textContent = '2ND BAN';
+        el.awayOrder.textContent = '1ST BAN';
       } else {
-        el.homePanelTag.textContent = '1ST BAN';
-        el.awayPanelTag.textContent = '2ND BAN';
+        el.homeOrder.textContent = '1ST BAN';
+        el.awayOrder.textContent = '2ND BAN';
       }
+    }
+
+    // The ban order is labelled in the colour of the team that made the ban.
+    function applyTeamColour(order, colour) {
+      order.style.color = colour || 'var(--fgc-accent)';
     }
 
     function connect() {
@@ -611,7 +509,7 @@
     }
 
     // === OVERLAY THEME ===
-    // The app sends the active theme as a 	heme message. Its 	okens are
+    // The app sends the active theme as a `theme` message. Its `tokens` are
     // the complete set of CSS custom properties to override, so a property
     // applied by an earlier theme and missing from this set is removed again.
     // That is what restores the stylesheet defaults when the theme changes.
@@ -641,96 +539,51 @@
         applyTheme(d.theme);
       }
 
-
       if (data.type === 'init' && d.scoreboard) {
         return updateOverlay({ type: 'heroBans', data: d.scoreboard });
       }
 
       if (data.type === 'scoreboard' || data.type === 'gameOverlay' || data.type === 'heroBans') {
-        // Team colors
-        if (d.teamColorsEnabled !== undefined) {
-          teamColorsEnabled = d.teamColorsEnabled;
-        }
-
-        // Team data
-        if (d.teamA) {
-          if (d.teamA.logoUrl) {
-            el.homeLogo.style.backgroundImage = `url(${d.teamA.logoUrl})`;
-          }
-          el.homeName.textContent = d.teamA.name || 'HOME TEAM';
-          el.homeScore.textContent = d.scoreA || 0;
-          if (teamColorsEnabled && d.teamA.color) {
-            el.homeSection.style.backgroundColor = d.teamA.color;
-            el.homeName.style.color = getContrastColor(d.teamA.color);
-          } else {
-            el.homeSection.style.backgroundColor = 'var(--fgc-surface)';
-            el.homeName.style.color = '';
-          }
-        }
-
-        if (d.teamB) {
-          if (d.teamB.logoUrl) {
-            el.awayLogo.style.backgroundImage = `url(${d.teamB.logoUrl})`;
-          }
-          el.awayName.textContent = d.teamB.name || 'AWAY TEAM';
-          el.awayScore.textContent = d.scoreB || 0;
-          if (teamColorsEnabled && d.teamB.color) {
-            el.awaySection.style.backgroundColor = d.teamB.color;
-            el.awayName.style.color = getContrastColor(d.teamB.color);
-          } else {
-            el.awaySection.style.backgroundColor = 'var(--fgc-surface)';
-            el.awayName.style.color = '';
-          }
-        }
-
-        // First to
-        if (d.firstTo) {
-          el.firstToText.textContent = `FIRST TO ${d.firstTo}`;
-        }
-
-        // Current map index, used for the ban slots and the map strip.
+        // Current map index, used to pick the ban slots.
         if (d.currentMapIndex !== undefined && d.currentMapIndex !== null) {
           currentMapIndex = d.currentMapIndex;
         }
 
-        // Hero bans
-        if (d.heroBans && Array.isArray(d.heroBans)) {
-          const currentMapBans = d.heroBans[currentMapIndex] || { firstBanTeam: null, teamA: [], teamB: [] };
-          firstBanTeam = currentMapBans.firstBanTeam;
-          updateHeroBans(currentMapBans.teamA, currentMapBans.teamB);
-          updateBanOrder(firstBanTeam);
-        }
-
-        // Hero portraits
+        // Hero art and roles.
         if (d.heroPortraits) {
           heroPortraits = d.heroPortraits;
-          // Re-render bans if we already have data
-          if (d.heroBans) {
-            const currentMapBans = d.heroBans[currentMapIndex] || { teamA: [], teamB: [] };
-            updateHeroBans(currentMapBans.teamA, currentMapBans.teamB);
-          }
+        }
+        if (d.heroTransparent) {
+          heroTransparent = d.heroTransparent;
+        }
+        if (d.heroRoles) {
+          heroRoles = d.heroRoles;
+        }
+        if (d.roleIcons) {
+          roleIcons = d.roleIcons;
         }
 
-        // Map strip: the mode and the map name sit in the bottom strip, never
-        // over the hero art.
-        el.mapIndex.textContent = `MAP ${currentMapIndex + 1}`;
-        el.mapName.textContent = d.currentMap || 'TBD';
-        const modeName = d.mapType || '';
-        el.mapMode.textContent = modeName.toUpperCase();
-        // The icon map is keyed by the lower-case mode name, while the match
-        // stores the mode as it was typed.
-        const modeIcon = modeName ? (d.gameModeIcons || {})[modeName.toLowerCase()] : null;
-        el.mapModeIcon.style.backgroundImage = modeIcon ? `url(${modeIcon})` : '';
+        // Team logos and the colour of the ban order.
+        if (d.teamA) {
+          el.homeLogo.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : '';
+          applyTeamColour(el.homeOrder, d.teamA.color);
+        }
+        if (d.teamB) {
+          el.awayLogo.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : '';
+          applyTeamColour(el.awayOrder, d.teamB.color);
+        }
+
+        // Hero bans.
+        const currentMapBans = (d.heroBans && d.heroBans[currentMapIndex])
+          || { firstBanTeam: null, teamA: [], teamB: [] };
+        updateHeroBans(currentMapBans.teamA || [], currentMapBans.teamB || []);
+        updateBanOrder(currentMapBans.firstBanTeam);
 
         document.fonts.ready.then(fitHeroBanText);
 
         if (!animationsTriggered) {
           triggerAnimations();
           animationsTriggered = true;
-        } else {
-          el.header.style.opacity = '1';
-          el.heroBansSection.style.opacity = '1';
-          el.mapStrip.style.opacity = '1';
         }
       }
 

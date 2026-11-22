@@ -35,6 +35,8 @@ fn asset(
         added_at: None,
         icon: None,
         portrait: None,
+        transparent: None,
+        role: None,
         game_mode: None,
         attachment: None,
     }

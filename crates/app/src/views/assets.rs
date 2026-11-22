@@ -6,7 +6,7 @@
 //! collection reclaim the bytes after the next save.
 
 use dioxus::prelude::*;
-use fgc_core::{Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin};
+use fgc_core::{Asset as CoreAsset, AssetCategory, AssetId, AssetOrigin, Role};
 
 use crate::components::asset_picker::AssetThumb;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
@@ -74,7 +74,7 @@ pub fn AssetsView() -> Element {
         .cloned()
         .collect();
 
-    let (property_asset, property_icon) = {
+    let (property_asset, property_icon, property_transparent) = {
         let assets = &state.read().assets;
         let asset = property_target()
             .and_then(|id| assets.iter().find(|candidate| candidate.id == id).cloned());
@@ -82,7 +82,11 @@ pub fn AssetsView() -> Element {
             .as_ref()
             .and_then(|asset| asset.icon.as_ref())
             .and_then(|id| assets.iter().find(|candidate| &candidate.id == id).cloned());
-        (asset, icon)
+        let transparent = asset
+            .as_ref()
+            .and_then(|asset| asset.transparent.as_ref())
+            .and_then(|id| assets.iter().find(|candidate| &candidate.id == id).cloned());
+        (asset, icon, transparent)
     };
 
     let preview_url = use_resource(move || {
@@ -365,6 +369,68 @@ pub fn AssetsView() -> Element {
                                         move |_| store.clear_hero_ban_icon(hero_id.clone())
                                     },
                                     "Remove ban icon"
+                                }
+                            }
+                        }
+                    }
+                    div { class: "fgc-asset-properties__section",
+                        h3 { "Transparent art" }
+                        if let Some(transparent) = property_transparent.clone() {
+                            div { class: "fgc-asset-properties__icon",
+                                AssetThumb {
+                                    asset: transparent,
+                                    class: "fgc-asset-properties__icon-image".to_owned(),
+                                }
+                                p { class: "fgc-note", "Uploaded for this hero. The hero bans overlay uses it instead of the regular art." }
+                            }
+                        } else {
+                            p { class: "fgc-note", "No transparent art yet. The regular hero art is used." }
+                        }
+                        div { class: "fgc-actions",
+                            Button {
+                                variant: ButtonVariant::Outline,
+                                size: ButtonSize::Sm,
+                                disabled: busy,
+                                onclick: {
+                                    let hero_id = asset.id.clone();
+                                    move |_| store.upload_hero_transparent(hero_id.clone())
+                                },
+                                if property_transparent.is_some() { "Replace transparent art…" } else { "Upload transparent art…" }
+                            }
+                            if property_transparent.is_some() {
+                                Button {
+                                    variant: ButtonVariant::Ghost,
+                                    size: ButtonSize::Sm,
+                                    onclick: {
+                                        let hero_id = asset.id.clone();
+                                        move |_| store.clear_hero_transparent(hero_id.clone())
+                                    },
+                                    "Remove transparent art"
+                                }
+                            }
+                        }
+                    }
+                    div { class: "fgc-asset-properties__section",
+                        h3 { "Role" }
+                        p { class: "fgc-note", "The hero bans overlay shows the role hexagon above the hero name." }
+                        select {
+                            class: "fgc-native-select",
+                            aria_label: "Hero role",
+                            value: asset.role.map(|role| role.slug().to_owned()).unwrap_or_default(),
+                            onchange: move |event| {
+                                let hero_id = asset.id.clone();
+                                let slug = event.value();
+                                let role = Role::ALL
+                                    .into_iter()
+                                    .find(|role| role.slug() == slug);
+                                store.set_hero_role(hero_id, role);
+                            },
+                            option { value: "", selected: asset.role.is_none(), "No role" }
+                            for role in Role::ALL {
+                                option {
+                                    value: role.slug(),
+                                    selected: asset.role == Some(role),
+                                    "{role.label()}"
                                 }
                             }
                         }

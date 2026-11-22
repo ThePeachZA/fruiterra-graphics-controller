@@ -223,6 +223,8 @@ fn hero_icons_fall_back_to_art_without_an_icon_link() {
         added_at: None,
         icon: None,
         portrait: None,
+        transparent: None,
+        role: None,
         game_mode: None,
         attachment: None,
     });
@@ -519,6 +521,8 @@ fn hero_art_prefers_a_portrait_link() {
         added_at: None,
         icon: None,
         portrait: Some(AssetId::from_raw("asset-portrait-a")),
+        transparent: None,
+        role: None,
         game_mode: None,
         attachment: None,
     });

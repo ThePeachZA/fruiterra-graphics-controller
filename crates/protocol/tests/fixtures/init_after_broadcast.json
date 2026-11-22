@@ -71,6 +71,8 @@
       "heroPortraits": {
         "Ana": "http://127.0.0.1:3001/assets/1818181818181818181818181818181818181818181818181818181818181818.png"
       },
+      "heroTransparent": {},
+      "heroRoles": {},
       "loserPicks": true,
       "mapPool": [
         "Nepal",
@@ -312,6 +314,8 @@
       "heroPortraits": {
         "Ana": "http://127.0.0.1:3001/assets/1818181818181818181818181818181818181818181818181818181818181818.png"
       },
+      "heroTransparent": {},
+      "heroRoles": {},
       "loserPicks": true,
       "mapPool": [
         "Nepal",
@@ -553,6 +557,8 @@
       "heroPortraits": {
         "Ana": "http://127.0.0.1:3001/assets/1818181818181818181818181818181818181818181818181818181818181818.png"
       },
+      "heroTransparent": {},
+      "heroRoles": {},
       "loserPicks": true,
       "mapPool": [
         "Nepal",
@@ -805,6 +811,8 @@
       "heroPortraits": {
         "Ana": "http://127.0.0.1:3001/assets/1818181818181818181818181818181818181818181818181818181818181818.png"
       },
+      "heroTransparent": {},
+      "heroRoles": {},
       "loserPicks": true,
       "mapPool": [
         "Nepal",
@@ -1046,6 +1054,8 @@
       "heroPortraits": {
         "Ana": "http://127.0.0.1:3001/assets/1818181818181818181818181818181818181818181818181818181818181818.png"
       },
+      "heroTransparent": {},
+      "heroRoles": {},
       "loserPicks": true,
       "mapPool": [
         "Nepal",

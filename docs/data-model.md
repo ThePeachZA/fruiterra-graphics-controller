@@ -112,7 +112,7 @@ pub struct MatchTalent {
 // ---------- assets ----------
 pub enum AssetCategory { Logo, Portrait, Map, Hero, GameMode, Role, Side }
 
-pub enum AssetAttachmentKind { HeroBanIcon }
+pub enum AssetAttachmentKind { HeroBanIcon, HeroTransparent }
 
 pub struct AssetAttachment {
     pub owner: AssetId,              // asset that owns this file
@@ -131,6 +131,8 @@ pub struct Asset {
     // Optional per-category extras kept only where used:
     pub icon: Option<AssetId>,       // hero → attached ban icon
     pub portrait: Option<AssetId>,   // hero portrait
+    pub transparent: Option<AssetId>, // hero → transparent cut-out art
+    pub role: Option<Role>,          // hero → role (tank | damage | support)
     pub game_mode: Option<AssetId>,  // map → game mode
     pub attachment: Option<AssetAttachment>, // hidden media owned by another asset
 }
@@ -227,7 +229,9 @@ pub struct Settings {
 - `MapSlot.game_mode_manual` (`gameModeManual` on the wire, `#[serde(default)]`) records a mode typed by the owner. Game-mode changes skip these slots; changing the map name derives a fresh mode from the map's game mode and clears the flag. Older state files load with the flag set to `false`.
 - `MapSlot.user_added` (`userAdded` on the wire, `#[serde(default)]`) records a slot created with **+ Add map**. It keeps an otherwise empty tiebreaker from being trimmed on load. Older state files load with the flag set to `false`.
 - `Asset.game_mode` is the map's game mode and is edited inline on the map card. `Asset.icon` points at a hero's ban icon and is edited from the hero's **Properties…** dialog.
-- `Asset.attachment` (`attachment` on the wire, `#[serde(default)]`) marks media owned by another asset. `kind: "heroBanIcon"` is the first variant; attached files are hidden from the library and pickers and are deleted with their owner. No schema version change was needed.
+- `Asset.transparent` (`transparent` on the wire, `#[serde(default)]`) points at a transparent cut-out of a hero, used by the hero bans overlay. It is uploaded from the hero's **Properties…** dialog and falls back to the regular hero art when it is missing.
+- `Asset.role` (`role` on the wire, `#[serde(default)]`) is the hero's role, one of `tank`, `damage` or `support`. It is picked from the hero's **Properties…** dialog and drawn as a hexagon on the hero bans overlay.
+- `Asset.attachment` (`attachment` on the wire, `#[serde(default)]`) marks media owned by another asset. `kind: "heroBanIcon"` is the first variant and `kind: "heroTransparent"` the second; attached files are hidden from the library and pickers and are deleted with their owner. No schema version change was needed.
 - `Team.record` is `Option<String>` internally; the wire DTO substitutes `"0-0"` exactly as the original does.
 - Timer state (running/seconds) is **ephemeral runtime state**, not persisted — matching the original. Only timer *settings* persist.
 - Asset lookup is case-insensitive by `name` for maps/heroes/game modes, matching the original `find` calls.

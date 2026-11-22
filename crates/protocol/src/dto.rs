@@ -112,6 +112,10 @@ pub struct ScoreboardDto {
     pub hero_icons: std::collections::BTreeMap<String, String>,
     /// Hero portraits keyed by case-sensitive hero name.
     pub hero_portraits: std::collections::BTreeMap<String, String>,
+    /// Transparent hero art keyed by case-sensitive hero name.
+    pub hero_transparent: std::collections::BTreeMap<String, String>,
+    /// Hero roles keyed by case-sensitive hero name; the value is the role slug.
+    pub hero_roles: std::collections::BTreeMap<String, String>,
     /// Attack and defend icons; values may be `null`.
     pub side_icons: SideIconsDto,
     /// Role icons keyed by both lower-case and original-case role name.

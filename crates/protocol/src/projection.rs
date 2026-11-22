@@ -92,6 +92,8 @@ impl<'a> Projector<'a> {
                 BTreeMap::new()
             },
             hero_portraits: self.hero_portraits(match_state),
+            hero_transparent: self.hero_transparent(match_state),
+            hero_roles: self.hero_roles(match_state),
             side_icons: self.side_icons(),
             role_icons: self.role_icons(),
             team_a_players: self.players(team_a),
@@ -468,37 +470,75 @@ impl<'a> Projector<'a> {
     }
 
     fn hero_portraits(&self, match_state: &Match) -> BTreeMap<String, String> {
-        let banned: BTreeSet<&str> = match_state
-            .hero_bans
-            .iter()
-            .flat_map(|bans| {
-                bans.team_a
-                    .iter()
-                    .chain(bans.team_b.iter())
-                    .map(String::as_str)
-            })
-            .collect();
-
-        let icon_ids = self.icon_asset_ids();
-        let icon_identities = self.icon_identities();
+        let banned = banned_hero_names(match_state);
 
         let mut portraits = BTreeMap::new();
-        for asset in self.catalog.in_category(AssetCategory::Hero) {
-            // Ban icons are for `game-overlay.html` only. Skip attached icons,
-            // legacy linked icons and duplicate files with the same bytes.
-            if icon_ids.contains(asset.id.as_str())
-                || icon_identities.contains(&(asset.hash.clone(), asset.ext.clone()))
-            {
-                continue;
-            }
-            if !banned.contains(asset.name.as_str()) {
-                continue;
-            }
+        for (name, asset) in self.banned_heroes(&banned) {
             if let Some(url) = self.hero_art_url(asset) {
-                portraits.insert(asset.name.clone(), url);
+                portraits.insert(name.to_owned(), url);
             }
         }
         portraits
+    }
+
+    /// The transparent cut-out art of the banned heroes, keyed by hero name.
+    ///
+    /// A hero may link a transparent image for the hero bans overlay. The
+    /// overlay falls back to the square art when the link is absent.
+    fn hero_transparent(&self, match_state: &Match) -> BTreeMap<String, String> {
+        let banned = banned_hero_names(match_state);
+
+        let mut transparent = BTreeMap::new();
+        for (name, asset) in self.banned_heroes(&banned) {
+            let Some(id) = asset.transparent.as_ref() else {
+                continue;
+            };
+            let Some(linked) = self.catalog.get(id) else {
+                continue;
+            };
+            let Some(url) = self.resolver.url(linked) else {
+                continue;
+            };
+            transparent.insert(name.to_owned(), url);
+        }
+        transparent
+    }
+
+    /// The roles of the banned heroes, keyed by hero name.
+    ///
+    /// The value is the role slug (`tank`, `damage` or `support`), which the
+    /// overlay resolves against the role icons.
+    fn hero_roles(&self, match_state: &Match) -> BTreeMap<String, String> {
+        let banned = banned_hero_names(match_state);
+
+        let mut roles = BTreeMap::new();
+        for (name, asset) in self.banned_heroes(&banned) {
+            let Some(role) = asset.role else {
+                continue;
+            };
+            roles.insert(name.to_owned(), role.slug().to_owned());
+        }
+        roles
+    }
+
+    /// The selectable hero assets the match bans.
+    ///
+    /// Ban icons, transparent art and duplicate files with the same bytes are
+    /// not selectable heroes, so they are skipped. The owning hero resolves
+    /// them through its own links.
+    fn banned_heroes(&self, banned: &BTreeSet<&str>) -> Vec<(&str, &fgc_core::Asset)> {
+        let icon_ids = self.icon_asset_ids();
+        let icon_identities = self.icon_identities();
+
+        self.catalog
+            .in_category(AssetCategory::Hero)
+            .filter(|asset| {
+                !icon_ids.contains(asset.id.as_str())
+                    && !icon_identities.contains(&(asset.hash.clone(), asset.ext.clone()))
+                    && banned.contains(asset.name.as_str())
+            })
+            .map(|asset| (asset.name.as_str(), asset))
+            .collect()
     }
 
     fn side_icons(&self) -> SideIconsDto {
@@ -604,6 +644,20 @@ fn hero_bans(match_state: &Match) -> Vec<HeroBansDto> {
             first_ban_team: bans.first_ban_team,
             team_a: bans.team_a.clone(),
             team_b: bans.team_b.clone(),
+        })
+        .collect()
+}
+
+/// The names of every hero the match bans.
+fn banned_hero_names(match_state: &Match) -> BTreeSet<&str> {
+    match_state
+        .hero_bans
+        .iter()
+        .flat_map(|bans| {
+            bans.team_a
+                .iter()
+                .chain(bans.team_b.iter())
+                .map(String::as_str)
         })
         .collect()
 }

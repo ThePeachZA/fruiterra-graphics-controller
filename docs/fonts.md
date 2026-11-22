@@ -70,9 +70,9 @@ family it does not own silently loses the weight it asks for.
 
 | Tier | Weight | Alias | Used for |
 |---|---|---|---|
-| Display | 900 | `FGC Display Black` | The biggest headline on a screen: the map pool header, the map select title, a roster team name |
-| Strong | 600 | `FGC Display SemiBold` | A score, a count or a map name: the game overlay score and title, the hero bans first-to count and map name, the map select name and score, the map pool map name, the timer value |
-| Body | 500 | `FGC Display Medium` | A person's or team's name, and every label: the game overlay name, the hero bans panel name and ban tag, the roster and talent names, social role tags |
+| Display | 900 | `FGC Display Black` | The biggest headline on a screen: the map pool header, the map select title, a roster team name, the hero bans hero name |
+| Strong | 600 | `FGC Display SemiBold` | A score, a count or a map name: the game overlay score and title, the map select name and score, the map pool map name, the timer value |
+| Body | 500 | `FGC Display Medium` | A person's or team's name, and every label: the game overlay name, the hero bans ban order and role tag, the roster and talent names, social role tags |
 | Secondary | 400 | `FGC Display` | Small supporting text that should recede |
 | Quiet | 300 | `FGC Display Light` | Handles, pronouns and separators |
 

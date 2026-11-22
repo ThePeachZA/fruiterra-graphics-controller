@@ -32,12 +32,17 @@ actions.
 
 ### What does the hero bans overlay show?
 
-Two large hero-art panels side by side, one per team, for the map that is
-currently selected. Each panel carries a `1ST BAN` or `2ND BAN` tag so you can
-see which team banned first, and the hero's name sits in a band under the art.
-The game mode and the map name are in a dark strip along the bottom, not over
-the hero art. If a team banned more than one hero, the extra portraits sit in
-the corner of the panel.
+The banned heroes for the map that is currently selected, as two full-bleed
+halves of the screen. The hero art fills each half, the team logo sits in the
+outer top corner, and the role hexagon and the hero's name sit over the lower
+half of the art. Under the name the ban order is written in that team's
+colour, so you can see at a glance which team banned first.
+
+Give a hero a **transparent cut-out** in the Assets tab and the overlay uses it
+instead of the regular hero art, so the hexagon texture shows through behind
+the hero. Give the hero a **role** and the role hexagon appears above the
+name. Both are optional; without them the overlay falls back to the regular
+art and hides the role hexagon.
 
 ### Which overlay shows which people?
 

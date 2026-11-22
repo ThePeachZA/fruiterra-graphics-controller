@@ -96,6 +96,8 @@ All five carry **the identical scoreboard payload**. The type name selects the s
     "gameModeIcons": { "control": "<url>", "push": "<url>" },
     "heroIcons": { "Ana": "<url>" },
     "heroPortraits": { "Ana": "<url>" },
+    "heroTransparent": { "Ana": "<url>" },
+    "heroRoles": { "Ana": "support" },
     "sideIcons": { "attack": "<url>", "defend": "<url>" },
     "roleIcons": { "tank": "<url>", "Tank": "<url>" },
     "teamAPlayers": [
@@ -167,6 +169,7 @@ All five carry **the identical scoreboard payload**. The type name selects the s
 | `roleIcons` | Keyed by both lower-case and original-case role name. |
 | `gameModeIcons` | Keyed by lower-case mode name. |
 | `heroIcons` / `heroPortraits` | Keyed by hero **name**, case-sensitive. |
+| `heroTransparent` / `heroRoles` | Keyed by hero **name**, case-sensitive. `heroTransparent` holds a transparent cut-out and is empty for a hero without one. `heroRoles` holds the role slug (`tank`, `damage`, `support`) and is empty for a hero without a role. |
 | `maps[].type` | Game mode display string, not the map name. |
 | `mapPoolData[].modeIcons` | Always an array (0 or 1 entries), never a string. |
 | `mapPoolData` ordering | Alphabetical, except `Flashpoint` and `Push` last. |

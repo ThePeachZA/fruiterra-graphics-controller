@@ -4231,3 +4231,79 @@ were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A1
 and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` was `No serve config`. The temporary QA harness lives
 outside the repository and is removed when the overlay review work completes.
+
+### A68 - Hero bans full-bleed redesign
+
+**Covers:** owner request 2026-11-22, slice I, `hero-bans.html`,
+`Asset.transparent`, `Asset.role`
+
+**Steps:**
+
+1. `dx build --desktop` after stopping any running `fruiterra-gc`, then launch
+   the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Restore
+   the authoritative `app.json`/`app.json.bak` fixture before and after the run.
+2. Build a QA fixture with the hero assets named **Ana** and **Kiriko**: give
+   Ana a `transparent` link and a `role` of `support`, give Kiriko a `role` of
+   `damage`, name the map slots (Ilios/Control current, Nepal/Push, King's
+   Row/Escort, Dorado/Control), set `currentMap` to the first slot and fill
+   `heroBans[0]` with `{ firstBanTeam: 'A', teamA: ['Ana'], teamB: ['Kiriko'] }`.
+   Give the two teams distinct colours so the ban labels can be told apart.
+3. Open `hero-bans.html` at 1920x1080 over CDP, wait for the two
+   `.hero-half__art img` elements, settle, then sample the geometry of both
+   halves, the centre banner, the team logos, the role hexagons, the names and
+   the ban labels, plus the computed texture and scrim.
+4. Confirm the two halves fill the width with the 110px banner between them,
+   that the team logo sits in the outer top corner of each half, that the role
+   hexagon is a 60x68 hexagon with a loaded icon, that the name sits over the
+   lower half of the art in the Display face, and that the ban order is
+   written in the colour of the team that made the ban.
+5. Confirm the transparent art is preferred over the regular art when the
+   hero has one, and that the regular art is the fallback when it does not.
+6. Record the transparency, document size, font state, requests, failed
+   responses and console errors. Stop the app, restore the authoritative
+   fixture and recheck its hashes and `tailscale serve status`.
+
+**Gotchas:**
+
+- The QA fixture can only point the transparent slot at a blob that is already
+  in the asset store, and the store holds the regular hero art. The check
+  therefore proves the overlay **prefers** the transparent slot - it does not
+  prove that a real cut-out renders.
+- The harness log has other lines around the JSON report, so the block has to
+  be located with `text.lastIndexOf('{', text.indexOf('"opened"'))` up to
+  `text.lastIndexOf('}')` before it can be parsed.
+- The hexagon texture is a masked background colour, so the computed
+  `background-color` is the accent and the mask is the SVG data URI. Read the
+  mask and the opacity, not the background image.
+- `roleIcons` is keyed by both the lower-case slug and the original asset
+  name, so `roleIcons['support']` resolves.
+
+**Evidence:** CDP DOM and computed-style JSON for the half geometry, the
+logos, the role hexagons, the names, the ban labels, the texture and the
+scrim; the wire payload; the network and console capture; no screenshots were
+taken or published.
+
+**Result: Pass - assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app and the overlay page. The home half measured x = 0, width 905, height
+1080, the centre banner x = 905, width 110, and the away half x = 1015, width
+905, right edge 1920. The home logo sat at x = 43, y = 43, 100x100 and the
+away logo at x = 1777, right edge 1877, both on a `rgb(11, 13, 18)` plate. The
+role hexagons measured 60x68 at y = 786 with the hexagon `clip-path`, showing
+the support icon on the home half and the damage icon on the away half. The
+names read Ana and Kiriko in `"FGC Display Black", "Apotek Black", sans-serif`
+at 92px in `rgb(238, 242, 248)`. The ban labels read `1ST BAN` and `2ND BAN`
+in `"FGC Display Medium", "Apotek Medium", sans-serif`, coloured
+`rgb(0, 200, 255)` and `rgb(255, 45, 149)`, exactly the two team colours. The
+home art took `heroTransparent.Ana` with `object-fit: contain` and
+`object-position: 50% 100%`; the away art took `heroPortraits.Kiriko` with
+`object-fit: cover`. The texture computed to the accent at `opacity: 0.14`
+with the SVG hexagon mask and the scrim to
+`linear-gradient(to top, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.42) 24%, rgba(0, 0, 0, 0) 56%)`.
+The old chrome was gone: no `#header`, no `#map-strip` and no `.hero-panel`.
+The overlay had a transparent `rgba(0, 0, 0, 0)` body, a 1920x1080 document,
+its bundled fonts loaded, and recorded 0 external requests, 0 failed
+responses and 0 console errors. The authoritative hashes were restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` was `No serve config`.

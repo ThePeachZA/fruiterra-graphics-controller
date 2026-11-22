@@ -66,6 +66,8 @@ pub fn asset(id: &str, hash: &str, ext: &str) -> Asset {
         added_at: None,
         icon: None,
         portrait: None,
+        transparent: None,
+        role: None,
         game_mode: None,
         attachment: None,
     }

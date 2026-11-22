@@ -1241,6 +1241,7 @@ on top of it afterwards.
 | F | Hero bans: bigger redesign - two large hero-art panels with `1ST BAN` / `2ND BAN` tags and the mode and map name in a dark bottom strip | **Done - A65** |
 | G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | **Done - A66** |
 | H | Font weights: align every overlay to one type scale and fix the weights that were being ignored | **Done - A67** |
+| I | Hero bans: a full-bleed OWWC27 layout with the team logo in the corner, the role hexagon, the hero name over the art and the ban order in the team colour | **Done - A68** |
 
 The theme model was chosen as a **built-in Light theme plus JSON import**: the
 app ships the dark Night Broadcast theme and a Light theme, and the user can
@@ -1496,3 +1497,42 @@ game overlay bar name and bar score that had been rendering at Regular, and
 every computed `font-weight` came back `400` normal, which is the rule working
 as intended. The overlays stayed transparent, 1920×1080 and free of external
 requests, failed responses and console errors.
+
+### Slice I - the OWWC27 hero bans redesign (A68, 2026-11-22)
+
+The owner was not happy with the hero bans screen: too many elements were on
+it. Following the OWWC27 reference, the screen is now two full-bleed halves
+with the hero art filling the frame, the team logo in the outer top corner, a
+role hexagon, the hero name hovering over the lower half of the art and the
+ban order underneath it in the colour of the team that made the ban.
+
+The old header (team names, logos, scores and FIRST TO) and the bottom map
+strip are gone. The map and mode stay on the map select overlay, where they
+already were.
+
+Two new pieces of hero data make the reference possible:
+
+- **`Asset.transparent`** - a link to a transparent cut-out of the hero. The
+  overlay prefers it and falls back to the regular hero art when it is
+  missing, so a hero with no cut-out still renders.
+- **`Asset.role`** - the hero's role, shown as the hexagon. There was no
+  hero-to-role data anywhere before, so this is a new field on the hero asset
+  itself, edited from the hero's **Properties** dialog.
+
+Both travel on the scoreboard payload as `heroTransparent` and `heroRoles`,
+keyed by the hero name, next to the existing `heroPortraits` and `heroIcons`.
+
+The background is a restrained hexagon texture: a masked accent-coloured fill
+at 14% opacity over the two halves and the centre banner. Because it is a
+masked background colour rather than an image, it follows the theme accent.
+
+A68 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the two halves measured 905px each with a 110px centre banner and
+reached the full 1080px height, the home logo sat at x = 43 and the away logo
+at x = 1777 so each is in its outer corner, the role hexagon resolved to the
+support and damage icons, the names rendered at 92px in the Display face, and
+the ban labels rendered in the two team colours. The transparent slot was
+preferred for the home hero and the regular art was used for the away hero.
+The overlay stayed transparent, 1920x1080 and free of external requests, failed
+responses and console errors.

@@ -1847,6 +1847,157 @@ impl AppStore {
         self.notify("Ban icon removed.");
     }
 
+    /// Uploads a transparent cut-out for a hero.
+    ///
+    /// The file is stored as an attached Hero asset, so it never appears in the
+    /// library or in another hero's picker. Any previous attached cut-out is
+    /// removed; a legacy library image is only unlinked, never deleted.
+    pub fn upload_hero_transparent(&self, hero_id: AssetId) {
+        let Some(hero) = self
+            .state
+            .peek()
+            .assets
+            .iter()
+            .find(|asset| asset.id == hero_id)
+            .cloned()
+        else {
+            self.report_error("That hero is unavailable.");
+            return;
+        };
+        if hero.is_attachment() || hero.origin == AssetOrigin::Bundled {
+            self.report_error("Bundled heroes cannot be edited.");
+            return;
+        }
+        if self.asset_busy() {
+            return;
+        }
+        let Some(asset_store) = self.asset_store.peek().clone() else {
+            self.report_error("Asset storage is unavailable.");
+            return;
+        };
+
+        let previous_transparent = hero.transparent.clone();
+        let transparent_name = format!("{} transparent", hero.name);
+        self.set_asset_busy(true);
+        let this = *self;
+        spawn(async move {
+            let picked = tokio::task::spawn_blocking(crate::assets_io::pick_image_file).await;
+            let path = match picked {
+                Ok(Some(path)) => path,
+                Ok(None) => {
+                    this.set_asset_busy(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The file picker failed: {error}"));
+                    this.set_asset_busy(false);
+                    return;
+                }
+            };
+
+            let read = tokio::task::spawn_blocking(move || read_image_file(&path)).await;
+            let (_, bytes, filename) = match read {
+                Ok(Ok(value)) => value,
+                Ok(Err(error)) => {
+                    this.report_error(error);
+                    this.set_asset_busy(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The file read task failed: {error}"));
+                    this.set_asset_busy(false);
+                    return;
+                }
+            };
+
+            let inserted = tokio::task::spawn_blocking(move || {
+                asset_store.insert(transparent_name, AssetCategory::Hero, &bytes, filename)
+            })
+            .await;
+            match inserted {
+                Ok(Ok(mut outcome)) => {
+                    outcome.asset.attachment =
+                        Some(AssetAttachment::hero_transparent(hero_id.clone()));
+                    let new_id = outcome.asset.id.clone();
+                    this.mutate(move |state| {
+                        if let Some(previous) = previous_transparent.as_ref() {
+                            remove_attached_asset(
+                                state,
+                                previous,
+                                &hero_id,
+                                AssetAttachmentKind::HeroTransparent,
+                            );
+                        }
+                        if let Some(hero) =
+                            state.assets.iter_mut().find(|asset| asset.id == hero_id)
+                        {
+                            hero.transparent = Some(new_id);
+                        }
+                        state.assets.push(outcome.asset);
+                    });
+                    this.refresh_unused();
+                    this.notify("Transparent art updated for this hero.");
+                }
+                Ok(Err(error)) => this.report_error(format!("Could not upload the image: {error}")),
+                Err(error) => this.report_error(format!("The upload task failed: {error}")),
+            }
+            this.set_asset_busy(false);
+        });
+    }
+
+    /// Removes a hero's transparent cut-out and deletes it when it is attached.
+    pub fn clear_hero_transparent(&self, hero_id: AssetId) {
+        let previous_transparent = self
+            .state
+            .peek()
+            .assets
+            .iter()
+            .find(|asset| asset.id == hero_id)
+            .and_then(|hero| hero.transparent.clone());
+        let Some(previous_transparent) = previous_transparent else {
+            return;
+        };
+
+        self.mutate(move |state| {
+            remove_attached_asset(
+                state,
+                &previous_transparent,
+                &hero_id,
+                AssetAttachmentKind::HeroTransparent,
+            );
+            if let Some(hero) = state.assets.iter_mut().find(|asset| asset.id == hero_id) {
+                hero.transparent = None;
+            }
+        });
+        self.refresh_unused();
+        self.notify("Transparent art removed.");
+    }
+
+    /// Sets the role of a hero, shown as a hexagon on the hero bans overlay.
+    ///
+    /// Passing `None` clears the role, and the overlay then hides the hexagon.
+    pub fn set_hero_role(&self, hero_id: AssetId, role: Option<Role>) {
+        let changed = self
+            .state
+            .peek()
+            .assets
+            .iter()
+            .find(|asset| asset.id == hero_id)
+            .is_some_and(|hero| hero.role != role);
+        if !changed {
+            return;
+        }
+        self.mutate(move |state| {
+            if let Some(hero) = state.assets.iter_mut().find(|asset| asset.id == hero_id) {
+                hero.role = role;
+            }
+        });
+        self.notify(match role {
+            Some(role) => format!("Role set to {}.", role.label()),
+            None => "Role cleared.".to_owned(),
+        });
+    }
+
     /// Sets the game mode on a map asset.
     ///
     /// Passing `None` clears the tag and moves the map back to **Other**. Every
@@ -2707,6 +2858,9 @@ pub fn clear_asset_references(state: &mut AppState, id: &AssetId) {
         }
         if asset.game_mode.as_ref() == Some(id) {
             asset.game_mode = None;
+        }
+        if asset.transparent.as_ref() == Some(id) {
+            asset.transparent = None;
         }
     }
 

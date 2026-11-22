@@ -351,56 +351,97 @@ fn map_select_card_count_follows_projected_maps() {
 }
 
 #[test]
-fn hero_bans_crops_portraits_inside_their_slots() {
+fn hero_bans_fills_the_screen_with_two_hero_halves() {
     let text = overlay_text("hero-bans.html");
 
     assert!(
-        text.contains(".hero-panel__art {\n      position: relative;\n      flex: 1;\n      min-width: 0;\n      min-height: 0;\n      overflow: hidden;"),
-        "hero ban slots should clip images to their flex dimensions"
+        text.contains(
+            ".hero-bans {\n      position: absolute;\n      inset: 0;\n      display: flex;"
+        ) && text.contains(".hero-half {\n      position: relative;\n      flex: 1 1 0;"),
+        "hero bans should render two full-bleed halves"
     );
     assert!(
-        text.contains("object-fit: cover"),
-        "hero ban portraits should be cropped rather than stretched"
+        text.contains("id=\"home-half\"")
+            && text.contains("id=\"away-half\"")
+            && text.contains("id=\"home-art\"")
+            && text.contains("id=\"away-art\""),
+        "each half should carry its own hero art"
+    );
+    assert!(
+        text.contains("id=\"home-logo\"")
+            && text.contains("id=\"away-logo\"")
+            && text.contains(
+                ".hero-half--home .hero-half__logo {\n      left: var(--fgc-margin);\n    }"
+            )
+            && text.contains(
+                ".hero-half--away .hero-half__logo {\n      right: var(--fgc-margin);\n    }"
+            ),
+        "the team logo should sit in the outer top corner of each half"
+    );
+    assert!(
+        text.contains("id=\"home-role\"")
+            && text.contains("id=\"away-role\"")
+            && text.contains("id=\"home-role-icon\"")
+            && text.contains("id=\"away-role-icon\""),
+        "each half should carry a role hexagon"
+    );
+    assert!(
+        text.contains("id=\"home-name\"")
+            && text.contains("id=\"away-name\"")
+            && text.contains("id=\"home-order\"")
+            && text.contains("id=\"away-order\""),
+        "each half should carry the hero name and the ban order"
+    );
+    assert!(
+        text.contains("el.homeOrder.textContent = '1ST BAN';")
+            && text.contains("el.awayOrder.textContent = '2ND BAN';")
+            && text.contains("el.homeOrder.textContent = '2ND BAN';")
+            && text.contains("el.awayOrder.textContent = '1ST BAN';"),
+        "the team that banned first should carry the 1ST BAN label"
+    );
+    assert!(
+        text.contains("mask-image: url(\"data:image/svg+xml,"),
+        "the halves should carry the hexagon texture"
+    );
+    assert!(
+        text.contains(".hero-half__art--cutout img {"),
+        "a transparent cut-out should stand on the bottom of the half"
+    );
+    assert!(
+        !text.contains("map-strip")
+            && !text.contains("hero-panel")
+            && !text.contains("first-to-text")
+            && !text.contains("id=\"header\""),
+        "the header, the map strip and the old panels should be gone"
     );
 }
 
 #[test]
-fn hero_bans_shows_two_ordinal_panels_over_a_map_strip() {
+fn hero_bans_prefers_the_transparent_art_and_reads_the_role() {
     let text = overlay_text("hero-bans.html");
 
     assert!(
-        text.contains("id=\"home-panel-art\"") && text.contains("id=\"away-panel-art\""),
-        "hero bans should render one large art panel per team"
+        text.contains("const cutout = heroName ? heroTransparent[heroName] : null;")
+            && text.contains("const fallback = heroName ? heroPortraits[heroName] : null;")
+            && text.contains("const source = cutout || fallback;"),
+        "the transparent cut-out should win, with the regular art as the fallback"
     );
     assert!(
-        text.contains("id=\"home-panel-tag\"") && text.contains("id=\"away-panel-tag\""),
-        "each ban panel should carry an ordinal tag"
+        text.contains("const slug = heroName ? heroRoles[heroName] : null;")
+            && text.contains("const icon = slug ? roleIcons[slug] : null;"),
+        "the role hexagon should resolve the hero role through the role icons"
     );
     assert!(
-        text.contains("el.homePanelTag.textContent = '1ST BAN';")
-            && text.contains("el.awayPanelTag.textContent = '2ND BAN';")
-            && text.contains("el.homePanelTag.textContent = '2ND BAN';")
-            && text.contains("el.awayPanelTag.textContent = '1ST BAN';"),
-        "the team that banned first should carry the 1ST BAN tag"
+        text.contains("if (d.heroTransparent) {")
+            && text.contains("if (d.heroRoles) {")
+            && text.contains("if (d.roleIcons) {"),
+        "the overlay should read the transparent art, the roles and the icons"
     );
     assert!(
-        text.contains(".hero-panel__tag {") && text.contains(".map-strip {"),
-        "hero bans should tag the art and carry the map in a bottom strip"
-    );
-    assert!(
-        text.contains("id=\"map-mode\"")
-            && text.contains("id=\"map-index\"")
-            && text.contains("id=\"map-name\""),
-        "the map strip should carry the mode, the map number and the map name"
-    );
-    assert!(
-        text.contains("el.mapMode.textContent = modeName.toUpperCase();")
-            && text.contains("el.mapName.textContent = d.currentMap || 'TBD';"),
-        "the map strip should read the mode and the current map"
-    );
-    assert!(
-        !text.contains("hero-ban-column") && !text.contains("map-info"),
-        "the old ban columns and map info block should be gone"
+        text.contains("applyTeamColour(el.homeOrder, d.teamA.color);")
+            && text.contains("applyTeamColour(el.awayOrder, d.teamB.color);")
+            && text.contains("order.style.color = colour || 'var(--fgc-accent)';"),
+        "the ban order should be labelled in the colour of the team that banned"
     );
 }
 
@@ -841,31 +882,30 @@ fn hero_bans_overlay_uses_night_broadcast_tokens() {
         "hero-bans should inline the canonical Night Broadcast token block"
     );
     assert!(
-        text.contains(".team-score {\n      width: 80px;\n      height: 80px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;\n      font-size: 48px;\n      color: var(--fgc-text-inverse);\n      text-transform: uppercase;\n      background: var(--fgc-surface-inverse);"),
-        "the score chip should keep the inverse plate with inverse text"
+        text.contains(".hero-half__role {\n      width: 60px;\n      height: 68px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      background: var(--fgc-plate-dark);"),
+        "the role hexagon should sit on the dark plate so the white icon reads"
     );
     assert!(
-        text.contains(".hero-panel__tag {"),
-        "the ordinal ban tag should sit on the art"
+        text.contains(".hero-half__name {\n      width: 86%;\n      font-family: 'FGC Display Black', 'Apotek Black', sans-serif;\n      font-size: 92px;\n      line-height: 1.02;\n      color: var(--fgc-ink-on-art);"),
+        "the hero name should hover over the art in the near-white ink"
+    );
+    assert!(
+        text.contains(".hero-half__order {\n      max-width: 70%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 30px;\n      line-height: 1;\n      letter-spacing: 0.22em;\n      text-transform: uppercase;\n      color: var(--fgc-accent);"),
+        "the ban order should carry the orange accent until the team colour lands"
+    );
+    assert!(
+        text.contains(".hero-half__logo {\n      position: absolute;\n      top: var(--fgc-margin);\n      z-index: 3;\n      width: 100px;\n      height: 100px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      background-color: var(--fgc-plate-dark);"),
+        "the team logo should sit on the dark plate so the white glyph reads"
+    );
+    assert!(
+        text.contains("--fgc-plate-dark: #0b0d12;") && text.contains("--fgc-ink-on-art: #eef2f8;"),
+        "the overlay should declare the local plate and ink tokens"
     );
     assert!(
         text.contains(
-            "background: var(--fgc-surface-inverse);\n      color: var(--fgc-text-inverse);"
+            "background: linear-gradient(\n        to top,\n        rgb(0 0 0 / 78%) 0%,"
         ),
-        "the ordinal ban tag should use the inverse plate with inverse text"
-    );
-    assert!(
-        text.contains(".map-strip__mode-text {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 24px;\n      color: var(--fgc-accent);"),
-        "the map mode label should carry the orange accent"
-    );
-    assert!(
-        text.contains("return luminance > 0.5 ? '#0b0d12' : '#eef2f8';"),
-        "team name contrast should follow the shared surface tokens"
-    );
-    assert!(
-        text.contains("el.homeSection.style.backgroundColor = 'var(--fgc-surface)';")
-            && text.contains("el.awaySection.style.backgroundColor = 'var(--fgc-surface)';"),
-        "the neutral team sections should fall back to the base surface"
+        "the halves should carry a scrim so the caption stays legible"
     );
     for retired in [
         "#fff", "#ffffff", "#090909", "#151515", "#eeeeee", "#eee", "#ac46f7", "#444444",
@@ -1093,15 +1133,9 @@ fn the_timer_overlay_uses_the_semi_bold_alias() {
 fn the_type_scale_gives_each_role_one_weight() {
     // Scores are Strong everywhere.
     assert!(
-        overlay_text("hero-bans.html").contains(
-            ".team-score {\n      width: 80px;\n      height: 80px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"
-        ),
-        "the hero bans team score should be SemiBold"
-    );
-    assert!(
         overlay_text("map-select.html")
             .contains(".map-card__score {\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"),
-        "the map select score should be SemiBold too"
+        "the map select score should be SemiBold"
     );
     assert!(
         overlay_text("game-overlay.html")
@@ -1110,7 +1144,7 @@ fn the_type_scale_gives_each_role_one_weight() {
     );
 
     // The name of a map is Strong everywhere.
-    for file in ["map-pool.html", "map-select.html", "hero-bans.html"] {
+    for file in ["map-pool.html", "map-select.html"] {
         let text = overlay_text(file);
         assert!(
             text.contains("font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"),
@@ -1129,12 +1163,6 @@ fn the_type_scale_gives_each_role_one_weight() {
         overlay_text("map-select.html")
             .contains(".map-card__type {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"),
         "the map select map type should be Medium too"
-    );
-    assert!(
-        overlay_text("hero-bans.html").contains(
-            ".map-strip__mode-text {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"
-        ),
-        "the hero bans mode label should be Medium too"
     );
 
     // Pronouns are the quietest text on the element, so they are Light
@@ -1166,14 +1194,18 @@ fn the_type_scale_gives_each_role_one_weight() {
         "the game overlay team name should be Medium"
     );
     assert!(
-        overlay_text("hero-bans.html")
-            .contains(".hero-panel__name {\n      display: block;\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"),
-        "the hero bans panel name should be Medium"
-    );
-    assert!(
         overlay_text("team-roster-home.html").contains(
             ".player-card-core .player-name {\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"
         ),
         "the roster player name should be Medium"
+    );
+
+    // The hero name on the hero bans screen is the headline of that screen,
+    // so it is the one name that is Display.
+    assert!(
+        overlay_text("hero-bans.html").contains(
+            ".hero-half__name {\n      width: 86%;\n      font-family: 'FGC Display Black', 'Apotek Black', sans-serif;"
+        ),
+        "the hero bans hero name should be Display"
     );
 }

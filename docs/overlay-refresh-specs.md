@@ -151,60 +151,82 @@ Team-section fallback colour: replace hardcoded `'#090909'` with `var(--fgc-surf
 - `#090909` → `--fgc-surface` / `--fgc-text-inverse` context (`.team-score` color, `.first-to-section`, `.ban-hero-name-text`, `.map-info`, JS fallback `'#090909'` ×2).
 - `#ac46f7` → `--fgc-accent` (`.ban-order` background, `.map-info-type` color).
 
-### 1.9 Owner-requested redesign - two ordinal hero panels (2026-11-22)
+### 1.9 Owner-requested redesign - the OWWC27 full-bleed layout (2026-11-22)
 
-The owner reviewed the overlay and asked for a bigger redesign, following the
-OWCS27 and OWWC27 references: two large hero-art panels side by side, each
-carrying an ordinal ban tag, with the mode and the map name in a dark bottom
-strip instead of over the art. The review also found that the content
-overflowed the canvas by 30px.
+The owner reviewed the two-panel layout and said there were "too many elements
+on the screen". The overlay was rebuilt around the OWWC27 hero bans reference:
+two full-bleed halves that fill the screen, with the hero art as the picture
+and only four things on top of it - the team logo in the outer top corner, the
+role hexagon, the hero name over the lower half of the art and the ban order
+underneath in the team colour.
 
-**Overflow fix.** `.main-container` padding changed from `150px 200px` to
-`120px 200px` and the hero-bans section grew from 600px to 630px, so the
-column now totals 120 + 80 + 25 + 630 + 25 + 80 + 120 = **1080px**, exactly
-the canvas height.
+The header (team names, logos, scores and the first-to count) and the map
+strip are **gone**. The first ban of each side is the only one shown; any
+further bans stay on the map select cards.
 
-**New surface plan.** The old `.hero-ban-column`, `.hero-ban-portrait`,
-`.ban-order`, `.ban-hero-name` and `.map-info` rules are gone.
+**New surface plan.** The old `.hero-panel`, `.hero-panel__art`,
+`.hero-panel__tag`, `.hero-panel__extra`, `.hero-panel__band`,
+`.hero-panel__name`, `.map-strip` and the whole `.header` are gone.
 
 | Element selector | Token value | Treatment |
 |---|---|---|
-| `.hero-panel` | background `var(--fgc-surface)` | two equal panels, 25px apart |
-| `.hero-panel__art` | background `var(--fgc-surface-muted)` | the hero art, `object-fit: cover` |
-| `.hero-panel__tag` | background `var(--fgc-surface-inverse)` → `rgb(238, 242, 248)`; color `var(--fgc-text-inverse)` → `rgb(11, 13, 18)` | the white `1ST BAN` / `2ND BAN` tag, bottom-left of the art |
-| `.hero-panel__extra` | - | 52px portraits for any further bans, bottom-right of the art |
-| `.hero-panel__band` | background `var(--fgc-surface)` | 80px band under the art |
-| `.hero-panel__name` | color `var(--fgc-text)` | the banned hero's name |
-| `.map-strip` | background `var(--fgc-surface)` | the dark bottom strip |
-| `.map-strip__mode-text` | color `var(--fgc-accent)` | the game mode |
-| `.map-strip__index` | color `var(--fgc-text-muted)` | `MAP N` |
-| `.map-strip__name` | color `var(--fgc-text)` | the map name |
+| `.hero-bans` | - | the full-bleed row, `display: flex` |
+| `.hero-half` | background `var(--fgc-surface)` | one half per team, `flex: 1 1 0` |
+| `.hero-half__texture` | background `var(--fgc-accent)` at `opacity: 0.14`, masked with the hexagon tile | the textured backdrop |
+| `.hero-half__art` | - | the hero art, `object-fit: cover` |
+| `.hero-half__art--cutout img` | - | `object-fit: contain; object-position: center bottom` for a transparent cut-out |
+| `.hero-half__scrim` | `linear-gradient(to top, rgb(0 0 0 / 78%) 0%, rgb(0 0 0 / 42%) 24%, rgb(0 0 0 / 0%) 56%)` | legibility under the caption |
+| `.hero-half__logo` | background `var(--fgc-plate-dark)` | the 100x100 team logo plate, outer top corner |
+| `.hero-half__role` | background `var(--fgc-plate-dark)` | the 60x68 role hexagon, `clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)` |
+| `.hero-half__name` | color `var(--fgc-ink-on-art)` | the hero name, Display 900 |
+| `.hero-half__order` | color `var(--fgc-accent)`, overridden inline with the team colour | the `1ST BAN` / `2ND BAN` label |
+| `.hero-bans__centre` | background `var(--fgc-surface)` | the 110px banner between the halves |
 
-**State matrix.** The tag follows the first-ban team: when `firstBanTeam` is
-`A` the home panel reads `1ST BAN` and the away panel `2ND BAN`; when it is
-`B` the two swap. A side with no ban shows `-` in its band and an empty art
-box.
+`--fgc-plate-dark` and `--fgc-ink-on-art` are local tokens in the same `:root`
+block, because the white role icons, the white team logos and the hero name
+over art need a dark plate and near-white ink whichever theme is active.
 
-**JS helpers.** `renderBanPanel(art, extra, name, bans)` puts the first ban
-into the art and any further bans into the extra row; `updateBanOrder(firstBan)`
-writes the two tags. `updateOverlay` reads `d.currentMapIndex`,
-`d.currentMap`, `d.mapType` and `d.gameModeIcons` for the strip. The icon map
-is keyed by the lower-case mode name while the match stores the mode as it was
-typed, so the lookup lower-cases the mode first.
+**New data.** Two per-hero facts were added, both optional:
+- `Asset.transparent` links a hero to a transparent cut-out of the art. The
+  overlay prefers it and falls back to the regular hero art.
+- `Asset.role` records the hero's role (tank, damage or support), which the
+  overlay shows as the role hexagon.
+
+They reach the overlay in the scoreboard payload as `heroTransparent` and
+`heroRoles`, both keyed by the hero name. The role hexagon only appears when
+the hero has a role and the app has a role icon for it.
+
+**State matrix.** The ban order follows the first-ban team: when
+`firstBanTeam` is `A` the home half reads `1ST BAN` and the away half
+`2ND BAN`; when it is `B` the two swap. The label is written in the colour of
+the team that made the ban and falls back to `var(--fgc-accent)`. A side with
+no ban shows `-` as its name and an empty art box.
+
+**JS helpers.** `renderHalf(art, role, roleIcon, name, heroName)` picks the
+transparent art before the regular art and resolves the role hexagon.
+`updateHeroBans(teamABans, teamBBans)` renders the first ban of each side.
+`updateBanOrder(firstBan)` writes the two labels, and `applyTeamColour(order,
+colour)` paints them.
 
 ### 1.10 CDP-verifiable assertions (redesign)
 
-- Two `.hero-panel` elements side by side with equal widths (747.5px each at
-  1920x1080 with a 25px gap).
-- `#home-panel-art img` and `#away-panel-art img` resolve to the first ban of
-  each side and load; the art computes `object-fit: cover`.
-- `#home-panel-tag` and `#away-panel-tag` read `1ST BAN` and `2ND BAN`, and
-  compute to `rgb(238, 242, 248)`.
-- `#home-panel-name` and `#away-panel-name` hold the banned hero's name.
-- `#map-mode`, `#map-index` and `#map-name` hold the mode, `MAP N` and the map
-  name; `#map-mode-icon` has a `background-image`.
-- The map strip sits below the panels and the container's bottom edge is
-  `<= 1080px`; the document does not scroll.
+- Two `.hero-half` elements fill the width (905px each at 1920x1080) with the
+  110px `.hero-bans__centre` banner between them, and both reach the full
+  1080px height.
+- `#home-art img` and `#away-art img` resolve to the first ban of each side
+  and load; a cut-out computes `object-fit: contain` and
+  `object-position: 50% 100%`, the fallback computes `object-fit: cover`.
+- `#home-name` and `#away-name` hold the banned hero's name in
+  `FGC Display Black` at 92px, colour `rgb(238, 242, 248)`.
+- `#home-order` and `#away-order` read `1ST BAN` and `2ND BAN` and compute to
+  the two team colours.
+- `#home-logo` sits at `left: 43px` and `#away-logo` at `right: 43px`, both
+  100x100 on a `rgb(11, 13, 18)` plate.
+- `#home-role` and `#away-role` are 60x68 with the hexagon `clip-path`, and
+  their icons load.
+- The texture computes to the accent colour at `opacity: 0.14` with the SVG
+  hexagon mask, and the scrim computes to the gradient above.
+- No `#header`, no `#map-strip` and no `.hero-panel` remain.
 
 ---
 
@@ -752,9 +774,9 @@ and the genuine mismatches fixed. Sizes were not changed.
 
 | Role | Tier | Where |
 |---|---|---|
-| The biggest headline on a screen | Display | map pool header, map select title, roster team name |
-| A score, a count, a map name | Strong | game overlay bar score and title, hero bans first-to count and map name, map select name, score and score divider, map pool map name, timer value |
-| A person's or team's name, any label | Body | game overlay bar name and logo placeholder, subtitle, format label and map number, hero bans panel name and ban tag, map strip mode and index, map select type label, roster and talent names, social roles, watermark text |
+| The biggest headline on a screen | Display | map pool header, map select title, roster team name, hero bans hero name |
+| A score, a count, a map name | Strong | game overlay bar score and title, map select name, score and score divider, map pool map name, timer value |
+| A person's or team's name, any label | Body | game overlay bar name and logo placeholder, subtitle, format label and map number, hero bans ban order, map select type label, roster and talent names, social roles, watermark text |
 | Small supporting text | Secondary | map select chosen-by label |
 | Handles, pronouns, separators | Quiet | social handle, separator, pronouns, roster pronouns |
 
@@ -782,10 +804,11 @@ Four static tests in `crates/server/tests/overlays.rs` keep the scale honest:
 - `the_timer_overlay_uses_the_semi_bold_alias` - the timer loads the SemiBold
   face under the shared alias.
 - `the_type_scale_gives_each_role_one_weight` - the drift guard: scores are
-  SemiBold in hero bans, map select and the game overlay; map names are
-  SemiBold in map pool, map select and hero bans; the mode label is Medium in
-  all three; pronouns are Light in the two roster files and the three talent
-  rows; names are Medium in the game overlay, hero bans and the roster.
+  SemiBold in map select and the game overlay; map names are SemiBold in map
+  pool and map select; the mode label is Medium in map pool and map select;
+  pronouns are Light in the two roster files and the three talent rows; names
+  are Medium in the game overlay and the roster; the hero bans hero name is
+  Display in the hero bans overlay.
 
 ### 10.5 CDP-verifiable assertions
 
