@@ -3750,3 +3750,56 @@ outside the repository and is removed when the overlay review work completes.
 blob in the asset store, so that portrait 404s. This is a data condition in the
 fixture, not a code defect; the QA fixture points Arc at an asset whose blob is
 present.
+
+### A61 — Flexible roster cards
+
+**Covers:** owner review list 2026-11-22 (slice B), `team-roster-home.html`,
+`team-roster-away.html`
+
+**Steps:**
+
+1. `dx build --desktop` after stopping any running `fruiterra-gc`, then launch
+   the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Restore
+   the authoritative `app.json`/`app.json.bak` fixture before and after the run.
+2. Build a QA fixture whose match teams carry a chosen number of core players
+   (`position: "core"`) and substitutes (`position: "sub"`). Copy the source
+   team object verbatim when cloning it: `logoBackground` is a boolean, not a
+   colour string, and a wrong type makes the whole team fail to load.
+3. Start the overlay server through the real app UI and wait until `/state`
+   holds `autoOverlay, casters, gameOverlay, heroBans, mapSelect, scoreboard,
+   teamRoster`.
+4. Open `team-roster-home.html` and `team-roster-away.html` as CDP targets with
+   a 1920×1080 device metrics override, reload and wait for the cards. Record
+   the core row width and gap, every card width and left offset, the substitute
+   card count and widths, the body background, the document size and the font
+   state.
+5. Assert that the core card count matches the fixture, that all core cards
+   share one width to within a sub-pixel, that the last card ends on the row's
+   right edge, that the substitutes keep their fixed 284px width, that the
+   document is 1920×1080 with no overflow, that the body is transparent, that
+   the font is loaded, and that the requests, failed responses, bad statuses and
+   console errors are all empty.
+6. Repeat for a short roster and a long roster. Stop the app, restore the
+   authoritative fixture and recheck its hashes.
+
+**Evidence:** CDP DOM and computed-style JSON for both roster overlays in all
+three roster sizes, network/console capture and `/health`; no screenshots were
+taken or published.
+
+**Result: Pass — assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay pages. The core row measured 1500px with a 20px gap
+in every case and the cards filled it to the right edge: five cards at 284px,
+three at 486.66px and six at 233.33px, with a sub-pixel spread of 0.01px
+between the widest and narrowest card. The substitute strip kept its fixed
+284px cards (two, one and three respectively) and stayed right-aligned. Every
+overlay had a transparent `rgba(0, 0, 0, 0)` body, a 1920×1080 document with no
+overflow, its bundled font loaded, and recorded 0 external requests, 0 failed
+responses, 0 bad statuses and 0 console errors. `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`git diff --check` and `dx build --desktop` passed. The authoritative hashes
+were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`
+and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` after
+every run, and `tailscale serve status` was `No serve config`. The temporary QA
+harness lives outside the repository and is removed when the overlay review work
+completes.

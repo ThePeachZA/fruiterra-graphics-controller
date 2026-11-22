@@ -1234,7 +1234,7 @@ on top of it afterwards.
 | Slice | Item | State |
 |---|---|---|
 | A | Split the talent row: casters only on `row-casters.html`, plus new `row-hosts.html` (host + analysts) and `row-interviews.html` (interviewer + guest) | **Done — A60** |
-| B | Team roster: core player cards fill the container width instead of a fixed 284px (substitutes keep their fixed width) | Next |
+| B | Team roster: core player cards fill the container width instead of a fixed 284px (substitutes keep their fixed width) | **Done — A61** |
 | C | Map pool: stagger each game-mode column so the reveal animates column by column | Next |
 | D | Map select: show the ban thumbnails over the bottom of the map image, minimal | Next |
 | E | Game overlay: drop the outline rings, put the team logo on the outer end, move the ban icon next to the score, add a team-abbreviation toggle, review gradients and background textures | Next |
@@ -1274,3 +1274,24 @@ analyst and the host with their role tags, the interview row showed the
 interviewer and the guest, the wire carried the interviewee, and every overlay
 stayed transparent, 1920×1080, font-loaded and free of external requests,
 failed responses and console errors.
+
+### Slice B — flexible roster cards (A61, 2026-11-22)
+
+The core player row was hard-wired to 284px cards, which only fit the row at
+exactly five players: a sixth card ran off the canvas and a shorter roster
+left a gap. The cards now share the row with `flex: 1 1 0` and `min-width: 0`,
+and the row no longer centres itself, so the cards always fill the 1500px
+roster width. Substitutes keep their fixed 284px width because they are a
+separate, right-aligned strip.
+
+The card width is now decided by the roster size: five cards are still 284px,
+three become 486.66px and six become 233.33px. Card height, padding, the role
+badge, the portrait box and the text blocks are unchanged, and the name still
+auto-shrinks before it ellipsizes.
+
+A61 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: five, three and six core cards all filled the row to within a
+sub-pixel, the substitutes held 284px, and both roster overlays stayed
+transparent, 1920×1080, font-loaded and free of external requests, failed
+responses and console errors.

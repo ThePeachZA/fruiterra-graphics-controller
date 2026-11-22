@@ -440,6 +440,21 @@ Placeholder colour fallbacks:
 - `#fff` → `--fgc-surface-raised` / `--fgc-text` context (`.team-name`, `.player-card-core`, `.player-card-sub`; JS contrast light branch `'#ffffff'`).
 - `#444444` → `--fgc-text-muted` (`.player-pronouns`).
 
+### 5.9 Owner-requested geometry change — flexible core cards (2026-11-22)
+The frozen-geometry rule above is deliberately broken here, at the owner's
+request: "player cards should always fill flexibly to the container width,
+instead of maintaining a fixed width (exception for substitutes)".
+
+`.player-card-core` no longer holds `width: 284px; flex-shrink: 0`. It now uses
+`flex: 1 1 0; min-width: 0`, and `.core-players` no longer centres itself, so
+the cards always fill the 1500px roster width. The card width follows the
+roster size: five cards are 284px, three are 486.66px and six are 233.33px.
+Previously a sixth card ran 304px off the canvas.
+
+Substitutes keep their fixed 284px width because they are a separate,
+right-aligned strip. Card height (600px), padding, the role badge, the portrait
+box and the text blocks are unchanged.
+
 ---
 
 ## 6. timer.html

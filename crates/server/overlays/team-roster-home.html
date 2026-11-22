@@ -189,7 +189,6 @@
       width: 1500px;
       display: flex;
       gap: 20px;
-      justify-content: center;
     }
 
     /* === SUBSTITUTES === */
@@ -203,14 +202,18 @@
 
     /* === PLAYER CARD (CORE) === */
     .player-card-core {
-      width: 284px;
+      /* The core roster shares the row evenly. The cards flex to fill the
+         roster width instead of holding a fixed 284px, so a short or long
+         roster always spans the same columns. Substitutes keep a fixed
+         width because they are a separate, right-aligned strip. */
+      flex: 1 1 0;
+      min-width: 0;
       height: 600px;
       background: var(--fgc-surface-raised);
       border-radius: 6px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      flex-shrink: 0;
       position: relative;
       clip-path: inset(0 round 6px);
     }
