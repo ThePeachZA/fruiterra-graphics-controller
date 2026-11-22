@@ -1239,7 +1239,7 @@ on top of it afterwards.
 | D | Map select: show the ban thumbnails over the bottom of the map image, minimal | **Done - A63** |
 | E | Game overlay: drop the outline rings, put the team logo on the outer end, move the ban icon next to the score, add a team-abbreviation toggle, review gradients and background textures | **Done - A64** |
 | F | Hero bans: bigger redesign - two large hero-art panels with `1ST BAN` / `2ND BAN` tags and the mode and map name in a dark bottom strip | **Done - A65** |
-| G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | Last |
+| G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | **Done - A66** |
 
 The theme model was chosen as a **built-in Light theme plus JSON import**: the
 app ships the dark Night Broadcast theme and a Light theme, and the user can
@@ -1378,6 +1378,40 @@ the real UI toggle changed them to the NWS and LONG tags and `/state` reported
 `teamAbbreviations: true`. The overlay stayed transparent, 1920×1080,
 font-loaded and free of external requests, failed responses and console
 errors.
+
+### Slice G - theme system (A66, 2026-11-22)
+
+The owner asked for a theme system: a built-in Light theme beside Night
+Broadcast, a JSON theme import, and live switching with no rebuild.
+
+A theme travels as a new `theme` message rather than an imported stylesheet,
+because the overlay server only serves `/overlays/{file}`, `/assets/fonts/{name}`
+and image assets. The message carries the preset name and the **complete** set
+of CSS custom properties to override. Each overlay tracks the properties it
+applied and removes any that the next theme does not list, so an empty token
+map restores the stylesheet defaults. The Night Broadcast values stay in the
+overlays' own `:root` blocks, which keeps one source of truth, and only the
+Light theme is defined in Rust.
+
+Two settings drive it: `settings.display.theme` (Night Broadcast or Light) and
+`settings.display.themeTokens`, the imported overrides. The import accepts
+either a flat `{ "--fgc-surface": "#fff" }` object or a
+`{ "name": "...", "tokens": { ... } }` file, and rejects anything that is not
+a `--token` name or a plain colour value. The picker lives in Match Controller
+-> Config -> Overlay theme. The `theme` frame is part of the ordinary
+projection, so switching repaints every connected overlay at once and the
+choice is saved with the rest of the settings.
+
+A66 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the hero-bans panel went from `rgb(11, 13, 18)` to
+`rgb(244, 246, 251)` and the ban tag from `rgb(238, 242, 248)` to
+`rgb(17, 21, 29)` the moment the picker changed, eighteen custom properties
+were applied inline, `/state` carried the preset and its tokens, `app.json`
+stored `light`, switching back removed every inline property and restored the
+stylesheet defaults exactly, and the timer overlay followed the same switch.
+The overlays stayed transparent, 1920×1080, font-loaded and free of external
+requests, failed responses and console errors.
 
 ### Slice F - hero bans redesign (A65, 2026-11-22)
 

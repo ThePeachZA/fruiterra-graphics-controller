@@ -74,6 +74,12 @@ The game overlay puts the team logo on the outer end of each bar and the ban
 block next to the score. Match Controller → Config → Overlay appearance has a
 **Team abbreviations** switch that shows the short team tag instead of the full
 name; it is off by default.
+
+Match Controller → Config → Overlay theme switches every bundled overlay
+between the built-in **Night Broadcast** (dark) and **Light** themes. The
+change is applied live, with no restart and no reload of the OBS Browser
+Source. **Import theme file** loads a JSON file of your own to override
+individual colour tokens.
 | Timer (standalone) | `/overlays/timer.html` |
 
 Add each one to OBS as a Browser Source at 1920×1080 with a transparent

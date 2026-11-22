@@ -1174,6 +1174,47 @@ impl Default for OverlaySettings {
     }
 }
 
+/// The built-in overlay themes.
+///
+/// The overlays inline the Night Broadcast tokens as their stylesheet
+/// defaults. A different preset is delivered as a set of CSS custom property
+/// overrides, so switching a theme never needs a rebuild.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ThemePreset {
+    /// The dark Night Broadcast theme.
+    #[default]
+    NightBroadcast,
+    /// The light Daylight theme.
+    Light,
+}
+
+impl ThemePreset {
+    /// The stable name used on the wire.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::NightBroadcast => "nightBroadcast",
+            Self::Light => "light",
+        }
+    }
+
+    /// The human-readable name shown in the app.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::NightBroadcast => "Night Broadcast",
+            Self::Light => "Light",
+        }
+    }
+
+    /// Every preset, in the order the app lists them.
+    #[must_use]
+    pub const fn all() -> [Self; 2] {
+        [Self::NightBroadcast, Self::Light]
+    }
+}
+
 /// Display settings.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1187,6 +1228,15 @@ pub struct DisplaySettings {
     /// Whether the overlays show the short team tag instead of the full name.
     #[serde(default)]
     pub team_abbreviations: bool,
+    /// The built-in overlay theme.
+    #[serde(default)]
+    pub theme: ThemePreset,
+    /// Token overrides loaded from an imported theme file.
+    ///
+    /// They are applied over the built-in preset, so a theme file may set only
+    /// the tokens it cares about.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub theme_tokens: Option<BTreeMap<String, String>>,
     /// Tournament logo asset.
     #[serde(default)]
     pub tournament_logo: Option<AssetId>,
@@ -1201,6 +1251,8 @@ impl Default for DisplaySettings {
             team_colors_enabled: false,
             show_hero_bans: true,
             team_abbreviations: false,
+            theme: ThemePreset::default(),
+            theme_tokens: None,
             tournament_logo: None,
             watermark_logo: None,
         }
@@ -1461,6 +1513,40 @@ mod tests {
         assert!(abbreviated.team_abbreviations);
         let json = serde_json::to_string(&abbreviated).expect("serialise display settings");
         assert!(json.contains("\"teamAbbreviations\":true"), "{json}");
+    }
+
+    #[test]
+    fn theme_preset_defaults_to_night_broadcast_and_round_trips() {
+        assert_eq!(
+            DisplaySettings::default().theme,
+            ThemePreset::NightBroadcast
+        );
+
+        let legacy: DisplaySettings = serde_json::from_str("{}").expect("legacy display settings");
+        assert_eq!(legacy.theme, ThemePreset::NightBroadcast);
+        assert!(legacy.theme_tokens.is_none());
+
+        let light: DisplaySettings =
+            serde_json::from_str(r#"{"theme":"light"}"#).expect("light display settings");
+        assert_eq!(light.theme, ThemePreset::Light);
+        let json = serde_json::to_string(&light).expect("serialise display settings");
+        assert!(json.contains("\"theme\":\"light\""), "{json}");
+
+        let imported: DisplaySettings =
+            serde_json::from_str(r##"{"themeTokens":{"--fgc-surface":"#ffffff"}}"##)
+                .expect("imported theme settings");
+        let tokens = imported.theme_tokens.expect("imported tokens");
+        assert_eq!(
+            tokens.get("--fgc-surface").map(String::as_str),
+            Some("#ffffff")
+        );
+    }
+
+    #[test]
+    fn theme_preset_names_are_stable() {
+        assert_eq!(ThemePreset::NightBroadcast.as_str(), "nightBroadcast");
+        assert_eq!(ThemePreset::Light.as_str(), "light");
+        assert_eq!(ThemePreset::all().len(), 2);
     }
 
     #[test]

@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use dioxus::prelude::*;
 use fgc_core::{
     AssetCategory, AssetId, Match, MatchStatus, Scoring, Side, Talent, TalentId, TalentSlot,
-    TalentType, Team, TeamId, TeamSide, default_map_slots, empty_hero_bans,
+    TalentType, Team, TeamId, TeamSide, ThemePreset, default_map_slots, empty_hero_bans,
 };
 use fgc_protocol::AssetCatalog;
 use fgc_server::ServerStatus;
@@ -20,7 +20,7 @@ use crate::components::asset_picker::AssetPicker;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::input::Input;
 use crate::components::switch::Switch;
-use crate::components::{CollapsiblePanel, Disclosure, Panel};
+use crate::components::{CollapsiblePanel, Disclosure, Field, Panel};
 use crate::state::AppStore;
 use crate::timer::{TimerController, broadcast_tick};
 use crate::views::overlay::OverlayUrls;
@@ -1310,6 +1310,62 @@ fn ConfigTab(match_state: Match) -> Element {
                         on_change: move |value: Option<AssetId>| {
                             store.mutate(|state| state.settings.display.watermark_logo = value);
                         },
+                    }
+                }
+
+                Panel {
+                    title: "Overlay theme".to_owned(),
+                    Field {
+                        label: "Theme".to_owned(),
+                        hint: Some("Applied to every bundled overlay straight away.".to_owned()),
+                        select {
+                            class: "fgc-native-select",
+                            aria_label: "Overlay theme",
+                            value: settings.display.theme.as_str(),
+                            onchange: move |event| {
+                                let next = match event.value().as_str() {
+                                    "light" => ThemePreset::Light,
+                                    _ => ThemePreset::NightBroadcast,
+                                };
+                                store.set_theme(next);
+                            },
+                            for preset in ThemePreset::all() {
+                                option {
+                                    value: preset.as_str(),
+                                    selected: preset == settings.display.theme,
+                                    "{preset.label()}"
+                                }
+                            }
+                        }
+                    }
+                    div { class: "fgc-toggle-row",
+                        div { class: "fgc-toggle-row__text",
+                            p { class: "fgc-toggle-row__title", "Imported theme" }
+                            p { class: "fgc-toggle-row__hint",
+                                match &settings.display.theme_tokens {
+                                    Some(tokens) => format!(
+                                        "{} tokens are layered over the selected theme.",
+                                        tokens.len()
+                                    ),
+                                    None => "Import a JSON theme file to override individual tokens."
+                                        .to_owned(),
+                                }
+                            }
+                        }
+                        div { class: "fgc-actions",
+                            Button {
+                                variant: ButtonVariant::Secondary,
+                                onclick: move |_| store.import_theme(),
+                                "Import theme file"
+                            }
+                            if settings.display.theme_tokens.is_some() {
+                                Button {
+                                    variant: ButtonVariant::Outline,
+                                    onclick: move |_| store.set_theme_tokens(None),
+                                    "Remove"
+                                }
+                            }
+                        }
                     }
                 }
             }

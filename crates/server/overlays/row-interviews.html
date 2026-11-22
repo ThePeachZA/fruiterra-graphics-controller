@@ -533,8 +533,37 @@
       ws.onerror = (e) => console.error('WS error:', e);
     }
 
+    // === OVERLAY THEME ===
+    // The app sends the active theme as a 	heme message. Its 	okens are
+    // the complete set of CSS custom properties to override, so a property
+    // applied by an earlier theme and missing from this set is removed again.
+    // That is what restores the stylesheet defaults when the theme changes.
+    let appliedThemeTokens = [];
+
+    function applyTheme(payload) {
+      const tokens =
+        payload && typeof payload === 'object' && payload.tokens && typeof payload.tokens === 'object'
+          ? payload.tokens
+          : {};
+      const root = document.documentElement;
+      appliedThemeTokens.forEach((name) => {
+        if (!Object.prototype.hasOwnProperty.call(tokens, name)) root.style.removeProperty(name);
+      });
+      appliedThemeTokens = Object.keys(tokens);
+      appliedThemeTokens.forEach((name) => {
+        root.style.setProperty(name, String(tokens[name]));
+      });
+    }
     function updateOverlay(data) {
       const d = data.data || data;
+      if (data.type === 'theme') {
+        applyTheme(d);
+        return;
+      }
+      if (data.type === 'init' && d.theme) {
+        applyTheme(d.theme);
+      }
+
 
       // Only frames that carry the talent list update the desk; `show` frames
       // and the other sections must not clear it.

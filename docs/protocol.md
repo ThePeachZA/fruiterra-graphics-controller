@@ -35,8 +35,10 @@ On connect the server sends:
 - The five scoreboard-bearing keys hold the **same** scoreboard payload object. This duplication is deliberate: each overlay reads a different key.
 - `casters` holds `{ "castersData": [...], "interviewee": { ... } }` — **not** the scoreboard payload.
 - `matchTimer` holds the timer payload.
+- `theme` holds the overlay theme, described in §3.5. It is present as soon as
+  the overlay server starts, even with no match loaded.
 - When the app's auto-overlay controller is active, `autoOverlay` holds the
-  session-only scene selection described in §3.5.
+  session-only scene selection described in §3.6.
 - `requestInit` triggers the same message again at any time.
 
 **Compatibility rules**
@@ -52,9 +54,11 @@ On connect the server sends:
 | `row-casters.html` | `data.casters.castersData` |
 | `row-hosts.html` | `data.casters.castersData` |
 | `row-interviews.html` | `data.casters.castersData` and `data.casters.interviewee` |
-| `timer.html` | `data.matchTimer` (if the timer has run) |
+| `timer.html` | `data.matchTimer` (if the timer has run) and `data.theme` |
 
 If any of those keys is missing on connect, the corresponding overlay renders blank until the next live broadcast. Our `init` is therefore built from current state and always includes every key the current match can populate.
+
+Every bundled overlay also reads `data.theme`, and the `theme` message itself, to apply the active theme. See §3.5.
 
 ---
 
@@ -225,7 +229,36 @@ Two shapes, exactly as the original sends them:
 - Implemented by all seven overlays; **not sent by the app in v1** (no UI toggle). The B1 backlog item turns it on.
 - Must remain supported server-side; no schema change.
 
-### 3.5 `autoOverlay`
+### 3.5 `theme`
+
+Post-v1 section carrying the active overlay theme:
+
+```json
+{
+  "type": "theme",
+  "data": {
+    "preset": "light",
+    "tokens": {
+      "--fgc-surface": "#f4f6fb",
+      "--fgc-text": "#11151d"
+    }
+  }
+}
+```
+
+- `preset` is the built-in theme name: `nightBroadcast` (the default) or
+  `light`.
+- `tokens` is the **complete** set of CSS custom properties to override, not a
+  patch. A property that is absent is removed, so an empty `tokens` map
+  restores each overlay's stylesheet defaults. The Night Broadcast values live
+  in the overlays' own `:root` blocks; only the Light theme is sent.
+- The app broadcasts this section on server start and whenever the theme or
+  the imported tokens change, so switching repaints every connected overlay at
+  once without a reload. It is present in `init` even with no match loaded.
+- Every bundled overlay applies the tokens as inline custom properties on the
+  document element, and a third-party overlay may ignore the section entirely.
+
+### 3.6 `autoOverlay`
 
 Post-v1 section used only by `auto.html` and the app's auto-overlay controller:
 

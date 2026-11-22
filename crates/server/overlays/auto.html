@@ -109,8 +109,38 @@
       applySelection();
     }
 
+    // === OVERLAY THEME ===
+    // The app sends the active theme as a 	heme message. Its 	okens are
+    // the complete set of CSS custom properties to override, so a property
+    // applied by an earlier theme and missing from this set is removed again.
+    // That is what restores the stylesheet defaults when the theme changes.
+    let appliedThemeTokens = [];
+
+    function applyTheme(payload) {
+      const tokens =
+        payload && typeof payload === 'object' && payload.tokens && typeof payload.tokens === 'object'
+          ? payload.tokens
+          : {};
+      const root = document.documentElement;
+      appliedThemeTokens.forEach((name) => {
+        if (!Object.prototype.hasOwnProperty.call(tokens, name)) root.style.removeProperty(name);
+      });
+      appliedThemeTokens = Object.keys(tokens);
+      appliedThemeTokens.forEach((name) => {
+        root.style.setProperty(name, String(tokens[name]));
+      });
+    }
     function handleMessage(message) {
       if (!message || typeof message !== 'object') return;
+
+      if (message.type === 'theme') {
+        applyTheme(message.data);
+        return;
+      }
+      if (message.type === 'init' && message.data && message.data.theme) {
+        applyTheme(message.data.theme);
+      }
+
 
       if (message.type === 'init' && message.data && message.data.autoOverlay) {
         updateSelection(message.data.autoOverlay);

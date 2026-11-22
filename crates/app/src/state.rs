@@ -8,7 +8,7 @@
 //! Asset imports, exports and garbage collection run on blocking tasks so
 //! hashing and disk I/O never stall the UI thread.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,13 +20,13 @@ use fgc_core::{
     DEFAULT_TIEBREAKERS, GroupId, IntervieweeRef, JsonStore, LinkError, LinkKind, MapSlot, Match,
     MatchId, MatchLink, MatchStatus, MemoryStore, Player, PlayerId, Position, RemoteAccessMode,
     Role, Scoring, Side, SlotError, Store, Talent, TalentId, TalentRef, TalentSlot, TalentType,
-    Team, TeamId, TeamReference, TeamSide, Tiebreaker, TimerAlignment, TimerMode, Tournament,
-    TournamentId, TournamentStage, TournamentStatus, UnusedAssets, add_entrant as core_add_entrant,
-    add_group_fixture as core_add_group_fixture, add_match as core_add_match,
-    add_round as core_add_round, clear_talent_references, derived_scores, insert_map,
-    match_mut as core_match_mut, move_map as move_map_slot, move_map_pool as move_map_pool_slot,
-    new_match, new_tournament, recalculate_loser_picks, referenced_hashes,
-    refresh as core_refresh_tournament, remove_entrant as core_remove_entrant,
+    Team, TeamId, TeamReference, TeamSide, ThemePreset, Tiebreaker, TimerAlignment, TimerMode,
+    Tournament, TournamentId, TournamentStage, TournamentStatus, UnusedAssets,
+    add_entrant as core_add_entrant, add_group_fixture as core_add_group_fixture,
+    add_match as core_add_match, add_round as core_add_round, clear_talent_references,
+    derived_scores, insert_map, match_mut as core_match_mut, move_map as move_map_slot,
+    move_map_pool as move_map_pool_slot, new_match, new_tournament, recalculate_loser_picks,
+    referenced_hashes, refresh as core_refresh_tournament, remove_entrant as core_remove_entrant,
     remove_group as core_remove_group, remove_group_fixture as core_remove_group_fixture,
     remove_map, remove_match as core_remove_match, remove_round as core_remove_round,
     remove_team_references, rename_group as core_rename_group, rename_round as core_rename_round,
@@ -39,7 +39,7 @@ use fgc_core::{
     set_map_mode, set_map_name, set_map_scores, set_slot as core_set_slot, toggle_map_pool,
     validate_and_repair,
 };
-use fgc_protocol::{AssetCatalog, auto_overlay, data_url_for};
+use fgc_protocol::{AssetCatalog, auto_overlay, data_url_for, parse_theme_json};
 use fgc_server::{AssetMode, Outbound, ServerConfig};
 use tracing::{debug, info, warn};
 
@@ -631,6 +631,60 @@ impl AppStore {
             return;
         }
         self.mutate(|state| state.settings.timer.standalone = standalone);
+    }
+
+    /// Changes the built-in overlay theme.
+    ///
+    /// The overlays pick the change up from the next `theme` broadcast, so a
+    /// theme switch never needs a rebuild.
+    pub fn set_theme(&self, theme: ThemePreset) {
+        if self.state.peek().settings.display.theme == theme {
+            return;
+        }
+        self.mutate(|state| state.settings.display.theme = theme);
+    }
+
+    /// Replaces the imported theme tokens.
+    pub fn set_theme_tokens(&self, tokens: Option<BTreeMap<String, String>>) {
+        if self.state.peek().settings.display.theme_tokens == tokens {
+            return;
+        }
+        self.mutate(|state| state.settings.display.theme_tokens = tokens);
+    }
+
+    /// Opens the file picker and imports an overlay theme file.
+    pub fn import_theme(&self) {
+        let this = *self;
+        spawn(async move {
+            let picked = tokio::task::spawn_blocking(crate::assets_io::pick_theme_file).await;
+            let path = match picked {
+                Ok(path) => path,
+                Err(error) => {
+                    this.report_error(format!("The file picker failed: {error}"));
+                    return;
+                }
+            };
+            let Some(path) = path else {
+                return;
+            };
+
+            let read = tokio::task::spawn_blocking(move || {
+                std::fs::read_to_string(&path)
+                    .map_err(|error| format!("Could not read the theme file: {error}"))
+                    .and_then(|text| parse_theme_json(&text).map_err(|error| error.to_string()))
+            })
+            .await;
+
+            match read {
+                Ok(Ok(tokens)) => {
+                    let count = tokens.len();
+                    this.set_theme_tokens(Some(tokens));
+                    this.notify(format!("Imported {count} theme tokens."));
+                }
+                Ok(Err(message)) => this.report_error(message),
+                Err(error) => this.report_error(format!("The theme read task failed: {error}")),
+            }
+        });
     }
 
     /// Returns the merged bundled and user asset catalogue.
@@ -3082,7 +3136,8 @@ mod tests {
     #[test]
     fn blob_paths_are_not_required_for_served_projection() {
         // Served projection must not touch the filesystem; an empty catalogue
-        // is enough to prove the helper is pure.
+        // is enough to prove the helper is pure. The theme frame is the only
+        // section projected without a match, so it is expected here.
         let state = AppState::default();
         let catalog = AssetCatalog::default();
         let outbound = project_outbound(
@@ -3092,7 +3147,14 @@ mod tests {
             AssetMode::Served,
             None,
         );
-        assert!(outbound.is_empty());
+        assert_eq!(outbound.len(), 1);
+        match &outbound[0] {
+            Outbound::Message { kind, data } => {
+                assert_eq!(kind, "theme");
+                assert_eq!(data["preset"], "nightBroadcast");
+            }
+            other => panic!("expected the theme frame, got {other:?}"),
+        }
     }
 
     #[test]

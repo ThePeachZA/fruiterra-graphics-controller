@@ -4,7 +4,7 @@ use fgc_core::{
     AppState, Asset, AssetCategory, AssetId, AssetOrigin, DisplaySettings, MapHeroBans, MapSlot,
     Match, MatchId, MatchStatus, MatchTalent, OverlaySettings, Player, PlayerId, Position, Role,
     Scoring, Settings, Side, SocialLink, SocialPlatform, Talent, TalentId, TalentRef, TalentType,
-    Team, TeamId, TeamSide, TimerAlignment, TimerSettings,
+    Team, TeamId, TeamSide, ThemePreset, TimerAlignment, TimerSettings,
 };
 use fgc_protocol::{
     AssetCatalog, Projector, SCOREBOARD_TYPES, SectionCache, ServedAssetResolver, TimerPayload,
@@ -346,6 +346,8 @@ pub fn fixture_state() -> AppState {
                 team_colors_enabled: true,
                 show_hero_bans: true,
                 team_abbreviations: false,
+                theme: ThemePreset::NightBroadcast,
+                theme_tokens: None,
                 tournament_logo: Some(AssetId::from_raw("asset-logo-t")),
                 watermark_logo: None,
             },

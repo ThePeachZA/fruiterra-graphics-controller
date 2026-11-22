@@ -27,6 +27,13 @@ show-hours settings. With **Show hours** off, hours are added to the minutes
 (`01:12:00` appears as `72:00`). It is not part of the auto-overlay scene list;
 add it as its own Browser Source.
 
+## Change the theme
+
+Match Controller → Config → Overlay theme switches every bundled overlay
+between **Night Broadcast** (dark) and **Light**. The change reaches the
+overlays live, so the OBS Browser Source picks it up without a reload. You can
+also import a JSON theme file to override individual colour tokens.
+
 The **Overlay** page lists the same match-overlay URLs with a **Copy URL** button for each.
 URLs are hidden by default; select **Show URLs** to reveal them and **Hide
 URLs** to hide them again.

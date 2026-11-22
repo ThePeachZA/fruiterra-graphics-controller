@@ -656,3 +656,75 @@ drop shadow. No gradient or texture was added.
 - The name's computed `text-align` is `left` on the home bar and `right` on the
   away bar.
 - With `teamAbbreviations` on, the rendered name equals the team's `tag`.
+
+## 9. Theme system (owner request, 2026-11-22)
+
+### 9.1 Model
+
+A theme is a set of CSS custom properties, not a stylesheet. The overlay
+server only serves `/overlays/{file}`, `/assets/fonts/{name}` and image
+assets, so an imported `.css` could never reach a page. Instead the app sends
+a `theme` message:
+
+```json
+{ "type": "theme", "data": { "preset": "light", "tokens": { "--fgc-surface": "#f4f6fb" } } }
+```
+
+`tokens` is the **complete** set of properties to override. An overlay keeps
+the list of properties it applied and removes any that the next theme does not
+list, so a theme with no tokens restores the stylesheet defaults.
+
+### 9.2 Where the values live
+
+| Set | Lives in | Notes |
+|---|---|---|
+| Night Broadcast | Each overlay's own `:root` block | The single source of truth for the dark theme; an overlay with no `theme` message still renders correctly |
+| Light | `fgc_protocol::LIGHT_THEME_TOKENS` | 18 colour overrides; spacing, radii and durations are never themed |
+| Imported | `settings.display.themeTokens` | Layered over the selected preset |
+
+### 9.3 Applied tokens
+
+`--fgc-surface`, `--fgc-surface-raised`, `--fgc-surface-inverse`,
+`--fgc-surface-muted`, `--fgc-line`, `--fgc-line-strong`,
+`--fgc-line-on-inverse`, `--fgc-text`, `--fgc-text-muted`, `--fgc-text-faint`,
+`--fgc-text-inverse`, `--fgc-accent`, `--fgc-accent-strong`,
+`--fgc-accent-soft`, `--fgc-on-accent`, `--fgc-success`, `--fgc-warning` and
+`--fgc-danger`.
+
+A theme may only override names that the overlays declare. The static test
+`the_light_theme_only_names_tokens_the_overlays_declare` guards that, so a new
+token cannot drift away from the stylesheets.
+
+### 9.4 Overlay contract
+
+Every bundled overlay carries the same helper, before its message handler:
+
+```js
+let appliedThemeTokens = [];
+
+function applyTheme(payload) {
+  const tokens = payload && typeof payload === 'object' && payload.tokens && typeof payload.tokens === 'object' ? payload.tokens : {};
+  const root = document.documentElement;
+  appliedThemeTokens.forEach((name) => {
+    if (!Object.prototype.hasOwnProperty.call(tokens, name)) root.style.removeProperty(name);
+  });
+  appliedThemeTokens = Object.keys(tokens);
+  appliedThemeTokens.forEach((name) => {
+    root.style.setProperty(name, String(tokens[name]));
+  });
+}
+```
+
+The message handler applies `data.theme` for a `theme` frame and
+`data.theme` for an `init` frame, then returns.
+
+### 9.5 CDP-verifiable assertions
+
+- The document element carries the theme's custom properties as inline styles
+  while a theme is active, and carries none after switching back.
+- A themed element's computed colour matches the theme's value, for example
+  `rgb(244, 246, 251)` for `--fgc-surface` in the Light theme.
+- `--fgc-surface-inverse` inverts between the themes, which proves the panels
+  were repainted rather than merely restyled.
+- The `theme` key is present in `init` and in `/state`.
+- The saved `app.json` carries `settings.display.theme`.

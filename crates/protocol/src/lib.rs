@@ -10,6 +10,7 @@ mod catalog;
 mod dto;
 mod error;
 mod projection;
+mod theme;
 mod url;
 
 pub use cache::SectionCache;
@@ -24,6 +25,10 @@ pub use error::ProtocolError;
 pub use projection::{
     DEFAULT_WATERMARK_NAME, Projector, SCOREBOARD_TYPES, auto_overlay, scores, show, timer_action,
     timer_tick,
+};
+pub use theme::{
+    LIGHT_THEME_TOKENS, THEME_MESSAGE, ThemeDto, ThemeError, effective_tokens, parse_theme_json,
+    theme_dto, theme_message,
 };
 pub use url::{
     AssetUrlResolver, DataUrlResolver, ServedAssetResolver, data_url_for, font_url,

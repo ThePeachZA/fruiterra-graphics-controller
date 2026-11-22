@@ -57,6 +57,15 @@ pub fn pick_match_library_open() -> Option<PathBuf> {
         .pick_file()
 }
 
+/// Opens the native file picker for an overlay theme file.
+#[must_use]
+pub fn pick_theme_file() -> Option<PathBuf> {
+    rfd::FileDialog::new()
+        .set_title("Import overlay theme")
+        .add_filter("Overlay theme", &["json"])
+        .pick_file()
+}
+
 /// Validates a URL before any network request is made.
 ///
 /// Only absolute `http`/`https` URLs without embedded credentials are

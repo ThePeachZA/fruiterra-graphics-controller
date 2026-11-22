@@ -60,6 +60,29 @@ abbreviations** switch. Turn it on and the game overlay shows each team's short
 tag (`NWS`) instead of its full name. It is off by default, and it is saved
 with your settings.
 
+### Can I change the overlay colours?
+
+Yes. Match Controller → Config → Overlay theme has a **Theme** picker with
+**Night Broadcast** (the default dark theme) and **Light**. The change is
+applied to every bundled overlay straight away, with no restart and no reload
+of the OBS Browser Source.
+
+You can also **Import theme file** to load a JSON file of your own. The file
+may be a flat object of token names and values:
+
+```json
+{ "--fgc-surface": "#f4f6fb", "--fgc-text": "#11151d" }
+```
+
+or it may name itself and nest the tokens:
+
+```json
+{ "name": "Daylight", "tokens": { "--fgc-surface": "#f4f6fb" } }
+```
+
+Imported tokens are layered over the selected theme, so you only list the ones
+you want to change. **Remove** clears them again.
+
 ### Is there a bracket overlay?
 
 Not in version 1. The bracket board is for the operator; it is not a broadcast

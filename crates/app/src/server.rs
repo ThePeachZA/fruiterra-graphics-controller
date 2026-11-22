@@ -11,7 +11,9 @@ use std::time::{Duration, Instant};
 
 use dioxus::prelude::*;
 use fgc_core::{AppState, Asset, AssetOrigin, Match};
-use fgc_protocol::{AssetCatalog, DataUrlResolver, Projector, SectionCache, ServedAssetResolver};
+use fgc_protocol::{
+    AssetCatalog, DataUrlResolver, Projector, SectionCache, ServedAssetResolver, theme_message,
+};
 use fgc_server::{AssetMode, Outbound, ServerConfig, ServerHandle, ServerStatus};
 use tracing::{debug, warn};
 
@@ -453,35 +455,51 @@ pub fn project_outbound(
     mode: AssetMode,
     blob_root: Option<&Path>,
 ) -> Vec<Outbound> {
+    let mut outbound = Vec::with_capacity(8);
+
+    // The theme is a display setting rather than match data, so it is
+    // projected even when no match is loaded.
+    push(
+        &mut outbound,
+        Outbound::from_message(&theme_message(&state.settings.display)),
+    );
+
     let Some(match_state) = state.current_match.as_ref() else {
-        return Vec::new();
+        return outbound;
     };
 
     match mode {
         AssetMode::Served => {
             let resolver = ServedAssetResolver::new(base_url);
-            collect(&Projector::new(state, catalog, &resolver), match_state)
+            collect(
+                &mut outbound,
+                &Projector::new(state, catalog, &resolver),
+                match_state,
+            );
         }
         AssetMode::DataUrl => {
             let blob_root = blob_root.map(Path::to_path_buf);
             let resolver = DataUrlResolver::new(move |asset: &Asset| {
                 load_asset_bytes(asset, blob_root.as_deref())
             });
-            collect(&Projector::new(state, catalog, &resolver), match_state)
+            collect(
+                &mut outbound,
+                &Projector::new(state, catalog, &resolver),
+                match_state,
+            );
         }
     }
+    outbound
 }
 
-fn collect(projector: &Projector<'_>, match_state: &Match) -> Vec<Outbound> {
-    let mut outbound = Vec::with_capacity(6);
+fn collect(outbound: &mut Vec<Outbound>, projector: &Projector<'_>, match_state: &Match) {
     for message in projector.scoreboard_messages(match_state) {
-        push(&mut outbound, Outbound::from_message(&message));
+        push(outbound, Outbound::from_message(&message));
     }
     push(
-        &mut outbound,
+        outbound,
         Outbound::from_message(&projector.casters_message(match_state)),
     );
-    outbound
 }
 
 fn push(outbound: &mut Vec<Outbound>, message: Result<Outbound, fgc_protocol::ProtocolError>) {

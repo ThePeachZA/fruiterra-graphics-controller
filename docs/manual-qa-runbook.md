@@ -4093,3 +4093,74 @@ were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A1
 and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` was `No serve config`. The temporary QA harness lives
 outside the repository and is removed when the overlay review work completes.
+
+### A66 - Overlay theme system
+
+**Covers:** owner review list 2026-11-22 (slice G), the `theme` message,
+`settings.display.theme`, `settings.display.themeTokens`
+
+**Steps:**
+
+1. `dx build --desktop` after stopping any running `fruiterra-gc`, then launch
+   the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Restore
+   the authoritative `app.json`/`app.json.bak` fixture before and after the run.
+2. Build a QA fixture with one named map, a hero ban on each side and
+   `settings.display.showHeroBans` on, so the hero-bans overlay has content.
+3. Open `hero-bans.html` at 1920x1080 over CDP, reload, await
+   `document.fonts.ready`, and record the computed colours of the themed
+   surfaces: the panel background, the ban tag background and text, the panel
+   name colour, the mode label colour, and the inline custom properties on the
+   document element.
+4. Drive the real app: open **Match Controller**, then the **Config** tab, and
+   change the **Overlay theme** picker from Night Broadcast to Light. Do not
+   reload the overlay. Re-sample it and confirm the computed colours changed
+   and that the theme's custom properties are now set inline.
+5. Confirm `/state` carries `theme.preset` and the theme's tokens, and that
+   the saved `app.json` stores `settings.display.theme`.
+6. Change the picker back to Night Broadcast. Confirm the inline properties
+   are removed (the overlay removes any property the new theme does not list)
+   and that the computed colours match the values recorded in step 3 exactly.
+7. Open `timer.html` the same way and confirm it follows the same switch.
+8. Record the transparency, document size, font state, requests, failed
+   responses and console errors. Stop the app, restore the authoritative
+   fixture and recheck its hashes and `tailscale serve status`.
+
+**Gotchas:**
+
+- `document.fonts.check` only reports a font the page actually paints. The
+  hero-bans page loads Archivo 500 and 600, so assert
+  `500 20px "FGC Display Medium"` and `600 20px "FGC Display SemiBold"`.
+- Read the **rendered** colours from the themed elements, not the raw custom
+  property values: `getComputedStyle(el).getPropertyValue('--fgc-surface')`
+  returns the authored `#f4f6fb`, while the painted colour is
+  `rgb(244, 246, 251)`.
+- The Night Broadcast `--fgc-surface-inverse` is the near-white plate
+  `rgb(238, 242, 248)`, and the Light theme inverts it to `rgb(17, 21, 29)`.
+  That inversion is what proves the theme really repainted the panels.
+
+**Evidence:** CDP DOM and computed-style JSON for the three states, the inline
+custom-property list, `/state`, the saved `app.json`, the network and console
+capture and `/health`; no screenshots were taken or published.
+
+**Result: Pass - assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay pages. The picker started on Night Broadcast. The
+hero-bans panel went from `rgb(11, 13, 18)` to `rgb(244, 246, 251)`, the ban tag
+from `rgb(238, 242, 248)` to `rgb(17, 21, 29)` with its text from
+`rgb(11, 13, 18)` to `rgb(238, 242, 248)`, the panel name from
+`rgb(238, 242, 248)` to `rgb(17, 21, 29)` and the mode label to
+`rgb(194, 65, 12)`, with no reload. Eighteen custom properties were applied
+inline. `/state` carried `theme.preset` `light` with all eighteen tokens and
+the saved `app.json` stored `light`. Switching back removed every inline
+property and restored the stylesheet defaults exactly, and `/state` reported
+`nightBroadcast` again. The timer overlay followed the same switch and
+returned to its default colour. Both overlays had a transparent
+`rgba(0, 0, 0, 0)` body, a 1920x1080 document and their bundled fonts loaded,
+and the run recorded 0 external requests, 0 failed responses, 0 bad statuses
+and 0 console errors. `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`git diff --check` and `dx build --desktop` passed. The authoritative hashes
+were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`
+and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` was `No serve config`. The temporary QA harness lives
+outside the repository and is removed when the overlay review work completes.

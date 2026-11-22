@@ -14,7 +14,13 @@ struct OverlaySpec {
 const OVERLAYS: [OverlaySpec; 9] = [
     OverlaySpec {
         file: "game-overlay.html",
-        message_types: &["'init'", "'scoreboard'", "'gameOverlay'", "'show'"],
+        message_types: &[
+            "'init'",
+            "'scoreboard'",
+            "'gameOverlay'",
+            "'show'",
+            "'theme'",
+        ],
     },
     OverlaySpec {
         file: "hero-bans.html",
@@ -24,11 +30,12 @@ const OVERLAYS: [OverlaySpec; 9] = [
             "'gameOverlay'",
             "'heroBans'",
             "'show'",
+            "'theme'",
         ],
     },
     OverlaySpec {
         file: "map-pool.html",
-        message_types: &["'init'", "'scoreboard'", "'mapPool'", "'show'"],
+        message_types: &["'init'", "'scoreboard'", "'mapPool'", "'show'", "'theme'"],
     },
     OverlaySpec {
         file: "map-select.html",
@@ -38,19 +45,20 @@ const OVERLAYS: [OverlaySpec; 9] = [
             "'gameOverlay'",
             "'mapSelect'",
             "'show'",
+            "'theme'",
         ],
     },
     OverlaySpec {
         file: "row-casters.html",
-        message_types: &["castersData", "'show'"],
+        message_types: &["castersData", "'show'", "'theme'"],
     },
     OverlaySpec {
         file: "row-hosts.html",
-        message_types: &["castersData", "'show'"],
+        message_types: &["castersData", "'show'", "'theme'"],
     },
     OverlaySpec {
         file: "row-interviews.html",
-        message_types: &["castersData", "interviewee", "'show'"],
+        message_types: &["castersData", "interviewee", "'show'", "'theme'"],
     },
     OverlaySpec {
         file: "team-roster-home.html",
@@ -60,6 +68,7 @@ const OVERLAYS: [OverlaySpec; 9] = [
             "'gameOverlay'",
             "'teamRoster'",
             "'show'",
+            "'theme'",
         ],
     },
     OverlaySpec {
@@ -70,6 +79,7 @@ const OVERLAYS: [OverlaySpec; 9] = [
             "'gameOverlay'",
             "'teamRoster'",
             "'show'",
+            "'theme'",
         ],
     },
 ];
@@ -879,4 +889,66 @@ fn hero_bans_overlay_uses_night_broadcast_tokens() {
         !text.contains("requestInit"),
         "hero-bans must not gain an init request it never sent"
     );
+}
+
+#[test]
+fn every_overlay_applies_the_theme_message() {
+    for spec in OVERLAYS {
+        let bytes = embedded_overlay(spec.file).expect("overlay should be embedded");
+        let text = String::from_utf8(bytes.into_owned()).expect("overlay should be UTF-8");
+
+        assert!(
+            text.contains("function applyTheme(payload)"),
+            "{} should define applyTheme",
+            spec.file
+        );
+        assert!(
+            text.contains("root.style.setProperty(name, String(tokens[name]));"),
+            "{} should apply the theme tokens",
+            spec.file
+        );
+        assert!(
+            text.contains("root.style.removeProperty(name);"),
+            "{} should clear the tokens of an earlier theme",
+            spec.file
+        );
+        assert!(
+            text.contains("'theme'"),
+            "{} should listen for the theme message",
+            spec.file
+        );
+    }
+}
+
+#[test]
+fn the_timer_overlay_applies_the_theme_message() {
+    let bytes = embedded_overlay("timer.html").expect("timer overlay should be embedded");
+    let text = String::from_utf8(bytes.into_owned()).expect("timer overlay should be UTF-8");
+
+    assert!(text.contains("function applyTheme(payload)"));
+    assert!(text.contains("root.style.setProperty(name, String(tokens[name]));"));
+    assert!(text.contains("message.type === 'theme'"));
+    assert!(text.contains("message.data.theme"));
+}
+
+#[test]
+fn the_light_theme_only_names_tokens_the_overlays_declare() {
+    for spec in OVERLAYS {
+        let bytes = embedded_overlay(spec.file).expect("overlay should be embedded");
+        let text = String::from_utf8(bytes.into_owned()).expect("overlay should be UTF-8");
+        let start = text
+            .find(":root {")
+            .expect("overlay should declare :root tokens");
+        let rest = &text[start..];
+        let end = rest.find('}').expect("the :root block should close");
+        let root = &rest[..=end];
+
+        for (name, _value) in fgc_protocol::LIGHT_THEME_TOKENS {
+            assert!(
+                root.contains(&format!("{name}:")),
+                "{} should declare the {name} token",
+                spec.file
+            );
+        }
+    }
 }
