@@ -1,0 +1,124 @@
+name: Bug report
+description: Something is broken — wrong overlay output, a crash, or a save that will not load.
+title: "[Bug]: "
+labels: ["kind:issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Use this form for broken behaviour only.
+        For "I want X", use **Feature request** instead.
+
+        Before filing, check the [troubleshooting guide](https://github.com/ThePeachZA/fruiterra-graphics-controller/blob/main/docs/wiki/Troubleshooting.md)
+        and the known limitations in the README. In v1 these are expected, not bugs:
+        Windows x64 only, unsigned builds (SmartScreen warning), no Google Sheets import,
+        control-only timer, and no bracket overlay.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences describing the fault.
+      placeholder: The away team logo placeholder stays visible after a logo is assigned.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the app is affected?
+      options:
+        - Overlays (OBS / browser sources)
+        - Control UI / navigation
+        - Match controller / timer
+        - Tournament
+        - Teams / talent / assets
+        - Data, save files & migration
+        - Overlay server / protocol
+        - Packaging / install
+        - Docs / wiki
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Blocks a live broadcast
+        - Major — feature unusable
+        - Minor — workaround exists
+        - Cosmetic
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps from a fresh launch. Include the relevant value in each field.
+      placeholder: |
+        1. Launch 1.0.0 from the installer.
+        2. Add a team with no logo and a tag of `NS`.
+        3. Start the overlay server and load /overlays/game-overlay.html in OBS.
+        4. Assign a logo in the team dialog.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include any on-screen text, wrong values or console errors verbatim.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install type
+      options:
+        - Installer (setup.exe)
+        - Portable ZIP
+        - Built from source (dx serve / dx build)
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 23H2 (10.0.22631)"
+  - type: input
+    id: environment
+    attributes:
+      label: Overlay / browser environment
+      description: OBS version, Browser Source URL (port), WebView2 version, or LAN mode if relevant.
+      placeholder: "OBS 30.2, http://127.0.0.1:3001/overlays/game-overlay.html, 1920x1080"
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and screenshots
+      description: |
+        Drag and drop files here. App logs live in
+        `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\logs\`.
+        For overlay faults, include the browser source console output if you can.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: I checked the troubleshooting guide and known limitations.
+          required: true
+        - label: I reproduced this on the latest available release.
+          required: false

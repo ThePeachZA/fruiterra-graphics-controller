@@ -1,0 +1,75 @@
+name: Feature request
+description: A scoped change or addition to existing behaviour.
+title: "[Feature]: "
+labels: ["kind:improvement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for a change or addition you can describe acceptance criteria for.
+        For broken behaviour, use **Bug report** instead.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: The change in one or two sentences.
+      placeholder: Add a show/hide toggle for the standalone timer overlay URL.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Overlays (OBS / browser sources)
+        - Control UI / navigation
+        - Match controller / timer
+        - Tournament
+        - Teams / talent / assets
+        - Data, save files & migration
+        - Overlay server / protocol
+        - Packaging / install
+        - Docs / wiki
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and where does the current app get in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: Describe what you want to see, including where in the app it would live.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about, and why you ruled them out.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How would we know this is done? Include 1920x1080 / overlay protocol constraints where relevant.
+      placeholder: |
+        - Toggle is visible on the Overlay page and persists in app.json.
+        - Overlay URL is hidden by default.
+        - No change to the WebSocket protocol.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, links to prior art in the docs, or related issues.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and the doctrine backlog for this request.
+          required: true

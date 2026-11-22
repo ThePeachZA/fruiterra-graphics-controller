@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Troubleshooting and known limitations
+    url: https://github.com/ThePeachZA/fruiterra-graphics-controller/blob/main/docs/wiki/Troubleshooting.md
+    about: Start here for blank overlays, port conflicts, SmartScreen warnings and other common problems.
+  - name: FAQ and end-user guide
+    url: https://github.com/ThePeachZA/fruiterra-graphics-controller/blob/main/docs/wiki/Home.md
+    about: Questions about setup, OBS Browser Sources, tournaments or how a feature is meant to work.
+  - name: Overlay protocol and custom overlays
+    url: https://github.com/ThePeachZA/fruiterra-graphics-controller/blob/main/docs/protocol.md
+    about: Wire format, emitted message types and authoring third-party overlays.
+  - name: Manual QA register
+    url: https://github.com/ThePeachZA/fruiterra-graphics-controller/blob/main/docs/manual-qa.md
+    about: Current QA gates, verified behaviour and accepted known issues.
