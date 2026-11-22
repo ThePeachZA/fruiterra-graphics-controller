@@ -651,6 +651,45 @@ fn map_select_overlay_uses_night_broadcast_tokens() {
 }
 
 #[test]
+fn map_select_shows_the_banned_heroes_on_the_map() {
+    let text = overlay_text("map-select.html");
+
+    assert!(
+        text.contains("function createBanStrip(bans)")
+            && text.contains("function orderedBans(bans)"),
+        "map-select should build the ban strip from the projected bans"
+    );
+    assert!(
+        text.contains("bans.firstBanTeam === 'B' ? [...teamB, ...teamA] : [...teamA, ...teamB]"),
+        "the ban order should follow the team that banned first"
+    );
+    assert!(
+        text.contains("heroPortraits[heroName]"),
+        "the ban portraits should come from the projected hero portraits"
+    );
+    assert!(
+        text.contains(
+            "<div class=\"map-card__visual\">\n          <div class=\"${imageClass}\" id=\"image-${index}\" style=\"${imageStyle}\"></div>\n          ${createBanStrip(bans)}\n        </div>"
+        ),
+        "the ban strip should sit beside the map image, not inside it"
+    );
+    assert!(
+        text.contains(
+            ".map-card__bans {\n      position: absolute;\n      left: 14px;\n      bottom: 14px;"
+        ),
+        "the ban strip should overlay the bottom of the map image"
+    );
+    assert!(
+        text.contains(".map-card__ban-number {\n      position: absolute;\n      top: -8px;\n      right: -8px;\n      width: 24px;\n      height: 24px;\n      transform: rotate(45deg);"),
+        "the ban order should be a small diamond in the corner"
+    );
+    assert!(
+        text.contains(".map-card__ban-number span {\n      transform: rotate(-45deg);"),
+        "the ban number should stay upright inside the diamond"
+    );
+}
+
+#[test]
 fn row_casters_overlay_uses_night_broadcast_tokens() {
     let text = overlay_text("row-casters.html");
 

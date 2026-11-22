@@ -1236,7 +1236,7 @@ on top of it afterwards.
 | A | Split the talent row: casters only on `row-casters.html`, plus new `row-hosts.html` (host + analysts) and `row-interviews.html` (interviewer + guest) | **Done — A60** |
 | B | Team roster: core player cards fill the container width instead of a fixed 284px (substitutes keep their fixed width) | **Done — A61** |
 | C | Map pool: stagger each game-mode column so the reveal animates column by column | **Done — A62** |
-| D | Map select: show the ban thumbnails over the bottom of the map image, minimal | Next |
+| D | Map select: show the ban thumbnails over the bottom of the map image, minimal | **Done - A63** |
 | E | Game overlay: drop the outline rings, put the team logo on the outer end, move the ban icon next to the score, add a team-abbreviation toggle, review gradients and background textures | Next |
 | F | Hero bans: bigger redesign — two large hero-art panels with `1ST BAN` / `2ND BAN` tags and the mode and map name in a dark bottom strip | Next |
 | G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | Last |
@@ -1320,3 +1320,28 @@ evidence: the four columns became visible 190ms apart with delays of 1100,
 `rgb(255, 122, 26)`, the logo stacked above the glow, and the overlay stayed
 transparent, 1920×1080, font-loaded and free of external requests, failed
 responses and console errors.
+
+### Slice D — map select ban thumbnails (A63, 2026-11-22)
+
+The map select overlay had no trace of the hero bans, so the pick and the ban
+were two separate pieces of information on screen. Following the OWCS27 and
+OWWC27 references, the banned heroes now sit inside the map image: a compact
+row of portrait thumbnails anchored to the bottom-left of the art, each with a
+numbered diamond badge in the corner.
+
+The order follows the first-ban team, so the hero banned first is number 1 and
+the other team's ban is number 2. The wire was not changed: the overlay already
+receives `heroBans` (one entry per map) and `heroPortraits` from the scoreboard
+payload. The strip is a sibling of the map image inside a new
+`.map-card__visual` wrapper, so a completed map's greyscale filter never drains
+the colour from the ban portraits.
+
+A63 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the first map showed Ana as ban 1 and Kiriko as ban 2, the second
+showed Winston before Tracer because team B banned first, the third showed
+Sojourn and Lucio, and the map without bans stayed empty. The strips sat inside
+the image area, the portraits were not greyscaled, the badge resolved to a 45°
+rotation with a counter-rotated label, and the overlay stayed transparent,
+1920×1080, font-loaded and free of external requests, failed responses and
+console errors.

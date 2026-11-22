@@ -3869,3 +3869,76 @@ and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` after
 every run, and `tailscale serve status` was `No serve config`. The temporary QA
 harness lives outside the repository and is removed when the overlay review work
 completes.
+
+### A63 - Map select ban thumbnails
+
+**Covers:** owner review list 2026-11-22 (slice D), `map-select.html`
+
+**Steps:**
+
+1. `dx build --desktop` after stopping any running `fruiterra-gc`, then launch
+   the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Restore
+   the authoritative `app.json`/`app.json.bak` fixture before and after the run.
+2. Build a QA fixture whose match names four maps (Ilios, Nepal, King's Row,
+   Dorado), marks Dorado completed and fills the first three hero-ban slots:
+   `{ firstBanTeam: 'A', teamA: ['Ana'], teamB: ['Kiriko'] }`,
+   `{ firstBanTeam: 'B', teamA: ['Tracer'], teamB: ['Winston'] }` and
+   `{ firstBanTeam: 'A', teamA: ['Sojourn'], teamB: ['Lucio'] }`. Leave
+   `settings.display.showHeroBans` on so the bans are projected.
+3. Start the overlay server through the real app UI and wait until `/state`
+   holds `autoOverlay, casters, gameOverlay, heroBans, mapSelect, scoreboard,
+   teamRoster`.
+4. Open `map-select.html` as a CDP target with a 1920×1080 device metrics
+   override, reload, wait for the map cards and let the reveal settle.
+5. Record the card count and names, and for every card the ban count, the
+   diamond numbers, the thumbnail sources, whether the portraits loaded, the
+   computed `filter` of each portrait, the badge and label transforms, the
+   strip and image boxes, and whether the strip sits inside `.map-card__visual`
+   or inside `.map-card__image`.
+6. Assert that the first card shows Ana as ban 1 and Kiriko as ban 2, that the
+   second shows Winston before Tracer because team B banned first, that the
+   third shows Sojourn and Lucio, that the card without bans carries no strip,
+   that every strip sits inside the visual wrapper and never inside the
+   greyscaled image, that the portraits are not greyscaled and do load, that
+   the badge is rotated 45° and the label −45°, that the document is
+   1920×1080, that the body is transparent, that the fonts are loaded, and that
+   the requests, failed responses, bad statuses and console errors are all
+   empty.
+
+**Gotchas:** the app trims trailing empty map slots, so a fixture with four
+named maps renders four cards, not eight, and the wire `heroBans` array is
+trimmed to the same length - assert the alignment against the rendered card
+count rather than a fixed number. `document.fonts.check` only reports a font
+that the page actually renders, so check the families the overlay uses
+(`FGC Display Medium` and `FGC Display Black`) instead of a family the page
+never paints. The fixture enables LAN access, so asset requests resolve against
+the LAN base URL - the "external request" filter must accept the app's own
+address on port 3001. The CDP websocket keeps the Node event loop alive, so the
+QA script must call `process.exit(0)` when it is done.
+
+**Evidence:** CDP DOM and computed-style JSON for every card, the wire
+`heroBans` and `heroPortraits`, network/console capture and `/health`; no
+screenshots were taken or published.
+
+**Result: Pass - assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay page. The overlay rendered four map cards and the
+wire carried `heroBans` aligned to them. The first card showed two ban
+thumbnails with the diamond numbers `1` and `2` and resolved to Ana then
+Kiriko; the second showed Winston then Tracer because team B banned first; the
+third showed Sojourn then Lucio; the card without bans carried no strip. Every
+strip sat inside `.map-card__visual` and not inside `.map-card__image`, the
+ban portraits computed `filter: none` so the completed map's greyscale never
+drained them, and the portraits loaded. The badge resolved to a 45° rotation
+and the number label to the counter-rotated −45°. The strips sat 14px above the
+bottom of the image area and inside the image box. The overlay had a
+transparent `rgba(0, 0, 0, 0)` body, a 1920×1080 document, its bundled fonts
+loaded, and recorded 0 external requests, 0 failed responses, 0 bad statuses
+and 0 console errors. `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`git diff --check` and `dx build --desktop` passed. The authoritative hashes
+were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`
+and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` after
+every run, and `tailscale serve status` was `No serve config`. The temporary QA
+harness lives outside the repository and is removed when the overlay review work
+completes.

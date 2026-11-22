@@ -223,7 +223,7 @@ No luminance/contrast function exists in this file; none is required (no dynamic
 ## 3. map-select.html
 
 ### 3.1 Purpose & wire
-Renders vertical map-select cards: one active (expanded) slot plus inactive slots, each with image, type/name, chosen-by tag, and score board for completed maps. Consumes `scoreboard`, `gameOverlay`, `mapSelect`; reads `currentMapIndex`, `loserPicks`, `gameModeIcons`, `maps[]` (name, type, scoreA, scoreB, mapImageUrl, completed, chosenByName), `teamA`, `teamB`, `tournamentLogoUrl`. Message types `scoreboard`, `gameOverlay`, `mapSelect`.
+Renders vertical map-select cards: one active (expanded) slot plus inactive slots, each with image, type/name, chosen-by tag, and score board for completed maps. Consumes `scoreboard`, `gameOverlay`, `mapSelect`; reads `currentMapIndex`, `loserPicks`, `gameModeIcons`, `maps[]` (name, type, scoreA, scoreB, mapImageUrl, completed, chosenByName), `heroBans[]` (firstBanTeam, teamA, teamB) and `heroPortraits` (hero name to portrait URL), `teamA`, `teamB`, `tournamentLogoUrl`. Message types `scoreboard`, `gameOverlay`, `mapSelect`.
 
 ### 3.2 Surface plan
 
@@ -249,7 +249,18 @@ Placeholder/empty state: cards with no map show `--fgc-surface-muted` image and 
 - Active/current: same surface treatment; card expands via existing `flex: 1.8` geometry (unchanged); no colour change beyond the active slot's normal treatment (accent already used for type).
 - Completed: image gets `--fgc-accent-soft` scrim; score board `rgb(11, 13, 18 / 0.60)`; team logo overlay (user asset).
 - Empty/TBC: `--fgc-surface-muted` placeholder; `TBC` in `--fgc-text`; chosen-by hidden.
+- Hero bans: a card with bans carries a `.map-card__bans` strip inside the map image; a card without bans carries none.
 - Team colours: neutral only in map-select; chosen-by logo is a user asset.
+
+**Ban thumbnails (owner request, 2026-11-22).** The OWCS27 and OWWC27 map
+selects put the banned heroes inside the map image rather than in a separate
+panel, so the pick and the bans read as one card:
+
+- `.map-card__visual` wraps the map image and the strip, so the strip is anchored to the bottom of the artwork.
+- The strip is a sibling of `.map-card__image`, never a child, so a completed map's `filter: grayscale(100%)` cannot drain the colour from the ban portraits.
+- `.map-card__ban` is a 58×58 portrait crop; `.map-card__ban-number` is a 24×24 accent diamond (`rotate(45deg)`) with a counter-rotated label, so the ban order reads as a number.
+- The order follows `firstBanTeam`: the team that banned first gets ban 1, the other team gets ban 2.
+- No wire change: `heroBans` and `heroPortraits` are already part of the scoreboard payload.
 
 ### 3.4 JS helpers
 No luminance/contrast function exists in this file; none required. The placeholder image branch:
@@ -279,6 +290,9 @@ No luminance/contrast function exists in this file; none required. The placehold
 - `.map-card__score` color === `rgb(238, 242, 248)`.
 - `.watermark` background === `rgb(238, 242, 248)`; `.watermark__text` color === `rgb(11, 13, 18)`.
 - `@font-face` literal count === 5.
+- The `.map-card__bans` strip sits inside `.map-card__visual` and never inside `.map-card__image`.
+- The ban portraits compute `filter: none`, so a completed map keeps its colour under the strip.
+- The badge transform is a 45° rotation (`matrix` with `b > 0` and `c < 0`) and the label transform is the counter-rotated −45°.
 
 ### 3.8 Retired-value purge map (map-select.html)
 - `#fff` → `--fgc-text` / `--fgc-surface-raised` / `--fgc-surface-inverse` context (`.map-select-title`, `.map-card`, `.map-card__text`, `.map-card__score`, `.map-card__score-divider`, `.watermark`).

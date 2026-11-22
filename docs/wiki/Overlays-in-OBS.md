@@ -12,7 +12,7 @@ default is `http://127.0.0.1:3001`.
 | Overlay | URL | What it shows |
 |---|---|---|
 | Game overlay | `<base>/overlays/game-overlay.html` | Score, team names, title, subtitle, current map, first-to and side indicators |
-| Map select | `<base>/overlays/map-select.html` | The map picks and who chose each map |
+| Map select | `<base>/overlays/map-select.html` | The map picks and who chose each map, with the banned heroes inside the map image |
 | Hero bans | `<base>/overlays/hero-bans.html` | The banned hero for each team on each map |
 | Map pool | `<base>/overlays/map-pool.html` | The map pool in the order set on the Map Pool tab. Each game-mode column enters on its own beat, and a picked map is greyscale with an accent glow rising from the bottom of the card |
 | Home team roster | `<base>/overlays/team-roster-home.html` | The home team's players, roles, portraits and heroes |

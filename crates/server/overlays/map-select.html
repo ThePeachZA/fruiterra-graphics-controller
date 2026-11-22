@@ -286,6 +286,66 @@
       background: var(--fgc-surface-muted);
     }
 
+    /* === MAP CARD BANS === */
+    /* The banned heroes sit inside the map image, the way the OWCS27 map
+       select does it, so the card keeps one clean image area. The strip lives
+       beside the image instead of inside it, because a greyscaled completed
+       image would otherwise drain the portraits too. */
+    .map-card__visual {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+    }
+
+    .map-card__bans {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      display: flex;
+      gap: 10px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .map-card__ban {
+      position: relative;
+      width: 58px;
+      height: 58px;
+      background: var(--fgc-surface-inverse);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .map-card__ban img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* The ban order is a small diamond in the corner, matching the OWCS27
+       map select. */
+    .map-card__ban-number {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 24px;
+      height: 24px;
+      transform: rotate(45deg);
+      background: var(--fgc-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .map-card__ban-number span {
+      transform: rotate(-45deg);
+      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
+      font-size: 13px;
+      line-height: 1;
+      color: var(--fgc-on-accent);
+    }
+
     /* === MAP CARD TEXT === */
     .map-card__text {
       width: 100%;
@@ -446,6 +506,8 @@
     };
 
     let gameModeIcons = {};
+    let heroPortraits = {};
+    let heroBans = [];
     let currentMapIndex = -1;
     let loserPicks = true;
     let animationsTriggered = false;
@@ -491,7 +553,35 @@
       });
     }
 
-    function createMapCard(mapData, index, teamAData, teamBData, isCurrent) {
+    // The banned heroes are ordered by who banned first, so the number on the
+    // diamond matches the order the bans were made in.
+    function orderedBans(bans) {
+      if (!bans) return [];
+      const teamA = Array.isArray(bans.teamA) ? bans.teamA : [];
+      const teamB = Array.isArray(bans.teamB) ? bans.teamB : [];
+      return bans.firstBanTeam === 'B' ? [...teamB, ...teamA] : [...teamA, ...teamB];
+    }
+
+    function createBanStrip(bans) {
+      const names = orderedBans(bans);
+      if (!names.length) return '';
+      const items = names
+        .map((heroName, index) => {
+          const portraitUrl = heroPortraits[heroName];
+          if (!portraitUrl) return '';
+          return (
+            `<div class="map-card__ban">` +
+            `<img src="${escapeHtml(portraitUrl)}" alt="">` +
+            `<span class="map-card__ban-number"><span>${index + 1}</span></span>` +
+            `</div>`
+          );
+        })
+        .join('');
+      if (!items) return '';
+      return `<div class="map-card__bans">${items}</div>`;
+    }
+
+    function createMapCard(mapData, index, teamAData, teamBData, isCurrent, bans) {
       const card = document.createElement('div');
       card.className = isCurrent ? 'map-card map-card--current' : 'map-card';
       card.dataset.index = index;
@@ -544,7 +634,10 @@
 
       card.innerHTML = `
         <div class="${logoClass}" id="logo-${index}" style="${logoContent}"></div>
-        <div class="${imageClass}" id="image-${index}" style="${imageStyle}"></div>
+        <div class="map-card__visual">
+          <div class="${imageClass}" id="image-${index}" style="${imageStyle}"></div>
+          ${createBanStrip(bans)}
+        </div>
         <div class="${boardClass}" id="board-${index}">
           <div class="map-card__score" id="score-a-${index}">${escapeHtml(mapData.scoreA || 0)}</div>
           <div class="map-card__score-divider">-</div>
@@ -568,7 +661,7 @@
       for (let i = 0; i < mapsToShow; i++) {
         const mapData = maps[i] || { name: '', type: '', scoreA: 0, scoreB: 0, mapImageUrl: '', completed: false, chosenByName: null };
         const isCurrent = i === currentMapIndex;
-        const card = createMapCard(mapData, i, teamAData, teamBData, isCurrent);
+        const card = createMapCard(mapData, i, teamAData, teamBData, isCurrent, heroBans[i]);
         el.mapsContainer.appendChild(card);
       }
 
@@ -627,6 +720,14 @@
 
         if (d.gameModeIcons) {
           gameModeIcons = d.gameModeIcons;
+        }
+
+        if (d.heroBans) {
+          heroBans = d.heroBans;
+        }
+
+        if (d.heroPortraits) {
+          heroPortraits = d.heroPortraits;
         }
 
         if (d.maps) {
