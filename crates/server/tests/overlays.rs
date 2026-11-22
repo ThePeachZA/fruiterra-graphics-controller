@@ -251,6 +251,40 @@ fn game_overlay_shows_a_tag_placeholder_for_empty_logo_slots() {
 }
 
 #[test]
+fn game_overlay_uses_night_broadcast_tokens() {
+    let text = overlay_text("game-overlay.html");
+
+    assert!(
+        text.contains("--fgc-surface: #0b0d12;")
+            && text.contains("--fgc-accent: #ff7a1a;")
+            && text.contains("--fgc-surface-inverse: #eef2f8;"),
+        "the game overlay should inline the Night Broadcast token block"
+    );
+    assert!(
+        text.contains("background: var(--fgc-surface-inverse)"),
+        "the score chip should use the inverse surface"
+    );
+    assert!(
+        text.contains(".mode-item--active {")
+            && text.contains("background: var(--fgc-accent);")
+            && text.contains("color: var(--fgc-on-accent);"),
+        "the active map segment should be orange on dark"
+    );
+    assert!(
+        !text.contains("#ac46f7") && !text.contains("rgba(172, 70, 247"),
+        "the old purple accent should be retired from the game overlay"
+    );
+    assert!(
+        !text.contains("#090909") && !text.contains("#eeeeee") && !text.contains("#ffffff"),
+        "the old flat greys should be retired from the game overlay"
+    );
+    assert!(
+        text.contains("return luminance > 0.5 ? '#0b0d12' : '#eef2f8';"),
+        "contrast text should use the Night Broadcast surfaces"
+    );
+}
+
+#[test]
 fn map_select_card_count_follows_projected_maps() {
     let text = overlay_text("map-select.html");
 

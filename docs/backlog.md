@@ -99,6 +99,24 @@ The seven shipped overlays are unchanged in v1: same filenames, protocol,
 geometry and 1920×1080 layout. Any later design pass must keep those contracts
 and be signed off in OBS before shipping.
 
+**Design pass started 2026-11-22.** The owner’s direction is OWWC27-inspired
+Night Broadcast: dark chrome, team colours as primary identity, Fruiterra
+orange as the system signal, geometry and protocol unchanged. Philosophy,
+tokens and layout concepts are in
+[`docs/overlay-refresh-design.md`](overlay-refresh-design.md); the owner’s
+review answers are recorded in §8.
+
+**Pilot done 2026-11-22.** `game-overlay.html` is the first overlay restyled
+to the Night Broadcast tokens. The team bars are now dark surfaces with a 1px
+inset line and inverse score chips, the retired white/black/purple palette is
+gone, the match bug sits on the raised surface, and the format text carries
+the orange accent. Filenames, wire protocol, geometry and the 1920×1080 canvas
+are unchanged, and no official marks were introduced. A57 in
+[`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence in both team-colour states. The remaining seven overlays and the
+standalone timer still use the old palette and are the next slice.
+
 ### C2. Control and overlay requests raised during R1 (2026-11-12 — post-v1)
 
 None of these are v1 fixes; they are recorded so the R1 pass does not turn into

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1920">
+  <link rel="icon" href="data:,">
   <title>Game Overlay</title>
   <style>
     @font-face {
@@ -43,6 +44,52 @@
       font-style: normal;
       font-display: swap;
       src: url('/assets/fonts/archivo-900.woff2') format('woff2');
+    }
+
+    /* === NIGHT BROADCAST TOKENS ===
+       Shared design tokens for the Fruiterra overlay refresh. Each overlay
+       inlines this block, exactly as it inlines its own font faces. */
+    :root {
+      --fgc-canvas: transparent;
+
+      --fgc-surface: #0b0d12;
+      --fgc-surface-raised: #11151d;
+      --fgc-surface-inverse: #eef2f8;
+      --fgc-surface-muted: #151922;
+
+      --fgc-line: #2a3140;
+      --fgc-line-strong: #3a4356;
+      --fgc-line-on-inverse: #0b0d12;
+
+      --fgc-text: #eef2f8;
+      --fgc-text-muted: #8d99ad;
+      --fgc-text-faint: #6b7688;
+      --fgc-text-inverse: #0b0d12;
+
+      --fgc-accent: #ff7a1a;
+      --fgc-accent-strong: #ff9346;
+      --fgc-accent-soft: rgb(255 122 26 / 16%);
+      --fgc-on-accent: #0b0d12;
+
+      --fgc-success: #3ecf8e;
+      --fgc-warning: #f5b84b;
+      --fgc-danger: #ef5b5b;
+
+      --fgc-space-1: 4px;
+      --fgc-space-2: 8px;
+      --fgc-space-3: 12px;
+      --fgc-space-4: 16px;
+      --fgc-radius-sm: 4px;
+      --fgc-radius-md: 6px;
+      --fgc-radius-lg: 10px;
+      --fgc-radius-pill: 999px;
+      --fgc-margin: 43px;
+
+      --fgc-duration-micro: 120ms;
+      --fgc-duration-state: 240ms;
+      --fgc-duration-reveal: 480ms;
+      --fgc-duration-scene: 900ms;
+      --fgc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     * {
@@ -131,8 +178,9 @@
       top: 52px;
       width: 525px;
       height: 55px;
-      background: #fff;
+      background: var(--fgc-surface);
       border-radius: 6px;
+      box-shadow: inset 0 0 0 1px var(--fgc-line);
       display: flex;
       overflow: hidden;
       clip-path: inset(0 round 6px);
@@ -180,36 +228,34 @@
       clip-path: inset(0);
     }
 
-    /* Default text colors (white bg) */
+    /* Default text colors (dark bg) */
     .team-bar--home .team-bar__name,
-    .team-bar--home .team-bar__score,
-    .team-bar--away .team-bar__name,
-    .team-bar--away .team-bar__score {
-      color: #090909;
+    .team-bar--away .team-bar__name {
+      color: var(--fgc-text);
     }
 
     /* Team colors enabled */
     .team-bar--home.team-colored {
-      background: var(--team-a-color, #fff);
+      background: var(--team-a-color, var(--fgc-surface));
     }
 
     .team-bar--away.team-colored {
-      background: var(--team-b-color, #fff);
+      background: var(--team-b-color, var(--fgc-surface));
     }
 
     .team-bar.team-colored .team-bar__name {
-      color: var(--team-text-color, #090909);
+      color: var(--team-text-color, var(--fgc-text));
     }
 
     .team-bar.team-colored .team-bar__score {
-      color: #090909;
-      background: #fff;
+      color: var(--fgc-text-inverse);
+      background: var(--fgc-surface-inverse);
     }
 
     .team-bar__ban {
       width: 47px;
       height: 55px;
-      background: #090909;
+      background: var(--fgc-surface-muted);
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
@@ -236,7 +282,7 @@
       justify-content: center;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 10px;
-      color: #fff;
+      color: var(--fgc-text);
       text-transform: uppercase;
       line-height: 1.2;
       padding-top: 2px;
@@ -248,7 +294,7 @@
       font-size: 30px;
       font-weight: 500;
       line-height: 55px;
-      color: #090909;
+      color: var(--fgc-text);
       text-transform: uppercase;
       white-space: nowrap;
       overflow: hidden;
@@ -288,7 +334,7 @@
       background-position: center;
       background-origin: content-box;
       padding: 6px;
-      background-color: var(--team-logo-bg, #eee);
+      background-color: var(--team-logo-bg, var(--fgc-surface-inverse));
       flex-shrink: 0;
       opacity: 0;
     }
@@ -309,7 +355,7 @@
       letter-spacing: 0.04em;
       line-height: 1;
       text-transform: uppercase;
-      color: var(--team-logo-placeholder-color, #090909);
+      color: var(--team-logo-placeholder-color, var(--fgc-text-inverse));
     }
 
     .team-bar__logo-placeholder--visible {
@@ -320,7 +366,9 @@
       width: 55px;
       font-size: 38px;
       font-weight: 600;
-      color: #090909;
+      color: var(--fgc-text-inverse);
+      background: var(--fgc-surface-inverse);
+      font-variant-numeric: tabular-nums;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -330,7 +378,7 @@
     .team-bar__side {
       width: 55px;
       height: 55px;
-      background: #090909;
+      background: var(--fgc-surface-muted);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -359,8 +407,9 @@
       position: absolute;
       top: 13px;
       height: 25px;
-      background: #090909;
+      background: var(--fgc-surface);
       border-radius: 6px;
+      box-shadow: inset 0 0 0 1px var(--fgc-line);
       display: flex;
       align-items: center;
       overflow: hidden;
@@ -384,7 +433,7 @@
       flex: 1;
       font-size: 16px;
       font-weight: 600;
-      color: #fff;
+      color: var(--fgc-text);
       text-transform: uppercase;
     }
 
@@ -392,7 +441,7 @@
       flex: 1;
       font-size: 16px;
       font-weight: 500;
-      color: #ac46f7;
+      color: var(--fgc-text-muted);
       text-transform: uppercase;
       text-align: right;
     }
@@ -412,7 +461,7 @@
       justify-content: center;
       gap: 3px;
       font-size: 11px;
-      color: rgba(255, 255, 255, 0.4);
+      color: var(--fgc-text-faint);
       text-transform: uppercase;
       transition: all 0.2s;
       padding: 0 2px;
@@ -428,23 +477,23 @@
     }
 
     .mode-item--active {
-      background: rgba(172, 70, 247, 0.3);
-      color: #fff;
+      background: var(--fgc-accent);
+      color: var(--fgc-on-accent);
     }
 
     .mode-item--active-first {
-      background: rgba(172, 70, 247, 0.3);
-      color: #fff;
+      background: var(--fgc-accent);
+      color: var(--fgc-on-accent);
     }
 
     .mode-item--active-last {
-      background: rgba(172, 70, 247, 0.3);
-      color: #fff;
+      background: var(--fgc-accent);
+      color: var(--fgc-on-accent);
     }
 
     .mode-item--active-single {
-      background: rgba(172, 70, 247, 0.3);
-      color: #fff;
+      background: var(--fgc-accent);
+      color: var(--fgc-on-accent);
     }
 
     .mode-item--past {
@@ -473,8 +522,9 @@
       left: 821px;
       width: 278px;
       height: 50px;
-      background: #151515;
+      background: var(--fgc-surface-raised);
       border-radius: 6px;
+      box-shadow: inset 0 0 0 1px var(--fgc-line);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -510,21 +560,22 @@
       gap: 2px;
       flex: 1;
       height: 50px;
-      background: #090909;
+      background: var(--fgc-surface);
       padding: 0 10px;
     }
 
     .map-number {
       font-size: 20px;
       font-weight: 500;
-      color: #fff;
+      color: var(--fgc-text);
+      font-variant-numeric: tabular-nums;
       text-transform: uppercase;
     }
 
     .format-text {
       font-size: 14px;
       font-weight: 500;
-      color: #ac46f7;
+      color: var(--fgc-accent);
       text-transform: uppercase;
     }
 
@@ -719,13 +770,13 @@
       const b = parseInt(hex.substr(4, 2), 16);
       // Calculate luminance
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      // Return black for light colors, white for dark colors
-      return luminance > 0.5 ? '#090909' : '#ffffff';
+      // Return the inverse surface for light colors, the surface for dark colors
+      return luminance > 0.5 ? '#0b0d12' : '#eef2f8';
     }
 
     function teamLogoPlaceholderColor(hexColor) {
       const color = typeof hexColor === 'string' ? hexColor.trim() : '';
-      return getContrastColor(/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#eeeeee');
+      return getContrastColor(/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#eef2f8');
     }
 
     function teamLogoPlaceholderText(team) {
@@ -944,16 +995,16 @@
 
         // Team colors
         if (d.teamColorsEnabled && d.teamA && d.teamB) {
-          el.homeBar.style.setProperty('--team-a-color', d.teamA.color || '#fff');
-          el.awayBar.style.setProperty('--team-b-color', d.teamB.color || '#fff');
+          el.homeBar.style.setProperty('--team-a-color', d.teamA.color || '#0b0d12');
+          el.awayBar.style.setProperty('--team-b-color', d.teamB.color || '#0b0d12');
           // Calculate text color based on background luminance
-          const homeTextColor = getContrastColor(d.teamA.color || '#ffffff');
-          const awayTextColor = getContrastColor(d.teamB.color || '#ffffff');
+          const homeTextColor = getContrastColor(d.teamA.color || '#0b0d12');
+          const awayTextColor = getContrastColor(d.teamB.color || '#0b0d12');
           el.homeBar.style.setProperty('--team-text-color', homeTextColor);
           el.awayBar.style.setProperty('--team-text-color', awayTextColor);
           // Set logo background colors
-          el.homeBar.style.setProperty('--team-logo-bg', d.teamA.logoBgColor || '#eee');
-          el.awayBar.style.setProperty('--team-logo-bg', d.teamB.logoBgColor || '#eee');
+          el.homeBar.style.setProperty('--team-logo-bg', d.teamA.logoBgColor || '#eef2f8');
+          el.awayBar.style.setProperty('--team-logo-bg', d.teamB.logoBgColor || '#eef2f8');
           el.homeBar.style.setProperty('--team-logo-placeholder-color', teamLogoPlaceholderColor(d.teamA.logoBgColor));
           el.awayBar.style.setProperty('--team-logo-placeholder-color', teamLogoPlaceholderColor(d.teamB.logoBgColor));
           el.homeBar.classList.add('team-colored');

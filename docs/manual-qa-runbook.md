@@ -3503,3 +3503,62 @@ overlay HTML and font were requested; `externalRequests`, `failedResponses` and
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
 `tailscale serve status` was `No serve config`, and the harness was deleted.
+
+### A57 — Game overlay Night Broadcast pilot
+
+**Covers:** C1, IDE-018 §C1, `game-overlay.html`
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. The app
+   resolves state through Windows Known Folders, so restore the authoritative
+   `app.json`/`app.json.bak` fixture before the run and again afterwards rather
+   than relying on an isolated `APPDATA`.
+2. Start the overlay server through the real app UI. Open
+   `http://127.0.0.1:3001/overlays/game-overlay.html` as a CDP target, set a
+   1920×1080 device metrics override, reload, await `document.fonts.ready`, and
+   record the computed styles of both team bars, their names, the score chips,
+   the title and mode bars, the match bug, the map number and the format text.
+3. With team colours on, confirm each bar uses the team colour as its surface,
+   the name is light, and the score chip is inverse. Then turn **Use team
+   colours** off in Settings and confirm the bars fall back to the neutral dark
+   surface with a light name, while the score chip stays inverse. Turn the
+   setting back on and confirm the coloured state returns.
+4. Check the empty-logo placeholder in both states: the tag text must contrast
+   with its slot, on the dark team slot when coloured and on the light default
+   slot when not.
+5. Confirm the canvas is transparent, the document is exactly 1920×1080 with no
+   overflow, the bundled Archivo faces are loaded, and the retired palette is
+   gone (`#fff`, `#ffffff`, `#090909`, `#eeeeee`, `#151515`, `#ac46f7`).
+6. Record every overlay request, failed response and console/log error. Stop the
+   app, restore the authoritative fixture, recheck its hashes and
+   `tailscale serve status`, then delete the isolated harness.
+
+**Evidence:** CDP DOM and computed-style JSON for the three colour states,
+network/console capture and `/health`; no screenshots were taken or published.
+
+**Result: Pass — assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and overlay page. Team bars measured 525×55 at left 43 and 1348,
+top 52, radius 6px, with a 1px inset line `rgb(42, 49, 64)`. The coloured bar
+was `rgb(48, 54, 61)` with a white name and the neutral bar `rgb(11, 13, 18)`
+with a `rgb(238, 242, 248)` name. The score chip was inverse in both states
+(`rgb(238, 242, 248)` background, `rgb(11, 13, 18)` text, `tabular-nums`). The
+placeholder read `T3` in `rgb(238, 242, 248)` on the dark `#30363d` slot when
+coloured and `rgb(11, 13, 18)` on the light `#eef2f8` slot when not. The title
+and mode bars were `rgb(11, 13, 18)`, the match bug `rgb(17, 21, 29)` at 278×50,
+the map number `rgb(238, 242, 248)` and the format text `rgb(255, 122, 26)`. The
+canvas was `rgba(0, 0, 0, 0)` at 1920×1080 with no overflow, the Archivo 400 and
+600 faces loaded, and `externalRequests`, `failedResponses` and `consoleErrors`
+were all empty. A neutral-state score-chip contrast defect found in the first
+run — the default text-colour rule still listed `.team-bar__score` and outranked
+the inverse colour — was fixed and re-verified. The active-mode orange segment
+could not be exercised because the fixture has `currentMap: null`, so
+`current_map_index` serialises as `null` and the mode item stays inactive grey;
+that is pre-existing behaviour, and the orange accent is proven by the format
+text and the static test. `cargo fmt --all -- --check`, `cargo clippy --workspace
+--all-targets -- -D warnings`, `cargo test --workspace`, `git diff --check` and
+`dx build --desktop` passed. Authoritative hashes were restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
+`tailscale serve status` was `No serve config`, and the harness was deleted.
