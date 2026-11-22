@@ -952,3 +952,228 @@ fn the_light_theme_only_names_tokens_the_overlays_declare() {
         }
     }
 }
+
+/// The shared type scale.
+///
+/// The alias family carries the weight, so a rule never declares a
+/// `font-weight` of its own. That is what keeps the overlays consistent: the
+/// same role gets the same weight in every file, and a rule cannot ask for a
+/// weight its family does not have.
+const TYPE_SCALE: [(&str, &str); 5] = [
+    ("300", "FGC Display Light"),
+    ("400", "FGC Display"),
+    ("500", "FGC Display Medium"),
+    ("600", "FGC Display SemiBold"),
+    ("900", "FGC Display Black"),
+];
+
+/// Every bundled overlay page, including the ones the shared spec does not
+/// cover.
+const ALL_OVERLAYS: [&str; 11] = [
+    "auto.html",
+    "game-overlay.html",
+    "hero-bans.html",
+    "map-pool.html",
+    "map-select.html",
+    "row-casters.html",
+    "row-hosts.html",
+    "row-interviews.html",
+    "team-roster-away.html",
+    "team-roster-home.html",
+    "timer.html",
+];
+
+/// Extracts the `<style>` block of an overlay.
+fn style_block(text: &str) -> &str {
+    let start = text
+        .find("<style>")
+        .expect("overlay should have a style block");
+    let end = text[start..]
+        .find("</style>")
+        .expect("overlay should close its style block");
+    &text[start..start + end]
+}
+
+/// The tiers an overlay declares as faces, as `(weight, family)` pairs.
+fn declared_faces(text: &str) -> Vec<(&'static str, &'static str)> {
+    TYPE_SCALE
+        .iter()
+        .filter(|(weight, family)| {
+            text.contains(&format!(
+                "font-family: '{family}';\n      font-weight: {weight};"
+            ))
+        })
+        .copied()
+        .collect()
+}
+
+#[test]
+fn every_overlay_uses_the_shared_type_scale() {
+    for file in ALL_OVERLAYS {
+        let text = overlay_text(file);
+        let css = style_block(&text);
+
+        // The alias family carries the weight, so no rule declares one.
+        let without_faces = css.replace("@font-face", "");
+        assert!(
+            !without_faces.contains("font-weight:"),
+            "{file} must not declare a font-weight outside an @font-face block"
+        );
+
+        // Every face is one of the five tiers and loads the matching file.
+        let faces = declared_faces(&text);
+        if file == "auto.html" {
+            // The auto overlay only hosts the other pages in frames, so it
+            // paints no text of its own and loads no face.
+            assert!(
+                faces.is_empty(),
+                "auto.html should not declare a display face"
+            );
+            return;
+        }
+        assert!(
+            !faces.is_empty(),
+            "{file} should declare at least one display face"
+        );
+        for (weight, family) in &faces {
+            assert!(
+                text.contains(&format!(
+                    "src: url('/assets/fonts/{FONT_PREFIX}-{weight}.woff2')"
+                )),
+                "{file} should load the {weight} face for {family}"
+            );
+        }
+
+        // Every family a rule names is a tier this overlay declares.
+        for (_, family) in TYPE_SCALE {
+            if text.contains(&format!("font-family: '{family}'")) {
+                assert!(
+                    faces.iter().any(|(_, declared)| *declared == family),
+                    "{file} uses {family} without declaring it as a face"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn the_match_overlays_all_ship_the_five_display_faces() {
+    for file in ALL_OVERLAYS {
+        if file == "timer.html" || file == "auto.html" {
+            continue;
+        }
+        let text = overlay_text(file);
+        assert_eq!(
+            declared_faces(&text).len(),
+            TYPE_SCALE.len(),
+            "{file} should declare the five display faces"
+        );
+    }
+}
+
+#[test]
+fn the_timer_overlay_uses_the_semi_bold_alias() {
+    let text = overlay_text("timer.html");
+
+    assert!(
+        text.contains("font-family: 'FGC Display SemiBold';\n      font-weight: 600;"),
+        "the timer should load the SemiBold face under the shared alias"
+    );
+    assert!(
+        text.contains("font-family: 'FGC Display SemiBold', 'Apotek Semibold', Arial, sans-serif;"),
+        "the timer value should use the shared SemiBold alias"
+    );
+    assert!(
+        !text.contains("font-family: 'FGC Display';\n      font-weight: 600;"),
+        "the timer must not hijack the regular alias for the SemiBold face"
+    );
+}
+
+#[test]
+fn the_type_scale_gives_each_role_one_weight() {
+    // Scores are Strong everywhere.
+    assert!(
+        overlay_text("hero-bans.html").contains(
+            ".team-score {\n      width: 80px;\n      height: 80px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"
+        ),
+        "the hero bans team score should be SemiBold"
+    );
+    assert!(
+        overlay_text("map-select.html")
+            .contains(".map-card__score {\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"),
+        "the map select score should be SemiBold too"
+    );
+    assert!(
+        overlay_text("game-overlay.html")
+            .contains(".team-bar__score {\n      width: 55px;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"),
+        "the game overlay score should be SemiBold too"
+    );
+
+    // The name of a map is Strong everywhere.
+    for file in ["map-pool.html", "map-select.html", "hero-bans.html"] {
+        let text = overlay_text(file);
+        assert!(
+            text.contains("font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"),
+            "{file} should render the map name in SemiBold"
+        );
+    }
+
+    // The game mode is a label, so it is Medium everywhere.
+    assert!(
+        overlay_text("map-pool.html").contains(
+            ".mode-name {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"
+        ),
+        "the map pool mode name should be Medium"
+    );
+    assert!(
+        overlay_text("map-select.html")
+            .contains(".map-card__type {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"),
+        "the map select map type should be Medium too"
+    );
+    assert!(
+        overlay_text("hero-bans.html").contains(
+            ".map-strip__mode-text {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"
+        ),
+        "the hero bans mode label should be Medium too"
+    );
+
+    // Pronouns are the quietest text on the element, so they are Light
+    // everywhere.
+    for file in ["team-roster-home.html", "team-roster-away.html"] {
+        let text = overlay_text(file);
+        assert!(
+            text.contains(".player-card-core .player-pronouns {\n      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;"),
+            "{file} should render the core pronouns in Light"
+        );
+        assert!(
+            text.contains(".player-card-sub .player-pronouns {\n      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;"),
+            "{file} should render the substitute pronouns in Light too"
+        );
+    }
+    for file in ["row-casters.html", "row-hosts.html", "row-interviews.html"] {
+        assert!(
+            overlay_text(file).contains(
+                ".pronouns {\n      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;"
+            ),
+            "{file} should render the pronouns in Light"
+        );
+    }
+
+    // A team or person name is Medium everywhere.
+    assert!(
+        overlay_text("game-overlay.html")
+            .contains(".team-bar__name {\n      flex: 1;\n      min-width: 0;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"),
+        "the game overlay team name should be Medium"
+    );
+    assert!(
+        overlay_text("hero-bans.html")
+            .contains(".hero-panel__name {\n      display: block;\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"),
+        "the hero bans panel name should be Medium"
+    );
+    assert!(
+        overlay_text("team-roster-home.html").contains(
+            ".player-card-core .player-name {\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"
+        ),
+        "the roster player name should be Medium"
+    );
+}

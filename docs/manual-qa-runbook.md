@@ -4164,3 +4164,70 @@ were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A1
 and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
 `tailscale serve status` was `No serve config`. The temporary QA harness lives
 outside the repository and is removed when the overlay review work completes.
+
+### A67 - Font-weight consistency pass
+
+**Covers:** owner review list 2026-11-22 (slice H), the type scale in every
+bundled overlay
+
+**Steps:**
+
+1. `dx build --desktop` after stopping any running `fruiterra-gc`, then launch
+   the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. Restore
+   the authoritative `app.json`/`app.json.bak` fixture before and after the run.
+2. Build one QA fixture that exercises every text tier at once: two teams with
+   five core and two substitute players, four named maps with one completed, and
+   three filled hero-ban slots.
+3. Open `game-overlay.html`, `map-select.html`, `hero-bans.html`,
+   `team-roster-home.html` and `timer.html` at 1920x1080 over CDP.
+4. For each of the twenty-one interesting nodes, call
+   `CSS.getPlatformFontsForNode` and record the platform font the node actually
+   painted with, alongside its computed `font-weight`.
+5. Assert that every node painted the face its tier calls for and that every
+   computed `font-weight` is `400` normal, which is the rule working: the alias
+   carries the weight and no rule declares one.
+6. Record the transparency, document size, requests, failed responses and
+   console errors. Stop the app, restore the authoritative fixture, recheck its
+   hashes and `tailscale serve status`.
+
+**Gotchas:**
+
+- `document.fonts.check` is too lenient to prove a weight. Use
+  `CSS.getPlatformFontsForNode`, which reports the font the node painted with.
+- WebView2 reports the font *file's* family and weight, not the CSS alias. All
+  five bundled faces carry the family `Archivo SemiBold`, so the weight suffix
+  identifies the tier: `Archivo SemiBold Light` is 300, `... Medium` is 500,
+  `... SemiBold` is 600 and `... Black` is 900.
+- A node that paints nothing returns no platform fonts. The map select score
+  board is `display: none` on a map that is not completed, so probe the score
+  of the completed card instead.
+
+**Evidence:** the platform-font probe table for twenty-one nodes, the computed
+weights, the network and console capture and `/health`; no screenshots were
+taken or published.
+
+**Result: Pass - assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+overlay pages. All twenty-one probes painted the intended face: the game
+overlay bar name and the subtitle, format label and map number painted
+`FGC Display Medium`; the bar score and the title painted
+`FGC Display SemiBold`; the map select map name, score and score divider
+painted `FGC Display SemiBold`; the map select type label painted
+`FGC Display Medium`; the hero bans map-strip name and first-to count painted
+`FGC Display SemiBold`; the hero bans panel name and ban tag painted
+`FGC Display Medium`; the roster player name painted `FGC Display Medium`,
+the roster pronouns painted `FGC Display Light` and the roster team name
+painted `FGC Display Black`; and the timer value painted
+`FGC Display SemiBold` under its renamed alias. Every computed `font-weight`
+came back `400` normal. The game overlay bar name and bar score had been
+rendering at Regular before the pass, because the family they inherited did not
+ship the weight they asked for. Every overlay had a transparent
+`rgba(0, 0, 0, 0)` body and a 1920x1080 document, and the run recorded 0
+external requests, 0 failed responses and 0 console errors.
+`cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`git diff --check` and `dx build --desktop` passed. The authoritative hashes
+were restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`
+and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`, and
+`tailscale serve status` was `No serve config`. The temporary QA harness lives
+outside the repository and is removed when the overlay review work completes.

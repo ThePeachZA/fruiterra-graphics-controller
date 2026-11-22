@@ -61,6 +61,36 @@ Use static WOFF2 instances (300/400/500/600/900) for predictable rendering in
 WebView2/OBS. Static files are simpler to reason about and avoid variable-font
 edge cases in older WebView2 builds; bundle a variable file only if needed.
 
+### Type scale in the overlays
+
+The bundled overlays share one type scale, so a text role always looks the same
+whichever overlay it appears in. **The alias family carries the weight and a
+rule never declares a `font-weight` of its own**, because a rule that names a
+family it does not own silently loses the weight it asks for.
+
+| Tier | Weight | Alias | Used for |
+|---|---|---|---|
+| Display | 900 | `FGC Display Black` | The biggest headline on a screen: the map pool header, the map select title, a roster team name |
+| Strong | 600 | `FGC Display SemiBold` | A score, a count or a map name: the game overlay score and title, the hero bans first-to count and map name, the map select name and score, the map pool map name, the timer value |
+| Body | 500 | `FGC Display Medium` | A person's or team's name, and every label: the game overlay name, the hero bans panel name and ban tag, the roster and talent names, social role tags |
+| Secondary | 400 | `FGC Display` | Small supporting text that should recede |
+| Quiet | 300 | `FGC Display Light` | Handles, pronouns and separators |
+
+This replaced a set of rules that asked for a weight their family did not
+have. The game overlay's bar name and bar score, the title, the subtitle, the
+map number and the format label all inherited `body { font-family: 'FGC
+Display' }`, which only ships the 400 face, so every one of them rendered at
+Regular whatever the rule asked for. The timer overlay had the same problem
+inverted: its `@font-face` declared the regular alias at weight 600, so it
+hijacked the alias every other overlay used for the 400 face. It now declares
+`'FGC Display SemiBold'`.
+
+Four static guards in `crates/server/tests/overlays.rs` keep the scale honest:
+no `font-weight` may appear outside an `@font-face`, every declared face must
+be a tier and load the matching Archivo file, the nine match overlays must
+ship all five faces, and each role must resolve to the same weight in every
+overlay that uses it.
+
 ### CSS migration
 
 1. Inline the five `@font-face` rules in each overlay, pointing at stable

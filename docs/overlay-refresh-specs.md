@@ -728,3 +728,70 @@ The message handler applies `data.theme` for a `theme` frame and
   were repainted rather than merely restyled.
 - The `theme` key is present in `init` and in `/state`.
 - The saved `app.json` carries `settings.display.theme`.
+
+## 10. Type scale (owner review, 2026-11-22)
+
+The last item of the owner's overlay review was a font-weight pass. The scope
+chosen was a consistency pass: one type scale, every overlay aligned to it,
+and the genuine mismatches fixed. Sizes were not changed.
+
+### 10.1 The rule
+
+**The alias family carries the weight, and a rule never declares a
+`font-weight` of its own.**
+
+| Tier | Weight | Alias |
+|---|---|---|
+| Display | 900 | `FGC Display Black` |
+| Strong | 600 | `FGC Display SemiBold` |
+| Body | 500 | `FGC Display Medium` |
+| Secondary | 400 | `FGC Display` |
+| Quiet | 300 | `FGC Display Light` |
+
+### 10.2 Roles
+
+| Role | Tier | Where |
+|---|---|---|
+| The biggest headline on a screen | Display | map pool header, map select title, roster team name |
+| A score, a count, a map name | Strong | game overlay bar score and title, hero bans first-to count and map name, map select name, score and score divider, map pool map name, timer value |
+| A person's or team's name, any label | Body | game overlay bar name and logo placeholder, subtitle, format label and map number, hero bans panel name and ban tag, map strip mode and index, map select type label, roster and talent names, social roles, watermark text |
+| Small supporting text | Secondary | map select chosen-by label |
+| Handles, pronouns, separators | Quiet | social handle, separator, pronouns, roster pronouns |
+
+### 10.3 Why the rule exists
+
+A rule that names the `FGC Display` family and asks for weight 500 gets
+nothing: the family only ships the 400 face, so the weight is dropped and the
+text renders at Regular. That was true of the game overlay's bar name, bar
+score, title, subtitle, map number and format label, all of which inherited
+`body { font-family: 'FGC Display' }`. The timer overlay had the same problem
+inverted: its `@font-face` declared the regular alias at weight 600 and so
+hijacked the alias every other overlay used for the 400 face. It now declares
+`'FGC Display SemiBold'`.
+
+### 10.4 The guards
+
+Four static tests in `crates/server/tests/overlays.rs` keep the scale honest:
+
+- `every_overlay_uses_the_shared_type_scale` - no `font-weight` outside an
+  `@font-face`, every declared face is a tier and loads the matching Archivo
+  file, and every family a rule names is a tier the file declares.
+  `auto.html` is special-cased: it declares no face of its own.
+- `the_match_overlays_all_ship_the_five_display_faces` - the nine match
+  overlays declare all five faces. `auto.html` and `timer.html` are excluded.
+- `the_timer_overlay_uses_the_semi_bold_alias` - the timer loads the SemiBold
+  face under the shared alias.
+- `the_type_scale_gives_each_role_one_weight` - the drift guard: scores are
+  SemiBold in hero bans, map select and the game overlay; map names are
+  SemiBold in map pool, map select and hero bans; the mode label is Medium in
+  all three; pronouns are Light in the two roster files and the three talent
+  rows; names are Medium in the game overlay, hero bans and the roster.
+
+### 10.5 CDP-verifiable assertions
+
+- `CSS.getPlatformFontsForNode` reports the platform font a node painted with.
+  WebView2 reports the font file's family and weight, so all five bundled
+  faces arrive as `Archivo SemiBold` with a weight suffix: `Light` is 300,
+  `Medium` is 500, `SemiBold` is 600 and `Black` is 900.
+- Every text node paints the face its tier calls for.
+- Every computed `font-weight` is `400` normal.

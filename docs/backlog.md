@@ -1240,6 +1240,7 @@ on top of it afterwards.
 | E | Game overlay: drop the outline rings, put the team logo on the outer end, move the ban icon next to the score, add a team-abbreviation toggle, review gradients and background textures | **Done - A64** |
 | F | Hero bans: bigger redesign - two large hero-art panels with `1ST BAN` / `2ND BAN` tags and the mode and map name in a dark bottom strip | **Done - A65** |
 | G | Theme system: a built-in Light theme beside Night Broadcast, JSON theme import, live switching with no rebuild | **Done - A66** |
+| H | Font weights: align every overlay to one type scale and fix the weights that were being ignored | **Done - A67** |
 
 The theme model was chosen as a **built-in Light theme plus JSON import**: the
 app ships the dark Night Broadcast theme and a Light theme, and the user can
@@ -1379,6 +1380,36 @@ the real UI toggle changed them to the NWS and LONG tags and `/state` reported
 font-loaded and free of external requests, failed responses and console
 errors.
 
+### Slice F - hero bans redesign (A65, 2026-11-22)
+
+The hero bans overlay was the last one to keep its old layout. Following the
+OWCS27 and OWWC27 references, the two ban portraits became two large hero-art
+panels side by side. Each panel carries a white ordinal tag at the bottom-left
+of the art, reading `1ST BAN` for the team that banned first and `2ND BAN` for
+the other, and the hero's name sits in a dark band under the art. A team with
+more than one ban keeps the rest as small portraits in the bottom-right corner
+of the art.
+
+The mode and the map name moved out of the old map-info block and into a dark
+bottom strip, which reads the game mode with its icon, `MAP N` and the map
+name. The wire was not changed: the overlay already receives `currentMap`,
+`currentMapIndex`, `mapType`, `gameModeIcons`, `heroBans` and `heroPortraits`
+in the scoreboard payload.
+
+The review also found that the content overflowed the canvas by 30px: the
+column was 1110px tall in a 1080px canvas. The padding dropped from 150px to
+120px and the panel row grew to 630px, so the column is now exactly 1080px.
+
+A65 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
+evidence: the two panels measured 747.5px each with a 25px gap, the home art
+showed Ana and the away art Kiriko, the tags read `1ST BAN` and `2ND BAN` on a
+`rgb(238, 242, 248)` plate, the second home ban sat in the extra row, the strip
+read `CONTROL`, `MAP 1` and `ILIOS` with the mode icon, and the container's
+bottom edge landed exactly on 1080px with no document scroll. The overlay
+stayed transparent, font-loaded and free of external requests, failed
+responses and console errors.
+
 ### Slice G - theme system (A66, 2026-11-22)
 
 The owner asked for a theme system: a built-in Light theme beside Night
@@ -1413,32 +1444,55 @@ stylesheet defaults exactly, and the timer overlay followed the same switch.
 The overlays stayed transparent, 1920×1080, font-loaded and free of external
 requests, failed responses and console errors.
 
-### Slice F - hero bans redesign (A65, 2026-11-22)
+### The font-weight consistency pass (A67, 2026-11-22)
 
-The hero bans overlay was the last one to keep its old layout. Following the
-OWCS27 and OWWC27 references, the two ban portraits became two large hero-art
-panels side by side. Each panel carries a white ordinal tag at the bottom-left
-of the art, reading `1ST BAN` for the team that banned first and `2ND BAN` for
-the other, and the hero's name sits in a dark band under the art. A team with
-more than one ban keeps the rest as small portraits in the bottom-right corner
-of the art.
+The last item of the review list was a font-weight pass under **General**. The
+owner chose the consistency scope: define one type scale, align every overlay
+to it, and fix the genuine mismatches such as the two different score weights.
+Sizes stay as they are.
 
-The mode and the map name moved out of the old map-info block and into a dark
-bottom strip, which reads the game mode with its icon, `MAP N` and the map
-name. The wire was not changed: the overlay already receives `currentMap`,
-`currentMapIndex`, `mapType`, `gameModeIcons`, `heroBans` and `heroPortraits`
-in the scoreboard payload.
+The audit found a real bug underneath the cosmetic mismatches. Several rules
+declared a `font-weight` their font family did not have, so the weight was
+silently ignored and the text rendered at Regular. The game overlay's bar name
+and bar score, the title, the subtitle, the map number and the format label
+all inherited `body { font-family: 'FGC Display' }`, which only ships the 400
+face, so every one of them rendered at Regular no matter what the rule asked
+for. The timer overlay made the same mistake differently: its `@font-face`
+declared the regular alias `'FGC Display'` at weight 600, so it hijacked the
+alias every other overlay used for the 400 face.
 
-The review also found that the content overflowed the canvas by 30px: the
-column was 1110px tall in a 1080px canvas. The padding dropped from 150px to
-120px and the panel row grew to 630px, so the column is now exactly 1080px.
+The fix is a rule rather than a list of patches: **the alias carries the
+weight, and a rule never declares a `font-weight` of its own.**
 
-A65 in [`docs/manual-qa.md`](manual-qa.md) and
+| Tier | Weight | Alias |
+|---|---|---|
+| Display | 900 | `FGC Display Black` |
+| Strong | 600 | `FGC Display SemiBold` |
+| Body | 500 | `FGC Display Medium` |
+| Secondary | 400 | `FGC Display` |
+| Quiet | 300 | `FGC Display Light` |
+
+Display is the biggest headline on a screen, Strong is a score, a count or a
+map name, Body is a person's or team's name and every label, Secondary is
+small supporting text and Quiet is handles, pronouns and separators. The
+twenty-three edits that follow it align the overlays: the game overlay's name,
+subtitle, map number and format label became Medium and its score and title
+SemiBold, the hero bans first-to count and map name became SemiBold, the map
+pool mode name became Medium, the map select name, score and score divider
+became SemiBold, the roster pronouns became Light to match the talent rows,
+and the timer moved to the SemiBold alias it was already loading.
+
+Four static guards in `crates/server/tests/overlays.rs` keep it honest: no
+`font-weight` may appear outside an `@font-face`, every declared face must be
+a tier and load the matching Archivo file, the nine match overlays must ship
+all five faces, and each role must resolve to the same weight everywhere.
+
+A67 in [`docs/manual-qa.md`](manual-qa.md) and
 [`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
-evidence: the two panels measured 747.5px each with a 25px gap, the home art
-showed Ana and the away art Kiriko, the tags read `1ST BAN` and `2ND BAN` on a
-`rgb(238, 242, 248)` plate, the second home ban sat in the extra row, the strip
-read `CONTROL`, `MAP 1` and `ILIOS` with the mode icon, and the container's
-bottom edge landed exactly on 1080px with no document scroll. The overlay
-stayed transparent, font-loaded and free of external requests, failed
-responses and console errors.
+evidence: twenty-one nodes were probed with `CSS.getPlatformFontsForNode`,
+which reports the platform font a node actually painted with rather than what
+the stylesheet asked for. Every probe painted the intended face, including the
+game overlay bar name and bar score that had been rendering at Regular, and
+every computed `font-weight` came back `400` normal, which is the rule working
+as intended. The overlays stayed transparent, 1920×1080 and free of external
+requests, failed responses and console errors.
