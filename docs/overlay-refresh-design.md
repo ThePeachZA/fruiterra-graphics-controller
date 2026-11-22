@@ -4,8 +4,13 @@ Status: **philosophy and token system approved 2026-11-22**. The
 **game-overlay pilot is implemented and QA'd** (A57): `game-overlay.html` now
 uses the Night Broadcast tokens, keeps its filenames, wire shapes, 1920×1080
 canvas and geometry, and retires the old white/black/purple palette. The
-remaining six match overlays and the standalone timer still carry the old
-palette. Next step is the rollout, one overlay at a time.
+**rollout is complete** (A58): `hero-bans.html`, `map-pool.html`,
+`map-select.html`, `row-casters.html`, `team-roster-home.html`,
+`team-roster-away.html` and the standalone `timer.html` now carry the same
+tokens, so no bundled overlay uses the old palette. `auto.html` remains a pure
+iframe host and was verified separately (A59), which also fixed its missing
+favicon link. Per-overlay targets and the one recorded deviation are in
+[`docs/overlay-refresh-specs.md`](overlay-refresh-specs.md).
 
 Owner direction: draw the most inspiration from the **OWWC27** examples, without
 copying them 1:1 and without copying official league/team marks. Team colours

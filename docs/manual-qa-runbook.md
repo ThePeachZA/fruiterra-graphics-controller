@@ -3562,3 +3562,128 @@ text and the static test. `cargo fmt --all -- --check`, `cargo clippy --workspac
 `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
 `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
 `tailscale serve status` was `No serve config`, and the harness was deleted.
+
+### A58 — Seven-overlay Night Broadcast rollout
+
+**Covers:** C1, IDE-018 §C1, `hero-bans.html`, `map-pool.html`,
+`map-select.html`, `row-casters.html`, `team-roster-home.html`,
+`team-roster-away.html`, `timer.html`
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. The app
+   resolves state through Windows Known Folders, so restore the authoritative
+   `app.json`/`app.json.bak` fixture before the run and again afterwards rather
+   than relying on an isolated `APPDATA`.
+2. Swap in the enriched fixture with the team colours on, start the overlay
+   server through the real app UI, and wait until `/state` holds every section
+   including `autoOverlay` before opening any overlay target.
+3. For each overlay, open it as a CDP target, set a 1920×1080 device metrics
+   override, reload, await `document.fonts.ready`, and dump every element with
+   its computed style, geometry and text. Compare the dump against the
+   pre-rollout baseline: geometry diffs, removed elements, added elements, font
+   regressions, non-local requests, failed responses, bad statuses and console
+   errors must all be zero.
+4. Repeat with the no-colour fixture (team colours off) and assert the exact
+   Night Broadcast values per element: surface `rgb(11, 13, 18)`, raised
+   `rgb(17, 21, 29)`, muted `rgb(21, 25, 34)`, inverse `rgb(238, 242, 248)`,
+   accent `rgb(255, 122, 26)`, text `rgb(238, 242, 248)` and muted text
+   `rgb(141, 153, 173)`.
+5. The row-casters social icons are inline SVG paths, and
+   `getComputedStyle(path).fill` is not exposed in this Chromium build. Resolve
+   the painted fill through the CDP `CSS.getComputedStyleForNode` domain
+   (`DOM.getDocument` → `DOM.querySelector` → `CSS.getComputedStyleForNode`) and
+   confirm it is `rgb(141, 153, 173)` for all five paths. That call needs the
+   node to exist, so poll until the websocket `init` frame has populated the
+   casters.
+6. Stop the app, restore the authoritative fixture, recheck its hashes and
+   `tailscale serve status`, then delete the isolated harness.
+
+**Evidence:** per-overlay DOM and computed-style dumps with the baseline
+comparison report, the neutral-state colour report, the CDP resolved-fill
+capture, network/console capture and `/health`; no screenshots were taken or
+published.
+
+**Result: Pass — assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and overlay pages. `hero-bans`, `map-pool`, `map-select`,
+`row-casters`, `team-roster-home`, `team-roster-away` and `timer` each reported
+0 geometry diffs, 0 removed, 0 added, 0 font regressions, 0 non-local requests,
+0 failed, 0 bad status and 0 console errors, with body background
+`rgba(0, 0, 0, 0)` and a 1920×1080 document. `game-overlay` reported differences
+only because its baseline predates the shipped pilot: all 14 geometry diffs are
+the 1px horizontal shift (`x: -32 → -33`, `1423 → 1424`) from the pilot's 1px
+inset border, plus one colour difference from the tournament-logo background
+image; `game-overlay.html` is not part of this rollout. The neutral-state run
+was `allOk: true` for `team-roster-home`, `team-roster-away`, `game-overlay`,
+`hero-bans` and `row-casters` with the exact Night Broadcast values listed
+above, a transparent canvas, 1920×1080, no console errors and no non-local
+requests. The five row-casters social-icon paths resolved to
+`rgb(141, 153, 173)` with the rule `.social-icon path { fill: var(--fgc-text-muted); }`
+present — the same colour as the spec's literal `fill="#8d99ad"`, recorded as
+the one deviation in `docs/overlay-refresh-specs.md` §4.9. Static guards were
+added to `crates/server/tests/overlays.rs`. `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`git diff --check` and `dx build --desktop` passed. The authoritative hashes were
+restored to `47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144`
+and `A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C` after
+every run, `tailscale serve status` was `No serve config`, and the harness was
+deleted.
+
+### A59 — `auto.html` scene switcher and favicon fix
+
+**Covers:** C1, IMP-004, `auto.html`
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary in WebView2 with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` and the
+   isolated WebView profile, restoring the authoritative fixture first.
+2. Start the overlay server through the real app UI, wait for the projection
+   cache to fill, then open `http://127.0.0.1:3001/overlays/auto.html` as a CDP
+   target with a 1920×1080 device metrics override.
+3. Record the `iframe.fgc-auto__scene` elements: title, `src`, `data-visible`,
+   computed `display` and `position`, geometry, inner text and inner
+   background, plus the body background and document size.
+4. Drive the real app UI: tick **Include map-select.html in the auto scene
+   switcher**, confirm the new iframe stays hidden until it is made the active
+   scene, then pick **Make map-select.html the active scene** and confirm the
+   visible scene moves and the app reports the new active scene.
+5. Use **Hide overlays** and **Show overlays** and confirm every scene toggles
+   between `display: none` and `display: block`.
+6. Untick the include box and confirm the scene stays in the DOM but hidden and
+   the previous active scene returns — the host never removes an existing iframe.
+7. Record every request, failed response, bad status and console/log error.
+   Stop the app, restore the authoritative fixture, recheck its hashes and
+   `tailscale serve status`, then delete the isolated harness.
+
+**Evidence:** CDP DOM and computed-style JSON for the scene host in every
+state, the `/state` `autoOverlay` payload, network/console capture and `/health`;
+no screenshots were taken or published.
+
+**Result: Pass — assistant 2026-11-22.** WebView2 158.0.4370.33 drove the real
+app controls and the overlay page. One iframe was present at start
+(`game-overlay.html`, `data-visible=true`, `display:block`, 1920×1080).
+Including `map-select.html` added a second iframe that stayed hidden until it
+was made active; the active switch moved the visible scene, the app reported
+`Active scene: map-select.html`, and the map-select canvas showed
+"MAP SELECT … POWERED BY THEPEACHZA". **Hide overlays** hid every scene and
+**Show overlays** restored `map-select.html` to `display:block` with
+`game-overlay.html` at `display:none`. Excluding `map-select.html` left its
+iframe in the DOM but hidden and returned `game-overlay.html` to active. The
+body background was `rgba(0, 0, 0, 0)` with a 1920×1080 document, and
+`/state.autoOverlay` was `{included:["game-overlay.html"], active:"game-overlay.html"}`.
+
+**Defect found and fixed.** The first run requested
+`http://127.0.0.1:3001/favicon.ico` and logged a 404 plus one console error,
+because `crates/server/overlays/auto.html` was the only bundled overlay without
+`<link rel="icon" href="data:,">`. The link was added after the viewport meta
+tag and guarded by the static test `auto_overlay_suppresses_the_favicon_request`
+in `crates/server/tests/auto_overlay.rs`. The re-run made no favicon request
+and recorded no external requests, failed responses or console errors.
+`cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace`, `git diff --check` and `dx build --desktop` passed.
+Authoritative hashes were restored to
+`47CA19074C16CF12BDC3C7737D1A9B404229DC62DC8828D3B477E52CD563A144` and
+`A2B4908D62A28986B1F093B4C53DA5961A6B4461AE0A3D74A33D9B447630FE8C`,
+`tailscale serve status` was `No serve config`, and the harness was deleted.

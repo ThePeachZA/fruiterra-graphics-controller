@@ -114,8 +114,30 @@ the orange accent. Filenames, wire protocol, geometry and the 1920×1080 canvas
 are unchanged, and no official marks were introduced. A57 in
 [`docs/manual-qa.md`](manual-qa.md) and
 [`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
-evidence in both team-colour states. The remaining seven overlays and the
-standalone timer still use the old palette and are the next slice.
+evidence in both team-colour states.
+
+**Rollout done 2026-11-22.** The remaining six match overlays and the
+standalone timer now carry the same tokens:
+`hero-bans.html`, `map-pool.html`, `map-select.html`, `row-casters.html`,
+`team-roster-home.html`, `team-roster-away.html` and `timer.html`. The frozen
+contracts hold — same filenames, same wire types and payload fields, same DOM
+ids and classes, no new message types, no schema or persistence change, no
+geometry move, 1920×1080 transparent canvas, no remote assets and no new
+fonts. `auto.html` stays a pure iframe host, so it is out of the restyle; it
+was verified separately and its missing favicon link was fixed (A59).
+
+Per-overlay targets are in
+[`docs/overlay-refresh-specs.md`](overlay-refresh-specs.md) (§4.9 records the
+one deviation: the row-casters social icons take `--fgc-text-muted` through a
+stylesheet rule rather than a literal `fill` attribute, with the same resolved
+colour `rgb(141, 153, 173)`). A58 and A59 in
+[`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) record the real WebView2
+evidence: a per-overlay geometry/font/network comparison against the
+pre-rollout baseline, an exact Night Broadcast colour check in the neutral
+(team-colours-off) state, and a scene-switcher check of `auto.html`.
+
+No overlay remains on the old palette.
 
 ### C2. Control and overlay requests raised during R1 (2026-11-12 — post-v1)
 
