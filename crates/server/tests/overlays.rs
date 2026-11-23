@@ -1071,6 +1071,71 @@ const ALL_OVERLAYS: [&str; 12] = [
 ];
 
 #[test]
+fn every_overlay_carries_the_same_fx_block() {
+    const START: &str = "<!-- === FGC CANONICAL FX START === -->";
+    const END: &str = "<!-- === FGC CANONICAL FX END === -->";
+    const FILES: [&str; 8] = [
+        "hero-bans.html",
+        "map-pool.html",
+        "map-select.html",
+        "row-casters.html",
+        "team-roster-home.html",
+        "team-roster-away.html",
+        "row-hosts.html",
+        "row-interviews.html",
+    ];
+
+    let mut canonical: Option<String> = None;
+    for file in FILES {
+        let text = overlay_text(file);
+        assert_eq!(
+            text.matches(START).count(),
+            1,
+            "{file} should contain exactly one canonical FX block"
+        );
+        let start = text.find(START).expect("FX start sentinel should exist");
+        let end = text[start..]
+            .find(END)
+            .expect("FX end sentinel should exist")
+            + start
+            + END.len();
+        let block = &text[start..end];
+
+        if let Some(expected) = &canonical {
+            assert_eq!(
+                block, expected,
+                "{file} must carry the canonical FX block byte-for-byte"
+            );
+        } else {
+            canonical = Some(block.to_owned());
+        }
+    }
+
+    let canonical = canonical.expect("at least one overlay should carry the FX block");
+    assert!(
+        canonical.contains("--fgc-hex-mask:")
+            && canonical.contains("mask-size: 180px 322px")
+            && canonical.contains("translate3d(0, -322px, 0)")
+            && canonical.contains("translate3d(180px, 0, 0)"),
+        "the canonical block should contain the shared mask and one-tile drift"
+    );
+    assert!(
+        canonical.contains("inset: -360px")
+            && canonical.contains("will-change: transform")
+            && !canonical.contains("background-position")
+            && !canonical.contains("requestAnimationFrame"),
+        "the canonical block should overscan and animate only on the compositor"
+    );
+    assert!(
+        canonical.contains("html[data-fx=\"off\"] .fgc-fx")
+            && canonical.contains("requestedFx === 'on' || requestedFx === 'off'")
+            && canonical.contains("@media (prefers-reduced-motion: reduce)")
+            && canonical.contains("animation: none"),
+        "the canonical block should carry the toggle and the reduced-motion freeze"
+    );
+}
+
+#[test]
 fn background_overlay_is_broadcast_safe_and_supports_url_variants() {
     let text = overlay_text("background.html");
 

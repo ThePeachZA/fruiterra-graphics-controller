@@ -4657,3 +4657,95 @@ SVG mask data URL with 0 console errors. The screenshot showed the opaque plate
 with the lattice over it. `cargo test -p
 fgc-server --test overlays` passed 30 tests with 0 failures, including the new
 `background_overlay_is_broadcast_safe_and_supports_url_variants`.
+
+### A74 - Built-in animated background (canonical FX block)
+
+**Covers:** owner request 2026-11-23 that the animated background also be built
+into the existing overlays, narrowed by "Note: there should be no background
+overlay attached to the timer or the game overlay". This gate covers the
+transparent canonical FX lattice in eight scene overlays, not the opaque plate
+from A73.
+
+**Steps:**
+
+1. Confirm the scope before testing. The sentinel block and `.fgc-fx` element
+   must exist in `hero-bans.html`, `map-pool.html`, `map-select.html`,
+   `row-casters.html`, `row-hosts.html`, `row-interviews.html`,
+   `team-roster-home.html` and `team-roster-away.html`. They must be absent from
+   `timer.html`, `game-overlay.html`, `auto.html` and `background.html`.
+2. Open `http://127.0.0.1:3001/overlays/hero-bans.html?fx=on` in a Chromium
+   browser with the console open. Confirm exactly one `.fgc-fx` exists, computes
+   `display: block`, `position: absolute`, `z-index: 0`, `pointer-events: none`
+   and `inset: -360px` on all four sides, and that
+   `document.documentElement.dataset.fx` reads `on`.
+3. Read the computed mask: `mask-size` is `180px 322px`, `mask-repeat` is
+   `repeat`, `background-color` is `rgb(58, 67, 86)` and `opacity` is `0.16`.
+   Confirm the overlay root `.overlay` computes `z-index: 1`, so the new sibling
+   sits behind the existing content.
+4. Read `getAnimations()` on `.fgc-fx`. One `fgcCanonicalFxDrift` should run at
+   72000ms. `getTiming().iterations` reads `null` in JSON, which is the infinite
+   loop; `easing` reads `linear` because the shorthand declares `linear`. Check
+   the source: the travel is from `translate3d(0, -322px, 0)` to
+   `translate3d(180px, 0, 0)`, a delta of exactly one `180px 322px` mask tile.
+5. Confirm the keyframes name only `transform`, that `will-change: transform`
+   appears only on `.fgc-fx`, and that the file has no `background-position`,
+   `filter` or `requestAnimationFrame`. The wash is uniform so a repeating
+   gradient cannot expose a moving seam as the lattice re-aligns.
+6. Navigate to `?fx=off` and confirm `dataset.fx` reads `off`, `.fgc-fx` computes
+   `display: none` and `getAnimations()` is empty for that element. Navigate
+   with no `fx` parameter and confirm the layer defaults back on.
+7. Confirm the body stays `rgba(0, 0, 0, 0)` in both states. The built-in layer
+   is transparent by design; only the standalone A73 plate paints a solid
+   colour. Check the console and network for new external requests, failed
+   responses or errors.
+8. Read the reduced-motion rule in the source. The
+   `@media (prefers-reduced-motion: reduce)` block sets `animation: none` on
+   `.fgc-fx` while leaving the static lattice painted. If a browser tool can
+   emulate the preference, reload with `Emulation.setEmulatedMedia` and confirm
+   `animation-name: none`; otherwise record it as a static-test assertion, not
+   as browser evidence.
+9. Run `cargo test -p fgc-server --test overlays` and confirm 31 tests pass,
+   including `every_overlay_carries_the_same_fx_block`. Confirm the test's file
+   list has eight entries and that it also checks the overscan, tile size,
+   toggle, reduced-motion rule and absence of per-frame JavaScript.
+
+**Gotchas:**
+
+- The FX layer is not the A73 background. It has no plate and must stay
+  transparent, so the game feed and the theme colour below it are unchanged.
+- Timer and game overlay are excluded by the owner. Adding the block to either
+  for "consistency" reverses a locked decision.
+- `auto.html` is also excluded; its planned preview cards will load `?fx=off`
+  so the preview and live sources do not render the lattice twice.
+- The SVG namespace is escaped inside the sentinels because
+  `crates/server/tests/timer_overlay.rs` rejects a literal `http://`. Do not
+  "fix" that string, and do not apply the escape to inline `<svg>` markup
+  outside the block.
+- `getTiming().iterations` reads `null`, not the string `infinite`. Treat `null`
+  as the infinite loop. `easing` reads `linear` for this shorthand.
+- The browser tab used for this gate measured 1000x700. The overlay's design
+  canvas is 1920x1080; computed style and animation assertions do not depend on
+  the tab size, but a visual sign-off still needs a 1920x1080 OBS check.
+- The equality test reads source text. Reformatting one copy breaks it; that is
+  intended. Fix the copy, not the assertion.
+- The app-level `data-fx` injection is not built. Today `data-fx` comes only
+  from the query string or a pre-seeded document element.
+
+**Evidence:** current browser values from `hero-bans.html?fx=on` and `?fx=off`
+(the `dataset` state, `display`, `inset`, `mask-size`, `opacity`, root z-index,
+animation name, 72000ms duration, `null` iterations, `linear` easing,
+`reduced: false`, transparent body and empty console), the source-text equality
+test, and the `cargo test -p fgc-server --test overlays` result. A screenshot of
+`hero-bans.html?fx=on` was captured at
+`C:\Users\Cameron\AppData\Local\Temp\opencode-browser-U0wU22\0\screenshot.jpeg`.
+
+**Result: Pass - assistant 2026-11-23.** With `?fx=on`, the live page showed one
+`.fgc-fx` at `display: block`, `inset: -360px`, `mask-size: 180px 322px`,
+`opacity: 0.16`, the existing `.overlay` at `z-index: 1`, a transparent body and
+one `fgcCanonicalFxDrift` animation at 72000ms with `iterations` reading `null`
+and `easing` reading `linear`. `dataset.fx` read `on`. With `?fx=off`,
+`dataset.fx` read `off`, the layer computed `display: none` and no animation was
+reported. The console was empty in both states. `matchMedia` reported reduced
+motion false, so the reduced-motion rule is covered by the source-text test
+rather than by browser emulation. `cargo test -p fgc-server --test overlays`
+passed 31 tests, including `every_overlay_carries_the_same_fx_block`.

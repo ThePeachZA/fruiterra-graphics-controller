@@ -462,8 +462,73 @@
       display: none;
     }
   </style>
+  <!-- === FGC CANONICAL FX START === -->
+  <style>
+    :root {
+      --fgc-hex-mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+    }
+
+    /* The mask repeats every 180x322 px, so exactly one tile of travel lands
+       on an identical frame. Keeping the colour uniform is part of that seam:
+       a non-repeating gradient would move even though the lattice re-aligned. */
+    @keyframes fgcCanonicalFxDrift {
+      from { transform: translate3d(0, -322px, 0); }
+      to { transform: translate3d(180px, 0, 0); }
+    }
+
+    /* The FX sibling comes first; the existing roots stay above it without
+       changing their geometry, colours or layout. */
+    .overlay {
+      z-index: 1;
+    }
+
+    .fgc-fx {
+      position: absolute;
+      /* More than one tile on every side, including the travel at both ends. */
+      inset: -360px;
+      z-index: 0;
+      pointer-events: none;
+      background-color: var(--fgc-line-strong);
+      opacity: 0.16;
+      -webkit-mask-image: var(--fgc-hex-mask);
+      mask-image: var(--fgc-hex-mask);
+      -webkit-mask-size: 180px 322px;
+      mask-size: 180px 322px;
+      -webkit-mask-repeat: repeat;
+      mask-repeat: repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+      transform: translate3d(0, -322px, 0);
+      animation: fgcCanonicalFxDrift 72s linear infinite;
+      /* Only this compositor drift changes every frame; the mask never repaints. */
+      will-change: transform;
+    }
+
+    html[data-fx="off"] .fgc-fx {
+      display: none;
+    }
+
+    /* Reduced motion freezes the drift but keeps the static lattice. */
+    @media (prefers-reduced-motion: reduce) {
+      .fgc-fx {
+        animation: none;
+      }
+    }
+  </style>
+  <script>
+    (() => {
+      const requestedFx = new URLSearchParams(location.search).get('fx');
+      if (requestedFx === 'on' || requestedFx === 'off') {
+        document.documentElement.dataset.fx = requestedFx;
+      } else if (document.documentElement.dataset.fx !== 'off') {
+        document.documentElement.dataset.fx = 'on';
+      }
+    })();
+  </script>
+  <!-- === FGC CANONICAL FX END === -->
 </head>
   <body>
+  <div class="fgc-fx" aria-hidden="true"></div>
   <div class="overlay" id="overlay">
     <!-- Main flex container -->
     <div class="main-container">

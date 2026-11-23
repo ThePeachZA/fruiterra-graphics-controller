@@ -1132,3 +1132,152 @@ The query string is read once at load, so changing a variant needs a reload.
 - The page loads no font, image or external file: the requests are the
   document, the WebSocket and the inline SVG mask data URL, and the console is
   empty.
+
+## 12. Canonical FX block and the built-in lattice (owner decision, 2026-11-23)
+
+The owner asked for the animated background as a separate overlay "as well as
+built into the existing ones", then narrowed the built-in part on 2026-11-23:
+"Note: there should be no background overlay attached to the timer or the game
+overlay". The built-in treatment is therefore a **transparent lattice layer**,
+not the opaque plate from §11. The plate belongs only to the standalone
+`background.html`, which sits below the scenes in OBS. This section covers the
+transparent layer that can sit over a scene without changing its geometry,
+colours or text.
+
+The layer ships in eight scene overlays: `hero-bans.html`, `map-pool.html`,
+`map-select.html`, `row-casters.html`, `row-hosts.html`, `row-interviews.html`,
+`team-roster-home.html` and `team-roster-away.html`. It does not ship in
+`timer.html` or `game-overlay.html`, by the owner's decision. It also does not
+ship in `auto.html`, whose previews will load `?fx=off`, or in
+`background.html`, which already has its own richer three-layer motion.
+
+### 12.1 Purpose & wire
+
+Each carrier gets one `div.fgc-fx[aria-hidden="true"]` as the first child of
+`<body>`, before its existing root. The layer adds no message handling, no
+network request and no state of its own. A short inline script reads the `fx`
+parameter once at load and writes `data-fx` to `<html>`. The CSS then hides or
+shows the layer through that attribute.
+
+The application-level switch is **planned, not shipped**. The reserved hook is
+the document-level `data-fx` attribute: when the server eventually injects
+`data-fx="off"`, the layer will default off unless an explicit `?fx=on` in the
+Browser Source URL overrides it. There is no injection endpoint today and no
+app UI control for it.
+
+### 12.2 Surface plan
+
+| Element selector | Token value | Treatment |
+|---|---|---|
+| `:root` | `--fgc-hex-mask` holds the shared hexagon SVG data URL | the one source of truth for the mask |
+| `.fgc-fx` | `position: absolute`, `inset: -360px`, `z-index: 0`, `pointer-events: none` | the overscanned, non-interactive layer behind the content |
+| `.fgc-fx` | `background-color: var(--fgc-line-strong)`, `opacity: 0.16` | a uniform wash, so a repeat cannot reveal a moving gradient |
+| `.fgc-fx` | `-webkit-mask-image` / `mask-image`, `mask-size: 180px 322px`, `mask-repeat: repeat`, `mask-position: center` | the shared hexagon lattice at the product's tile size |
+| `.fgc-fx` | `transform: translate3d(0, -322px, 0)`, `animation: fgcCanonicalFxDrift 72s linear infinite`, `will-change: transform` | the only animated layer, moved on the compositor |
+| `.overlay` | `z-index: 1` | lifts the existing content above the new sibling with no geometry change |
+| `html[data-fx="off"] .fgc-fx` | `display: none` | the explicit off state |
+| `@media (prefers-reduced-motion: reduce)` | `animation: none` on `.fgc-fx` | stops motion but keeps the static lattice |
+
+The SVG namespace inside the data URL is escaped as
+`http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg`. `crates/server/tests/timer_overlay.rs`
+forbids the literal `http://` or `https://` in an overlay; the escaped form is a
+normal data URL and renders the same mask. Only the canonical block uses the
+escaped form; existing inline `<svg>` markup outside the sentinels is untouched.
+
+The block is delimited by `<!-- === FGC CANONICAL FX START === -->` and
+`<!-- === FGC CANONICAL FX END === -->`. The comments are part of the contract:
+the Rust test extracts exactly what lies between them.
+
+### 12.3 Motion design and the seam proof
+
+The keyframes travel exactly one mask tile:
+
+```css
+@keyframes fgcCanonicalFxDrift {
+  from { transform: translate3d(0, -322px, 0); }
+  to { transform: translate3d(180px, 0, 0); }
+}
+```
+
+The difference between the two states is `(180px, 322px)`, precisely the
+`180px 322px` mask repeat unit. When the animation loops back to its start,
+each hexagon occupies the previous position of its neighbour, so the frame is
+identical and there is no jump. The `inset: -360px` overscan is larger than one
+tile on every side, so the moving layer's edge never enters the 1920x1080
+viewport. Overscan hides an edge; exact tile travel is what makes the loop
+seamless.
+
+Only `transform` and `opacity` are used. There is no `background-position`,
+`filter`, `width`, `height`, `box-shadow`, `requestAnimationFrame` or per-frame
+JavaScript. `will-change: transform` is set on `.fgc-fx` alone. The 72s cycle is
+inside the council's 40s to 90s band and is deliberately slower than a viewer
+can track.
+
+### 12.4 URL variants and scope
+
+- `?fx=off` sets `document.documentElement.dataset.fx = 'off'`; the computed
+  `display` of `.fgc-fx` becomes `none` and no animation is reported.
+- `?fx=on` forces the layer on even if the document element was already marked
+  off.
+- With no `fx` parameter, the layer is on unless the document element already
+  carries `data-fx="off"`. That is the app-level hook.
+- `@media (prefers-reduced-motion: reduce)` sets `animation: none`. The layer is
+  still painted and the static lattice remains, so the composition does not
+  collapse.
+- The query string is read once at load, so an OBS source refresh is needed
+  after changing it.
+
+`timer.html` and `game-overlay.html` carry no sentinel block, no `.fgc-fx`
+element and no `fx` script. Their bodies stay transparent and their existing
+roots are unchanged. A future change that adds the block to either file
+reverses an explicit owner decision and must be recorded in `docs/decisions.md`
+first.
+
+### 12.5 Byte-equality assertion
+
+`crates/server/tests/overlays.rs` carries
+`every_overlay_carries_the_same_fx_block`. It reads the eight carrier files,
+extracts the text between the two sentinels and compares every extraction with
+the first one. It asserts that the array has eight entries, so excluding a
+carrier is a deliberate edit.
+
+The test also guards the mechanism rather than only the equality: the shared
+mask token, `mask-size: 180px 322px`, `inset: -360px`, `will-change: transform`,
+the absence of `background-position` and `requestAnimationFrame`, the
+`html[data-fx="off"] .fgc-fx` rule, the two accepted `fx` parameter values, the
+reduced-motion media query and its `animation: none`. A copy that drifts from
+the canonical block fails even if all copies drift together.
+
+This is a source-text test and is known to be fragile against unrelated markup
+edits. That is the accepted cost of inlining a shared layer without a bundler.
+When it breaks for an unrelated reason, narrow the assertion; do not remove the
+byte-equality check.
+
+### 12.6 CDP-verifiable assertions
+
+- On `hero-bans.html?fx=on`, exactly one `.fgc-fx` exists and computes
+  `display: block`, `position: absolute`, `z-index: 0`, `pointer-events: none`
+  and an inset of `-360px` on all four sides.
+- Its computed `mask-size` is `180px 322px`, `mask-repeat` is `repeat`,
+  `background-color` is `rgb(58, 67, 86)` (`--fgc-line-strong`) and `opacity` is
+  `0.16`.
+- `getAnimations()` reports one `fgcCanonicalFxDrift` at 72000ms. As with §11.5,
+  `getTiming().iterations` reads `null` in JSON, which is the infinite loop, and
+  `getTiming().easing` reads `linear` for the `linear` shorthand used here.
+- `document.documentElement.dataset.fx` reads `on` with `?fx=on`, and the existing
+  `.overlay` root computes `z-index: 1`.
+- With `?fx=off`, `dataset.fx` reads `off`, `.fgc-fx` computes `display: none`
+  and `getAnimations()` is empty for that element.
+- With no parameter, `dataset.fx` reads `on` unless the document element was
+  seeded with `data-fx="off"`.
+- `matchMedia('(prefers-reduced-motion: reduce)').matches` is false in the normal
+  test browser; the reduced-motion branch is guarded by the source-text test,
+  not claimed as browser-emulated for A74.
+- The overlay body stays `rgba(0, 0, 0, 0)` and the document stays 1920x1080.
+  No external request, failed response or console error is introduced.
+- `timer.html` and `game-overlay.html` contain neither the sentinel comments nor
+  `.fgc-fx`, and their bodies remain transparent.
+
+A74 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the browser evidence
+and the explicit scope of what was verified.
