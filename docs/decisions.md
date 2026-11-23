@@ -1498,22 +1498,24 @@ not having the feature. Recording the floor turns an assumption into a gate.
 ### D11 - Background transparency is an explicit mode
 
 **Decision.** The eight FX carriers accept a `bg` mode. `opaque` or its alias
-`off` paints a solid `--fgc-surface` plate and hides the hexagon layer;
-`transparent` or its alias `on` keeps the transparent body and the lattice.
-Scene overlays default to transparent. `background.html` keeps opaque as its
-own default and accepts the inverse `?bg=transparent` variant, which removes its
-plate but keeps the glow and both drifting lattices. `auto.html` forwards the
-selected mode to its scene iframes.
+`off` paints a solid `--fgc-surface` plate; as first implemented in A75 it hid
+the hexagon layer, but D12 and A77 supersede that part. `transparent` or its
+alias `on` keeps the transparent body and the lattice. Scene overlays default
+to transparent. `background.html` keeps opaque as its own default and accepts
+the inverse `?bg=transparent` variant, which removes its plate but keeps the
+glow and both drifting lattices. `auto.html` forwards the selected mode to its
+scene iframes.
 
 The app's Overlays view exposes a session-only `Background` switch in a
 `ToggleRow`. It appends the mode to the Browser Source URLs in
 `BACKGROUND_MODE_FILES` so a new source starts in the selected mode, and it
 broadcasts a cached `background` section with `{"opaque": true}` or `false`.
 Every modes-aware overlay handles that message and writes the value to `data-bg`,
-so connected sources change without an OBS refresh. New sources receive the
-cached section in their init frame. The switch does not replace the still-unbuilt
-`data-fx` injection hook. Timer and game overlay are absent from the list and
-from the source-text guards.
+so connected sources change without an OBS refresh. As first implemented in A76
+the handler only recognised the live `background` frame; D12 and A77 added the
+keyed init-frame parser so new and refreshed sources also receive the cached
+mode. The switch does not replace the still-unbuilt `data-fx` injection hook.
+Timer and game overlay are absent from the list and from the source-text guards.
 
 **Reason.** The owner pointed out that the opaque plate only existed in the
 standalone background and asked for control over transparency, "including
@@ -1522,5 +1524,45 @@ without adding a second Browser Source per scene. The first implementation only
 rewrote URLs, which the owner correctly reported as not changing the connected
 overlays. The cached section now carries the same mode to every connected source
 and to sources that connect later, so the switch does what the operator expects
-without an OBS refresh. Timer and game overlay remain excluded by the owner's
-earlier decision.
+without an OBS refresh. The owner later clarified that opaque must still show
+the hexagons; D12 records that reversal. Timer and game overlay remain excluded
+by the owner's earlier decision.
+
+### D12 - Opaque keeps the lattice and survives a source refresh
+
+**Decision.** Opaque mode paints `--fgc-surface` and keeps the shared hexagon
+lattice visible over the plate. The `html[data-bg="opaque"] .fgc-fx { display:
+none; }` rule is removed from all eight FX carriers, and the byte-equality test
+now asserts its absence. The cached `background` section is delivered both as
+the live frame `{"type":"background","data":{"opaque":true}}` and inside the
+keyed init frame `{"type":"init","data":{"background":{"opaque":true}}}`. The
+carriers read `payload.background.opaque` from the init frame or
+`data.data.opaque` from the live frame; `background.html` uses the equivalent
+`data.type === 'background' || (data.type === 'init' && d.background)` branch.
+The URL remains only the starting state. A cached section wins on init and on
+every live change.
+
+**Reason.** The owner reported: "Observed behaviour: opague background is
+toggled, but when the browser source refreshes, it disappears. The opaque
+background also does not show the hexagon display". When asked whether opaque
+should keep or hide the hexagons, the owner chose "Show hexagons (Recommended)".
+The refresh failure was caused by overlays handling only the live `background`
+message and ignoring the `background` object inside `init`. A77 verified that a
+fresh and reloaded Browser Source stays opaque with visible hexagons, and that
+the same path restores transparent mode after the switch is turned off.
+
+### D13 - Every overlay clips document overflow from first paint
+
+**Decision.** All twelve bundled overlays declare `html, body { width: 100%;
+height: 100%; margin: 0; overflow: hidden; }` immediately after the first
+`<style>`, outside the canonical FX sentinels. `auto.html` keeps its existing
+multi-line guard as well. `every_overlay_has_an_early_document_overflow_guard`
+asserts the rule in every overlay before any `.fgc-fx` rule or iframe.
+
+**Reason.** The owner reported: "When the pages refresh, I'm seeing scrollbars
+for a split second". The shared FX layer overscans by `-360px`, and only the
+fixed-size `.overlay` had `overflow: hidden`; the document itself did not clip
+until later styles applied. The early guard prevents the transient gutters
+without changing the overlays' visual composition. A78 verified zero scrollbar
+gutters on fresh and reloaded tabs for hero-bans, background, map-pool,
+game-overlay and auto.

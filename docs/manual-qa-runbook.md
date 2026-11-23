@@ -4752,6 +4752,11 @@ passed 31 tests, including `every_overlay_carries_the_same_fx_block`.
 
 ### A75 - Background transparency toggle (opaque plate and lattice removal)
 
+**Historical gate.** This section records the first implementation exactly as
+measured on 2026-11-23. The owner later clarified that opaque mode must keep the
+hexagons, and A77 replaced the hide rule and the refresh behaviour described
+here. Do not use these steps as the current acceptance path; use A77.
+
 **Covers:** owner request 2026-11-23 that background transparency be toggled on
 or off, "including removing the hexagons". This gate covers the two modes in
 the eight canonical FX carriers, the inverse variant in `background.html`, the
@@ -4811,8 +4816,9 @@ background to the timer or the game overlay.
   overlays. A body reading `rgba(0, 0, 0, 0)` in opaque mode is correct.
 - The standalone background is the reverse case: opaque is its default, so
   `?bg=transparent` is the variant that removes its plate.
-- Opaque removes the hexagons by hiding `.fgc-fx`; it does not clear `data-fx`.
-  Both attributes can be read at once.
+- At this gate, opaque removed the hexagons by hiding `.fgc-fx`; it did not
+  clear `data-fx`. Both attributes could be read at once. A77 supersedes this
+  behaviour: the hide rule is gone and the lattice stays visible over the plate.
 - At the A75 gate the app toggle changed URLs only, so a connected OBS Browser
   Source kept the mode it loaded until it was refreshed. A76 replaced that with
   a cached `background` section; see the later section for the live path. Do not
@@ -4841,16 +4847,22 @@ errors. Both tabs were 1000x700. The 34-test overlay suite passed. A screenshot
 of `hero-bans.html?bg=opaque` was captured at
 `C:\Users\Cameron\AppData\Local\Temp\opencode-browser-gBzqQi\0\screenshot.jpeg`.
 
-**Result: Pass - assistant 2026-11-23.** The two modes are distinguishable in a
-real browser, opaque hides the hexagons without repainting the body, and the
-standalone background accepts the inverse variant while keeping its lattice.
-At this gate the app-level toggle changed generated URLs for the ten modes-aware
-sources only, and the timer and game overlay remained excluded. The owner
-reported that connected overlays did not change; A76 supersedes the URL-only
-behaviour. Visual sign-off at 1920x1080 in OBS and browser-emulated reduced
+**Result: Pass - assistant 2026-11-23 (historical).** At this gate the two modes
+were distinguishable in a real browser, opaque hid the hexagons without
+repainting the body, and the standalone background accepted the inverse variant
+while keeping its lattice. The app-level toggle changed generated URLs for the
+ten modes-aware sources only, and the timer and game overlay remained excluded.
+The owner reported that connected overlays did not change; A76 superseded the
+URL-only behaviour, and A77 superseded both the hexagons-hidden claim and the
+refresh caveat. Visual sign-off at 1920x1080 in OBS and browser-emulated reduced
 motion remain outstanding owner checks.
 
 ### A76 - Live background broadcast and accessible switch
+
+**Historical gate.** This section records the live-switch implementation before
+the refresh fix. Its observations that `.fgc-fx` was hidden by opaque mode are
+accurate for that build, but A77 removes the hide rule and adds init-frame
+replay. Use A77 as the current acceptance path.
 
 **Covers:** the owner's bug report that the background toggle did nothing, the
 cached `background` section broadcast, the live message handlers in the eight
@@ -4912,8 +4924,9 @@ FX carriers and in `background.html`, the replacement of the app's Button with a
 - The eight carriers call the shared helper from their existing `updateOverlay`
   function. Only the helper definition is inside the sentinel block; the
   one-line call is asserted separately per file.
-- Opaque hides `.fgc-fx` but does not clear `data-fx`. Both attributes have
-  independent meanings.
+- At this gate, opaque hid `.fgc-fx` but did not clear `data-fx`. Both
+  attributes had independent meanings. A77 supersedes this: the lattice remains
+  visible over the plate and `data-fx` is still untouched.
 - Timer and game overlay remain excluded and receive no handler or layer. The
   harmless `bg` parameter forwarded by `auto.html` does not change that.
 - The browser tabs measured 1000x700. Computed styles and state changes do not
@@ -4934,7 +4947,178 @@ and `rgba(0, 0, 0, 0)` while all three animations continued. CDP found one
 then read `bgMode: 'opaque'` with `.fgc-bg display: block` and `.fgc-fx display:
 none` without a refresh. Console errors were empty in every check.
 
-**Result: Pass - assistant 2026-11-23.** The toggle now changes connected
-overlays straight away, uses the project's accessible Switch component and keeps
-the generated URLs in step for new sources. Visual sign-off at 1920x1080 in OBS
-and browser-emulated reduced motion remain outstanding owner checks.
+**Result: Pass - assistant 2026-11-23 (historical).** At this gate the toggle
+changed connected overlays straight away, used the project's accessible Switch
+component and kept the generated URLs in step for new sources. The owner then
+reported that a Browser Source refresh lost the mode and that the hexagons were
+missing; A77 supersedes this gate with init-frame replay and a visible lattice.
+Visual sign-off at 1920x1080 in OBS and browser-emulated reduced motion remain
+outstanding owner checks.
+
+### A77 - Opaque mode survives a source refresh and keeps the hexagons
+
+**Covers:** the owner's 2026-11-23 report that opaque mode disappeared on a
+Browser Source refresh and that the hexagon display was missing. It covers the
+keyed init frame `{"type":"init","data":{"background":{"opaque":true|false}}}`,
+the unchanged live frame `{"type":"background","data":{"opaque":true|false}}`,
+the nine modes-aware overlays, the removal of
+`html[data-bg="opaque"] .fgc-fx { display: none; }`, the byte-equality guard that
+forbids its return, and the owner's clarification that opaque must show the
+hexagons. A77 supersedes A75's lattice-removal requirement and A76's refresh
+caveat; their measurements remain historical.
+
+**Steps:**
+
+1. Confirm the mode is cached. Start the app, open the Overlays view and check
+   that the `Opaque background` switch is `aria-checked="true"`. The raw
+   `http://127.0.0.1:3001/state` body must contain
+   `background:{"opaque":true}`. If a helper must toggle it, use
+   `C:\Users\Cameron\AppData\Local\Temp\fgc-switch-on.mjs` against CDP 9222 and
+   read `{"before":"true","after":"true"}` when it is already on.
+2. Open a fresh `http://127.0.0.1:3001/overlays/hero-bans.html?probe=<unique>`
+   tab with the console open. Use a unique probe query because reusing an old
+   URL can present a stale tab. Read `document.documentElement.dataset.bg` as
+   `opaque`, the body as `rgba(0, 0, 0, 0)`, `.fgc-bg` as `display: block` with
+   `backgroundColor: rgb(11, 13, 18)` and z-index 0, and `.fgc-fx` as
+   `display: block` with `maskSize: 180px 322px` and `opacity: 0.16`.
+   `getAnimations()` must include `fgcCanonicalFxDrift`. This is the owner's
+   requested hexagon-over-plate composition.
+3. Reload that tab and reread all four values. They must stay opaque with the
+   plate and the visible drifting lattice. This is the refresh proof that A76
+   lacked.
+4. Open a fresh `background.html?probe=<unique>` tab. Its document element,
+   body and `.background` should all compute `rgb(11, 13, 18)`, with
+   `glowBreathe`, `latticeDriftForward` and `latticeDriftReverse` still running.
+   Reload and confirm the same state.
+5. In the earlier app instance, run
+   `C:\Users\Cameron\AppData\Local\Temp\fgc-switch-off.js` to move the switch
+   from `true` to `false`. Reload the hero-bans and background probe tabs:
+   hero-bans must read `bgMode: transparent` with `.fgc-bg display: none` and
+   `.fgc-fx display: block` plus drift; background must read all surfaces as
+   `rgba(0, 0, 0, 0)` with its three animations still running. Run
+   `fgc-switch-on.js` to restore `{"before":"false","after":"true"}` and leave
+   the app in opaque mode.
+6. Confirm `crates/server/tests/overlays.rs` asserts in the byte-compared
+   canonical block that `.fgc-bg` exists and that `html[data-bg="opaque"] .fgc-bg`
+   is present, while `html[data-bg="opaque"] .fgc-fx` is absent with the message
+   "keep the lattice in that mode". The handler assertion must accept
+   `payload.background` and `candidate.opaque`, and the background assertion
+   must accept `data.type === 'init' && d.background`.
+7. Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --
+   -D warnings`, `cargo test --workspace` and `git diff --check`. The overlay
+   suite has 35 tests. Rebuild with `dx build --desktop` after overlay edits,
+   restart the app and recheck `/health` before browser verification.
+
+**Gotchas:**
+
+- The init payload is nested one level deeper than the live payload:
+  `data.data.background.opaque` versus `data.data.opaque`. The carriers read
+  `payload.background` and fall back to the live message shape;
+  `background.html` branches on `data.type === 'init' && d.background`.
+- A fresh tab is a new WebSocket connection and receives the keyed init frame.
+  Reusing an old tab can hide the bug. Always use a unique `?probe=` query.
+- The plain PowerShell `Invoke-RestMethod` parser returned `null` for `.background`
+  because the `/state` body was parsed as a string. Read the raw response body
+  when confirming the cached section.
+- Opaque no longer hides `.fgc-fx`; `data-fx` and the plate `data-bg` are still
+  independent. Do not reintroduce the hide rule to "fix" a visual complaint.
+- The URL `bg` parameter is only the starting state. The cached section wins on
+  init and on every live change; do not expect OBS URL rewrites to be the
+  refresh mechanism.
+- Timer and game overlay remain excluded from both background mode and the
+  canonical FX block.
+- The browser checks used 1000x700 Review-pane tabs. Visual sign-off at the
+  1920x1080 OBS canvas remains an owner gate, and reduced motion was not
+  browser-emulated; the media query remains guarded by source-text assertions.
+
+**Evidence:** after the rebuild, with cached `background: {"opaque":true}`, a
+fresh `hero-bans.html?probe=1795470496591` tab read `bgMode: opaque`, body
+`rgba(0, 0, 0, 0)`, `.fgc-bg display: block` at `rgb(11, 13, 18)` with z-index 0,
+`.fgc-fx display: block` with `maskSize: 180px 322px`, `opacity: 0.16` and
+`fgcCanonicalFxDrift`, overflow hidden on html and body, guard true, zero
+scrollbar gutters, and an empty console. Reloading that tab returned all four
+mode values unchanged. A fresh and reloaded `background.html` tab both read
+`bgMode: opaque` with the `rgb(11, 13, 18)` plate and the three named
+animations; its console was empty. In the earlier app instance, switching off
+and reloading produced transparent hero and background tabs with the lattice
+still visible, and switching back on restored opaque. CDP confirmed the switch
+already read `{"before":"true","after":"true"}` after the restart. `cargo
+fmt --all -- --check`, clippy, workspace tests and `dx build --desktop` passed;
+the overlay suite has 35 tests.
+
+**Result: Pass - assistant 2026-11-23.** The cached background section now
+arrives inside the keyed init frame and all nine modes-aware overlays parse it,
+so a Browser Source refresh restores the app-selected mode in either direction.
+Opaque paints the theme plate without hiding the hexagons, matching the owner's
+clarification. A75's lattice-removal requirement and A76's refresh caveat are
+superseded. Visual sign-off at 1920x1080 in OBS and browser-emulated reduced
+motion remain outstanding owner checks.
+
+### A78 - Early document overflow guard stops transient refresh scrollbars
+
+**Covers:** the owner's 2026-11-23 report that pages show scrollbars for a split
+second when refreshed. It covers the early `html, body` overflow-clip rule in all
+twelve overlays, its placement before any FX layer or iframe, the source-text
+test that enforces it, and the measured absence of scrollbar gutters despite FX
+overscan. This is a separate mechanism from A77 and does not change background
+mode.
+
+**Steps:**
+
+1. Confirm `crates/server/tests/overlays.rs` contains
+   `every_overlay_has_an_early_document_overflow_guard`. It must iterate
+   `ALL_OVERLAYS` (twelve files), strip `\r`, find the exact line
+   `    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }`,
+   and assert that it precedes any `.fgc-fx {` rule and the first `<iframe`.
+2. Inspect one overlay source. The two-line guard must sit immediately after
+   the first `  <style>`, outside the canonical FX sentinels:
+   `/* Critical document guard: contain overscanned FX/lattice layers during load so transient scrollbars never appear. */`
+   followed by the one-line `html, body` rule. `auto.html` has a harmless
+   duplicate multi-line guard from its own design.
+3. Rebuild with `dx build --desktop`, restart the app with CDP 9222 and check
+   `/health`. Open fresh probe tabs for `hero-bans.html`, `background.html`,
+   `map-pool.html`, `game-overlay.html` and `auto.html`. For each, read the
+   guard as present, `getComputedStyle(document.documentElement).overflow` and
+   `getComputedStyle(document.body).overflow` as `hidden`, and the console as
+   empty.
+4. For the FX carriers, also read `document.scrollingElement.scrollWidth`,
+   `scrollHeight`, `window.innerWidth`, `innerHeight`,
+   `document.documentElement.clientWidth` and `clientHeight`. The overscanned
+   layer may report `scrollWidth: 1360` and `scrollHeight: 738` in a 1000x700
+   tab, but `innerWidth - clientWidth` and `innerHeight - clientHeight` must
+   both be zero, proving there is no visible scrollbar gutter.
+5. Reload the hero-bans and background tabs and repeat the guard, overflow and
+   gutter checks. Reload is the condition the owner reported.
+6. Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --
+   -D warnings`, `cargo test --workspace` (35 overlay tests) and
+   `git diff --check`.
+
+**Gotchas:**
+
+- A large `scrollWidth`/`scrollHeight` is not a visible scrollbar by itself.
+  The decisive measurement is the gutter: `innerWidth - clientWidth` and
+  `innerHeight - clientHeight`.
+- The guard must come before the FX and iframe rules. A later fix would still
+  allow a first-paint flash; the source-text test enforces the order.
+- The guard is deliberately outside the canonical sentinels, so placing it
+  inside one copy would break the byte-equality test across the eight carriers.
+- The fixed-size `.overlay` already had `overflow: hidden`; the missing piece
+  was document-level clipping. Do not remove the component-level clipping.
+- Tabs were 1000x700. The 1920x1080 OBS canvas and actual Browser Source
+  rendering remain an owner gate; computed style alone cannot prove what the
+  owner sees in OBS.
+
+**Evidence:** fresh and reloaded tabs for hero-bans, background, map-pool,
+game-overlay and auto all reported the guard present, computed `overflow: hidden`
+on both html and body, and empty consoles. Hero-bans and map-pool reported
+`scrollWidth: 1360` and `scrollHeight: 738` in a 1000x700 viewport because the
+canonical FX layer overscans by `-360px`, while `innerWidth - clientWidth` and
+`innerHeight - clientHeight` were both zero. The standalone background, game
+overlay and auto reported `1000x700` scroll extents with zero gutters. The
+35-test overlay suite, workspace fmt/clippy/tests and `git diff --check` passed.
+
+**Result: Pass - assistant 2026-11-23.** Every overlay now clips document
+overflow from the first style rule, so the transient scrollbars reported by the
+owner have no gutter in which to appear. The overscanned FX composition is
+unchanged and the zero-gutter measurement confirms it is clipped rather than
+removed. Visual confirmation in OBS at 1920x1080 remains an owner check.

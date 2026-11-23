@@ -34,19 +34,24 @@ across all milestones is in `docs/manual-qa.md`.
 | 23 | Only `transform` and `opacity` animate; there is no per-frame JavaScript | ☑ |
 | 24 | The canonical FX block exists only in the eight agreed overlays; timer and game overlay have none | ☑ |
 | 25 | `every_overlay_carries_the_same_fx_block` passes and the sentinelled copies are byte-identical | ☑ |
-| 26 | `?bg=opaque` paints a solid `--fgc-surface` plate and hides the hexagon lattice; `?bg=transparent` restores the lattice | ☑ |
+| 26 | `?bg=opaque` paints a solid `--fgc-surface` plate and keeps the hexagon lattice visible over it; `?bg=transparent` hides the plate and keeps the lattice | ☑ |
 | 27 | `?bg=off` / `?bg=on` normalise to opaque / transparent, and a scene overlay defaults to transparent unless seeded with `data-bg="opaque"` | ☑ |
 | 28 | `background.html` stays opaque by default, and `?bg=transparent` removes its plate while keeping the glow and both lattices | ☑ |
 | 29 | The app Background switch is an accessible `Switch` that rewrites Browser Source URLs and broadcasts a cached `background` section, so connected sources change without an OBS refresh | ☑ |
 | 30 | `auto.html` forwards the background mode to its scene iframes | ☑ |
 | 31 | Timer and game overlay still have no background layer or `data-bg` attribute | ☑ |
-| 32 | The byte-equality test includes `.fgc-bg`, the `data-bg` rules and the live `background` handler, and the mode-specific source-text tests pass | ☑ |
-| 33 | A `{"type":"background","data":{"opaque":true\|false}}` message changes `data-bg` and the plate/lattice layers in connected overlays without a refresh | ☑ |
+| 32 | The byte-equality test includes `.fgc-bg`, the remaining `data-bg` rule, the live and init-aware handler, and forbids the old `html[data-bg="opaque"] .fgc-fx` hide rule | ☑ |
+| 33 | A `{"type":"background","data":{"opaque":true\|false}}` message changes `data-bg` and the plate in connected overlays without a refresh, while the lattice stays visible | ☑ |
+| 34 | A `{"type":"init","data":{"background":{"opaque":true\|false}}}` frame restores the app-selected mode on a fresh or reloaded Browser Source | ☑ |
+| 35 | All twelve overlays carry the early `html, body` overflow guard before any FX rule or iframe, so a refresh shows no transient scrollbars | ☑ |
+| 36 | FX carriers report zero scrollbar gutters in a 1000x700 tab even though the `-360px` overscan reports `scrollWidth: 1360` and `scrollHeight: 738` | ☑ |
 
 The current design language, the per-overlay playbook and the motion rules are
 in [`docs/overlay-design-language.md`](overlay-design-language.md). The
 post-v1 evidence for these checks is in `docs/manual-qa.md` §7 and the repeatable
-steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74, A75 and A76.
+steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74, A75, A76, A77
+and A78. A75 and A76 remain historical records; A77 supersedes their
+hexagons-hidden claim and its refresh caveat.
 
 ## Automated pre-check
 

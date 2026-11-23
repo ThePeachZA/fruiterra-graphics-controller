@@ -1293,15 +1293,19 @@ and the explicit scope of what was verified.
 
 The owner observed that only `background.html` painted an opaque plate and
 asked for a toggle that turns background transparency on or off, "including
-removing the hexagons". The two modes are now explicit:
+removing the hexagons". A75 implemented the first reading literally: opaque
+hid the lattice. The owner then clarified the intended identity rule:
+opaque mode must still show the hexagons. A77 supersedes A75 and A76 on this
+point. The two modes are now explicit:
 
 - **Transparent** is the default for the eight scene overlays that carry the
   canonical FX block. Their bodies stay `rgba(0, 0, 0, 0)` and the shared
   hexagon lattice is visible.
-- **Opaque** paints a solid plate from `var(--fgc-surface)` and hides the
-  lattice completely. It is the same theme colour used by the standalone
-  background, but it is a sibling layer inside each scene overlay rather than a
-  second Browser Source.
+- **Opaque** paints a solid plate from `var(--fgc-surface)` and keeps the same
+  drifting hexagon lattice on top of it. It is the same theme colour used by
+  the standalone background, but it is a sibling layer inside each scene
+  overlay rather than a second Browser Source. The plate sits at `z-index: 0`
+  and the lattice layer remains above it.
 - `background.html` keeps opaque as its own default. Its `?bg=transparent`
   variant removes the plate while leaving the glow and both drifting lattices
   in place, so a user can preview the composite either way.
@@ -1315,18 +1319,22 @@ receive no background mode parameter.
 
 The app's Overlays view holds a session-only `background_opaque` signal. The
 `Background` key value reads `Opaque` or `Transparent`, and a `Switch` inside a
-`ToggleRow` is labelled `Opaque background`. Its hint explains that opaque paints
-a solid theme colour with no lattice and that connected Browser Sources switch
-straight away. It is disabled until the overlay server is running. Changing the
-switch does two things. It rewrites the Browser Source URLs shown in the app, so
-a source opened later starts in the selected mode. It also broadcasts a cached
-`background` section over the overlay WebSocket. Every connected source that
-carries the mode handler changes `data-bg` straight away, and a newly connected
-source receives the cached section in its init frame, so an OBS source refresh
-is not needed. The wire frame is
-`{"type":"background","data":{"opaque":true}}` for opaque mode and `false` for
-transparent mode. The state is not persisted to `app.json` and is not dirty
-state. Server injection of the separate `data-fx` hook remains unbuilt.
+`ToggleRow` is labelled `Opaque background`. Its hint explains that opaque
+paints a solid theme colour under the lattice and that connected Browser
+Sources switch straight away. It is disabled until the overlay server is
+running. Changing the switch does two things. It rewrites the Browser Source
+URLs shown in the app, so a source opened later starts in the selected mode. It
+also broadcasts a cached `background` section over the overlay WebSocket. Every
+connected source that carries the mode handler changes `data-bg` straight away.
+The cached section also arrives inside the keyed init frame, so an OBS source
+refresh restores the app-selected mode instead of falling back to the URL
+default. The live frame is `{"type":"background","data":{"opaque":true}}` for
+opaque mode and `false` for transparent mode. The init frame is
+`{"type":"init","data":{"background":{"opaque":true}}}`, or `false` for
+transparent mode. A77 added the init-frame parser after the owner reported that
+the toggle disappeared on refresh. The state is not persisted to `app.json` and
+is not dirty state. Server injection of the separate `data-fx` hook remains
+unbuilt.
 
 `auto.html` forwards the mode from its own URL to every scene iframe. It copies
 `bg` through the same normalisation as the scene overlays, so the auto Browser
@@ -1340,22 +1348,28 @@ ignore the harmless parameter.
 | `.fgc-bg` | `position: absolute`, `inset: 0`, `z-index: 0`, `pointer-events: none` | a full-frame sibling behind the overlay content |
 | `.fgc-bg` | `display: none`, `background-color: var(--fgc-surface)` | hidden in transparent mode, painted in opaque mode |
 | `html[data-bg="opaque"] .fgc-bg` | `display: block` | turns the solid plate on |
-| `html[data-bg="opaque"] .fgc-fx` | `display: none` | removes the hexagons when the plate is on |
 | `:root` | `--fgc-surface` | the one theme token for the plate, `#0b0d12` under Night Broadcast and `#f4f6fb` under Light |
+| `html, body` | `width: 100%; height: 100%; margin: 0; overflow: hidden` | the early document guard from A78 that prevents transient scrollbars during load |
 | `html[data-bg="transparent"] .background` | `background-color: transparent` | the standalone page's plate-off variant |
 | `html[data-bg="transparent"], html[data-bg="transparent"] body` | `background: transparent` | removes the standalone page's document plate too |
 
 The new selector lives inside the same sentinel comments as the canonical FX
 block, so `every_overlay_carries_the_same_fx_block` now compares the plate
-declarations, the two `data-bg` rules and the mode script as well as the
-original lattice rules. Each carrier has exactly one `.fgc-bg` and one
-`.fgc-fx` sibling before the overlay root. The sentinelled script also defines
-`window.fgcUpdateBackground(data)`, which reads `data.data.opaque` (or a top-level
+declarations, the remaining `data-bg` rule and the mode script as well as the
+original lattice rules. The test also asserts that the sentinelled block does
+not contain `html[data-bg="opaque"] .fgc-fx`, so the lattice cannot be hidden
+again by a copied rule. Each carrier has exactly one `.fgc-bg` and one `.fgc-fx`
+sibling before the overlay root. The sentinelled script also defines
+`window.fgcUpdateBackground(data)`, which reads `payload.background.opaque`
+from the init frame or `data.data.opaque` from a live frame (or a top-level
 `opaque`) and writes `data-bg`; each carrier's `updateOverlay` calls that helper
 for every inbound frame. `background.html` has the equivalent
-`data.type === 'background'` branch in its own `updateOverlay`. A new test,
+`data.type === 'background' || (data.type === 'init' && d.background)` branch in
+its own `updateOverlay`. A test,
 `background_mode_is_absent_from_sources_without_a_background`, asserts that
 `timer.html` and `game-overlay.html` contain neither `data-bg` nor `fgc-bg`.
+`every_overlay_has_an_early_document_overflow_guard` asserts that all twelve
+overlays declare the A78 guard before any `.fgc-fx` rule or iframe.
 
 `background_html_supports_the_transparent_variant` checks the standalone page's
 transparent rules, and `auto_overlay_forwards_the_background_mode_to_its_scenes`
@@ -1369,20 +1383,24 @@ is what keeps the two layers from drifting apart.
 The inline script reads `bg` from `new URLSearchParams(location.search)` in the
 eight scene carriers and in `background.html`:
 
-- `?bg=opaque` and its alias `?bg=off` select the solid plate with no hexagons.
+- `?bg=opaque` and its alias `?bg=off` select the solid plate with the hexagons
+  still visible over it.
 - `?bg=transparent` and its alias `?bg=on` select the transparent lattice.
 - With no `bg` parameter, a scene overlay stays transparent unless its document
   element was already seeded with `data-bg="opaque"`.
 - `background.html` defaults to opaque unless a parameter says otherwise.
 
-The `fx` parameter is independent. `?bg=opaque` wins visually because the CSS
-hides `.fgc-fx`, but it does not rewrite or clear `data-fx`. The query string is
-still read once when the document loads and seeds the initial mode, but the app
-now broadcasts a `background` section when the operator changes the switch. The
-handler in every modes-aware overlay overwrites `data-bg` on that message, so
-connected sources change without an OBS refresh. A newly opened source starts
-from its URL and then receives the cached section, which keeps it aligned with
-the app. §12.1 still reserves `data-fx` as a separate, unbuilt injection hook.
+The `fx` parameter is independent. Opaque paints the plate but does not rewrite
+or clear `data-fx`. The query string is read once when the document loads and
+seeds the initial mode, but the app broadcasts a `background` section when the
+operator changes the switch. The handler in every modes-aware overlay overwrites
+`data-bg` on that message, so connected sources change without an OBS refresh.
+A newly opened source starts from its URL and then receives the cached section
+inside the init frame, which keeps it aligned with the app even after a Browser
+Source refresh. A77 fixed the handler, which previously only recognised the
+live `background` message and therefore let a refreshed source fall back to its
+URL default. §12.1 still reserves `data-fx` as a separate, unbuilt injection
+hook.
 
 ### 13.4 CDP-verifiable assertions
 
@@ -1393,14 +1411,18 @@ Chromium tab:
   reads `on`.
 - One `.fgc-bg` computes `display: block`, `background-color: rgb(11, 13, 18)`
   under Night Broadcast and `inset: 0px`.
-- The single `.fgc-fx` computes `display: none` while retaining
-  `mask-size: 180px 322px` and `opacity: 0.16`; no drift animation is reported
-  on the hidden layer.
+- The single `.fgc-fx` computes `display: block` with
+  `mask-size: 180px 322px` and `opacity: 0.16`; `getAnimations()` reports
+  `fgcCanonicalFxDrift`. A77 reversed the A75 assertion that the layer was
+  hidden in opaque mode.
 - `document.body` computes `rgba(0, 0, 0, 0)`; the plate is the sibling layer,
   not a body background. The existing `.overlay` still computes `z-index: 1`.
+- The early A78 guard computes `overflow: hidden` on both the document element
+  and the body. The overscanned FX layer reports `scrollWidth: 1360` and
+  `scrollHeight: 738` in a 1000x700 tab, but the scrollbar gutters are zero.
 - `matchMedia('(prefers-reduced-motion: reduce)').matches` is false in the test
   browser. Reduced motion is covered by the unchanged source-text assertion,
-  not claimed as browser-emulated for A75.
+  not claimed as browser-emulated.
 - The console is empty.
 
 On the same page with `?bg=transparent`:
@@ -1424,23 +1446,43 @@ The live message path was checked separately in a connected tab with no URL
 parameter. Before the message, `hero-bans.html` read `bgMode: 'transparent'`,
 showed one `.fgc-fx` with a drift animation and kept `.fgc-bg` hidden. Calling
 `window.updateOverlay({type:'background', data:{opaque:true}})` changed
-`dataset.bg` to `opaque` and swapped the layers in the same document: `.fgc-bg`
-became `display: block` with `backgroundColor: rgb(11, 13, 18)`, and `.fgc-fx`
-became `display: none`. Sending `opaque: false` reversed both states. The
-`background.html` tab showed the inverse mapping from its opaque default:
-`opaque: false` made the document, body and plate transparent while all three
-animations kept running, and `opaque: true` restored `rgb(11, 13, 18)`. The app's
-`Switch` was then clicked through CDP: it exposed
-`role="switch"`, `aria-label="Opaque background"`, `aria-checked` and
+`dataset.bg` to `opaque` and turned the plate on in the same document: `.fgc-bg`
+became `display: block` with `backgroundColor: rgb(11, 13, 18)`, while `.fgc-fx`
+stayed `display: block` with its drift animation. A76 recorded the older
+hidden-layer result; A77 supersedes it. Sending `opaque: false` hid the plate
+and left the lattice running. The `background.html` tab showed the inverse
+mapping from its opaque default: `opaque: false` made the document, body and
+plate transparent while all three animations kept running, and `opaque: true`
+restored `rgb(11, 13, 18)`. The app's `Switch` was then clicked through CDP: it
+exposed `role="switch"`, `aria-label="Opaque background"`, `aria-checked` and
 `data-state`, and the previously connected hero-bans tab moved to opaque mode
 without a refresh. All four checks had empty consoles.
+
+A77 added the refresh proof. With the cached state at
+`background: {"opaque":true}`, a fresh `hero-bans.html?probe=1795470496591` read
+`bgMode: opaque`, `.fgc-bg display: block` at `rgb(11, 13, 18)`, and `.fgc-fx
+display: block` with `mask-size: 180px 322px`, `opacity: 0.16` and
+`fgcCanonicalFxDrift`. Reloading the same tab kept all four values. A fresh and
+reloaded `background.html` tab both read `bgMode: opaque` with the
+`rgb(11, 13, 18)` plate and the same empty console. An earlier switch-off pass
+in the previous app instance had proved the same persistence in the other
+direction: fresh hero-bans and background tabs after switching to transparent
+both stayed transparent after reload, with the FX lattice still visible on
+hero-bans. The A78 guard probe covered hero-bans, background, map-pool,
+game-overlay and auto: every fresh and reloaded tab reported the guard,
+`overflow: hidden` on html and body, empty console and a zero scrollbar gutter.
+The FX carriers reported `scrollWidth: 1360` and `scrollHeight: 738` because of
+the `-360px` overscan, but the clipped document has no visible scrollbars.
 
 Both browser tabs measured a 1000x700 viewport. That is the Review-pane tab
 size, not the overlay's 1920x1080 design canvas. The computed-style and
 animation assertions do not depend on the viewport size; a visual sign-off in
 OBS at 1920x1080 remains an outstanding owner check.
 
-A75 in [`docs/manual-qa.md`](manual-qa.md) and
-[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the URL-mode values,
-the 1000x700 caveat and the source-text coverage. A76 records the live message
-and Switch proof that superseded the URL-only behaviour.
+A75 and A76 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) remain the historical
+records for the URL-mode values, the live message and Switch proof, with their
+1000x700 caveat and source-text coverage. A77 supersedes both on the lattice
+question and adds refresh persistence. A78 records the early document overflow
+guard and the zero-gutter browser proof. Visual sign-off at 1920x1080 in OBS
+and browser-emulated reduced motion remain outstanding owner checks.
