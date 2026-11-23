@@ -652,25 +652,28 @@ fn roster_overlays_use_hexagon_identity_without_touching_the_rows() {
 
         assert!(
             text.contains(".roster-wash {")
-                && text.contains("width: 760px;")
+                && text
+                    .contains("left: 0;\n      right: 0;\n      bottom: 0;\n      height: 420px;")
+                && text.contains("linear-gradient(0deg, var(--fgc-wash), transparent 100%);")
                 && text.contains(".roster-wash::after {")
-                && text.contains("width: 1920px;")
-                && text.contains("transform: translateX(-50%);")
+                && text.contains("bottom: -100px;")
+                && text.contains("height: 300px;")
+                && text.contains("filter: blur(24px);")
                 && text.contains("linear-gradient(0deg, var(--fgc-glow), transparent 100%);")
                 && !text.contains("radial-gradient(")
-                && text.contains("--fgc-wash: rgb(255 122 26 / 12%);")
-                && text.contains("--fgc-glow: rgb(255 122 26 / 12%);")
-                && text.contains("rgba(${r}, ${g}, ${b}, 0.12)")
-                && text.contains("rgba(${r}, ${g}, ${b}, 0.14)")
+                && !text.contains("width: 760px;")
+                && !text.contains("linear-gradient(90deg, var(--fgc-wash)")
+                && !text.contains("linear-gradient(270deg, var(--fgc-wash)")
+                && !text.contains(".overlay[data-roster-side=\"home\"] .roster-wash")
+                && !text.contains(".overlay[data-roster-side=\"away\"] .roster-wash")
+                && text.contains("--fgc-wash: rgb(255 122 26 / 8%);")
+                && text.contains("--fgc-glow: rgb(255 122 26 / 9%);")
+                && text.contains("rgba(${r}, ${g}, ${b}, 0.08)")
+                && text.contains("rgba(${r}, ${g}, ${b}, 0.09)")
                 && text.contains(
                     "el.overlay.dataset.rosterSide = TEAM_SIDE === 'A' ? 'home' : 'away';"
-                )
-                && text
-                    .contains(".overlay[data-roster-side=\"home\"] .roster-wash {\n      left: 0;")
-                && text.contains(
-                    ".overlay[data-roster-side=\"away\"] .roster-wash {\n      right: 0;"
                 ),
-            "{file} should keep the side wash, soften its alphas and stretch the glow across the frame"
+            "{file} should use a full-width bottom glow with no side wash or side-anchored gradient"
         );
         assert!(
             text.contains("el.overlay.style.setProperty('--fgc-team', teamData.color);")
