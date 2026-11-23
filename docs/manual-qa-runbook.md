@@ -4789,11 +4789,12 @@ background to the timer or the game overlay.
    `latticeDriftReverse` still reported by `getAnimations()`. Reload without a
    parameter and confirm the opaque plate returns.
 7. In the app's Overlays view, confirm the `Background` key value reads
-   `Transparent` by default and the button reads `Use opaque background`. Start
-   the overlay server, activate the toggle, and confirm the value and button
-   flip while the generated hero, background and auto URLs gain `?bg=opaque`.
-   The game overlay and timer URLs must not gain a `bg` parameter. The note
-   beside the button must tell the operator to refresh each OBS source.
+   `Transparent` by default and the switch reads `Opaque background`. Start the
+   overlay server, activate the switch, and confirm the value and switch flip
+   while the generated hero, background and auto URLs gain `?bg=opaque`. The game
+   overlay and timer URLs must not gain a `bg` parameter. For the A75 gate the
+   note beside the control said to refresh each OBS source; A76 supersedes that
+   with a cached section that changes connected sources straight away.
 8. Read `auto.html` and confirm `sceneUrl(file)` copies a valid `bg` parameter
    into its scene iframes after normalising the aliases. If the app is serving
    a built copy, rebuild before judging this step.
@@ -4812,10 +4813,10 @@ background to the timer or the game overlay.
   `?bg=transparent` is the variant that removes its plate.
 - Opaque removes the hexagons by hiding `.fgc-fx`; it does not clear `data-fx`.
   Both attributes can be read at once.
-- The app toggle changes URLs only. A connected OBS Browser Source keeps the
-  mode it loaded until it is refreshed. Do not describe this as live
-  propagation, and do not confuse it with the still-unbuilt `data-fx`
-  injection hook.
+- At the A75 gate the app toggle changed URLs only, so a connected OBS Browser
+  Source kept the mode it loaded until it was refreshed. A76 replaced that with
+  a cached `background` section; see the later section for the live path. Do not
+  confuse either mechanism with the still-unbuilt `data-fx` injection hook.
 - Timer and game overlay are excluded by the owner's A74 decision. A harmless
   ignored `bg` parameter from `auto.html` does not change that.
 - The browser tab used for this gate measured 1000x700. The overlay's design
@@ -4843,7 +4844,97 @@ of `hero-bans.html?bg=opaque` was captured at
 **Result: Pass - assistant 2026-11-23.** The two modes are distinguishable in a
 real browser, opaque hides the hexagons without repainting the body, and the
 standalone background accepts the inverse variant while keeping its lattice.
-The app-level toggle changes generated URLs for the ten modes-aware sources
-only, and the timer and game overlay remain excluded. Visual sign-off at
-1920x1080 in OBS and browser-emulated reduced motion remain outstanding owner
-checks.
+At this gate the app-level toggle changed generated URLs for the ten modes-aware
+sources only, and the timer and game overlay remained excluded. The owner
+reported that connected overlays did not change; A76 supersedes the URL-only
+behaviour. Visual sign-off at 1920x1080 in OBS and browser-emulated reduced
+motion remain outstanding owner checks.
+
+### A76 - Live background broadcast and accessible switch
+
+**Covers:** the owner's bug report that the background toggle did nothing, the
+cached `background` section broadcast, the live message handlers in the eight
+FX carriers and in `background.html`, the replacement of the app's Button with a
+`Switch` inside a `ToggleRow`, and the preservation of the timer/game exclusion.
+
+**Steps:**
+
+1. Rebuild after changing an overlay file. In this run the app was stopped,
+   `dx build --desktop` was run, and the app was restarted with
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222
+   --remote-allow-origins=*
+   --user-data-dir=C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-user-webview`.
+   `/health` reported `{"overlays":13,"port":3001,"status":"ok","version":"1.0.0"}`.
+2. Open `http://127.0.0.1:3001/overlays/hero-bans.html` and confirm
+   `window.fgcUpdateBackground` and `window.updateOverlay` are both functions.
+   With no parameter, read `document.documentElement.dataset.bg` as
+   `transparent`, one `.fgc-bg` at `display: none`, one `.fgc-fx` at
+   `display: block` and one `fgcCanonicalFxDrift` animation.
+3. Evaluate
+   `window.updateOverlay({type:'background', data:{opaque:true}})` in the same
+   tab. Read `dataset.bg` as `opaque`, `.fgc-bg` as `display: block` with
+   `backgroundColor: rgb(11, 13, 18)`, and `.fgc-fx` as `display: none`. Send
+   `opaque: false` and confirm the transparent state returns. Read the console
+   as empty in both states.
+4. Open `http://127.0.0.1:3001/overlays/background.html`. With its opaque
+   default, the document element, body and `.background` should read
+   `rgb(11, 13, 18)` and `getAnimations()` should report `glowBreathe`,
+   `latticeDriftForward` and `latticeDriftReverse`. Send the same `background`
+   message with `opaque: false` and confirm all three surfaces become
+   `rgba(0, 0, 0, 0)` while the three animations keep running; `opaque: true`
+   restores the plate. The console must stay empty.
+5. Inspect the Overlays view through CDP. Find the `Dioxus app` target in
+   `http://127.0.0.1:9222/json/list` and read the control with
+   `document.querySelector('[aria-label="Opaque background"]')`. It must expose
+   `role="switch"`, `aria-checked` and `data-state`, not `aria-pressed`. The
+   helper used here was
+   `C:\Users\Cameron\AppData\Local\Temp\fgc-switch-on.js`; it reads the switch,
+   clicks it, waits 300ms and reads the state again.
+6. With the hero-bans overlay tab already connected, click the app switch and
+   then read the overlay tab again. It must move to `bgMode: 'opaque'` with
+   `.fgc-bg display: block` and `.fgc-fx display: none` without reloading the
+   Browser Source. Clicking back restores transparent mode.
+7. Confirm `crates/server/tests/overlays.rs` asserts the live handler in the
+   byte-compared canonical block, the call from each carrier's `updateOverlay`,
+   and the equivalent branch in `background.html`. Confirm the app state test
+   checks that `server_plan` replays the `background` section before `show`.
+8. Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --
+   -D warnings`, `cargo test --workspace` and `git diff --check`. The overlay
+   suite has 34 tests and the app suite has 88.
+
+**Gotchas:**
+
+- A URL reload is not a live switch. The cached section is what reaches a
+  connected Browser Source; the query string is only the starting mode.
+- The message payload is nested: `data.type === 'background'` with
+  `data.data.opaque`. The overlays also accept a top-level `opaque` boolean for
+  direct helper calls.
+- The eight carriers call the shared helper from their existing `updateOverlay`
+  function. Only the helper definition is inside the sentinel block; the
+  one-line call is asserted separately per file.
+- Opaque hides `.fgc-fx` but does not clear `data-fx`. Both attributes have
+  independent meanings.
+- Timer and game overlay remain excluded and receive no handler or layer. The
+  harmless `bg` parameter forwarded by `auto.html` does not change that.
+- The browser tabs measured 1000x700. Computed styles and state changes do not
+  depend on viewport size, but the visual 1920x1080 OBS check is still an owner
+  gate.
+- Reduced motion was not emulated. The media query is unchanged and guarded by
+  the source-text assertion.
+
+**Evidence:** the hero-bans tab began at `bgMode: 'transparent'`, with one
+hidden `.fgc-bg`, one visible `.fgc-fx` and one drift animation. After
+`window.updateOverlay({type:'background', data:{opaque:true}})` it read
+`bgMode: 'opaque'`, `.fgc-bg display: block`,
+`backgroundColor: 'rgb(11, 13, 18)'` and `.fgc-fx display: none`; `opaque: false`
+restored the drift layer. The background tab moved between the same plate colour
+and `rgba(0, 0, 0, 0)` while all three animations continued. CDP found one
+`BUTTON[role=switch][aria-label="Opaque background"]` with `aria-checked` and
+`data-state`; the first click moved it to `true`, and a connected hero-bans tab
+then read `bgMode: 'opaque'` with `.fgc-bg display: block` and `.fgc-fx display:
+none` without a refresh. Console errors were empty in every check.
+
+**Result: Pass - assistant 2026-11-23.** The toggle now changes connected
+overlays straight away, uses the project's accessible Switch component and keeps
+the generated URLs in step for new sources. Visual sign-off at 1920x1080 in OBS
+and browser-emulated reduced motion remain outstanding owner checks.

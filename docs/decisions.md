@@ -1505,18 +1505,22 @@ own default and accepts the inverse `?bg=transparent` variant, which removes its
 plate but keeps the glow and both drifting lattices. `auto.html` forwards the
 selected mode to its scene iframes.
 
-The app's Overlays view exposes a session-only `Background` toggle. It appends
-the mode to the Browser Source URLs in `BACKGROUND_MODE_FILES` and says beside
-the control that each OBS source must be refreshed. It does not inject a
-message into a connected source, and it does not replace the still-unbuilt
+The app's Overlays view exposes a session-only `Background` switch in a
+`ToggleRow`. It appends the mode to the Browser Source URLs in
+`BACKGROUND_MODE_FILES` so a new source starts in the selected mode, and it
+broadcasts a cached `background` section with `{"opaque": true}` or `false`.
+Every modes-aware overlay handles that message and writes the value to `data-bg`,
+so connected sources change without an OBS refresh. New sources receive the
+cached section in their init frame. The switch does not replace the still-unbuilt
 `data-fx` injection hook. Timer and game overlay are absent from the list and
 from the source-text guards.
 
 **Reason.** The owner pointed out that the opaque plate only existed in the
 standalone background and asked for control over transparency, "including
 removing the hexagons". A mode on each source gives the operator that control
-without adding a second Browser Source per scene. Keeping the toggle at the URL
-level avoids promising live propagation that a Browser Source cannot deliver;
-the explicit refresh note turns that platform behaviour into an understood
-operating step instead of a surprise. Excluding timer and game overlay keeps
-the owner's earlier decision intact.
+without adding a second Browser Source per scene. The first implementation only
+rewrote URLs, which the owner correctly reported as not changing the connected
+overlays. The cached section now carries the same mode to every connected source
+and to sources that connect later, so the switch does what the operator expects
+without an OBS refresh. Timer and game overlay remain excluded by the owner's
+earlier decision.

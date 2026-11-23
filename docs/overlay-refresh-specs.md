@@ -1163,9 +1163,10 @@ Server injection of the document-level `data-fx` attribute remains **planned,
 not shipped**. The reserved hook is still there: when the server eventually
 injects `data-fx="off"`, the layer will default off unless an explicit
 `?fx=on` in the Browser Source URL overrides it. The application now has a UI
-control for the separate background mode described in §13, but that control
-rewrites the generated Browser Source URLs; it does not inject `data-fx` into a
-connected page.
+control for the separate background mode described in §13, and that control now
+broadcasts a cached `background` section to connected sources as well as
+rewriting the generated Browser Source URLs. It changes only `data-bg`; it does
+not inject `data-fx` into a connected page.
 
 ### 12.2 Surface plan
 
@@ -1226,8 +1227,10 @@ can track.
 - `@media (prefers-reduced-motion: reduce)` sets `animation: none`. The layer is
   still painted and the static lattice remains, so the composition does not
   collapse.
-- The query string is read once at load, so an OBS source refresh is needed
-  after changing it.
+- The `fx` query string is read once at load, so an OBS source refresh is needed
+  after changing it. The separate `bg` mode is seeded from the URL in the same
+  way, but a cached `background` section can now change `data-bg` on a connected
+  page without a refresh; see §13.
 
 `timer.html` and `game-overlay.html` carry no sentinel block, no `.fgc-fx`
 element and no `fx` script. Their bodies stay transparent and their existing
@@ -1311,14 +1314,19 @@ deliberately absent; the owner's exclusion from A74 still holds, and they
 receive no background mode parameter.
 
 The app's Overlays view holds a session-only `background_opaque` signal. The
-`Background` key value reads `Opaque` or `Transparent`, and a toggle button
-reads `Use opaque background` or `Use transparent background` with a matching
-`aria-pressed` state. It is disabled until the overlay server is running. The
-toggle rewrites the Browser Source URLs shown in the app; it does not send a
-message to a connected Browser Source. An operator must refresh each OBS source
-after changing it, and the app says so beside the button. The state is not
-persisted to `app.json`, is not dirty state and is not broadcast over the
-overlay WebSocket.
+`Background` key value reads `Opaque` or `Transparent`, and a `Switch` inside a
+`ToggleRow` is labelled `Opaque background`. Its hint explains that opaque paints
+a solid theme colour with no lattice and that connected Browser Sources switch
+straight away. It is disabled until the overlay server is running. Changing the
+switch does two things. It rewrites the Browser Source URLs shown in the app, so
+a source opened later starts in the selected mode. It also broadcasts a cached
+`background` section over the overlay WebSocket. Every connected source that
+carries the mode handler changes `data-bg` straight away, and a newly connected
+source receives the cached section in its init frame, so an OBS source refresh
+is not needed. The wire frame is
+`{"type":"background","data":{"opaque":true}}` for opaque mode and `false` for
+transparent mode. The state is not persisted to `app.json` and is not dirty
+state. Server injection of the separate `data-fx` hook remains unbuilt.
 
 `auto.html` forwards the mode from its own URL to every scene iframe. It copies
 `bg` through the same normalisation as the scene overlays, so the auto Browser
@@ -1341,7 +1349,11 @@ The new selector lives inside the same sentinel comments as the canonical FX
 block, so `every_overlay_carries_the_same_fx_block` now compares the plate
 declarations, the two `data-bg` rules and the mode script as well as the
 original lattice rules. Each carrier has exactly one `.fgc-bg` and one
-`.fgc-fx` sibling before the overlay root. A new test,
+`.fgc-fx` sibling before the overlay root. The sentinelled script also defines
+`window.fgcUpdateBackground(data)`, which reads `data.data.opaque` (or a top-level
+`opaque`) and writes `data-bg`; each carrier's `updateOverlay` calls that helper
+for every inbound frame. `background.html` has the equivalent
+`data.type === 'background'` branch in its own `updateOverlay`. A new test,
 `background_mode_is_absent_from_sources_without_a_background`, asserts that
 `timer.html` and `game-overlay.html` contain neither `data-bg` nor `fgc-bg`.
 
@@ -1364,10 +1376,13 @@ eight scene carriers and in `background.html`:
 - `background.html` defaults to opaque unless a parameter says otherwise.
 
 The `fx` parameter is independent. `?bg=opaque` wins visually because the CSS
-hides `.fgc-fx`, but it does not rewrite or clear `data-fx`. The toggle state is
-read once when the document loads, so an OBS source refresh is required after
-the app rewrites a URL. This is a deliberate URL-level control, not live
-injection; §12.1 still reserves `data-fx` as the future injection hook.
+hides `.fgc-fx`, but it does not rewrite or clear `data-fx`. The query string is
+still read once when the document loads and seeds the initial mode, but the app
+now broadcasts a `background` section when the operator changes the switch. The
+handler in every modes-aware overlay overwrites `data-bg` on that message, so
+connected sources change without an OBS refresh. A newly opened source starts
+from its URL and then receives the cached section, which keeps it aligned with
+the app. §12.1 still reserves `data-fx` as a separate, unbuilt injection hook.
 
 ### 13.4 CDP-verifiable assertions
 
@@ -1405,11 +1420,27 @@ On `http://127.0.0.1:3001/overlays/background.html?bg=transparent`:
   `glowBreathe`, `latticeDriftForward` and `latticeDriftReverse`.
 - The console is empty.
 
+The live message path was checked separately in a connected tab with no URL
+parameter. Before the message, `hero-bans.html` read `bgMode: 'transparent'`,
+showed one `.fgc-fx` with a drift animation and kept `.fgc-bg` hidden. Calling
+`window.updateOverlay({type:'background', data:{opaque:true}})` changed
+`dataset.bg` to `opaque` and swapped the layers in the same document: `.fgc-bg`
+became `display: block` with `backgroundColor: rgb(11, 13, 18)`, and `.fgc-fx`
+became `display: none`. Sending `opaque: false` reversed both states. The
+`background.html` tab showed the inverse mapping from its opaque default:
+`opaque: false` made the document, body and plate transparent while all three
+animations kept running, and `opaque: true` restored `rgb(11, 13, 18)`. The app's
+`Switch` was then clicked through CDP: it exposed
+`role="switch"`, `aria-label="Opaque background"`, `aria-checked` and
+`data-state`, and the previously connected hero-bans tab moved to opaque mode
+without a refresh. All four checks had empty consoles.
+
 Both browser tabs measured a 1000x700 viewport. That is the Review-pane tab
 size, not the overlay's 1920x1080 design canvas. The computed-style and
 animation assertions do not depend on the viewport size; a visual sign-off in
 OBS at 1920x1080 remains an outstanding owner check.
 
 A75 in [`docs/manual-qa.md`](manual-qa.md) and
-[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records these values, the
-1000x700 caveat and the source-text coverage.
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the URL-mode values,
+the 1000x700 caveat and the source-text coverage. A76 records the live message
+and Switch proof that superseded the URL-only behaviour.

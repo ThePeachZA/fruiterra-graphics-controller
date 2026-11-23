@@ -1946,14 +1946,15 @@ a QA row, a runbook section and a source-text test where needed.
    transparent 1920×1080 subject. If more than three overlays need it, guard the
    copies with another byte-equality test.
 8. **The per-overlay design refreshes - open.** The council's plan is below.
-9. **The app-level background toggle - done as a URL rewrite; FX injection open.**
-   The Overlays view now holds a session-only `background_opaque` signal and
+9. **The app-level background toggle - done as a URL rewrite plus a cached
+   section; FX injection open.** The Overlays view holds a session-only
+   `background_opaque` signal behind an accessible `Switch` in a `ToggleRow`,
    appends `?bg=opaque` or `?bg=transparent` to the ten files in
-   `BACKGROUND_MODE_FILES`. Opaque paints the theme plate and removes the
-   hexagons; transparent restores them. `auto.html` forwards the mode to its
-   scene iframes, and the app warns that OBS sources must be refreshed. It does
-   not inject `data-fx` into a connected page, so the separate app-level FX
-   switch remains open.
+   `BACKGROUND_MODE_FILES`, and broadcasts a `background` section to connected
+   sources. Opaque paints the theme plate and removes the hexagons; transparent
+   restores them. `auto.html` forwards the mode to its scene iframes. No OBS
+   refresh is needed. The implementation does not inject `data-fx`, so the
+   separate app-level FX switch remains open.
 10. **Documentation - continuous.** The design-language reference, the specs,
     the checklist, the QA register, the runbook, the decisions log and this
     backlog are part of each change, not a final tidy-up.
@@ -2004,7 +2005,7 @@ a QA row, a runbook section and a source-text test where needed.
 | Source-text tests break on unrelated markup edits | The equality test narrows its extraction to the sentinel block and asserts specific rules. When an unrelated edit breaks it, fix the copy or narrow the assertion; do not delete the equality check. |
 | Copy-paste drift between duplicated blocks | Sentinel comments and byte comparison across exactly eight files, with the file list asserted so removing a carrier is deliberate. |
 | Preview and live sources render the effect twice | Planned: `auto.html` previews load `?fx=off`. Today the auto previews do not carry the block. |
-| OBS source-refresh semantics for the app-level toggle | The shipped `bg` toggle rewrites URLs only; the app says to refresh each OBS source and A75 records the limitation. Planned: the same warning must ship with any future `data-fx` injection; never promise live propagation. |
+| OBS source-refresh semantics for the app-level toggle | The `bg` switch now broadcasts a cached section that connected and newly connected sources handle, so no refresh is needed. Planned: use the same cached-section pattern for any future `data-fx` switch; A75 records the old URL-only behaviour and A76 records the fix. |
 | An opaque plate inside a scene source could look like a second background | Accepted as an operator choice: opaque is opt-in for the eight carriers, `background.html` stays the default backdrop, and opaque removes the hexagons rather than stacking them over a plate. |
 | OBS version floor | Floor is 31.0.4 / CEF 116; `color-mix()` is safe there. Any newer requirement needs a new decision. |
 | Schedule realism | One overlay or one mechanism per change, each with four artefacts. Ideas stay here until they have a QA row and a runbook section. |
@@ -2013,9 +2014,9 @@ a QA row, a runbook section and a source-text test where needed.
 
 A stinger hand-off tuned to the 0.8s reveal, a flythrough introduction overlay,
 a single app switch for every overlay's FX backed by `data-fx` injection (the
-shipped `bg` toggle is a URL rewrite and does not cover it), a shared cut-out
-locator helper, and a stable OBS capture for visual regression testing. These
-are ideas only. They
+shipped `bg` toggle uses the same cached-section pattern but only changes
+`data-bg`), a shared cut-out locator helper, and a stable OBS capture for visual
+regression testing. These are ideas only. They
 do not change the shipped contract until they are promoted with a decision and
 a QA gate.
 
@@ -2032,5 +2033,7 @@ background mode gate: `hero-bans.html?bg=opaque` showed the solid
 `rgb(11, 13, 18)` plate with `.fgc-fx` hidden and a transparent body;
 `?bg=transparent` restored the 72s lattice; `background.html?bg=transparent`
 removed its plate while keeping all three animations. The app toggle was
-checked as a URL rewrite for the ten modes-aware sources only. Visual sign-off
-at 1920x1080 and browser-emulated reduced motion remain outstanding.
+checked as a URL rewrite for the ten modes-aware sources only; A76 then proved
+the cached `background` section and the app's accessible Switch change connected
+sources without a refresh. Visual sign-off at 1920x1080 and browser-emulated
+reduced motion remain outstanding.

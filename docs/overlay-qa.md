@@ -37,15 +37,16 @@ across all milestones is in `docs/manual-qa.md`.
 | 26 | `?bg=opaque` paints a solid `--fgc-surface` plate and hides the hexagon lattice; `?bg=transparent` restores the lattice | ☑ |
 | 27 | `?bg=off` / `?bg=on` normalise to opaque / transparent, and a scene overlay defaults to transparent unless seeded with `data-bg="opaque"` | ☑ |
 | 28 | `background.html` stays opaque by default, and `?bg=transparent` removes its plate while keeping the glow and both lattices | ☑ |
-| 29 | The app Background toggle rewrites Browser Source URLs only, and the operator refreshes OBS sources after changing it | ☑ |
+| 29 | The app Background switch is an accessible `Switch` that rewrites Browser Source URLs and broadcasts a cached `background` section, so connected sources change without an OBS refresh | ☑ |
 | 30 | `auto.html` forwards the background mode to its scene iframes | ☑ |
 | 31 | Timer and game overlay still have no background layer or `data-bg` attribute | ☑ |
-| 32 | The byte-equality test includes `.fgc-bg` and the `data-bg` rules, and the mode-specific source-text tests pass | ☑ |
+| 32 | The byte-equality test includes `.fgc-bg`, the `data-bg` rules and the live `background` handler, and the mode-specific source-text tests pass | ☑ |
+| 33 | A `{"type":"background","data":{"opaque":true\|false}}` message changes `data-bg` and the plate/lattice layers in connected overlays without a refresh | ☑ |
 
 The current design language, the per-overlay playbook and the motion rules are
 in [`docs/overlay-design-language.md`](overlay-design-language.md). The
 post-v1 evidence for these checks is in `docs/manual-qa.md` §7 and the repeatable
-steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74 and A75.
+steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74, A75 and A76.
 
 ## Automated pre-check
 

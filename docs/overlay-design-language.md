@@ -382,7 +382,8 @@ parameters rather than extra pages:
   the query string. The OS preference wins.
 
 The query string is read once at load. Changing a variant needs a reload or an
-OBS source refresh.
+OBS source refresh. The `bg` mode is the exception: it can also be changed live
+by the cached `background` section described in §8.6.
 
 ## 8. The canonical FX block
 
@@ -469,8 +470,9 @@ no parameter, the layer is on unless the document element already carries
 for the future app-level FX switch; the server does not inject it today.
 
 The shipped app control is the separate background toggle described in §8.6.
-It rewrites Browser Source URLs with a `bg` parameter rather than injecting
-`data-fx` into a connected page, so an OBS source refresh is needed.
+It rewrites Browser Source URLs with a `bg` parameter and broadcasts a cached
+`background` section that changes `data-bg` on connected pages. It does not
+inject `data-fx`; that hook remains unbuilt.
 
 `@media (prefers-reduced-motion: reduce)` sets `animation: none` on `.fgc-fx`.
 The static lattice stays, so the composition still holds and the operator does
@@ -529,14 +531,18 @@ and both lattices. `auto.html` forwards the mode to its scene iframes. The two
 attributes are independent: `?bg=opaque` wins visually because it hides
 `.fgc-fx`, but it does not rewrite `data-fx`.
 
-The app's Overlays view has a session-only `Background` toggle. It uses
-`overlay_url_with_background()` to append `?bg=opaque` or `?bg=transparent` to
-the ten URLs in `BACKGROUND_MODE_FILES`: the eight carriers, the standalone
-background and the auto host. Timer and game overlay are not in that list. The
-toggle changes the displayed URLs, not a connected page; an OBS Browser Source
-must be refreshed to pick up the new mode. That limitation is stated beside the
-control and recorded in the runbook, because it is easy to mistake a URL toggle
-for live propagation.
+The app's Overlays view has a session-only `Background` switch in a `ToggleRow`.
+It uses `overlay_url_with_background()` to append `?bg=opaque` or
+`?bg=transparent` to the ten URLs in `BACKGROUND_MODE_FILES`: the eight carriers,
+the standalone background and the auto host. Timer and game overlay are not in
+that list. Changing the switch also broadcasts a cached `background` section,
+`{"type":"background","data":{"opaque":true}}` or its `false` form. Every
+modes-aware overlay registers a handler inside its canonical block, or an
+equivalent branch in `background.html`, that writes the boolean to `data-bg` on
+the document element. Connected Browser Sources therefore switch straight away,
+and a source opened later receives the cached section in its init frame. That
+is why the hint beside the control promises live switching. URL rewriting is
+kept as the starting state for new sources, not as the only delivery mechanism.
 
 Adding the plate inside the sentinel comments means the byte-equality test now
 covers both layers. The test also asserts exactly one `.fgc-bg` and one
@@ -679,11 +685,11 @@ narrowly; do not weaken the equality rule.
    Planned.
 8. Run the per-overlay design refreshes from §9.1, one overlay per change.
    Planned.
-9. The app-level background toggle - done as a URL rewrite. It appends `?bg=`
-   to the ten modes-aware Browser Source URLs and requires an OBS source
-   refresh; the app says so beside the control. The separate app-level FX
-   toggle that injects `data-fx` is still planned, because the shipped control
-   does not change a connected page.
+9. The app-level background toggle - done as a URL rewrite plus a cached
+   `background` section. It appends `?bg=` to the ten modes-aware Browser Source
+   URLs for new sources, and broadcasts `data-bg` changes to connected pages, so
+   no OBS refresh is needed. The separate app-level FX toggle that injects
+   `data-fx` is still planned.
 10. Keep this document, the specs, the checklist, the QA register, the runbook,
     the decisions and the backlog in step with each change. Continuous.
 
@@ -701,7 +707,7 @@ narrowly; do not weaken the equality rule.
 | Source-text tests break on unrelated markup edits | known cost | narrow the assertion; never remove the equality check |
 | Copy-paste drift between duplicated blocks | guarded | sentinel comments and `every_overlay_carries_the_same_fx_block` |
 | Preview and live sources render FX twice | planned | `auto.html` previews load `?fx=off` |
-| App-level toggle needs an OBS source refresh | shipped for `bg`, accepted | the URL toggle writes `?bg=` and the app notes that OBS sources must be refreshed; the future `data-fx` injection must carry the same warning |
+| App-level toggle does not reach a connected source | mitigated for `bg`, open for `data-fx` | the `bg` switch broadcasts a cached section so connected and newly connected sources switch live; the future `data-fx` injection must use the same pattern |
 | OBS version floor | 31.0.4 | no feature that needs a newer Chromium without a decision |
 | Schedule realism | open | one overlay or one mechanism per change, each with its four artefacts |
 
@@ -710,7 +716,8 @@ narrowly; do not weaken the equality rule.
 - A stinger transition that hands off to the 0.8s reveal without a visible gap.
 - A flythrough moment overlay for match introductions.
 - A single app switch for every overlay's FX, backed by `data-fx` injection.
-  The shipped `bg` toggle is a URL rewrite and does not cover this.
+  The shipped `bg` toggle already uses the cached-section pattern, but it only
+  changes `data-bg` and does not cover this.
 - A locator helper shared by more than one cut-out overlay.
 - A visual regression capture per overlay, if a stable OBS capture harness can be
   built without making CI slow.
@@ -730,3 +737,4 @@ it has shipped.
 | 2026-11-23 | Canonical transparent FX block added to eight overlays with a byte-equality test; timer and game overlay explicitly excluded by the owner (A74). |
 | 2026-11-23 | This document opened as the canonical design-language reference after the owner asked for maximum written detail. |
 | 2026-11-23 | Background mode toggle added: opaque plate removes the hexagons, `background.html` gained the inverse transparent variant, `auto.html` forwards the mode, and the app rewrites mode-aware Browser Source URLs (A75). |
+| 2026-11-23 | The mode toggle became live: a cached `background` section changes `data-bg` on connected sources, the app control became an accessible `Switch` in a `ToggleRow`, and no OBS source refresh is needed (A76). |
