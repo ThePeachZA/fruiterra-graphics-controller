@@ -4749,3 +4749,101 @@ reported. The console was empty in both states. `matchMedia` reported reduced
 motion false, so the reduced-motion rule is covered by the source-text test
 rather than by browser emulation. `cargo test -p fgc-server --test overlays`
 passed 31 tests, including `every_overlay_carries_the_same_fx_block`.
+
+### A75 - Background transparency toggle (opaque plate and lattice removal)
+
+**Covers:** owner request 2026-11-23 that background transparency be toggled on
+or off, "including removing the hexagons". This gate covers the two modes in
+the eight canonical FX carriers, the inverse variant in `background.html`, the
+`auto.html` forwarding and the app's URL-generating toggle. It does not add a
+background to the timer or the game overlay.
+
+**Steps:**
+
+1. Confirm the scope first. `BACKGROUND_MODE_FILES` in
+   `crates/app/src/server.rs` has ten entries: `auto.html`, `background.html`
+   and the eight FX carriers from A74. `timer.html` and `game-overlay.html`
+   must contain neither `data-bg` nor `fgc-bg`.
+2. Open `http://127.0.0.1:3001/overlays/hero-bans.html?bg=opaque` in a
+   Chromium browser with the console open. Confirm `dataset.bg` reads `opaque`
+   and `dataset.fx` still reads `on`. Exactly one `.fgc-bg` should exist and
+   compute `display: block`, `background-color: rgb(11, 13, 18)` under Night
+   Broadcast and `inset: 0px`.
+3. Read the same page's `.fgc-fx`. It should compute `display: none` while its
+   mask still reads `180px 322px` and its opacity still reads `0.16`. No drift
+   animation should be reported on the hidden layer. The body must stay
+   `rgba(0, 0, 0, 0)`, because the plate is a sibling layer, and the existing
+   `.overlay` must still compute `z-index: 1`.
+4. Navigate to `?bg=transparent` and confirm `dataset.bg` reads `transparent`.
+   `.fgc-bg` should compute `display: none` and `.fgc-fx` should compute
+   `display: block` with one `fgcCanonicalFxDrift` at 72000ms. The body stays
+   transparent. Check that the console is empty in both states.
+5. Try the aliases `?bg=off` and `?bg=on`. They normalise to `opaque` and
+   `transparent` respectively. With no parameter, the scene overlay defaults
+   to transparent unless the document element was seeded with
+   `data-bg="opaque"` before the inline script ran.
+6. Open `http://127.0.0.1:3001/overlays/background.html?bg=transparent`.
+   Confirm `dataset.bg` reads `transparent`, and that the document element,
+   body and `.background` all compute `rgba(0, 0, 0, 0)`. Two lattice layers
+   must remain, with `glowBreathe`, `latticeDriftForward` and
+   `latticeDriftReverse` still reported by `getAnimations()`. Reload without a
+   parameter and confirm the opaque plate returns.
+7. In the app's Overlays view, confirm the `Background` key value reads
+   `Transparent` by default and the button reads `Use opaque background`. Start
+   the overlay server, activate the toggle, and confirm the value and button
+   flip while the generated hero, background and auto URLs gain `?bg=opaque`.
+   The game overlay and timer URLs must not gain a `bg` parameter. The note
+   beside the button must tell the operator to refresh each OBS source.
+8. Read `auto.html` and confirm `sceneUrl(file)` copies a valid `bg` parameter
+   into its scene iframes after normalising the aliases. If the app is serving
+   a built copy, rebuild before judging this step.
+9. Run `cargo test -p fgc-server --test overlays` and confirm the overlay suite
+   passes 34 tests. `every_overlay_carries_the_same_fx_block` must include the
+   plate declarations in the byte comparison.
+   `background_mode_is_absent_from_sources_without_a_background`,
+   `background_html_supports_the_transparent_variant` and
+   `auto_overlay_forwards_the_background_mode_to_its_scenes` must all pass.
+
+**Gotchas:**
+
+- The plate is a sibling layer, not a body background, in the eight scene
+  overlays. A body reading `rgba(0, 0, 0, 0)` in opaque mode is correct.
+- The standalone background is the reverse case: opaque is its default, so
+  `?bg=transparent` is the variant that removes its plate.
+- Opaque removes the hexagons by hiding `.fgc-fx`; it does not clear `data-fx`.
+  Both attributes can be read at once.
+- The app toggle changes URLs only. A connected OBS Browser Source keeps the
+  mode it loaded until it is refreshed. Do not describe this as live
+  propagation, and do not confuse it with the still-unbuilt `data-fx`
+  injection hook.
+- Timer and game overlay are excluded by the owner's A74 decision. A harmless
+  ignored `bg` parameter from `auto.html` does not change that.
+- The browser tab used for this gate measured 1000x700. The overlay's design
+  canvas is 1920x1080; computed style and animation assertions do not depend on
+  the tab size, but visual sign-off still needs a 1920x1080 OBS check.
+- Reduced motion was not emulated. The existing media query is unchanged and
+  remains guarded by the source-text assertion.
+- Reformatting one canonical copy breaks the byte-equality test. Fix the copy,
+  not the comparison.
+
+**Evidence:** `hero-bans.html?bg=opaque` measured `dataset.bg: 'opaque'`,
+`dataset.fx: 'on'`, one `.fgc-bg` at `display: block`,
+`backgroundColor: 'rgb(11, 13, 18)'` and `inset: '0px'`, `.fgc-fx` at
+`display: none` with `maskSize: '180px 322px'` and `opacity: '0.16'`, no drift
+animation on the hidden layer, body `rgba(0, 0, 0, 0)`, `.overlay` `z-index: 1`,
+`reduced: false` and an empty console. The same tab at `?bg=transparent`
+measured `dataset.bg: 'transparent'`, `.fgc-bg display: none`, `.fgc-fx
+display: block` and one `fgcCanonicalFxDrift` at 72000ms, with an empty console.
+`background.html?bg=transparent` measured html/body/plate `rgba(0, 0, 0, 0)`,
+two lattice layers and the three named animations, again with no console
+errors. Both tabs were 1000x700. The 34-test overlay suite passed. A screenshot
+of `hero-bans.html?bg=opaque` was captured at
+`C:\Users\Cameron\AppData\Local\Temp\opencode-browser-gBzqQi\0\screenshot.jpeg`.
+
+**Result: Pass - assistant 2026-11-23.** The two modes are distinguishable in a
+real browser, opaque hides the hexagons without repainting the body, and the
+standalone background accepts the inverse variant while keeping its lattice.
+The app-level toggle changes generated URLs for the ten modes-aware sources
+only, and the timer and game overlay remain excluded. Visual sign-off at
+1920x1080 in OBS and browser-emulated reduced motion remain outstanding owner
+checks.

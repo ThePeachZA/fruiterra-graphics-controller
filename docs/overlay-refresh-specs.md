@@ -1159,11 +1159,13 @@ network request and no state of its own. A short inline script reads the `fx`
 parameter once at load and writes `data-fx` to `<html>`. The CSS then hides or
 shows the layer through that attribute.
 
-The application-level switch is **planned, not shipped**. The reserved hook is
-the document-level `data-fx` attribute: when the server eventually injects
-`data-fx="off"`, the layer will default off unless an explicit `?fx=on` in the
-Browser Source URL overrides it. There is no injection endpoint today and no
-app UI control for it.
+Server injection of the document-level `data-fx` attribute remains **planned,
+not shipped**. The reserved hook is still there: when the server eventually
+injects `data-fx="off"`, the layer will default off unless an explicit
+`?fx=on` in the Browser Source URL overrides it. The application now has a UI
+control for the separate background mode described in §13, but that control
+rewrites the generated Browser Source URLs; it does not inject `data-fx` into a
+connected page.
 
 ### 12.2 Surface plan
 
@@ -1281,3 +1283,133 @@ byte-equality check.
 A74 in [`docs/manual-qa.md`](manual-qa.md) and
 [`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the browser evidence
 and the explicit scope of what was verified.
+
+## 13. Background mode toggle (2026-11-23)
+
+### 13.1 Purpose & wire
+
+The owner observed that only `background.html` painted an opaque plate and
+asked for a toggle that turns background transparency on or off, "including
+removing the hexagons". The two modes are now explicit:
+
+- **Transparent** is the default for the eight scene overlays that carry the
+  canonical FX block. Their bodies stay `rgba(0, 0, 0, 0)` and the shared
+  hexagon lattice is visible.
+- **Opaque** paints a solid plate from `var(--fgc-surface)` and hides the
+  lattice completely. It is the same theme colour used by the standalone
+  background, but it is a sibling layer inside each scene overlay rather than a
+  second Browser Source.
+- `background.html` keeps opaque as its own default. Its `?bg=transparent`
+  variant removes the plate while leaving the glow and both drifting lattices
+  in place, so a user can preview the composite either way.
+
+`BACKGROUND_MODE_FILES` in `crates/app/src/server.rs` names the ten files that
+understand the mode: `auto.html`, `background.html` and the eight FX carriers.
+`overlay_url_with_background(base_url, file, opaque)` appends `?bg=opaque` or
+`?bg=transparent` only to those ten. `timer.html` and `game-overlay.html` are
+deliberately absent; the owner's exclusion from A74 still holds, and they
+receive no background mode parameter.
+
+The app's Overlays view holds a session-only `background_opaque` signal. The
+`Background` key value reads `Opaque` or `Transparent`, and a toggle button
+reads `Use opaque background` or `Use transparent background` with a matching
+`aria-pressed` state. It is disabled until the overlay server is running. The
+toggle rewrites the Browser Source URLs shown in the app; it does not send a
+message to a connected Browser Source. An operator must refresh each OBS source
+after changing it, and the app says so beside the button. The state is not
+persisted to `app.json`, is not dirty state and is not broadcast over the
+overlay WebSocket.
+
+`auto.html` forwards the mode from its own URL to every scene iframe. It copies
+`bg` through the same normalisation as the scene overlays, so the auto Browser
+Source can drive the whole scene set from one URL. Timer and game overlay
+ignore the harmless parameter.
+
+### 13.2 Surface plan
+
+| Element selector | Token value | Treatment |
+|---|---|---|
+| `.fgc-bg` | `position: absolute`, `inset: 0`, `z-index: 0`, `pointer-events: none` | a full-frame sibling behind the overlay content |
+| `.fgc-bg` | `display: none`, `background-color: var(--fgc-surface)` | hidden in transparent mode, painted in opaque mode |
+| `html[data-bg="opaque"] .fgc-bg` | `display: block` | turns the solid plate on |
+| `html[data-bg="opaque"] .fgc-fx` | `display: none` | removes the hexagons when the plate is on |
+| `:root` | `--fgc-surface` | the one theme token for the plate, `#0b0d12` under Night Broadcast and `#f4f6fb` under Light |
+| `html[data-bg="transparent"] .background` | `background-color: transparent` | the standalone page's plate-off variant |
+| `html[data-bg="transparent"], html[data-bg="transparent"] body` | `background: transparent` | removes the standalone page's document plate too |
+
+The new selector lives inside the same sentinel comments as the canonical FX
+block, so `every_overlay_carries_the_same_fx_block` now compares the plate
+declarations, the two `data-bg` rules and the mode script as well as the
+original lattice rules. Each carrier has exactly one `.fgc-bg` and one
+`.fgc-fx` sibling before the overlay root. A new test,
+`background_mode_is_absent_from_sources_without_a_background`, asserts that
+`timer.html` and `game-overlay.html` contain neither `data-bg` nor `fgc-bg`.
+
+`background_html_supports_the_transparent_variant` checks the standalone page's
+transparent rules, and `auto_overlay_forwards_the_background_mode_to_its_scenes`
+checks the iframe parameter forwarding. The byte-equality extraction still
+starts and ends at `<!-- === FGC CANONICAL FX START === -->` and
+`<!-- === FGC CANONICAL FX END === -->`; adding the plate inside those sentinels
+is what keeps the two layers from drifting apart.
+
+### 13.3 URL variants
+
+The inline script reads `bg` from `new URLSearchParams(location.search)` in the
+eight scene carriers and in `background.html`:
+
+- `?bg=opaque` and its alias `?bg=off` select the solid plate with no hexagons.
+- `?bg=transparent` and its alias `?bg=on` select the transparent lattice.
+- With no `bg` parameter, a scene overlay stays transparent unless its document
+  element was already seeded with `data-bg="opaque"`.
+- `background.html` defaults to opaque unless a parameter says otherwise.
+
+The `fx` parameter is independent. `?bg=opaque` wins visually because the CSS
+hides `.fgc-fx`, but it does not rewrite or clear `data-fx`. The toggle state is
+read once when the document loads, so an OBS source refresh is required after
+the app rewrites a URL. This is a deliberate URL-level control, not live
+injection; §12.1 still reserves `data-fx` as the future injection hook.
+
+### 13.4 CDP-verifiable assertions
+
+On `http://127.0.0.1:3001/overlays/hero-bans.html?bg=opaque`, measured in a real
+Chromium tab:
+
+- `document.documentElement.dataset.bg` reads `opaque` and `dataset.fx` still
+  reads `on`.
+- One `.fgc-bg` computes `display: block`, `background-color: rgb(11, 13, 18)`
+  under Night Broadcast and `inset: 0px`.
+- The single `.fgc-fx` computes `display: none` while retaining
+  `mask-size: 180px 322px` and `opacity: 0.16`; no drift animation is reported
+  on the hidden layer.
+- `document.body` computes `rgba(0, 0, 0, 0)`; the plate is the sibling layer,
+  not a body background. The existing `.overlay` still computes `z-index: 1`.
+- `matchMedia('(prefers-reduced-motion: reduce)').matches` is false in the test
+  browser. Reduced motion is covered by the unchanged source-text assertion,
+  not claimed as browser-emulated for A75.
+- The console is empty.
+
+On the same page with `?bg=transparent`:
+
+- `dataset.bg` reads `transparent`.
+- `.fgc-bg` computes `display: none`, even though its theme colour remains
+  `rgb(11, 13, 18)`.
+- `.fgc-fx` computes `display: block`, and `getAnimations()` reports one
+  `fgcCanonicalFxDrift` at 72000ms.
+- The body stays transparent and the console stays empty.
+
+On `http://127.0.0.1:3001/overlays/background.html?bg=transparent`:
+
+- `dataset.bg` reads `transparent`; the document element, body and `.background`
+  all compute `rgba(0, 0, 0, 0)`.
+- Two `.background__lattice` layers remain, and `getAnimations()` reports
+  `glowBreathe`, `latticeDriftForward` and `latticeDriftReverse`.
+- The console is empty.
+
+Both browser tabs measured a 1000x700 viewport. That is the Review-pane tab
+size, not the overlay's 1920x1080 design canvas. The computed-style and
+animation assertions do not depend on the viewport size; a visual sign-off in
+OBS at 1920x1080 remains an outstanding owner check.
+
+A75 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records these values, the
+1000x700 caveat and the source-text coverage.

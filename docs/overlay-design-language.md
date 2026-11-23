@@ -373,6 +373,10 @@ parameters rather than extra pages:
   other value leaves the drift running.
 - `?tone=team` adds `tone-team` and swaps the two wash aliases. The plate stays
   the theme surface colour.
+- `?bg=transparent` adds `data-bg="transparent"` and removes the plate while
+  keeping the glow and both lattices. Opaque is this page's default; the
+  `off` / `on` aliases normalise to opaque / transparent as they do in the
+  scene overlays.
 - `?host=` and `?port=` retarget the WebSocket, as in the other overlays.
 - `@media (prefers-reduced-motion: reduce)` freezes the motion independently of
   the query string. The OS preference wins.
@@ -461,8 +465,12 @@ The tiny inline script reads `new URLSearchParams(location.search).get('fx')`.
 `?fx=off` sets `data-fx="off"` on `<html>` and
 `html[data-fx="off"] .fgc-fx` sets `display: none`. `?fx=on` forces it on. With
 no parameter, the layer is on unless the document element already carries
-`data-fx="off"`, which is the hook reserved for an app-level toggle. The app
-toggle is planned but not shipped; today the server does not inject `data-fx`.
+`data-fx="off"`. Server injection of that attribute is still the reserved hook
+for the future app-level FX switch; the server does not inject it today.
+
+The shipped app control is the separate background toggle described in §8.6.
+It rewrites Browser Source URLs with a `bg` parameter rather than injecting
+`data-fx` into a connected page, so an OBS source refresh is needed.
 
 `@media (prefers-reduced-motion: reduce)` sets `animation: none` on `.fgc-fx`.
 The static lattice stays, so the composition still holds and the operator does
@@ -485,11 +493,65 @@ The first native carrier is hero bans, because it already had the hexagon wall
 and a proven release path. Calling it a pilot is a statement about rollout
 order, not about adding FX to the timer.
 
+### 8.6 Background mode
+
+The owner then pointed out that only `background.html` had an opaque background
+and asked for a toggle that turns transparency on or off, "including removing
+the hexagons". Each of the eight carriers now has a second sibling inside the
+canonical block:
+
+```css
+.fgc-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: none;
+  background-color: var(--fgc-surface);
+}
+
+html[data-bg="opaque"] .fgc-bg { display: block; }
+html[data-bg="opaque"] .fgc-fx { display: none; }
+```
+
+Transparent is the normal mode for a scene overlay: the body stays clear and
+the drifting lattice is visible. Opaque mode paints the same theme plate that
+the standalone background owns and removes the hexagons with it. The plate is
+a sibling layer rather than a body background, so the body continues to read
+`rgba(0, 0, 0, 0)` in both modes. This keeps the overlay compositing contract
+intact and avoids coupling the new mode to the theme's body rules.
+
+The inline script reads `bg` from the query string as well as `fx`. The accepted
+values are `opaque` and `transparent`, with `off` and `on` as aliases. Scene
+overlays default to transparent; `background.html` defaults to opaque and gets
+the inverse `?bg=transparent` variant, which drops its plate but keeps the glow
+and both lattices. `auto.html` forwards the mode to its scene iframes. The two
+attributes are independent: `?bg=opaque` wins visually because it hides
+`.fgc-fx`, but it does not rewrite `data-fx`.
+
+The app's Overlays view has a session-only `Background` toggle. It uses
+`overlay_url_with_background()` to append `?bg=opaque` or `?bg=transparent` to
+the ten URLs in `BACKGROUND_MODE_FILES`: the eight carriers, the standalone
+background and the auto host. Timer and game overlay are not in that list. The
+toggle changes the displayed URLs, not a connected page; an OBS Browser Source
+must be refreshed to pick up the new mode. That limitation is stated beside the
+control and recorded in the runbook, because it is easy to mistake a URL toggle
+for live propagation.
+
+Adding the plate inside the sentinel comments means the byte-equality test now
+covers both layers. The test also asserts exactly one `.fgc-bg` and one
+`.fgc-fx` per carrier, the two `data-bg` rules, the aliases and the mode script.
+Separate source-text tests keep the mode out of timer and game overlay, give
+the standalone page its transparent variant, and check the auto forwarding.
+
 ## 9. Per-overlay playbook
 
 The order below is the council's rollout order from 2026-11-23. Each item is a
 separate change with its own QA row and runbook section. The FX column describes
-the shared transparent lattice, not the opaque standalone background.
+the shared transparent lattice, not the opaque standalone background. Every FX
+carrier can also take the §8.6 background mode: transparent by default, or
+opaque with the hexagons removed. `background.html` starts opaque and can be
+made transparent. Timer and game overlay have no background mode at all.
 
 | Overlay | Purpose | Hexagon use | Colour rule | Motion | FX state |
 |---|---|---|---|---|---|
@@ -617,8 +679,11 @@ narrowly; do not weaken the equality rule.
    Planned.
 8. Run the per-overlay design refreshes from §9.1, one overlay per change.
    Planned.
-9. Add the app-level FX toggle that injects `data-fx`, and document the OBS
-   source refresh it requires. Planned.
+9. The app-level background toggle - done as a URL rewrite. It appends `?bg=`
+   to the ten modes-aware Browser Source URLs and requires an OBS source
+   refresh; the app says so beside the control. The separate app-level FX
+   toggle that injects `data-fx` is still planned, because the shipped control
+   does not change a connected page.
 10. Keep this document, the specs, the checklist, the QA register, the runbook,
     the decisions and the backlog in step with each change. Continuous.
 
@@ -636,7 +701,7 @@ narrowly; do not weaken the equality rule.
 | Source-text tests break on unrelated markup edits | known cost | narrow the assertion; never remove the equality check |
 | Copy-paste drift between duplicated blocks | guarded | sentinel comments and `every_overlay_carries_the_same_fx_block` |
 | Preview and live sources render FX twice | planned | `auto.html` previews load `?fx=off` |
-| App-level toggle needs an OBS source refresh | accepted | document it in the runbook when built; do not promise live propagation |
+| App-level toggle needs an OBS source refresh | shipped for `bg`, accepted | the URL toggle writes `?bg=` and the app notes that OBS sources must be refreshed; the future `data-fx` injection must carry the same warning |
 | OBS version floor | 31.0.4 | no feature that needs a newer Chromium without a decision |
 | Schedule realism | open | one overlay or one mechanism per change, each with its four artefacts |
 
@@ -645,6 +710,7 @@ narrowly; do not weaken the equality rule.
 - A stinger transition that hands off to the 0.8s reveal without a visible gap.
 - A flythrough moment overlay for match introductions.
 - A single app switch for every overlay's FX, backed by `data-fx` injection.
+  The shipped `bg` toggle is a URL rewrite and does not cover this.
 - A locator helper shared by more than one cut-out overlay.
 - A visual regression capture per overlay, if a stable OBS capture harness can be
   built without making CI slow.
@@ -663,3 +729,4 @@ it has shipped.
 | 2026-11-23 | Ten locked design decisions, the rollout plan and the full risk list written into `docs/decisions.md` and `docs/backlog.md`. |
 | 2026-11-23 | Canonical transparent FX block added to eight overlays with a byte-equality test; timer and game overlay explicitly excluded by the owner (A74). |
 | 2026-11-23 | This document opened as the canonical design-language reference after the owner asked for maximum written detail. |
+| 2026-11-23 | Background mode toggle added: opaque plate removes the hexagons, `background.html` gained the inverse transparent variant, `auto.html` forwards the mode, and the app rewrites mode-aware Browser Source URLs (A75). |
