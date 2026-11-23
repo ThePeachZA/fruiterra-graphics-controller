@@ -1625,3 +1625,29 @@ glow, ellipsized long names, separator order, zero gutters and empty consoles.
 Screenshots were captured, but vision review was unavailable because the
 observer subagent hit the OpenCode Go usage limit, so OBS visual sign-off
 remains an owner check.
+
+### D16 - The bottom gradient is softer
+
+**Decision.** The A81 bottom gradient keeps its full-width, bottom-origin
+geometry but becomes gentler. The default wash alpha falls from 12% to 8% and the
+default glow alpha from 12% to 9%; the final shipped defaults are
+`--fgc-wash: 8%` and `--fgc-glow: 9%`. Live team colours write
+`rgba(r, g, b, 0.08)` for the wash and
+`rgba(r, g, b, 0.09)` for the glow. `.roster-wash` is 420px high, and
+`.roster-wash::after` sits 100px below the frame, measures 300px high and blurs
+24px. Both layers still run from the left edge to the right edge and fade from
+the bottom upward. No side wash, side-specific selector, radial gradient or
+centred pseudo layer inside a narrow parent returns. No payload field, message
+type, asset or filename changes.
+
+**Reason.** After seeing the in-progress A81 gradient, the owner said: "I
+checked out the gradient in progress. Make it a little less harsh". The first
+A81 pass had already removed the side wash and the clipped 1920px child, so the
+remaining correction was intensity and falloff. Fresh 1920×1080 DOM probes on
+`team-roster-home.html?probe=1795474824592home` and
+`team-roster-away.html?probe=1795474824592away` proved a 1920×420 wash at y 660,
+bottom-only `rgba(62, 207, 142, 0.08)` and `rgba(255, 92, 122, 0.08)` gradients,
+a 300px blurred glow at `bottom: -100px` with alpha 0.09, zero gutters, hidden
+overflow and empty consoles. Screenshots were captured, but the observer
+subagent still hit the OpenCode Go usage limit, so OBS visual sign-off remains
+an owner check.

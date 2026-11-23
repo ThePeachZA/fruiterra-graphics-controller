@@ -2100,3 +2100,27 @@ empty consoles. `git diff --check`, fmt, fmt check, clippy, workspace tests and
 `dx build --desktop` passed; the overlay suite still contains 36 tests. Home and
 away screenshots were captured, but the observer subagent again failed with an
 OpenCode Go usage limit, so OBS visual sign-off remains an owner check.
+
+A81 replaces the last A80 side wash with one full-width bottom gradient. The
+owner said the gradient "still doesn't look like it is working properly", that
+it was "still showing on the side, and getting cut off before reaching the end",
+and restated the target: "The gradient comes from the bottom of the overlay
+stretching to each end. It should be a subtle bottom glow essentially". The root
+cause was a 1920px `::after` layer centred inside a 760px side-anchored parent,
+so OBS clipped the glow before the frame edge. Both roster files now position
+`.roster-wash` at `left: 0`, `right: 0`, `bottom: 0` with `height: 420px` and
+paint `linear-gradient(0deg, var(--fgc-wash), transparent 100%)`. The `::after`
+layer uses the same left and right edges, sits at `bottom: -100px`, measures
+300px high and blurs 24px. After the owner said "Make it a little less harsh",
+the final alphas are 0.08 for the wash and 0.09 for the glow, with the same
+full-width bottom-only geometry. Source-text assertions forbid the 760px wash,
+the 90/270deg side gradients, side-specific wash selectors and radial gradients,
+and require the new full-width rules and alphas. Fresh 1920×1080 probe tabs with
+home tab `tab_e28b29ad-ba2a-4ec3-8304-268ce2858155` and away tab
+`tab_f9c46bbf-fba2-45e2-903d-76d69da8aa00` proved the 1920×420 wash at y 660,
+the matching team-colour alphas, zero gutters, hidden overflow and empty
+consoles. `git diff --check`, fmt, fmt check, clippy, workspace tests and
+`dx build --desktop` passed; the overlay suite still contains 36 tests. Home and
+away screenshots were captured in `opencode-browser-3KLrG5` and
+`opencode-browser-SeRdqL`, but visual review remained unavailable because of the
+OpenCode Go usage limit, so OBS sign-off remains with the owner.

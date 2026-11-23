@@ -1702,3 +1702,80 @@ A80's real-browser evidence is in `docs/manual-qa.md` row A80, with repeatable
 steps in `docs/manual-qa-runbook.md` section A80. Screenshots were captured, but
 the observer subagent again failed with an OpenCode Go usage limit, so OBS visual
 sign-off at 1920×1080 remains an owner check.
+
+## 16. Roster overlays - one full-width bottom gradient (A81)
+
+### 16.1 Purpose and scope
+
+A81 changes only the paired `team-roster-home.html` and
+`team-roster-away.html` wash treatment. The owner rejected the A80 side wash
+after seeing it in review: it still read as a side gradient and was cut off
+before the frame edge. The new contract is one subtle glow rising from the
+bottom of the overlay and stretching edge to edge across the full 1920px frame.
+A81 supersedes only the gradient geometry in A80. The rail removal, substitute
+hexagon proportion, Damage/Tank/Support sort, role badges, plate height,
+pronoun sizes, ellipsis guard and byte-equality contract are unchanged.
+
+### 16.2 Surface plan
+
+`.roster-wash` is the primary layer. It is absolutely positioned with `left: 0`,
+`right: 0`, `bottom: 0`, `height: 420px`, `z-index: 0` and
+`pointer-events: none`. Its background is
+`linear-gradient(0deg, var(--fgc-wash), transparent 100%)`, so colour is
+strongest at the bottom and fades upward. It no longer has a width, top, left
+or right edge that depends on `data-roster-side`.
+
+`.roster-wash::after` is the softer second layer. It uses `left: 0`, `right: 0`,
+`bottom: -100px`, `height: 300px`, `filter: blur(24px)` and
+`linear-gradient(0deg, var(--fgc-glow), transparent 100%)`. The negative bottom
+lets the blur soften below the visible frame; the overlay's A78 overflow guard
+clips the excess. Both layers are as wide as the overlay, so no centred 1920px
+child can be clipped by a 760px parent.
+
+No `.overlay[data-roster-side="home"] .roster-wash` or
+`.overlay[data-roster-side="away"] .roster-wash` rule remains. The
+`data-roster-side` attribute is still assigned for diagnostics and the
+byte-equality guard, but it does not select any styling.
+
+### 16.3 State matrix
+
+| State | Required result |
+|---|---|
+| Default colours | wash and glow paint the orange defaults at 8% and 9% respectively |
+| Team colours on | JS sets `--fgc-wash` to `rgba(r, g, b, 0.08)` and `--fgc-glow` to `rgba(r, g, b, 0.09)` |
+| Team colours off | all inline `--fgc-team`, `--fgc-wash` and `--fgc-glow` properties are removed |
+| Home and away | identical wash geometry and gradient direction; only `data-roster-side` differs |
+| Fresh or reloaded source | styling is intrinsic HTML and CSS; A77 init replay and A78 overflow guard remain in force |
+
+### 16.4 JS helpers
+
+A81 adds no helper and changes no message handler. The A80 `ROLE_RANK`,
+`roleRank()` and `sortPlayersByRole()` helpers remain in both files. The team
+colour branch keeps writing the two gradient custom properties; A81 changes
+only the CSS that consumes them.
+
+### 16.5 CDP-verifiable assertions
+
+On fresh 1920×1080 probe tabs for both roster files with a loaded `teamRoster`
+payload:
+
+- `.roster-wash` reports left 0, right 0, width 1920, bottom 0, y 660 and
+  height 420.
+- Its computed background is `linear-gradient(0deg, rgba(<team>, 0.08),
+  rgba(0, 0, 0, 0) 100%)`.
+- `.roster-wash::after` reports left 0, right 0, width 1920, bottom -100, height
+  300, `blur(24px)` and `linear-gradient(0deg, rgba(<team>, 0.09),
+  rgba(0, 0, 0, 0) 100%)`.
+- No `radial-gradient`, `linear-gradient(90deg, var(--fgc-wash)`,
+  `linear-gradient(270deg, var(--fgc-wash)`, `width: 760px` or side-specific
+  `.roster-wash` selector remains in either source file.
+- Core and substitute names remain in Damage, Tank, Support order; the core
+  badge is 56×56, the substitute badge is 46×54 with a 34px icon, and no rail
+  node exists.
+- Long names report ellipsis and a full `title`; gutters are zero; html and body
+  overflow are `hidden`; console is empty.
+
+A81's real-browser evidence is in `docs/manual-qa.md` row A81, with repeatable
+steps in `docs/manual-qa-runbook.md` section A81. Screenshots were captured, but
+visual review was unavailable in this session, so OBS sign-off at 1920×1080
+remains an owner check.

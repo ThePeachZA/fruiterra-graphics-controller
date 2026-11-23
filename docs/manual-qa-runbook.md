@@ -5357,3 +5357,102 @@ hexagon and paint a softer wash with one window-wide bottom glow. All static
 gates and real DOM probes passed. Visual confirmation in OBS at 1920×1080
 remains an owner check because the captured screenshots could not be reviewed in
 this session.
+
+### A81 - One full-width roster bottom gradient
+
+**Covers:** the owner's 2026-11-23 review of A80. They said: "The gradient still
+doesn't look like it is working properly. It is still showing on the side, and
+getting cut off before reaching the end." They then restated the goal: "The
+gradient comes from the bottom of the overlay stretching to each end. It should
+be a subtle bottom glow essentially". A81 supersedes only the remaining A80
+side wash and its clipped pseudo-element. The A80 rail removal, substitute badge
+proportion and Damage/Tank/Support sort stay in force.
+
+**Steps:**
+
+1. Run `git status --short` and confirm only the two roster HTML files and
+   `crates/server/tests/overlays.rs` are in scope. Do not touch other overlays.
+2. Read `.roster-wash` in both files. A80 had a 760px parent with a home or away
+   90/270 degree gradient and a 1920px `::after` centred with
+   `translateX(-50%)`. That child was wider than its parent, so the frame clipped
+   it and the side wash still dominated. This is the failure to reproduce.
+3. Replace the whole wash block in both files with one edge-to-edge treatment.
+   `.roster-wash` must be `position: absolute`, `left: 0`, `right: 0`,
+   `bottom: 0`, `height: 420px`, `z-index: 0`, `pointer-events: none` and
+   `background: linear-gradient(0deg, var(--fgc-wash), transparent 100%)`.
+4. Keep `.roster-wash::after` as a softer second layer, but make it edge-to-edge
+   inside the full-width parent: `left: 0`, `right: 0`, `bottom: -100px`,
+   `height: 300px`, `filter: blur(24px)` and
+   `background: linear-gradient(0deg, var(--fgc-glow), transparent 100%)`.
+5. Delete every `.overlay[data-roster-side=...] .roster-wash` rule. Do not remove
+   the `el.overlay.dataset.rosterSide` assignment; it is still a diagnostic and
+   a byte-equality anchor, but it must not drive any gradient.
+6. Leave the `--fgc-wash` and `--fgc-glow` defaults and JS assignments alone.
+   Defaults stay at 8% wash and 9% glow; team colours still set wash 0.08 and glow 0.09. The
+   colour-off branch must still remove all three inline custom properties.
+7. Update `roster_overlays_use_hexagon_identity_without_touching_the_rows` so it
+   requires the full-width bottom wash, the edge-to-edge blurred pseudo layer,
+   the absence of 760px side wash and side-specific selectors, and the absence
+   of `radial-gradient(`. Keep the byte-equality test.
+8. Run `git diff --check`, `cargo fmt --all`, `cargo fmt --all -- --check`,
+   `cargo clippy --workspace --all-targets -- -D warnings`,
+   `cargo test --workspace` and `dx build --desktop`. The overlay suite still
+   has 36 tests.
+9. Restart the app with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` set to
+   `--remote-debugging-port=9222`, then confirm `/health` reports the overlay
+   server. Open fresh probe tabs for both rosters; do not reuse A80 tabs.
+10. Send a `teamRoster` payload with both teams, scrambled player order, long
+    names, `teamColorsEnabled: true` and data-URL role icons. Use lowercase role
+    values, including `damage`, `tank` and `support`.
+11. After `document.fonts.ready`, measure the wash and pseudo layer. Both must
+    report left 0, right 0, width 1920, a bottom-origin 0 degree gradient and
+    matching team-colour alpha. The wash box must be y 660 with height 420; the
+    pseudo layer must report bottom -100, height 300 and blur 24.
+12. Confirm the A80 invariants still pass: sorted core and substitute names,
+    56×56 core badge, 46×54 substitute badge with a 34px icon, no rails, 126px
+    plate, ellipsized long names with titles, separator order, zero gutters,
+    hidden overflow and empty consoles.
+13. Focus each tab in one browser call and capture the screenshot in a separate
+    call. If the model cannot view images, record the exact paths and leave OBS
+    sign-off to the owner.
+
+**Gotchas:**
+
+- Do not merely delete the 90/270 degree rules. The parent must become
+  full-width, or the pseudo layer remains a wider child of a narrow parent and
+  still gets clipped.
+- `translateX(-50%)` is no longer needed once the parent spans the window. Its
+  presence is a sign that the old clipped model survived.
+- The wash and glow gradients are vertical. A horizontal `90deg` or `270deg`
+  value is a regression even if the colours are correct.
+- The glow may extend below the frame at `bottom: -100px`. That is intentional:
+  blur softens the lower edge while the visible part fades upward from the
+  bottom. The overlay's overflow guard keeps it inside the source.
+- Do not add a new colour variable. `--fgc-wash` and `--fgc-glow` already carry
+  the default and team-colour states.
+- `document.fonts.ready` is still required before name measurement. Avoid
+  `requestAnimationFrame`, which hung in earlier in-app browser checks.
+
+**Evidence:** home tab
+`tab_e28b29ad-ba2a-4ec3-8304-268ce2858155` with probe
+`1795474824592home` reported side `home`, wash box x 0, y 660, width 1920,
+height 420, background `linear-gradient(0deg, rgba(62, 207, 142, 0.08),
+rgba(0, 0, 0, 0) 100%)`; pseudo layer left 0, right 0, width 1920, bottom -100,
+height 300, `blur(24px)` and `linear-gradient(0deg, rgba(62, 207, 142, 0.09),
+rgba(0, 0, 0, 0) 100%)`. Header was `rgb(62, 207, 142)`. Core order was DAMAGE
+A LONG ALEXANDRIA FITZGERALD MONTGOMERY, TANK A, SUPPORT A; substitute order
+was DAMAGE SUB A, SUPPORT SUB A. Core badge was 56×56, plate 126 and substitute
+badge 46×54. Gutters were 0/0, overflow was hidden/hidden and console was
+empty. Away tab `tab_f9c46bbf-fba2-45e2-903d-76d69da8aa00` with probe
+`1795474824592away` reported the same geometry with `rgba(255, 92, 122, 0.08)`
+and `rgba(255, 92, 122, 0.09)`, header `rgb(255, 92, 122)`, sorted names
+DAMAGE B LONG BENJAMIN THEODORE HARRISON, TANK B, SUPPORT B and DAMAGE SUB B,
+SUPPORT SUB B, zero gutters, hidden overflow and empty console. Screenshots were
+saved at `C:/Users/Cameron/AppData/Local/Temp/opencode-browser-3KLrG5/0/screenshot.png`
+and `C:/Users/Cameron/AppData/Local/Temp/opencode-browser-SeRdqL/0/screenshot.png`.
+
+**Result: Pass - assistant 2026-11-23.** Both rosters now paint one subtle bottom
+gradient across the whole frame. No side wash, radial glow or clipped centred
+pseudo layer remains. All static gates and real DOM probes passed. Visual
+confirmation in OBS at 1920×1080 remains an owner check because the captured
+screenshots could not be reviewed in this session.
