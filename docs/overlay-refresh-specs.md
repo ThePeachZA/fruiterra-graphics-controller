@@ -87,6 +87,10 @@ Shows the two team score chips, team names/logos, first-to format, hero ban port
 
 ### 1.2 Surface plan
 
+> This table records the first Night Broadcast pass of hero bans, before the
+> full-bleed rework. The current layout is §1.9 to §1.13; the table is kept for
+> the record and no longer describes the shipped overlay.
+
 | Element selector | Current colour(s) | New token value | Treatment |
 |---|---|---|---|
 | `.team-name` | color `#fff` | `var(--fgc-text)` → `rgb(238, 242, 248)` | text tier (neutral dark bg) |
@@ -296,6 +300,107 @@ ban order follow the payload, exactly as before.
   the role badge.
 - `.hero-bans__centre` computes to a `linear-gradient` between the two team
   colours, and no `.hero-half__texture` element remains.
+
+### 1.13 Owner-requested redesign - the cut-out placement, the outer edge wash and the reveal delay (2026-11-23)
+
+The owner reviewed the honeycomb build and raised five things: the transparent
+hero cut-outs were letterboxed in the middle of the half with the hero small and
+floating, the hexagons were too opaque, the centre seam read as a seam, the team
+colour sat on the ban label instead of on the half, and the `1ST BAN` /
+`2ND BAN` wording was shouted. The reveal also started immediately, so a stinger
+or a scene transition was cut short by the bans appearing on top of it. The
+overlay was reworked around each point.
+
+**The cut-out placement.** The cut-out files are a full 1920x1080 transparent
+canvas with the hero standing on the bottom, so `object-fit: contain` scaled the
+whole canvas into the half and left the hero at roughly 47% of the height. The
+cut-out is now placed by script. `subjectBox(img)` draws the image into an
+offscreen canvas and scans the alpha channel (alpha above 8) for the hero's
+opaque bounding box; `placeCutout(img, box)` computes
+`const scale = box.height / subject.height;` and centres that box on the half
+with `transform-origin: bottom center`, so the hero fills the half height and
+stands on the bottom. The `<img>` inside `.hero-half__art--cutout` keeps its
+natural size (`width: auto; height: auto;`), is absolutely positioned, and the
+`transform` alone moves and scales it.
+`.hero-half__art--cutout-fallback` covers a canvas that cannot be read and falls
+back to `object-fit: cover` with `object-position: center bottom`.
+
+**The hexagons.** The wall joints dropped from `opacity: 0.5` to `0.3`. The lit
+grid copy in front of the art dropped from `rgb(255 255 255 / 18%)` and
+`/ 7%` to `/ 11%` and `/ 4%`, and the floor wash from `6%` to `3.5%`. The wall
+fill and the scrim are unchanged.
+
+**No seam.** `.hero-bans__centre` and all of its CSS are gone. The two
+`.hero-half` elements tile the full 1920 width, 0-960 and 960-1920, with no
+banner between them.
+
+**The edge wash.** `.hero-half__edge` is a new absolutely positioned layer at
+`z-index: 4`, over the art and over the honeycomb. The home half paints
+`linear-gradient(to right, ...)` from `--team-a-color` and the away half
+`linear-gradient(to left, ...)` from `--team-b-color`, each
+`color-mix(in srgb, <colour> 46%, transparent)` at the outer edge,
+`16%` at 18% and transparent by 38%. The two properties are set on the
+`#hero-bans` container with `style.setProperty('--team-a-color', ...)` and
+`style.setProperty('--team-b-color', ...)`. The ban-order label no longer takes
+the team colour.
+
+`color-mix()` needs Chrome 111 or newer, which is OBS 31 and newer. The
+documented floor for this project is OBS 31.0.4, so the wash is safe, but an
+older OBS would drop the whole declaration and leave the edge bare.
+
+**The label.** `1ST BAN` / `2ND BAN` became `First ban` / `Second ban` in the
+markup and in `updateBanOrder()`, and the CSS `text-transform: uppercase` still
+renders them `FIRST BAN` / `SECOND BAN`. The label is neutral -
+`color: var(--fgc-ink-on-art)` (`#eef2f8`) - instead of the accent.
+
+**The reveal delay.** `--hero-reveal-delay: 0.8s` on `:root` is read by
+`triggerAnimations()`. The home half runs
+`heroReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) var(--hero-reveal-delay) both`,
+the away half the same animation at
+`calc(var(--hero-reveal-delay) + 0.12s)`, and the two captions
+`captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1)` at
+`calc(var(--hero-reveal-delay) + 0.35s)` and `+ 0.47s`.
+
+**Wire/contract.** Nothing about the payload changed. `--team-a-color` and
+`--team-b-color` still come from `teamA.color` and `teamB.color` in the
+scoreboard payload, and the cut-out still arrives as `heroTransparent` keyed by
+hero name with `heroPortraits` as the fallback.
+
+**Retired values.** `object-fit: contain; object-position: 50% 100%` on the
+cut-out image; `.hero-bans__centre` and its gradient; the wall joint
+`opacity: 0.5`; the grid tints `18%` and `7%`; the floor wash `6%`; the
+`1ST BAN` / `2ND BAN` literals; and `color: var(--fgc-accent)` on
+`.hero-half__order`.
+
+### 1.14 CDP-verifiable assertions (cut-out placement, edge wash and reveal delay)
+
+- The document is 1920x1080 and `getComputedStyle(document.body).backgroundColor`
+  is `rgba(0, 0, 0, 0)`.
+- No `.hero-bans__centre` element exists, and the two `.hero-half` rectangles
+  tile `0-960` and `960-1920`.
+- Both `.hero-half__art` boxes carry `hero-half__art--cutout`, and both images
+  report `naturalWidth` 1920 and `naturalHeight` 1080.
+- An alpha-channel scan of a cut-out image drawn into a canvas returns a subject
+  box, and the placed image's scaled box fills the half height with its bottom
+  on the half's bottom edge.
+- The `.hero-half__grid` background resolves to a radial and a linear gradient
+  whose first stop is `rgba(255, 255, 255, 0.11)`, and the away half mirrors the
+  radial to `at 100% 46%`.
+- `getComputedStyle(wall, '::before').opacity` is `0.3`.
+- `.hero-half--home .hero-half__edge` background starts
+  `linear-gradient(to right` and `.hero-half--away .hero-half__edge` starts
+  `linear-gradient(to left`.
+- `getComputedStyle(document.querySelector('#hero-bans'))` reports
+  `--team-a-color` and `--team-b-color` equal to the two live team colours.
+- `#home-order` and `#away-order` `textContent` read `First ban` and
+  `Second ban`, compute `text-transform: uppercase`, and colour
+  `rgb(238, 242, 248)`.
+- `getComputedStyle(document.documentElement)` reports `--hero-reveal-delay` as
+  `0.8s`, and the two halves report animation delays of 0.8s and 0.92s.
+- `getAnimations()` on a half reports `heroReveal` with an 800ms delay and a
+  900ms duration, and after it finishes the opacity is 1 with
+  `transform: matrix(1, 0, 0, 1, 0, 0)`.
+- The role badge icon loads at 500x500.
 
 ---
 
@@ -887,3 +992,143 @@ Four static tests in `crates/server/tests/overlays.rs` keep the scale honest:
   `Medium` is 500, `SemiBold` is 600 and `Black` is 900.
 - Every text node paints the face its tier calls for.
 - Every computed `font-weight` is `400` normal.
+
+## 11. background.html (owner request, 2026-11-23)
+
+The owner asked for an animated background in HTML and CSS: "maybe you can help
+me make an animated background using html and css? But it would probably be a
+separate overlay as well as built into the existing ones." It ships first as a
+standalone **persistent Browser Source** that sits beneath the scene overlays.
+The nine scene overlays replace one another; the background stays on screen for
+the whole broadcast, so it is a source of its own and is deliberately absent
+from the auto scene switcher and its number hotkeys.
+
+The page paints no text and loads no fonts, and it is asset-free: the only
+network requests are the document, the WebSocket and the inline SVG mask data
+URL. It is **not** a transparent wash. `html`, `body` and `.background` all
+paint a solid, opaque plate from `var(--fgc-surface)`, so the overlay is a real
+backdrop and a `theme` message repaints the whole frame.
+
+### 11.1 Purpose & wire
+
+A 1920x1080 opaque plate built from a soft ambient glow and two drifting copies
+of the product's hexagon lattice. It is the backdrop beneath everything else
+rather than a scene in its own right, and it paints the active theme's surface
+colour, so it reads as part of the broadcast rather than a wash laid over it.
+
+It carries the same WebSocket client as the other overlays and consumes
+`init`, `theme`, `scoreboard`, `gameOverlay`, `heroBans` and `show`:
+
+- `theme` (and an `init` carrying `theme`) runs `applyTheme()`, which applies
+  the token set and removes any property the new set omits. Because the plate
+  is painted from `--fgc-surface`, a theme message repaints the whole backdrop,
+  not just the washes.
+- `scoreboard`, `gameOverlay`, `heroBans` and an `init` carrying `scoreboard`
+  feed `updateTeamColour()`, which writes `teamA.color` and `teamB.color` to
+  `--team-a-color` / `--team-b-color` on `#background`, and removes them when a
+  colour is absent so a later match cannot inherit an earlier wash.
+- `show` toggles `.background` between `block` and `none` and toggles
+  `background-hidden` on `<html>`. The rule turns the plate transparent along
+  with the artwork, so a hidden source leaves no solid colour behind.
+- The socket target is `location.host`, with `?host=` and `?port=` overrides,
+  matching the rest of the overlays.
+
+### 11.2 Surface plan
+
+| Element selector | Token value | Treatment |
+|---|---|---|
+| `html`, `body`, `.background` | `background: var(--fgc-surface)` on the root and body, `background-color: var(--fgc-surface)` on `.background` | the solid plate: Night Broadcast `#0b0d12` → `rgb(11, 13, 18)`, Light `#f4f6fb` → `rgb(244, 246, 251)` |
+| `.background` | 1920x1080, `pointer-events: none`, `aria-hidden="true"` | the frame over the plate |
+| `.background__glow` | `inset: -12%`, two radial gradients at `4% 54%` and `96% 38%`, `--background-a` at 14% and `--background-b` at 12% | the ambient wash |
+| `.background__lattice--ambient` | `background-color: var(--fgc-line-strong)`, `opacity: 0.13`, `z-index: 1` | the quiet honeycomb |
+| `.background__lattice--lit` | two radial gradients weighted to `-6% 52%` and `106% 38%`, `opacity: 0.68`, `z-index: 2` | the lit honeycomb |
+| `.background__lattice` | the shared hexagon SVG `mask-image`, `mask-size: 180px 322px`, `inset: -180px -220px` | the drifting layer, overscanned so no edge is ever exposed |
+| `html.background-hidden`, `html.background-hidden body` | `background: transparent` | the hide rule, so a hidden source takes the plate with it |
+
+The layer aliases are `--background-a: var(--fgc-text-muted)` (`#8d99ad`) and
+`--background-b: var(--fgc-line-strong)` (`#3a4356`). Under `.tone-team` they
+become `var(--team-a-color, var(--fgc-text-muted))` and
+`var(--team-b-color, var(--fgc-line-strong))`, so a missing team state resolves
+to the same quiet greys. The aliases live on `.background`, which keeps team
+colours from colliding with the root theme overrides.
+
+The lit lattice is weighted to the outer edges, which leaves the centre of the
+frame comparatively plain for a game feed, a desktop or another graphic.
+
+### 11.3 Motion design
+
+Three CSS animations, all `ease-in-out` and `infinite`, and all on the
+compositor:
+
+| Animation | Layer | Duration | What changes |
+|---|---|---|---|
+| `glowBreathe` | `.background__glow` | 84s | `opacity` 0.46 to 0.72 and `scale(1)` to `scale(1.045)` |
+| `latticeDriftForward` | `.background__lattice--ambient` | 88s | `translate3d(-48px, -28px, 0)` to `translate3d(48px, 28px, 0)` and back |
+| `latticeDriftReverse` | `.background__lattice--lit` | 72s | `translate3d(64px, -36px, 0)` to `translate3d(-64px, 36px, 0)` and back |
+
+Only `transform` and `opacity` appear in the keyframes; nothing paint-heavy is
+animated. The file runs no `requestAnimationFrame` and no per-frame JavaScript.
+Both drift paths are closed, so they reverse without a loop jump, and the
+stylesheet notes that even the fastest movement stays below 0.08 px/frame at
+60 fps. The two lattices start at the 0% keyframe values, which is why a fresh
+load measures `matrix(1, 0, 0, 1, -48, -28)` for the ambient layer and
+`matrix(1, 0, 0, 1, 64, -36)` for the lit layer.
+
+### 11.4 URL variants and reduced motion
+
+OBS preserves the query string on a Browser Source URL, so the variants ship as
+parameters instead of extra bundled pages:
+
+- `?motion=still` adds `motion-still` to `<html>`. `.motion-still` sets
+  `animation: none` on the glow and both lattices, leaving a composed first
+  frame. Any other `motion` value, and no value at all, leaves the drift
+  running; `?motion=drift` is not a separate mode.
+- `?tone=team` adds `tone-team` to `<html>`, switching the two aliases to the
+  live team colours. Without it the background stays neutral, whatever the
+  payload says.
+- `@media (prefers-reduced-motion: reduce)` sets `animation: none` on both
+  layers, independent of the query string, so the OS accessibility preference
+  wins.
+- `--fgc-surface` owns the plate. The inlined Night Broadcast block sets
+  `#0b0d12`, and the Light theme's `LIGHT_THEME_TOKENS` sets `#f4f6fb`, so the
+  backdrop follows the active theme. `?tone=team` recolours only the two washes,
+  never the plate.
+- `?host=` and `?port=` retarget the WebSocket for third-party pages.
+
+The query string is read once at load, so changing a variant needs a reload.
+
+### 11.5 CDP-verifiable assertions
+
+- `document.title` is `Animated Background` and
+  `getComputedStyle(document.body).backgroundColor` is `rgb(11, 13, 18)`.
+- `.background` measures 1920x1080 and carries `aria-hidden="true"`.
+- The computed `background-color` of `html`, `body` and `.background` is
+  `rgb(11, 13, 18)` under Night Broadcast, and all three are opaque.
+- A `theme` message carrying `--fgc-surface: #f4f6fb` repaints `html`, `body`
+  and `.background` to `rgb(244, 246, 251)`; removing the override restores
+  `rgb(11, 13, 18)`.
+- Exactly one `.background__glow`, one `.background__lattice--ambient` and one
+  `.background__lattice--lit` exist.
+- `getComputedStyle` reports `opacity: 0.13` on the ambient lattice and `0.68`
+  on the lit lattice, and the glow starts at `0.46`.
+- On load the ambient lattice computes `transform: matrix(1, 0, 0, 1, -48, -28)`
+  and the lit lattice `matrix(1, 0, 0, 1, 64, -36)`.
+- `getAnimations()` reports `glowBreathe` at 84000ms, `latticeDriftForward` at
+  88000ms and `latticeDriftReverse` at 72000ms. `getTiming().iterations` reads
+  `null`, which is the JSON form of `Infinity` and therefore an infinite loop,
+  and `getTiming().easing` reads `linear`, because the `ease-in-out` easing is
+  declared in the animation shorthand and lands on the keyframes rather than on
+  the effect timing.
+- Both lattices compute `mask-size: 180px 322px`.
+- With `?motion=still`, `<html>` carries `motion-still` and both layers compute
+  `animation-name: none`.
+- With `?tone=team`, `<html>` carries `tone-team`, the layer aliases resolve to
+  the two team colours and the plate stays `rgb(11, 13, 18)`; without it they
+  resolve to `#8d99ad` and `#3a4356`.
+- With a `show` message of `visible: false`, `<html>` carries
+  `background-hidden`, `.background` computes `display: none` and the body
+  computes `rgba(0, 0, 0, 0)`; a `visible: true` message restores all three.
+- With emulated reduced motion, both layers compute `animation-name: none`.
+- The page loads no font, image or external file: the requests are the
+  document, the WebSocket and the inline SVG mask data URL, and the console is
+  empty.

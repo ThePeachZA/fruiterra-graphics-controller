@@ -1634,9 +1634,25 @@ the project stored links to the old bundled icons, the pack repairs them.
 
 The pack is published at
 [`ThePeachZA/fruiterra-overwatch`](https://github.com/ThePeachZA/fruiterra-overwatch)
-with release `v1`: 157 assets, 139,159,747 bytes, 29 repaired map links and
+with release `v2`: 250 assets, 200,035,760 bytes, 29 repaired map links and
 none left dangling. It is installed in the operator's project, which holds the
 four real teams, the tournament and the 13-map pool.
+
+The `v1` tag still points at the first manifest - 157 assets with the operator's
+own team logos and player portraits - while the `v1` download was replaced in
+place with the 250-asset artwork set, so the tag and the asset disagreed about
+what the release was. `v2` tags the commit that holds the manifest the asset
+actually ships, and the release notes match the download. `v1` stays where it is
+for anyone who already links to it.
+
+The `v2` download was verified end to end against the real importer. The zip
+unpacks to `pack.json` and `blobs/` at the root of the archive, which is the
+layout the importer accepts, and
+`fruiterra-gc.exe --data-dir <scratch> --import-pack <unpacked>` reported
+`Installed 250 asset(s) and repaired 0 link(s) from the content pack (250
+file(s), 200035760 bytes)`. The check ran in a scratch project folder, so no
+real project was written to.
+
 A70 in [`docs/manual-qa.md`](manual-qa.md) and
 [`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real WebView2
 evidence: before the install the map pool rendered one "Other" column with no
@@ -1714,3 +1730,171 @@ A71 in [`docs/manual-qa.md`](manual-qa.md) and
 evidence: the library pages and sorts and filters, all 24 thumbnails served
 over HTTP with no data URL among them, the project backup in Settings and the
 badge, transparent art and role sections in the hero dialog.
+
+## AK. Hero bans cut-out placement, outer edge wash and reveal delay (2026-11-23)
+
+Owner feedback on 2026-11-23 after the honeycomb wall shipped: the transparent
+hero cut-outs sat letterboxed in the middle of each half, the hexagons were too
+opaque, the centre seam read as a seam, the team colour was on the ban label
+instead of on the half, the `1ST BAN` / `2ND BAN` wording was shouted, and the
+reveal started too early for a stinger or a scene transition.
+
+### The cut-outs
+
+The cut-out files are a 1920x1080 transparent canvas with the hero standing on
+the bottom, so `object-fit: contain` fitted the whole canvas into the half and
+left the hero at roughly 47% of the height, floating in the middle. The overlay
+now measures the hero instead of trusting the canvas. `subjectBox(img)` scans
+the alpha channel for the hero's opaque bounding box and `placeCutout(img, box)`
+computes `const scale = box.height / subject.height;`, then centres that box on
+the half with `transform-origin: bottom center`, so the hero fills the half
+height and stands on the bottom. The `<img>` keeps its natural size and is
+absolutely positioned, and `.hero-half__art--cutout-fallback` covers a canvas
+that cannot be read.
+
+### The hexagons and the seam
+
+The wall joints went from opacity 0.5 to 0.3, the lit grid copy in front of the
+art from 18% and 7% to 11% and 4%, and the floor wash from 6% to 3.5%. The
+`.hero-bans__centre` element and its CSS were deleted, so the two halves tile
+the full 1920 width with no banner between them.
+
+### The edge wash and the labels
+
+`.hero-half__edge` is a new layer at `z-index: 4`, over the art and over the
+honeycomb. The home half washes in from the left edge with `--team-a-color` and
+the away half from the right with `--team-b-color`, both set on `#hero-bans`
+with `style.setProperty`. The ban-order label no longer takes the team colour;
+it is neutral `var(--fgc-ink-on-art)`. `1ST BAN` / `2ND BAN` became
+`First ban` / `Second ban` in the markup, and the CSS still uppercases them on
+screen.
+
+### The reveal delay
+
+`--hero-reveal-delay: 0.8s` on `:root` is read by `triggerAnimations()`, so the
+halves start at 0.8s and 0.92s and the captions at 1.15s and 1.27s. A stinger or
+a scene transition can finish before the bans appear.
+
+### Left open
+
+The hero bounding-box centre includes the weapon and the outstretched arm, so
+the box centre is not the visual centre. The measured offset was 19px, which is
+1% of a 960px half, and that was accepted; a per-hero visual anchor would be
+needed to do better, and nothing in the app asks the operator for one.
+
+A72 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the real browser
+evidence: 26 assertions ran, 24 passed and the 2 centring checks were accepted at
+19px, the cut-outs were measured and scaled to the half height, the hexagons
+were fainter, the seam was gone, the team colour washed in from the outer edge,
+the labels were neutral and read First ban / Second ban, the reveal waited 0.8s,
+and `cargo test -p fgc-server --test overlays` passed 29 tests.
+
+## AL. Animated background overlay (2026-11-23)
+
+The owner asked: "maybe you can help me make an animated background using html
+and css? But it would probably be a separate overlay as well as built into the
+existing ones." The separate overlay is the part that shipped. A follow-up
+requirement landed after the page was built: "For the background overlay, please
+note that it should also have a completely solid and opaque colour based on the
+theme colour tokens."
+
+### What shipped
+
+A new bundled page, `crates/server/overlays/background.html`, titled **Animated
+Background**. It is a persistent Browser Source that sits beneath the scene
+overlays: the nine scenes replace one another, while the background stays on
+screen for the whole broadcast. It is a tenth entry in `OVERLAY_FILES` and the
+first one listed, so it appears in every Browser Source URL set, but it is not
+part of the new `SCENE_OVERLAY_FILES`, so the auto scene switcher, its include
+checks and its number hotkeys still hold exactly the nine scenes.
+
+The page paints a solid, opaque plate from the theme tokens and is asset-free.
+It loads no fonts and no images, paints no text, and requests only the document,
+the WebSocket and its inline SVG mask.
+
+### The plate
+
+The plate is `background: var(--fgc-surface)` on `html` and `body`, with
+`background-color: var(--fgc-surface)` on `.background`. Under Night Broadcast
+`--fgc-surface` is `#0b0d12` (`rgb(11, 13, 18)`); the Light theme's
+`LIGHT_THEME_TOKENS` sets `#f4f6fb` (`rgb(244, 246, 251)`). Because the colour
+is a token rather than a literal, a `theme` message repaints the whole frame,
+so the backdrop always belongs to the selected theme.
+
+Hiding the source has to take the plate with it, otherwise the Browser Source
+leaves a solid block on screen while the artwork is gone. A `show` message of
+`visible: false` therefore adds `background-hidden` to `<html>`, and
+`html.background-hidden` plus `html.background-hidden body` set
+`background: transparent`, leaving the frame empty until the source is shown
+again. The dead `--hero-reveal-delay` token copied over from hero bans was
+removed in the same pass.
+
+### The composition
+
+A root `.background` element holds three layers. `.background__glow` is an
+oversized ambient wash made of two radial gradients, one from each side of the
+frame. Over it sit `.background__lattice--ambient` and
+`.background__lattice--lit`, two copies of the shared hexagon SVG mask at
+`mask-size: 180px 322px`, the same cell the hero bans wall uses. The ambient
+copy is the quiet structure at opacity 0.13; the lit copy is brighter, weighted
+to the outer edges, and leaves the centre of the frame comparatively plain for a
+game feed.
+
+### The motion
+
+Three CSS animations, all `ease-in-out` and infinite: `glowBreathe` runs 84s and
+takes the glow from opacity 0.46 to 0.72 with a small scale, while
+`latticeDriftForward` (88s) and `latticeDriftReverse` (72s) drift the two
+lattices in opposite directions. Only `transform` and `opacity` are animated, so
+there is no repaint of the 1920x1080 surface and no per-frame JavaScript at all;
+the file has no `requestAnimationFrame`. Both drift paths are closed, so they
+reverse without a visible jump, and the lattice is overscanned by
+`inset: -180px -220px` so a masked edge never enters the frame.
+
+### The variants
+
+OBS preserves the query string on a Browser Source URL, so the variants are URL
+parameters rather than extra pages. `?motion=still` adds a `motion-still` class
+that turns every animation off and leaves a composed first frame; any other
+value drifts, so `?motion=drift` is just the default. `?tone=team` adds
+`tone-team`, which swaps the two neutral greys for the live team colours and
+falls back to the same greys when a team has no colour. The OS
+`prefers-reduced-motion: reduce` preference turns the animations off through a
+media query as well, so an operator who has asked for less motion gets the still
+composition whichever URL they use.
+
+### The wiring
+
+`crates/app/src/server.rs` split the old nine-entry list in two: `OVERLAY_FILES`
+is now `[&str; 10]` and starts with `background.html`, and the new
+`SCENE_OVERLAY_FILES` is `[&str; 9]` and holds the scene overlays.
+`crates/app/src/state.rs` and `crates/app/src/views/overlay.rs` use
+`SCENE_OVERLAY_FILES` for the auto scene switcher, its include checks and its
+number hotkeys, while the Overlay view still lists every `OVERLAY_FILES` entry
+as a Browser Source URL. The note under the URL sets now reads "Each set
+contains the auto scene switcher plus all ten overlays." The new static test
+`background_overlay_is_broadcast_safe_and_supports_url_variants` guards the
+layers, the three animations, the transform/opacity-only rule, the reduced-motion
+and URL variants, the inlined Night Broadcast tokens and the absence of a
+per-frame loop.
+
+### Left open
+
+The owner also wanted the background "built into the existing ones". This slice
+ships the separate source only; the scene overlays still paint their own
+surfaces, and because the new plate is opaque the background source has to sit
+below them in the OBS scene collection. Folding the background into `auto.html`
+was left for a later pass.
+
+### QA
+
+A73 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the browser
+evidence: the solid plate in both themes (`rgb(11, 13, 18)` under Night
+Broadcast and `rgb(244, 246, 251)` under Light), the `show` hide rule, the three
+layers, the 84s, 88s and 72s animations, the two lattice matrices on load, the
+shared 180px 322px hexagon mask, the `?motion=still` and `?tone=team` variants,
+an empty console, and `cargo test -p fgc-server --test overlays` passing 30
+tests. A screenshot of the running page showed the opaque plate with the lattice
+over it.

@@ -215,7 +215,7 @@ one from a folder, or import one straight from a URL. The command line takes
 The Overwatch pack is published at
 [`ThePeachZA/fruiterra-overwatch`](https://github.com/ThePeachZA/fruiterra-overwatch);
 install it from the URL
-`https://github.com/ThePeachZA/fruiterra-overwatch/releases/download/v1/fruiterra-overwatch-pack-v1.zip`.
+`https://github.com/ThePeachZA/fruiterra-overwatch/releases/download/v2/fruiterra-overwatch-pack-v2.zip`.
 
 ## Documentation
 

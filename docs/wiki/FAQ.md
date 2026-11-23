@@ -158,7 +158,7 @@ They are **not** built into the app. The app ships only its placeholder
 watermark so it stays usable for any game; the artwork comes in **content
 packs**. Open **Assets → Content packs → Import pack from URL…** and paste the
 pack address, for example
-`https://github.com/ThePeachZA/fruiterra-overwatch/releases/download/v1/fruiterra-overwatch-pack-v1.zip`.
+`https://github.com/ThePeachZA/fruiterra-overwatch/releases/download/v2/fruiterra-overwatch-pack-v2.zip`.
 
 A pack adds images to your library and nothing else: your teams, players,
 tournaments, settings and the running match are left exactly as they were. You

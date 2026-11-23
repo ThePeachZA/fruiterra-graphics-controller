@@ -4471,3 +4471,189 @@ and `noConsoleErrors`. The library is the first panel, the pager reads "Showing
 1-24 of 104" and "Page 1 of 5", page 2 starts Domina, Doomfist and Dorado, the
 Hero filter narrows to 54 assets over 3 pages, and all 24 thumbnails were served
 over HTTP with no data URL among them.
+
+### A72 - Hero bans cut-out placement, edge wash and reveal delay
+
+**Covers:** owner feedback 2026-11-23 on `hero-bans.html` (the letterboxed
+transparent cut-outs, the too-opaque hexagons, the centre seam, the team colour
+wash, the `1ST BAN` / `2ND BAN` wording and the reveal delay).
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary. Note the process id of
+   `fruiterra-gc.exe`, start the overlay server through the real app UI and
+   confirm `http://127.0.0.1:3001/health` returns
+   `{"overlays":0,"port":3001,"status":"ok","version":1.0.0}`.
+2. Open `http://127.0.0.1:3001/overlays/hero-bans.html` in a Chromium browser
+   with the devtools console open at 1920x1080. Wait for the reveal to finish -
+   the 0.8s delay plus the 0.9s animation - before measuring anything.
+3. Check the frame: the document is 1920x1080, the body background is
+   `rgba(0, 0, 0, 0)`, no `.hero-bans__centre` element exists, and the two
+   `.hero-half` boxes tile 0-960 and 960-1920 with no gap.
+4. Check the art: both `.hero-half__art` boxes carry
+   `hero-half__art--cutout`, both PNGs report a natural size of 1920x1080, the
+   alpha scan finds the hero's opaque box, and the scaled hero fills the half
+   height and stands on the bottom of its half.
+5. Check the wash: the home `.hero-half__edge` gradient starts `to right` and
+   the away one `to left`, and `--team-a-color` / `--team-b-color` on
+   `#hero-bans` resolve to the two live team colours.
+6. Read the computed styles: the `.hero-half__grid` tint is
+   `rgba(255, 255, 255, 0.11)` with the away radial mirrored at `100% 46%`, the
+   wall `::before` `opacity` is `0.3`, the ban-order labels read `First ban` /
+   `Second ban` with `text-transform: uppercase` and colour
+   `rgb(238, 242, 248)`, and `--hero-reveal-delay` is `0.8s`.
+7. Read `getAnimations()` on the two halves: `heroReveal` starts at 0.8s, runs
+   0.9s and ends at opacity 1 with `transform: matrix(1, 0, 0, 1, 0, 0)`; the
+   away half starts 0.12s later and the two captions follow at +0.35s and
+   +0.47s.
+8. In the Network panel confirm the document, the WebSocket, both fonts and all
+   five artwork PNGs return 200, and that the console is empty. Run
+   `cargo test -p fgc-server --test overlays` and confirm 29 tests pass.
+
+**Gotchas:**
+
+- `object-fit: contain` on a 1920x1080 transparent canvas letterboxes the hero
+  into the middle of the half. The alpha box has to be measured and the hero
+  scaled on its own, which is what `subjectBox(img)` and
+  `placeCutout(img, box)` do.
+- The cut-out `<img>` must span its natural size (`width: auto; height: auto;`)
+  and be absolutely positioned. If it is laid out at the half size instead, the
+  script measures a 960x1080 box and the translate lands the hero off-centre.
+- The `heroReveal` keyframe starts at `scale(1.04)`, and
+  `animation-fill-mode: both` holds that start state during the delay, so
+  measuring the halves during the 0.8s delay reports 998.4px-wide halves.
+  Measure after the animation has finished, and note that a background browser
+  tab freezes the animation timeline at the delay.
+- A hex path in an inline SVG `mask-image` needs `%23` for `#`; the wall and
+  grid masks are `mask-size: 180px 322px`.
+- The alpha scan must read the alpha channel, not the colour: the cut-out PNGs
+  are fully transparent in the empty area.
+
+**Evidence:** the in-page JavaScript output from the browser - DOM geometry,
+computed style values, `getAnimations()` timing and the canvas alpha scan - plus
+the Network and console capture and the
+`cargo test -p fgc-server --test overlays` result.
+
+**Result: Pass - assistant 2026-11-23.** 26 assertions ran; 24 passed and the 2
+centring checks were accepted at 19px, which is 1% of the half width (the
+subject box includes the weapon and the outstretched arm, so the box centre is
+not the visual centre). The document was 1920x1080 with a transparent body, no
+`.hero-bans__centre` remained, and the halves tiled 0-960 and 960-1920. Both art
+boxes carried `hero-half__art--cutout` with 1920x1080 PNGs, the alpha scan found
+the subject, and the hero filled 1123px of the 1123px half height standing on
+the bottom. The grid tint computed to `rgba(255, 255, 255, 0.11)` with the away
+half mirrored at `100% 46%`, the wall `::before` opacity to 0.3, the home edge
+gradient to `to right` and the away to `to left`, and the team colours to
+`#032248` and `#ef51b7`. The labels read `First ban` / `Second ban` in
+`rgb(238, 242, 248)`, `--hero-reveal-delay` computed to `0.8s` with the halves
+at `0.8s` and `0.92s`, and `getAnimations()` ended `heroReveal` at opacity 1 and
+`matrix(1, 0, 0, 1, 0, 0)`. The role icon loaded at 500x500, the overlay,
+WebSocket, fonts and five PNGs returned 200 with no console errors, and
+`cargo test -p fgc-server --test overlays` passed 29 tests.
+
+### A73 - Animated background overlay
+
+**Covers:** owner request 2026-11-23 (an animated HTML and CSS background that
+sits beneath the scene overlays and paints a solid, opaque plate from the theme
+colour tokens).
+
+**Steps:**
+
+1. `dx build --desktop`, then launch the debug binary and start the overlay
+   server through the real app UI. Confirm `http://127.0.0.1:3001/health`
+   answers before opening the page.
+2. Open `http://127.0.0.1:3001/overlays/background.html` in a Chromium browser
+   at 1920x1080 with the devtools console open. Confirm the tab title reads
+   `Animated Background` and that
+   `getComputedStyle(document.body).backgroundColor` is `rgb(11, 13, 18)`, which
+   is the Night Broadcast `#0b0d12`.
+3. Confirm the structure: one `.background` element at 1920x1080 with
+   `aria-hidden="true"` and three children, `.background__glow`,
+   `.background__lattice--ambient` and `.background__lattice--lit`.
+4. Check the plate: `html`, `body` and `.background` all compute to
+   `rgb(11, 13, 18)`, and the two rules are `background: var(--fgc-surface)` on
+   the root and body with `background-color: var(--fgc-surface)` on
+   `.background`. Send a `theme` message whose tokens include
+   `{"--fgc-surface": "#f4f6fb"}` (or switch the app to Light) and confirm all
+   three repaint to `rgb(244, 246, 251)` without a reload; switch back and
+   confirm they return to `rgb(11, 13, 18)`.
+5. Read the computed transform of each lattice on load: the ambient one is
+   `matrix(1, 0, 0, 1, -48, -28)` and the lit one is
+   `matrix(1, 0, 0, 1, 64, -36)`. Read the opacity: ambient `0.13`, lit `0.68`.
+6. Read `getAnimations()` and confirm `glowBreathe` runs 84s, `latticeDriftForward`
+   88s on the ambient layer and `latticeDriftReverse` 72s on the lit layer, all
+   `infinite` and `ease-in-out`. Confirm the keyframes name only `transform` and
+   `opacity`, and that the file contains no `requestAnimationFrame`. Read the
+   values through `getTiming()` with care: `iterations` reads `null`, which is
+   the JSON form of `Infinity` and therefore the infinite loop, and `easing`
+   reads `linear`, because the `ease-in-out` easing is declared in the animation
+   shorthand and lands on the keyframes, not on the effect timing.
+7. Confirm both lattices use the shared hexagon SVG mask with
+   `mask-size: 180px 322px`, and that the layer is inset `-180px -220px` so the
+   drifting edges never expose a seam.
+8. Open `?motion=still` and confirm `<html>` gains `motion-still` and both layers
+   compute `animation-name: none` while keeping the first-frame transform. Open
+   `?tone=team` and confirm `<html>` gains `tone-team`, the plate colour is
+   unchanged and the two radial washes read the live team colours.
+9. Send `{"type":"show","data":{"visible":false}}` and confirm `.background`
+   computes `display: none`, `<html>` gains `background-hidden`, and the body
+   computes `rgba(0, 0, 0, 0)` so the plate leaves with the artwork. Send
+   `visible: true` and confirm the plate and the three layers return.
+10. Emulate the OS accessibility preference with
+    `Emulation.setEmulatedMedia` (`prefers-reduced-motion: reduce`), reload, and
+    confirm both layers compute `animation-name: none`. In the Network panel
+    confirm only the document, the WebSocket and the inline SVG mask data URL are
+    requested, and that the console is empty.
+11. Run `cargo test -p fgc-server --test overlays` and confirm 30 tests pass,
+    including `background_overlay_is_broadcast_safe_and_supports_url_variants`.
+
+**Gotchas:**
+
+- The plate is solid and opaque on purpose, so the source must sit **below** the
+  scene overlays in OBS; placed above them it hides them. A screenshot now shows
+  the theme surface colour with the lattice on top, not a wash over the page.
+- The only time the plate is transparent is while the source is hidden:
+  `html.background-hidden` and `html.background-hidden body` set
+  `background: transparent` so a hidden source leaves nothing behind.
+- The lattice is deliberately oversized (`inset: -180px -220px`) so the drift
+  never pulls a masked edge into frame. Cropping it to 1920x1080 when reviewing
+  reintroduces the seam it was built to hide.
+- `?motion=drift` is not a separate mode. Only `?motion=still` is special-cased;
+  every other value, and no value at all, leaves the drift running.
+- The lattice transforms above are the 0% keyframe values. Sampling mid-drift
+  returns a different matrix, so read them immediately on load or pause the
+  animation before measuring.
+- The query string is read once at load, so switching `motion` or `tone` needs a
+  reload. OBS preserves the query on a Browser Source URL, which is why the
+  variants ship as parameters instead of extra pages.
+- The background is a Browser Source, not a scene: it is absent from the auto
+  scene switcher and its number hotkeys. A run that expects ten scenes will be
+  wrong; the switcher still holds nine.
+
+**Evidence:** in-page JavaScript output from the browser - the computed plate
+colour under both themes, `getAnimations()` timing, the two lattice matrices and
+the `show` hide rule - plus the Network and console capture, the reduced-motion
+rule in the stylesheet and the `cargo test -p fgc-server --test overlays`
+result.
+
+**Result: Pass - assistant 2026-11-23.** The page served at
+`http://127.0.0.1:3001/overlays/background.html` paints a solid, opaque plate:
+`html`, `body` and `.background` all computed to `rgb(11, 13, 18)` under Night
+Broadcast, and the Light override `#f4f6fb` resolves to `rgb(244, 246, 251)`, so
+a `theme` message repaints the whole plate. A `show` message with
+`visible: false` set `.background` to `display: none` and added
+`background-hidden` to `<html>`, taking the plate with the artwork. On load the
+ambient lattice computed to `matrix(1, 0, 0, 1, -48, -28)` with opacity `0.13` and the
+lit lattice to `matrix(1, 0, 0, 1, 64, -36)` with opacity `0.68`. The three
+animations are `glowBreathe` at 84s, `latticeDriftForward` at 88s and
+`latticeDriftReverse` at 72s, all infinite; only `transform` and `opacity`
+appear in the keyframes and the file contains no `requestAnimationFrame`. Both
+lattices use the shared hexagon mask at `mask-size: 180px 322px`, and the query
+string selects `?motion=still` and `?tone=team`. The reduced-motion media query
+and the `.motion-still` class both set `animation: none`, and
+`matchMedia('(prefers-reduced-motion: reduce)').matches` was false in the test
+browser. The network showed the overlay document, the WebSocket and the inline
+SVG mask data URL with 0 console errors. The screenshot showed the opaque plate
+with the lattice over it. `cargo test -p
+fgc-server --test overlays` passed 30 tests with 0 failures, including the new
+`background_overlay_is_broadcast_safe_and_supports_url_variants`.
