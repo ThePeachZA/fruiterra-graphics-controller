@@ -10,7 +10,7 @@ use crate::assets_io::open_browser;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::{CollapsiblePanel, Disclosure, KeyValue, KeyValues, Panel};
 use crate::remote_access::{self, OverlayUrlGroup};
-use crate::server::{OVERLAY_FILES, overlay_source_files, overlay_url};
+use crate::server::{OVERLAY_FILES, SCENE_OVERLAY_FILES, overlay_source_files, overlay_url};
 use crate::state::AppStore;
 use crate::status::{broadcast_age_text, client_count_text, status_text, status_tone};
 
@@ -179,7 +179,7 @@ fn AutoOverlayController() -> Element {
                             let Some(number) = key.parse::<u8>().ok() else {
                                 return;
                             };
-                            let Some(file) = OVERLAY_FILES.get(usize::from(number.saturating_sub(1))) else {
+                            let Some(file) = SCENE_OVERLAY_FILES.get(usize::from(number.saturating_sub(1))) else {
                                 return;
                             };
                             if number == 0 || !hotkey_included.iter().any(|item| item == file) {
@@ -199,7 +199,7 @@ fn AutoOverlayController() -> Element {
                     }
                 },
                 div { class: "fgc-auto-scenes__list", role: "group", aria_label: "Overlay scenes",
-                    for (index, file) in OVERLAY_FILES.iter().enumerate() {
+                    for (index, file) in SCENE_OVERLAY_FILES.iter().enumerate() {
                         {
                             let file = (*file).to_owned();
                             let is_included = included.contains(&file);
@@ -303,13 +303,13 @@ pub(crate) fn OverlayUrls() -> Element {
                 }
             }
             p { class: "fgc-note",
-                "Each set contains the auto scene switcher plus all nine overlays. Use the URLs for the network your OBS computer can reach."
+                "Each set contains the auto scene switcher plus all ten overlays. Use the URLs for the network your OBS computer can reach."
             }
         }
     }
 }
 
-/// One access path's nine Browser Source URLs.
+/// One access path's ten Browser Source URLs.
 #[component]
 fn UrlGroupCard(group: OverlayUrlGroup, visible: bool) -> Element {
     let key = group.key;

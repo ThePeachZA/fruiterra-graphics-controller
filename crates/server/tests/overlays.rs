@@ -1055,8 +1055,9 @@ const TYPE_SCALE: [(&str, &str); 5] = [
 
 /// Every bundled overlay page, including the ones the shared spec does not
 /// cover.
-const ALL_OVERLAYS: [&str; 11] = [
+const ALL_OVERLAYS: [&str; 12] = [
     "auto.html",
+    "background.html",
     "game-overlay.html",
     "hero-bans.html",
     "map-pool.html",
@@ -1068,6 +1069,94 @@ const ALL_OVERLAYS: [&str; 11] = [
     "team-roster-home.html",
     "timer.html",
 ];
+
+#[test]
+fn background_overlay_is_broadcast_safe_and_supports_url_variants() {
+    let text = overlay_text("background.html");
+
+    assert!(
+        text.contains(".background__lattice {")
+            && text.contains(".background__lattice--ambient {")
+            && text.contains(".background__lattice--lit {")
+            && text.contains("mask-size: 180px 322px;"),
+        "the background should carry the shared hexagon lattice and two drift layers"
+    );
+    assert!(
+        text.contains("@keyframes latticeDriftForward")
+            && text.contains("@keyframes latticeDriftReverse")
+            && text.contains("@keyframes glowBreathe"),
+        "the lattice should drift in opposite directions while the glow breathes"
+    );
+
+    let keyframes_start = text
+        .find("@keyframes latticeDriftForward")
+        .expect("background should define its lattice animation");
+    let keyframes_end = text
+        .find("    .background__glow,")
+        .expect("background keyframes should end before the layer declarations");
+    let keyframes = &text[keyframes_start..keyframes_end];
+    for property in [
+        "background-position:",
+        "filter:",
+        "width:",
+        "height:",
+        "box-shadow:",
+    ] {
+        assert!(
+            !keyframes.contains(property),
+            "background keyframes must not animate paint-heavy {property}"
+        );
+    }
+    for declaration in keyframes.split(';') {
+        let Some((property, _value)) = declaration.split_once(':') else {
+            continue;
+        };
+        let property = property
+            .rsplit('{')
+            .next()
+            .expect("a keyframe declaration should have a property")
+            .trim();
+        assert!(
+            property == "transform" || property == "opacity",
+            "background keyframes should animate only transform and opacity, found {property}"
+        );
+    }
+
+    assert!(
+        text.contains("@media (prefers-reduced-motion: reduce)")
+            && text.contains(".motion-still .background__glow")
+            && text.contains("animation: none;"),
+        "reduced-motion and motion=still should leave a static composition"
+    );
+    assert!(
+        text.contains("query.get('motion')")
+            && text.contains("query.get('tone')")
+            && text.contains("=== 'still'")
+            && text.contains("=== 'team'"),
+        "OBS URL query parameters should select the motion and tone variants"
+    );
+    assert!(
+        text.contains("=== NIGHT BROADCAST TOKENS ===")
+            && text.contains("--fgc-surface: #0b0d12;")
+            && text.contains("--fgc-ink-on-art: #eef2f8;"),
+        "the background should inline the shared Night Broadcast tokens"
+    );
+    assert!(
+        !text.contains("requestAnimationFrame"),
+        "the background must not run a per-frame JavaScript animation loop"
+    );
+    assert!(
+        text.contains("background-color: var(--fgc-surface);")
+            && text.contains("background: var(--fgc-surface);")
+            && !text.contains("rgba(0, 0, 0, 0)"),
+        "the background should paint a solid, opaque plate from the theme tokens"
+    );
+    assert!(
+        text.contains("html.background-hidden")
+            && text.contains("root.classList.toggle('background-hidden', !visible);"),
+        "hiding the source should take the solid plate with it"
+    );
+}
 
 /// Extracts the `<style>` block of an overlay.
 fn style_block(text: &str) -> &str {
@@ -1145,7 +1234,8 @@ fn every_overlay_uses_the_shared_type_scale() {
 #[test]
 fn the_match_overlays_all_ship_the_five_display_faces() {
     for file in ALL_OVERLAYS {
-        if file == "timer.html" || file == "auto.html" {
+        if file == "timer.html" || file == "auto.html" || file == "background.html" {
+            // The background paints no text and is deliberately asset-free.
             continue;
         }
         let text = overlay_text(file);

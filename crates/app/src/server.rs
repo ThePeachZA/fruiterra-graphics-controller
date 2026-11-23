@@ -430,7 +430,24 @@ pub fn base_url_for_host(host: Ipv4Addr, port: u16) -> String {
 }
 
 /// The overlay files served by the embedded router, in display order.
-pub const OVERLAY_FILES: [&str; 9] = [
+pub const OVERLAY_FILES: [&str; 10] = [
+    "background.html",
+    "game-overlay.html",
+    "map-select.html",
+    "hero-bans.html",
+    "map-pool.html",
+    "team-roster-home.html",
+    "team-roster-away.html",
+    "row-casters.html",
+    "row-hosts.html",
+    "row-interviews.html",
+];
+
+/// Mutually exclusive scenes hosted by the auto overlay.
+///
+/// The background is a persistent source beneath these scenes, so it keeps its
+/// own Browser Source URL without joining the scene selection or its hotkeys.
+pub const SCENE_OVERLAY_FILES: [&str; 9] = [
     "game-overlay.html",
     "map-select.html",
     "hero-bans.html",

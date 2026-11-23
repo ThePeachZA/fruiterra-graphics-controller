@@ -45,7 +45,7 @@ use tracing::{debug, info, warn};
 
 use crate::assets_io::format_bytes;
 use crate::remote_access;
-use crate::server::{OVERLAY_FILES, ServerController, project_outbound, server_config};
+use crate::server::{SCENE_OVERLAY_FILES, ServerController, project_outbound, server_config};
 use crate::tailscale::{ServeState, TailscaleState, TailscaleStatus};
 
 /// How often dirty state is written to disk.
@@ -73,7 +73,7 @@ fn auto_overlay_outbound(included: &[String], active: Option<&str>) -> Option<Ou
 }
 
 fn default_auto_overlay() -> (Vec<String>, Option<String>) {
-    let first = OVERLAY_FILES[0].to_owned();
+    let first = SCENE_OVERLAY_FILES[0].to_owned();
     (vec![first.clone()], Some(first))
 }
 
@@ -84,9 +84,9 @@ fn canonical_auto_overlay(
 ) -> (Vec<String>, Option<String>) {
     let requested: BTreeSet<String> = included
         .into_iter()
-        .filter(|file| OVERLAY_FILES.contains(&file.as_str()))
+        .filter(|file| SCENE_OVERLAY_FILES.contains(&file.as_str()))
         .collect();
-    let included: Vec<String> = OVERLAY_FILES
+    let included: Vec<String> = SCENE_OVERLAY_FILES
         .iter()
         .copied()
         .filter(|file| requested.contains(*file))
@@ -416,7 +416,7 @@ impl AppStore {
 
     /// Includes or removes one bundled overlay from the scene switcher.
     pub fn set_auto_overlay_included(&self, file: &str, include: bool) {
-        if !OVERLAY_FILES.contains(&file) {
+        if !SCENE_OVERLAY_FILES.contains(&file) {
             return;
         }
 
@@ -449,7 +449,7 @@ impl AppStore {
         if number == 0 {
             return;
         }
-        let Some(file) = OVERLAY_FILES.get(usize::from(number - 1)) else {
+        let Some(file) = SCENE_OVERLAY_FILES.get(usize::from(number - 1)) else {
             return;
         };
         self.set_auto_overlay_active(file);

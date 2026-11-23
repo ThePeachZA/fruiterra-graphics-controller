@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <link rel="icon" href="data:,">
+  <title>Animated Background</title>
+  <style>
+    /* === NIGHT BROADCAST TOKENS ===
+       Shared design tokens for the Fruiterra overlay refresh. Each overlay
+       inlines this block, exactly as it inlines its own font faces. */
+    :root {
+      --fgc-canvas: transparent;
+
+      --fgc-surface: #0b0d12;
+      --fgc-surface-raised: #11151d;
+      --fgc-surface-inverse: #eef2f8;
+      --fgc-surface-muted: #151922;
+
+      --fgc-line: #2a3140;
+      --fgc-line-strong: #3a4356;
+      --fgc-line-on-inverse: #0b0d12;
+
+      --fgc-text: #eef2f8;
+      --fgc-text-muted: #8d99ad;
+      --fgc-text-faint: #6b7688;
+      --fgc-text-inverse: #0b0d12;
+
+      --fgc-accent: #ff7a1a;
+      --fgc-accent-strong: #ff9346;
+      --fgc-accent-soft: rgb(255 122 26 / 16%);
+      --fgc-on-accent: #0b0d12;
+
+      --fgc-success: #3ecf8e;
+      --fgc-warning: #f5b84b;
+      --fgc-danger: #ef5b5b;
+
+      --fgc-space-1: 4px;
+      --fgc-space-2: 8px;
+      --fgc-space-3: 12px;
+      --fgc-space-4: 16px;
+      --fgc-radius-sm: 4px;
+      --fgc-radius-md: 6px;
+      --fgc-radius-lg: 10px;
+      --fgc-radius-pill: 999px;
+      --fgc-margin: 43px;
+
+      --fgc-duration-micro: 120ms;
+      --fgc-duration-state: 240ms;
+      --fgc-duration-reveal: 480ms;
+      --fgc-duration-scene: 900ms;
+      --fgc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+      /* === OVERLAY-LOCAL TOKENS ===
+         The role icons and the team logos are white glyphs on transparent, and
+         the hero name sits on top of the hero art. Those need a dark plate
+         and a near-white ink whichever theme is active, so they do not follow
+         the theme tokens. */
+      --fgc-plate-dark: #0b0d12;
+      --fgc-ink-on-art: #eef2f8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      width: 100%;
+      height: 100%;
+      /* The background is a solid, opaque plate taken from the theme tokens, so
+         it is a real backdrop rather than a wash over whatever is behind it.
+         A theme message repaints it. */
+      background: var(--fgc-surface);
+    }
+
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--fgc-surface);
+    }
+
+    /* Hiding the source has to take the plate with it, otherwise the frame
+       keeps a solid colour while the artwork is gone. */
+    html.background-hidden,
+    html.background-hidden body {
+      background: transparent;
+    }
+
+    .background {
+      /* These aliases refer to theme tokens instead of replacing them, so a
+         theme message still owns the shared palette. Team colours live on this
+         element and therefore never collide with the root theme overrides. */
+      --background-a: var(--fgc-text-muted);
+      --background-b: var(--fgc-line-strong);
+
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      pointer-events: none;
+      /* The solid plate. The theme owns the colour, so the backdrop follows
+         the theme instead of a value baked into this file. */
+      background-color: var(--fgc-surface);
+    }
+
+    .tone-team .background {
+      /* Missing state deliberately resolves to the same quiet greys. */
+      --background-a: var(--team-a-color, var(--fgc-text-muted));
+      --background-b: var(--team-b-color, var(--fgc-line-strong));
+    }
+
+    /* === ANIMATIONS ===
+       A Browser Source can run for an entire broadcast. Only compositor-friendly
+       transform and opacity change here; paint-heavy animation would needlessly
+       redraw a 1920x1080 surface on every frame. The closed paths reverse without
+       a loop jump, and even their fastest movement stays below 0.08 px/frame at
+       60 fps, far under the visible-motion ceiling for a background. */
+    @keyframes latticeDriftForward {
+      0%, 100% { transform: translate3d(-48px, -28px, 0); }
+      50% { transform: translate3d(48px, 28px, 0); }
+    }
+
+    @keyframes latticeDriftReverse {
+      0%, 100% { transform: translate3d(64px, -36px, 0); }
+      50% { transform: translate3d(-64px, 36px, 0); }
+    }
+
+    @keyframes glowBreathe {
+      0%, 100% { opacity: 0.46; transform: scale(1); }
+      50% { opacity: 0.72; transform: scale(1.045); }
+    }
+
+    .background__glow,
+    .background__lattice {
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .background__glow {
+      inset: -12%;
+      z-index: 0;
+      background-image:
+        radial-gradient(ellipse at 4% 54%, color-mix(in srgb, var(--background-a) 14%, transparent) 0%, transparent 62%),
+        radial-gradient(ellipse at 96% 38%, color-mix(in srgb, var(--background-b) 12%, transparent) 0%, transparent 60%);
+      opacity: 0.46;
+      transform: scale(1);
+      animation: glowBreathe 84s ease-in-out infinite;
+      will-change: transform, opacity;
+    }
+
+    /* The same SVG cell as hero bans keeps the product's shape language intact.
+       A mask draws only the joints, rather than filling every hexagon, and the
+       fixed 180x322 cell makes the motion read as architecture, not a texture.
+       Overscan keeps the translucent edges outside the frame while it drifts. */
+    .background__lattice {
+      inset: -180px -220px;
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+      -webkit-mask-size: 180px 322px;
+      mask-size: 180px 322px;
+      -webkit-mask-repeat: repeat;
+      mask-repeat: repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
+      will-change: transform;
+    }
+
+    .background__lattice--ambient {
+      z-index: 1;
+      background-color: var(--fgc-line-strong);
+      opacity: 0.13;
+      transform: translate3d(-48px, -28px, 0);
+      animation: latticeDriftForward 88s ease-in-out infinite;
+    }
+
+    /* The lit lattice is weighted to the outer edges, leaving useful visual
+       space in the centre for a game feed, desktop or another graphic. */
+    .background__lattice--lit {
+      z-index: 2;
+      background-image:
+        radial-gradient(82% 120% at -6% 52%, color-mix(in srgb, var(--background-a) 36%, transparent) 0%, color-mix(in srgb, var(--background-a) 13%, transparent) 42%, transparent 80%),
+        radial-gradient(76% 112% at 106% 38%, color-mix(in srgb, var(--background-b) 32%, transparent) 0%, color-mix(in srgb, var(--background-b) 11%, transparent) 44%, transparent 82%);
+      opacity: 0.68;
+      transform: translate3d(64px, -36px, 0);
+      animation: latticeDriftReverse 72s ease-in-out infinite;
+    }
+
+    /* OBS operators can choose a still source explicitly; the OS accessibility
+       preference wins too. Static transforms preserve a composed first frame. */
+    .motion-still .background__glow,
+    .motion-still .background__lattice {
+      animation: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .background__glow,
+      .background__lattice {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="background" id="background" aria-hidden="true">
+    <div class="background__glow"></div>
+    <div class="background__lattice background__lattice--ambient"></div>
+    <div class="background__lattice background__lattice--lit"></div>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const background = document.getElementById('background');
+    const query = new URLSearchParams(location.search);
+
+    // OBS preserves query parameters on Browser Source URLs, so variants do not
+    // need another bundled page or a settings round-trip through the server.
+    root.classList.toggle('motion-still', query.get('motion') === 'still');
+    root.classList.toggle('tone-team', query.get('tone') === 'team');
+
+    // === OVERLAY THEME ===
+    // The app sends the active theme as a `theme` message. Its `tokens` are
+    // the complete set of CSS custom properties to override, so a property
+    // applied by an earlier theme and missing from this set is removed again.
+    // That is what restores the stylesheet defaults when the theme changes.
+    let appliedThemeTokens = [];
+
+    function applyTheme(payload) {
+      const tokens =
+        payload && typeof payload === 'object' && payload.tokens && typeof payload.tokens === 'object'
+          ? payload.tokens
+          : {};
+      const root = document.documentElement;
+      appliedThemeTokens.forEach((name) => {
+        if (!Object.prototype.hasOwnProperty.call(tokens, name)) root.style.removeProperty(name);
+      });
+      appliedThemeTokens = Object.keys(tokens);
+      appliedThemeTokens.forEach((name) => {
+        root.style.setProperty(name, String(tokens[name]));
+      });
+    }
+
+    function updateTeamColour(property, team) {
+      const colour = team && typeof team === 'object' && typeof team.color === 'string'
+        ? team.color.trim()
+        : '';
+      // Clearing an absent colour restores the neutral fallback instead of
+      // leaving a previous match's team wash on a later broadcast.
+      if (colour) {
+        background.style.setProperty(property, colour);
+      } else {
+        background.style.removeProperty(property);
+      }
+    }
+
+    function updateOverlay(data) {
+      if (!data || typeof data !== 'object') return;
+      const d = data.data && typeof data.data === 'object' ? data.data : data;
+
+      if (data.type === 'theme') {
+        applyTheme(d);
+        return;
+      }
+      if (data.type === 'init' && d.theme) {
+        applyTheme(d.theme);
+      }
+      if (data.type === 'init' && d.scoreboard) {
+        updateOverlay({ type: 'scoreboard', data: d.scoreboard });
+      }
+
+      if (data.type === 'scoreboard' || data.type === 'gameOverlay' || data.type === 'heroBans') {
+        if (Object.prototype.hasOwnProperty.call(d, 'teamA')) {
+          updateTeamColour('--team-a-color', d.teamA);
+        }
+        if (Object.prototype.hasOwnProperty.call(d, 'teamB')) {
+          updateTeamColour('--team-b-color', d.teamB);
+        }
+      }
+
+      if (data.type === 'show') {
+        // The solid plate is part of the source, so hiding the artwork has to
+        // hide the plate too.
+        const visible = data.visible !== false;
+        background.style.display = visible ? 'block' : 'none';
+        root.classList.toggle('background-hidden', !visible);
+      }
+    }
+
+    function connect() {
+      // Reach the server that served this page so a LAN or proxied client does
+      // not dial its own localhost. ?host= and ?port= still override the target
+      // for third-party pages.
+      const host = query.get('host');
+      const port = query.get('port');
+      const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+      const target = host || port
+        ? `${host || 'localhost'}:${port || '3001'}`
+        : (location.host || 'localhost:3001');
+      const ws = new WebSocket(`${scheme}://${target}`);
+
+      ws.onmessage = ({ data }) => {
+        try {
+          updateOverlay(JSON.parse(data));
+        } catch (e) {
+          console.error('Parse error:', e);
+        }
+      };
+
+      ws.onclose = () => setTimeout(connect, 2000);
+      ws.onerror = (e) => console.error('WS error:', e);
+    }
+
+    connect();
+  </script>
+</body>
+</html>
