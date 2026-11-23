@@ -393,11 +393,11 @@ fn hero_bans_fills_the_screen_with_two_hero_halves() {
         "each half should carry the hero name and the ban order"
     );
     assert!(
-        text.contains("el.homeOrder.textContent = '1ST BAN';")
-            && text.contains("el.awayOrder.textContent = '2ND BAN';")
-            && text.contains("el.homeOrder.textContent = '2ND BAN';")
-            && text.contains("el.awayOrder.textContent = '1ST BAN';"),
-        "the team that banned first should carry the 1ST BAN label"
+        text.contains("el.homeOrder.textContent = 'First ban';")
+            && text.contains("el.awayOrder.textContent = 'Second ban';")
+            && text.contains("el.homeOrder.textContent = 'Second ban';")
+            && text.contains("el.awayOrder.textContent = 'First ban';"),
+        "the team that banned first should carry the First ban label"
     );
     assert!(
         text.contains(".hero-half__wall {")
@@ -426,8 +426,32 @@ fn hero_bans_fills_the_screen_with_two_hero_halves() {
         "the logo badge and the role badge should share one hexagon shape"
     );
     assert!(
-        text.contains(".hero-half__art--cutout img {"),
-        "a transparent cut-out should stand on the bottom of the half"
+        text.contains(".hero-half__art--cutout img {")
+            && text.contains("transform-origin: bottom center;")
+            && !text.contains("object-fit: contain;\n      object-position: center bottom;"),
+        "a transparent cut-out should be placed by script so the hero fills the half"
+    );
+    assert!(
+        text.contains("function subjectBox(img)")
+            && text.contains("function placeCutout(img, box)")
+            && text.contains("const scale = box.height / subject.height;"),
+        "the cut-out should be measured before it is placed"
+    );
+    assert!(
+        text.contains(".hero-half__edge {")
+            && text.contains(".hero-half--home .hero-half__edge {")
+            && text.contains(".hero-half--away .hero-half__edge {")
+            && text.contains("var(--team-a-color")
+            && text.contains("var(--team-b-color"),
+        "the team colour should wash in from the outer edge of each half"
+    );
+    assert!(
+        !text.contains("hero-bans__centre"),
+        "the seam down the middle should be gone"
+    );
+    assert!(
+        text.contains("--hero-reveal-delay:") && text.contains("var(--hero-reveal-delay)"),
+        "the reveal should wait so a scene transition can finish first"
     );
     assert!(
         !text.contains("map-strip")
@@ -460,10 +484,10 @@ fn hero_bans_prefers_the_transparent_art_and_reads_the_role() {
         "the overlay should read the transparent art, the roles and the icons"
     );
     assert!(
-        text.contains("applyTeamColour(el.homeOrder, d.teamA.color);")
-            && text.contains("applyTeamColour(el.awayOrder, d.teamB.color);")
-            && text.contains("order.style.color = colour || 'var(--fgc-accent)';"),
-        "the ban order should be labelled in the colour of the team that banned"
+        text.contains("el.heroBans.style.setProperty('--team-a-color', d.teamA.color")
+            && text.contains("el.heroBans.style.setProperty('--team-b-color', d.teamB.color")
+            && !text.contains("applyTeamColour"),
+        "the team colour should wash in from the outer edge, not colour the label"
     );
 }
 
@@ -912,8 +936,8 @@ fn hero_bans_overlay_uses_night_broadcast_tokens() {
         "the hero name should hover over the art in the near-white ink"
     );
     assert!(
-        text.contains(".hero-half__order {\n      max-width: 70%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 30px;\n      line-height: 1;\n      letter-spacing: 0.22em;\n      text-transform: uppercase;\n      color: var(--fgc-accent);"),
-        "the ban order should carry the orange accent until the team colour lands"
+        text.contains(".hero-half__order {\n      max-width: 70%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 30px;\n      line-height: 1;\n      letter-spacing: 0.22em;\n      text-transform: uppercase;\n      color: var(--fgc-ink-on-art);"),
+        "the ban order should use the neutral near-white ink so it reads on any art"
     );
     assert!(
         text.contains(".hero-half__logo {\n      position: absolute;\n      top: var(--fgc-margin);\n      z-index: 4;\n      width: 100px;\n      height: 115px;\n      background-color: var(--fgc-plate-dark);"),

@@ -98,6 +98,11 @@
          the theme tokens. */
       --fgc-plate-dark: #0b0d12;
       --fgc-ink-on-art: #eef2f8;
+
+      /* The reveal waits this long before it starts, so a stinger or a scene
+         transition that is still playing is not cut short by the bans
+         appearing on top of it. Override it to taste. */
+      --hero-reveal-delay: 0.8s;
     }
 
     * {
@@ -188,7 +193,7 @@
       mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
       -webkit-mask-size: 180px 322px;
       mask-size: 180px 322px;
-      opacity: 0.85;
+      opacity: 0.3;
     }
 
     /* The wall fades up into the surface, so the caption stands on the busiest
@@ -207,7 +212,8 @@
 
     /* A second copy of the wall in front of the art, so a full-bleed hero
        image still stands in the same space. It is weighted to the outer edge
-       of the half, where the hero is not, and fades up from the caption. */
+       of the half, where the hero is not, and fades up from the caption. It
+       stays faint: it is structure, not decoration. */
     .hero-half__grid {
       position: absolute;
       inset: 0;
@@ -216,11 +222,11 @@
       background-image:
         radial-gradient(
           46% 130% at 0% 46%,
-          rgb(255 255 255 / 30%) 0%,
-          rgb(255 255 255 / 12%) 46%,
+          rgb(255 255 255 / 11%) 0%,
+          rgb(255 255 255 / 4%) 46%,
           rgb(255 255 255 / 0%) 88%
         ),
-        linear-gradient(to top, rgb(255 255 255 / 10%) 0%, rgb(255 255 255 / 0%) 62%);
+        linear-gradient(to top, rgb(255 255 255 / 3.5%) 0%, rgb(255 255 255 / 0%) 62%);
       -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
       mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100L0 84L0 50L28 34L56 50L56 84L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
       -webkit-mask-size: 180px 322px;
@@ -231,11 +237,39 @@
       background-image:
         radial-gradient(
           46% 130% at 100% 46%,
-          rgb(255 255 255 / 30%) 0%,
-          rgb(255 255 255 / 12%) 46%,
+          rgb(255 255 255 / 11%) 0%,
+          rgb(255 255 255 / 4%) 46%,
           rgb(255 255 255 / 0%) 88%
         ),
-        linear-gradient(to top, rgb(255 255 255 / 10%) 0%, rgb(255 255 255 / 0%) 62%);
+        linear-gradient(to top, rgb(255 255 255 / 3.5%) 0%, rgb(255 255 255 / 0%) 62%);
+    }
+
+    /* The team colour washes in from the outer edge of the half, over the art
+       and over the honeycomb, so the edge reads as belonging to that team
+       without a seam down the middle of the screen. */
+    .hero-half__edge {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    .hero-half--home .hero-half__edge {
+      background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--team-a-color, var(--fgc-accent)) 46%, transparent) 0%,
+        color-mix(in srgb, var(--team-a-color, var(--fgc-accent)) 16%, transparent) 18%,
+        rgb(0 0 0 / 0%) 38%
+      );
+    }
+
+    .hero-half--away .hero-half__edge {
+      background: linear-gradient(
+        to left,
+        color-mix(in srgb, var(--team-b-color, var(--fgc-accent)) 46%, transparent) 0%,
+        color-mix(in srgb, var(--team-b-color, var(--fgc-accent)) 16%, transparent) 18%,
+        rgb(0 0 0 / 0%) 38%
+      );
     }
 
     .hero-half__art {
@@ -252,10 +286,28 @@
       object-position: center;
     }
 
-    /* A transparent cut-out stands on the bottom of the half so the honeycomb
-       wall stays visible behind it. */
+    /* A transparent cut-out is placed by script rather than by object-fit.
+
+       The cut-out files are a full 1920x1080 canvas with the hero standing on
+       the bottom of it. The script finds the hero inside the canvas and
+       scales that part to fill the height of the half, anchored to the
+       bottom, so the box keeps its natural size and the transform alone
+       moves and scales it. */
     .hero-half__art--cutout img {
-      object-fit: contain;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: auto;
+      height: auto;
+      transform-origin: bottom center;
+      will-change: transform;
+    }
+
+    /* Used when the canvas cannot be read, so the hero still fills the half. */
+    .hero-half__art--cutout-fallback img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
       object-position: center bottom;
     }
 
@@ -270,37 +322,6 @@
         rgb(0 0 0 / 0%) 56%
       );
       pointer-events: none;
-    }
-
-    /* The seam is where the two teams meet, so it carries both team colours
-       instead of a texture. */
-    .hero-bans__centre {
-      position: relative;
-      z-index: 2;
-      flex: 0 0 110px;
-      background: var(--fgc-surface);
-    }
-
-    .hero-bans__centre::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        to right,
-        color-mix(in srgb, var(--team-a-color, var(--fgc-surface-raised)) 42%, var(--fgc-surface)) 0%,
-        var(--fgc-surface) 50%,
-        color-mix(in srgb, var(--team-b-color, var(--fgc-surface-raised)) 42%, var(--fgc-surface)) 100%
-      );
-    }
-
-    .hero-bans__centre::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 50%;
-      width: 1px;
-      background: var(--fgc-line-strong);
     }
 
     /* === TEAM LOGO === */
@@ -389,7 +410,7 @@
       line-height: 1;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: var(--fgc-accent);
+      color: var(--fgc-ink-on-art);
       text-shadow: 0 2px 14px rgb(0 0 0 / 55%);
     }
   </style>
@@ -402,30 +423,30 @@
         <div class="hero-half__art" id="home-art"></div>
         <div class="hero-half__scrim"></div>
         <div class="hero-half__grid"></div>
+        <div class="hero-half__edge"></div>
         <div class="hero-half__logo" id="home-logo">
           <div class="hero-half__logo-art" id="home-logo-art"></div>
         </div>
         <div class="hero-half__caption" id="home-caption">
           <div class="hero-half__role" id="home-role" hidden><img id="home-role-icon" alt=""></div>
           <div class="hero-half__name" id="home-name">-</div>
-          <div class="hero-half__order" id="home-order">1ST BAN</div>
+          <div class="hero-half__order" id="home-order">First ban</div>
         </div>
       </section>
-
-      <div class="hero-bans__centre" id="hero-bans-centre"></div>
 
       <section class="hero-half hero-half--away" id="away-half">
         <div class="hero-half__wall"></div>
         <div class="hero-half__art" id="away-art"></div>
         <div class="hero-half__scrim"></div>
         <div class="hero-half__grid"></div>
+        <div class="hero-half__edge"></div>
         <div class="hero-half__logo" id="away-logo">
           <div class="hero-half__logo-art" id="away-logo-art"></div>
         </div>
         <div class="hero-half__caption" id="away-caption">
           <div class="hero-half__role" id="away-role" hidden><img id="away-role-icon" alt=""></div>
           <div class="hero-half__name" id="away-name">-</div>
-          <div class="hero-half__order" id="away-order">2ND BAN</div>
+          <div class="hero-half__order" id="away-order">Second ban</div>
         </div>
       </section>
     </div>
@@ -501,10 +522,73 @@
     let animationsTriggered = false;
 
     function triggerAnimations() {
-      el.homeHalf.style.animation = 'heroReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) both';
-      el.awayHalf.style.animation = 'heroReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both';
-      el.homeCaption.style.animation = 'captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both';
-      el.awayCaption.style.animation = 'captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.47s both';
+      // The reveal waits for the scene to settle, so a stinger or a scene
+      // transition that is still playing is not cut short by the bans
+      // appearing on top of it.
+      const delay = 'var(--hero-reveal-delay)';
+      el.homeHalf.style.animation = `heroReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) ${delay} both`;
+      el.awayHalf.style.animation = `heroReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(${delay} + 0.12s) both`;
+      el.homeCaption.style.animation = `captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) calc(${delay} + 0.35s) both`;
+      el.awayCaption.style.animation = `captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) calc(${delay} + 0.47s) both`;
+    }
+
+    // Finds the hero inside a transparent canvas.
+    //
+    // The cut-out files are a full 1920x1080 canvas with the hero standing on
+    // the bottom of it. Fitting the whole canvas into a half leaves the hero
+    // small and floating, so the hero is located first and that part alone is
+    // scaled to the height of the half.
+    function subjectBox(img) {
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+      if (!width || !height) return null;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return null;
+
+      let pixels;
+      try {
+        context.clearRect(0, 0, width, height);
+        context.drawImage(img, 0, 0);
+        pixels = context.getImageData(0, 0, width, height).data;
+      } catch (error) {
+        return null;
+      }
+
+      let minX = width;
+      let minY = height;
+      let maxX = -1;
+      let maxY = -1;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (pixels[(y * width + x) * 4 + 3] > 8) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < 0 || maxY < 0) return null;
+      return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+    }
+
+    // Places a cut-out so the hero fills the height of the half, standing on
+    // the bottom and centred on its own width rather than on the canvas.
+    function placeCutout(img, box) {
+      const subject = subjectBox(img);
+      if (!subject) {
+        img.classList.add('hero-half__art--cutout-fallback');
+        return;
+      }
+
+      const scale = box.height / subject.height;
+      const centre = subject.x + subject.width / 2;
+      const offset = box.width / 2 - (img.naturalWidth / 2 + (centre - img.naturalWidth / 2) * scale);
+      img.style.transform = `translate(${offset}px, 0) scale(${scale})`;
     }
 
     // Renders one half. The transparent cut-out is preferred, because it lets
@@ -526,6 +610,12 @@
         img.alt = heroName;
         if (cutout) {
           art.classList.add('hero-half__art--cutout');
+          img.addEventListener('load', () => {
+            const box = art.getBoundingClientRect();
+            if (box.width && box.height) {
+              placeCutout(img, { width: box.width, height: box.height });
+            }
+          });
         }
         art.appendChild(img);
       }
@@ -548,20 +638,15 @@
     }
 
     function updateBanOrder(firstBan) {
-      // The team that banned first carries the 1ST BAN label, the other one
-      // carries 2ND BAN.
+      // The team that banned first carries the FIRST BAN label, the other one
+      // carries SECOND BAN.
       if (firstBan === 'B') {
-        el.homeOrder.textContent = '2ND BAN';
-        el.awayOrder.textContent = '1ST BAN';
+        el.homeOrder.textContent = 'Second ban';
+        el.awayOrder.textContent = 'First ban';
       } else {
-        el.homeOrder.textContent = '1ST BAN';
-        el.awayOrder.textContent = '2ND BAN';
+        el.homeOrder.textContent = 'First ban';
+        el.awayOrder.textContent = 'Second ban';
       }
-    }
-
-    // The ban order is labelled in the colour of the team that made the ban.
-    function applyTeamColour(order, colour) {
-      order.style.color = colour || 'var(--fgc-accent)';
     }
 
     function connect() {
@@ -644,17 +729,15 @@
           roleIcons = d.roleIcons;
         }
 
-        // Team logos and the colour of the ban order. The seam between the
-        // halves carries both team colours, so it is set here as well.
+        // Team logos and the team colours. The colours wash in from the outer
+        // edge of each half, so they are set on the container here.
         if (d.teamA) {
           el.homeLogoArt.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : '';
-          applyTeamColour(el.homeOrder, d.teamA.color);
-          el.heroBans.style.setProperty('--team-a-color', d.teamA.color || 'var(--fgc-surface-raised)');
+          el.heroBans.style.setProperty('--team-a-color', d.teamA.color || 'var(--fgc-accent)');
         }
         if (d.teamB) {
           el.awayLogoArt.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : '';
-          applyTeamColour(el.awayOrder, d.teamB.color);
-          el.heroBans.style.setProperty('--team-b-color', d.teamB.color || 'var(--fgc-surface-raised)');
+          el.heroBans.style.setProperty('--team-b-color', d.teamB.color || 'var(--fgc-accent)');
         }
 
         // Hero bans.
