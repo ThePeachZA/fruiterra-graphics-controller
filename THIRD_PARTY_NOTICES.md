@@ -150,6 +150,7 @@ features enabled.
 | Crate | Version | Licence |
 |---|---|---|
 | adler2 | 2.0.1 | 0BSD OR MIT OR Apache-2.0 |
+| aes | 0.9.4 | MIT OR Apache-2.0 |
 | aligned | 0.4.3 | MIT OR Apache-2.0 |
 | aligned-vec | 0.6.4 | MIT |
 | anyhow | 1.0.104 | MIT OR Apache-2.0 |
@@ -173,14 +174,18 @@ features enabled.
 | block-buffer | 0.10.4 | MIT OR Apache-2.0 |
 | block-buffer | 0.12.1 | MIT OR Apache-2.0 |
 | built | 0.8.1 | MIT |
+| bumpalo | 3.20.3 | MIT OR Apache-2.0 |
 | by_address | 1.2.1 | MIT OR Apache-2.0 |
 | bytemuck | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
 | byteorder | 1.5.0 | Unlicense OR MIT |
 | byteorder-lite | 0.1.0 | Unlicense OR MIT |
 | bytes | 1.12.1 | MIT |
+| bzip2 | 0.6.1 | MIT OR Apache-2.0 |
 | cc | 1.11.1 | MIT OR Apache-2.0 |
 | cfb | 0.7.3 | MIT |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 |
+| cipher | 0.5.2 | MIT OR Apache-2.0 |
+| cmov | 0.5.4 | Apache-2.0 OR MIT |
 | color_quant | 1.1.0 | MIT |
 | const-oid | 0.10.2 | Apache-2.0 OR MIT |
 | const-serialize | 0.7.2 | MIT OR Apache-2.0 |
@@ -189,8 +194,10 @@ features enabled.
 | const-serialize-macro | 0.8.0-alpha.3 | MIT OR Apache-2.0 |
 | const_format | 0.2.37 | Zlib |
 | const_format_proc_macros | 0.2.37 | Zlib |
+| constant_time_eq | 0.6.1 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
 | convert_case | 0.8.0 | MIT |
 | cookie | 0.18.2 | MIT OR Apache-2.0 |
+| cpubits | 0.1.1 | MIT OR Apache-2.0 |
 | cpufeatures | 0.2.17 | MIT OR Apache-2.0 |
 | cpufeatures | 0.3.1 | MIT OR Apache-2.0 |
 | crc32fast | 1.5.4 | MIT OR Apache-2.0 |
@@ -200,10 +207,12 @@ features enabled.
 | crossbeam-utils | 0.8.23 | MIT OR Apache-2.0 |
 | crypto-common | 0.1.7 | MIT OR Apache-2.0 |
 | crypto-common | 0.2.2 | MIT OR Apache-2.0 |
+| ctutils | 0.4.8 | Apache-2.0 OR MIT |
 | darling | 0.21.3 | MIT |
 | darling_core | 0.21.3 | MIT |
 | darling_macro | 0.21.3 | MIT |
 | data-encoding | 2.11.1 | MIT |
+| deflate64 | 0.1.12 | MIT |
 | deranged | 0.5.9 | MIT OR Apache-2.0 |
 | digest | 0.10.7 | MIT OR Apache-2.0 |
 | digest | 0.11.3 | MIT OR Apache-2.0 |
@@ -243,6 +252,7 @@ features enabled.
 | enumset_derive | 0.15.1 | MIT OR Apache-2.0 |
 | equator | 0.4.2 | MIT |
 | equator-macro | 0.4.2 | MIT |
+| equivalent | 1.0.3 | Apache-2.0 OR MIT |
 | euclid | 0.22.14 | MIT OR Apache-2.0 |
 | exr | 1.74.2 | BSD-3-Clause |
 | fastrand | 2.5.0 | Apache-2.0 OR MIT |
@@ -273,6 +283,8 @@ features enabled.
 | gif | 0.14.2 | MIT OR Apache-2.0 |
 | global-hotkey | 0.7.0 | Apache-2.0 OR MIT |
 | half | 2.7.1 | MIT OR Apache-2.0 |
+| hashbrown | 0.17.1 | MIT OR Apache-2.0 |
+| hmac | 0.13.0 | MIT OR Apache-2.0 |
 | http | 1.5.0 | MIT OR Apache-2.0 |
 | http-body | 1.1.0 | MIT |
 | http-body-util | 0.1.5 | MIT |
@@ -295,16 +307,20 @@ features enabled.
 | image | 0.25.10 | MIT OR Apache-2.0 |
 | image-webp | 0.2.4 | MIT OR Apache-2.0 |
 | imgref | 1.12.3 | CC0-1.0 OR Apache-2.0 |
+| indexmap | 2.14.2 | Apache-2.0 OR MIT |
 | infer | 0.19.0 | MIT |
+| inout | 0.2.6 | MIT OR Apache-2.0 |
 | ipnet | 2.12.2 | MIT OR Apache-2.0 |
 | itertools | 0.14.0 | MIT OR Apache-2.0 |
 | itoa | 1.0.18 | MIT OR Apache-2.0 |
+| jobserver | 0.1.35 | MIT OR Apache-2.0 |
 | keyboard-types | 0.7.0 | MIT OR Apache-2.0 |
 | konst | 0.2.20 | Zlib |
 | konst_macro_rules | 0.2.19 | Zlib |
 | lazy-js-bundle | 0.7.10 | MIT OR Apache-2.0 |
 | lazy_static | 1.5.1 | MIT OR Apache-2.0 |
 | lebe | 0.5.3 | BSD-3-Clause |
+| libbz2-rs-sys | 0.2.7 | bzip2-1.0.6 |
 | libc | 0.2.191 | MIT OR Apache-2.0 |
 | libloading | 0.8.9 | ISC |
 | libm | 0.2.16 | MIT |
@@ -313,6 +329,7 @@ features enabled.
 | log | 0.4.35 | MIT OR Apache-2.0 |
 | longest-increasing-subsequence | 0.1.0 | MIT OR Apache-2.0 |
 | loop9 | 0.1.5 | MIT |
+| lzma-rust2 | 0.25.0 | Apache-2.0 |
 | macro-string | 0.1.4 | MIT OR Apache-2.0 |
 | manganis | 0.7.10 | MIT OR Apache-2.0 |
 | manganis-core | 0.7.10 | MIT OR Apache-2.0 |
@@ -351,15 +368,18 @@ features enabled.
 | parking_lot_core | 0.9.12 | MIT OR Apache-2.0 |
 | paste | 1.0.15 | MIT OR Apache-2.0 |
 | pastey | 0.1.1 | MIT OR Apache-2.0 |
+| pbkdf2 | 0.13.0 | MIT OR Apache-2.0 |
 | percent-encoding | 2.3.2 | MIT OR Apache-2.0 |
 | phf | 0.13.1 | MIT |
 | phf_shared | 0.13.1 | MIT |
 | pin-project | 1.1.13 | Apache-2.0 OR MIT |
 | pin-project-internal | 1.1.13 | Apache-2.0 OR MIT |
 | pin-project-lite | 0.2.17 | Apache-2.0 OR MIT |
+| pkg-config | 0.3.34 | MIT OR Apache-2.0 |
 | png | 0.18.1 | MIT OR Apache-2.0 |
 | potential_utf | 0.1.6 | Unicode-3.0 |
 | powerfmt | 0.2.1 | MIT OR Apache-2.0 |
+| ppmd-rust | 1.5.2 | CC0-1.0 OR MIT-0 |
 | ppv-lite86 | 0.2.21 | MIT OR Apache-2.0 |
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
 | proc-macro2-diagnostics | 0.10.1 | MIT OR Apache-2.0 |
@@ -409,6 +429,7 @@ features enabled.
 | serde_repr | 0.1.21 | MIT OR Apache-2.0 |
 | serde_urlencoded | 0.7.1 | MIT OR Apache-2.0 |
 | sha1 | 0.10.7 | MIT OR Apache-2.0 |
+| sha1 | 0.11.0 | MIT OR Apache-2.0 |
 | sha2 | 0.10.9 | MIT OR Apache-2.0 |
 | sha2 | 0.11.1 | MIT OR Apache-2.0 |
 | sharded-slab | 0.1.7 | MIT |
@@ -461,6 +482,7 @@ features enabled.
 | try-lock | 0.2.5 | MIT |
 | tungstenite | 0.28.0 | MIT OR Apache-2.0 |
 | tungstenite | 0.29.0 | MIT OR Apache-2.0 |
+| typed-path | 0.13.0 | MIT OR Apache-2.0 |
 | typenum | 1.20.1 | MIT OR Apache-2.0 |
 | unicase | 2.10.0 | MIT OR Apache-2.0 |
 | unicode-ident | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 |
@@ -516,10 +538,17 @@ features enabled.
 | zerofrom | 0.1.8 | Unicode-3.0 |
 | zerofrom-derive | 0.1.8 | Unicode-3.0 |
 | zeroize | 1.9.1 | Apache-2.0 OR MIT |
+| zeroize_derive | 1.5.0 | Apache-2.0 OR MIT |
 | zerotrie | 0.2.5 | Unicode-3.0 |
 | zerovec | 0.11.9 | Unicode-3.0 |
 | zerovec-derive | 0.11.7 | Unicode-3.0 |
+| zip | 9.8.1 | MIT |
+| zlib-rs | 0.6.8 | Zlib |
 | zmij | 1.0.23 | MIT |
+| zopfli | 0.8.4 | Apache-2.0 |
+| zstd | 0.14.4 | BSD-3-Clause |
+| zstd-safe | 8.3.0 | BSD-3-Clause |
+| zstd-sys | 2.1.3+zstd.1.5.7 | BSD-3-Clause AND BSD-2-Clause |
 | zune-core | 0.5.3 | MIT OR Apache-2.0 OR Zlib |
 | zune-inflate | 0.2.54 | MIT OR Apache-2.0 OR Zlib |
 | zune-jpeg | 0.5.15 | MIT OR Apache-2.0 OR Zlib |
@@ -984,7 +1013,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #### zlib License
 
 ```text
-Copyright (c) 2020 Matias Rodriguez.
+(C) 2024 Trifecta Tech Foundation 
 
 This software is provided &#x27;as-is&#x27;, without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -998,9 +1027,12 @@ freely, subject to the following restrictions:
    claim that you wrote the original software. If you use this software
    in a product, an acknowledgment in the product documentation would be
    appreciated but is not required.
+
 2. Altered source versions must be plainly marked as such, and must not be
    misrepresented as being the original software.
+
 3. This notice may not be removed or altered from any source distribution.
+
 ```
 
 #### BSD 2-Clause &quot;Simplified&quot; License
@@ -1052,6 +1084,131 @@ struc FGData
 endstruc
 
 cextern gaussian_sequence
+
+```
+
+#### Creative Commons Zero v1.0 Universal
+
+```text
+CC0 1.0 Universal
+
+    CREATIVE COMMONS CORPORATION IS NOT A LAW FIRM AND DOES NOT PROVIDE
+    LEGAL SERVICES. DISTRIBUTION OF THIS DOCUMENT DOES NOT CREATE AN
+    ATTORNEY-CLIENT RELATIONSHIP. CREATIVE COMMONS PROVIDES THIS
+    INFORMATION ON AN &quot;AS-IS&quot; BASIS. CREATIVE COMMONS MAKES NO WARRANTIES
+    REGARDING THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS
+    PROVIDED HEREUNDER, AND DISCLAIMS LIABILITY FOR DAMAGES RESULTING FROM
+    THE USE OF THIS DOCUMENT OR THE INFORMATION OR WORKS PROVIDED
+    HEREUNDER.
+
+Statement of Purpose
+
+The laws of most jurisdictions throughout the world automatically confer
+exclusive Copyright and Related Rights (defined below) upon the creator
+and subsequent owner(s) (each and all, an &quot;owner&quot;) of an original work of
+authorship and/or a database (each, a &quot;Work&quot;).
+
+Certain owners wish to permanently relinquish those rights to a Work for
+the purpose of contributing to a commons of creative, cultural and
+scientific works (&quot;Commons&quot;) that the public can reliably and without fear
+of later claims of infringement build upon, modify, incorporate in other
+works, reuse and redistribute as freely as possible in any form whatsoever
+and for any purposes, including without limitation commercial purposes.
+These owners may contribute to the Commons to promote the ideal of a free
+culture and the further production of creative, cultural and scientific
+works, or to gain reputation or greater distribution for their Work in
+part through the use and efforts of others.
+
+For these and/or other purposes and motivations, and without any
+expectation of additional consideration or compensation, the person
+associating CC0 with a Work (the &quot;Affirmer&quot;), to the extent that he or she
+is an owner of Copyright and Related Rights in the Work, voluntarily
+elects to apply CC0 to the Work and publicly distribute the Work under its
+terms, with knowledge of his or her Copyright and Related Rights in the
+Work and the meaning and intended legal effect of CC0 on those rights.
+
+1. Copyright and Related Rights. A Work made available under CC0 may be
+   protected by copyright and related or neighboring rights (&quot;Copyright and
+   Related Rights&quot;). Copyright and Related Rights include, but are not
+   limited to, the following:
+
+i. the right to reproduce, adapt, distribute, perform, display,
+communicate, and translate a Work;
+ii. moral rights retained by the original author(s) and/or performer(s);
+iii. publicity and privacy rights pertaining to a person&#x27;s image or
+likeness depicted in a Work;
+iv. rights protecting against unfair competition in regards to a Work,
+subject to the limitations in paragraph 4(a), below;
+v. rights protecting the extraction, dissemination, use and reuse of data
+in a Work;
+vi. database rights (such as those arising under Directive 96/9/EC of the
+European Parliament and of the Council of 11 March 1996 on the legal
+protection of databases, and under any national implementation
+thereof, including any amended or successor version of such
+directive); and
+vii. other similar, equivalent or corresponding rights throughout the
+world based on applicable law or treaty, and any national
+implementations thereof.
+
+2. Waiver. To the greatest extent permitted by, but not in contravention
+   of, applicable law, Affirmer hereby overtly, fully, permanently,
+   irrevocably and unconditionally waives, abandons, and surrenders all of
+   Affirmer&#x27;s Copyright and Related Rights and associated claims and causes
+   of action, whether now known or unknown (including existing as well as
+   future claims and causes of action), in the Work (i) in all territories
+   worldwide, (ii) for the maximum duration provided by applicable law or
+   treaty (including future time extensions), (iii) in any current or future
+   medium and for any number of copies, and (iv) for any purpose whatsoever,
+   including without limitation commercial, advertising or promotional
+   purposes (the &quot;Waiver&quot;). Affirmer makes the Waiver for the benefit of each
+   member of the public at large and to the detriment of Affirmer&#x27;s heirs and
+   successors, fully intending that such Waiver shall not be subject to
+   revocation, rescission, cancellation, termination, or any other legal or
+   equitable action to disrupt the quiet enjoyment of the Work by the public
+   as contemplated by Affirmer&#x27;s express Statement of Purpose.
+
+3. Public License Fallback. Should any part of the Waiver for any reason
+   be judged legally invalid or ineffective under applicable law, then the
+   Waiver shall be preserved to the maximum extent permitted taking into
+   account Affirmer&#x27;s express Statement of Purpose. In addition, to the
+   extent the Waiver is so judged Affirmer hereby grants to each affected
+   person a royalty-free, non transferable, non sublicensable, non exclusive,
+   irrevocable and unconditional license to exercise Affirmer&#x27;s Copyright and
+   Related Rights in the Work (i) in all territories worldwide, (ii) for the
+   maximum duration provided by applicable law or treaty (including future
+   time extensions), (iii) in any current or future medium and for any number
+   of copies, and (iv) for any purpose whatsoever, including without
+   limitation commercial, advertising or promotional purposes (the
+   &quot;License&quot;). The License shall be deemed effective as of the date CC0 was
+   applied by Affirmer to the Work. Should any part of the License for any
+   reason be judged legally invalid or ineffective under applicable law, such
+   partial invalidity or ineffectiveness shall not invalidate the remainder
+   of the License, and in such case Affirmer hereby affirms that he or she
+   will not (i) exercise any of his or her remaining Copyright and Related
+   Rights in the Work or (ii) assert any associated claims and causes of
+   action with respect to the Work, in either case contrary to Affirmer&#x27;s
+   express Statement of Purpose.
+
+4. Limitations and Disclaimers.
+
+a. No trademark or patent rights held by Affirmer are waived, abandoned,
+surrendered, licensed or otherwise affected by this document.
+b. Affirmer offers the Work as-is and makes no representations or
+warranties of any kind concerning the Work, express, implied,
+statutory or otherwise, including without limitation warranties of
+title, merchantability, fitness for a particular purpose, non
+infringement, or the absence of latent or other defects, accuracy, or
+the present or absence of errors, whether or not discoverable, all to
+the greatest extent permissible under applicable law.
+c. Affirmer disclaims responsibility for clearing rights of other persons
+that may apply to the Work or any use thereof, including without
+limitation any person&#x27;s Copyright and Related Rights in the Work.
+Further, Affirmer disclaims responsibility for obtaining any necessary
+consents, permissions or other rights required for any use of the
+Work.
+d. Affirmer understands and acknowledges that Creative Commons is not a
+party to this document and has no duty or obligation with respect to
+this CC0 or use of the Work.
 
 ```
 
@@ -1498,6 +1655,60 @@ Exhibit B - &quot;Incompatible With Secondary Licenses&quot; Notice
 
   This Source Code Form is &quot;Incompatible With Secondary Licenses&quot;, as
   defined by the Mozilla Public License, v. 2.0.
+
+```
+
+#### bzip2 and libbzip2 License v1.0.6
+
+```text
+
+--------------------------------------------------------------------------
+
+The original program, &quot;bzip2&quot;, the associated library &quot;libbzip2&quot;, and all
+documentation, are
+
+Copyright (C) 1996-2021 Julian R Seward.
+Copyright (C) 2019-2020 Federico Mena Quintero
+Copyright (C) 2021 Micah Snyder
+
+This Rust translation, &quot;libbzip2-rs&quot; is a derived work based on &quot;bzip2&quot; and
+&quot;libbzip2&quot;, and is Copyright (C) 2024-2025 Trifecta Tech Foundation and contributors
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+
+2. The origin of this software must not be misrepresented; you must
+   not claim that you wrote the original software.  If you use this
+   software in a product, an acknowledgment in the product
+   documentation would be appreciated but is not required.
+
+3. Altered source versions must be plainly marked as such, and must
+   not be misrepresented as being the original software.
+
+4. The name of the author may not be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR &#x60;&#x60;AS IS&#x27;&#x27; AND ANY EXPRESS
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Julian Seward, jseward@acm.org
+bzip2/libbzip2 version 1.1.0 of 6 September 2010
+
+--------------------------------------------------------------------------
 
 ```
 
