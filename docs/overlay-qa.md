@@ -46,15 +46,18 @@ across all milestones is in `docs/manual-qa.md`.
 | 35 | All twelve overlays carry the early `html, body` overflow guard before any FX rule or iframe, so a refresh shows no transient scrollbars | ☑ |
 | 36 | FX carriers report zero scrollbar gutters in a 1000x700 tab even though the `-360px` overscan reports `scrollWidth: 1360` and `scrollHeight: 738` | ☑ |
 | 37 | Roster overlays use the wider team wash and bottom glow, a small core role badge fully inside the portrait, divider-style vertical rails outside the card row, a taller core plate with smaller pronouns, no name-plate code chip, and no long-name overflow | ☑ |
+| 38 | Roster overlays remove the side rails, use proportional substitute hexagons, order both rows Damage, Tank, Support, and use a softer side wash with a full-width bottom glow | ☑ |
 
 The current design language, the per-overlay playbook and the motion rules are
 in [`docs/overlay-design-language.md`](overlay-design-language.md). The
 post-v1 evidence for these checks is in `docs/manual-qa.md` §7 and the repeatable
 steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74, A75, A76, A77,
-A78 and A79. A75 and A76 remain historical records; A77 supersedes their
+A78, A79 and A80. A75 and A76 remain historical records; A77 supersedes their
 hexagons-hidden claim and its refresh caveat. A79 supersedes the earlier roster
 experiment that put the reduced hexagon abbreviation, then the team tag or
-country code, in the name plate; that idea is deferred to the backlog.
+country code, in the name plate; that idea remains deferred to the backlog. A80
+supersedes the A79 side rails and the side-anchored glow; the owner rejected both
+after review and asked for the full-width bottom glow instead.
 
 ## Automated pre-check
 

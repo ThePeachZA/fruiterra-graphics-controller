@@ -1985,17 +1985,22 @@ a QA row, a runbook section and a source-text test where needed.
   role chips, a per-card outer-edge wash, and reuse the cut-out locator where a
   transparent portrait is supplied. Keep the current role filtering exactly as
   it is: casters, hosts and interviewers with their guest card.
-- **Team roster home and away - role badges, wash and rails done in A79.** The
-  home wash enters from the left edge and the away wash from the right, both
-  760px wide with a subtle bottom glow. The core role badge is a 56×56 hexagon
-  fully inside the portrait; the substitute badge is 58×58 inside a 72×76
-  portrait. Divider-style vertical rails sit outside the 1500px core row. The
-  core plate is 126px with smaller pronouns. A hexagon separator still sits
-  between core and substitutes, and the table rows stay rectangular and
-  readable. Keep the flexible card widths from A61. The original avatar-cell
-  abbreviation is not shipped in this iteration: the name plate is plain after
-  the owner scrapped both the initials and the country/tag experiment. See
-  decision D14 and QA gate A79.
+- **Team roster home and away - A79 identity, refined by A80.** The home wash
+  enters from the left edge and the away wash from the right, both 760px wide.
+  A80 softened the wash alpha to 0.12 and replaced the side-anchored radial glow
+  with one 1920px-wide linear glow across the whole bottom of the frame at alpha
+  0.14. The core role badge remains a 56×56 hexagon fully inside the portrait
+  with a 40×40 icon. The substitute badge is now 46×54 with a 34×34 icon inside
+  the 72×76 portrait, fixing the squashed look of the earlier 58×58 badge.
+  Divider-style vertical rails were tried in A79 and removed in A80; do not
+  reintroduce `.core-stage` or `.core-rail`. Both core and substitute rows use
+  the existing role values in Damage, Tank, Support order with a stable tiebreak
+  inside each role. The core plate is 126px with smaller pronouns. A hexagon
+  separator still sits between core and substitutes, and the rows stay
+  rectangular and readable. Keep the flexible card widths from A61. The original
+  avatar-cell abbreviation is not shipped: the name plate is plain after the
+  owner scrapped both the initials and the country/tag experiment. See decisions
+  D14 and D15 and QA gates A79 and A80.
 - **Timer.** Add a hexagon plate and keep tabular figures. Do not add
   per-frame JavaScript, an FX layer or a background plate. The owner's
   exclusion is absolute.
@@ -2014,8 +2019,11 @@ a QA row, a runbook section and a source-text test where needed.
 | Neutral ink on very light artwork | `--fgc-ink-on-art` always sits on `--fgc-plate-dark`, never directly on the art. Planned: check both themes on every new text-over-art treatment. |
 | Hexagon clipping cuts the corners off a logo | Badges use one inscribed band at 100×115 and 60×68. Planned: inspect any new clipped asset at both sizes before rollout. |
 | Table readability | Hexagons are forbidden on table rows and map thumbnails; the roster cards keep their existing widths. Planned: keep the rectangular table in map pool and rosters. |
-| A core role badge crosses back into the name plate | Guarded by A79: the badge is 56×56 at `bottom: 16px`, the plate is 126px, and the source-text plus browser probes require a negative overlap. The old 76px badge at `bottom: -36px` is forbidden. |
-| Divider-style rails invade the card row | Guarded by A79: rails are siblings outside `.core-players` inside `.core-stage`; browser geometry requires them at x = 118 and x = 1782 outside the 1500px row. |
+| A core role badge crosses back into the name plate | Guarded by A79 and retained in A80: the badge is 56×56 at `bottom: 16px`, the plate is 126px, and the source-text plus browser probes require a negative overlap. The old 76px badge at `bottom: -36px` is forbidden. |
+| A substitute hexagon looks squashed | Fixed by A80: the badge is 46×54 with a 34×34 icon and an 8px inset inside the 72×76 portrait. Source-text assertions require all four dimensions; the browser probe measured a 0.852 width/height ratio and 0px centre offset. |
+| Divider-style rails return around the card row | Removed by A80 after the A79 experiment. No `.core-stage` or `.core-rail` remains; source-text assertions forbid all four rail selectors, and the browser probe found zero rail nodes. |
+| Roster role order drifts away from the game's role list | Fixed by A80: `ROLE_RANK` orders damage, tank, support; `sortPlayersByRole()` applies a stable index tiebreak to both filtered rows, and source-text plus browser probes require DAMAGE, TANK, SUPPORT in both rows. |
+| The bottom glow is side-anchored again | Fixed by A80: `::after` is 1920px wide, centred with `translateX(-50%)`, and paints `linear-gradient(0deg, var(--fgc-glow), transparent 100%)`. Source-text assertions forbid `radial-gradient`, and browser probes measured the same full-width glow on both sides. |
 | Country flag or team tag code returns as a half-finished identity chip | Deferred by the owner in A79. No `player-code` or `teamCode` remains; source-text assertions forbid them, and a real implementation needs a new payload field with its own decision and QA gate. |
 | Source-text tests break on unrelated markup edits | The equality test narrows its extraction to the sentinel block and asserts specific rules. When an unrelated edit breaks it, fix the copy or narrow the assertion; do not delete the equality check. |
 | Copy-paste drift between duplicated blocks | Sentinel comments and byte comparison across exactly eight files, with the file list asserted so removing a carrier is deliberate. |
@@ -2071,3 +2079,24 @@ fmt, clippy, workspace tests and `dx build --desktop` passed. Screenshots were
 captured but could not be reviewed by an observer because of an OpenCode Go
 usage limit, so visual sign-off at 1920x1080 and browser-emulated reduced
 motion remain outstanding owner checks.
+
+A80 supersedes the A79 rails and side-anchored glow. The owner asked to remove
+the left and right decorations, shrink the substitute role icon so its hexagon
+is no longer squashed, keep both rows in Damage, Tank, Support order, and make
+the gradient softer and subtler with the glow across the whole bottom of the
+window rather than following home or away. Both roster files now use wash alpha
+0.12 and glow alpha 0.14, keep the 760px side-origin wash at 90deg or 270deg,
+and paint a 1920px centred linear-gradient glow from the bottom with no radial
+gradient. The core badge stays 56×56 with a 40×40 icon at 16px inset; the
+substitute badge is 46×54 with a 34×34 icon, 8px inset and zero centre offset.
+`ROLE_RANK` and `sortPlayersByRole()` sort core and substitute lists stably by
+damage, tank and support, with unknown roles grouped with damage and original
+order preserved inside each group. Source-text assertions forbid `.core-stage`,
+`.core-rail` and `radial-gradient(` and require the new helper. Fresh 1920×1080
+probe tabs with scrambled player input proved the rendered order on both sides,
+the new wash and full-width glow, centred badges with no rails, long-name
+ellipsis with full `title`, separator order, zero gutters, hidden overflow and
+empty consoles. `git diff --check`, fmt, fmt check, clippy, workspace tests and
+`dx build --desktop` passed; the overlay suite still contains 36 tests. Home and
+away screenshots were captured, but the observer subagent again failed with an
+OpenCode Go usage limit, so OBS visual sign-off remains an owner check.

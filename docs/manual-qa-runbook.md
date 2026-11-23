@@ -5241,3 +5241,119 @@ country/tag experiment is gone; and the wider wash and bottom glow remain. All
 static gates and real DOM probes passed. Visual confirmation in OBS at
 1920×1080 remains an owner check because the captured screenshots could not be
 reviewed in this session.
+
+### A80 - Roster role order, proportion and full-width bottom glow
+
+**Covers:** the owner's next review of the paired rosters after A79. The owner
+said: "remove the left/right decorations" and "fix squished substitute hexagon
+by shrinking the role icon". They added: "both core and sub rows must always
+order Damage, Tank, Support". When asked about the gradient, the owner answered:
+"softer and subtler, but glow across the whole bottom of the window, not
+left/right by home/away". A80 supersedes only the A79 side rails and the
+side-anchored radial glow. It keeps the A79 small core badge, taller plate,
+smaller pronouns, absence of the code chip, wash width, separator and zero-gutter
+guards. It is one paired mechanism across `team-roster-home.html` and
+`team-roster-away.html`.
+
+**Steps:**
+
+1. Run `dx build --desktop`, stop the old `fruiterra-gc` process and restart the
+   app with `$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS =
+   '--remote-debugging-port=9222'`. The verified run reported the overlay server
+   on `127.0.0.1:3001`, status `ok`, version `1.0.0` and 2 configured overlays.
+2. Open fresh tabs for `team-roster-home.html?probe=<stamp>home` and
+   `team-roster-away.html?probe=<stamp>away`. Never reuse an A79 URL; a cached
+   tab masks the changed file.
+3. Send a `teamRoster` payload with `position: 'core'` and `position: 'sub'` on
+   every player. Deliberately scramble the input order and include several
+   Damage, Tank and Support players in both rows. Use long names, a team colour,
+   `teamColorsEnabled: true`, `showPlayerPortraits: false` and role-icon data
+   URLs. The away proof needed a second payload because the first populated only
+   `teamAPlayers`.
+4. After `document.fonts.ready`, read the player-name nodes in DOM order. Both
+   core and substitute rows must read Damage, Damage, Tank, Tank, Support in the
+   verified fixture. The implementation uses `ROLE_RANK` with damage 0, tank 1,
+   support 2, maps unknown roles to damage, and breaks ties by original index so
+   the sort is stable. The application model uses lowercase `tank`, `damage` and
+   `support`; the visible labels are `Tank`, `Damage` and `Support`.
+5. Read `.core-stage`, `.core-rail` and `.core-rail__hex`. All three counts must
+   be zero. `.core-players` must again be the 1500×600 flex row from A61, with
+   no wrapper and no geometry change to the cards.
+6. Read the substitute portrait and badge. The portrait stays 72×76. The badge
+   is now 46×54 at an 8px bottom inset with zero horizontal centre offset. Its
+   image is 34×34. The ratio is 0.852, so the hexagon is proportional rather
+   than vertically squashed. The 58×58 badge with a 44×44 image is forbidden.
+7. Read the core badge and plate again. The core badge stays 56×56 with a 40×40
+   icon, 16px above the plate, and the plate stays 126px with `20px 24px`
+   padding. Core pronouns are 18px/22px; substitute pronouns are 14px/16px. No
+   `.player-code` exists.
+8. Read the wash. `.roster-wash` stays 760px and keeps the home 90deg and away
+   270deg side gradients, but the default colours are now
+   `--fgc-wash: rgb(255 122 26 / 12%)` and
+   `--fgc-glow: rgb(255 122 26 / 12%)`. With team colours on, the JS sets
+   `rgba(r, g, b, 0.12)` and `rgba(r, g, b, 0.14)`. The `::after` glow is now
+   1920px wide, centred with `left: 50%` and `translateX(-50%)`, 320px high, at
+   `bottom: -120px`, with `blur(14px)` and
+   `linear-gradient(0deg, var(--fgc-glow), transparent 100%)`. No radial gradient
+   and no side-specific `::after` rule may remain.
+9. Read long names. `fitRosterText()` still floors at core 18px and sub 14px,
+   then uses ellipsis and a full `title`. In the verified run the long core name
+   fitted to the 18px floor with `clientWidth: 236` and `scrollWidth: 552`.
+10. Read the separator order, gutters and console. Core bottom must be at or
+    above separator top, separator bottom at or above substitute top,
+    `innerWidth - clientWidth` and `innerHeight - clientHeight` must be zero,
+    html and body overflow must both compute `hidden`, and the console must be
+    empty.
+11. Run `git diff --check`, `cargo fmt --all`, `cargo fmt --all -- --check`,
+    `cargo clippy --workspace --all-targets -- -D warnings`,
+    `cargo test --workspace`, and `dx build --desktop`. The overlay suite still
+    contains 36 tests, including the byte-equality guard and the A80
+    source-text assertions.
+
+**Gotchas:**
+
+- Role order is a presentation sort inside each row. Do not mutate the incoming
+  payload or add a wire field; the app model already knows the three roles.
+- Unknown roles are intentionally ranked with Damage. This keeps every player
+  visible and deterministic instead of dropping or isolating them.
+- The side rails were an A79 experiment. A80 removes them completely; do not
+  leave a hidden wrapper or dead CSS behind.
+- The glow is centred on the whole 1920px window, not the 1500px content column.
+  A width of 1500px or a side-anchored radial gradient is a regression.
+- The substitute badge is 46×54, not a 46×46 square. The 54px height matches the
+  72×76 portrait inset and keeps the cell proportion close to the shared mask.
+- `document.fonts.ready` is required before name measurement. Avoid
+  `requestAnimationFrame`, which hung in the in-app browser.
+- Screenshot focus and capture must be separate browser calls. The observer
+  subagent failed again with an OpenCode Go usage limit, so the captured images
+  could not be visually reviewed. Record that limitation and leave OBS sign-off
+  to the owner.
+
+**Evidence:** home tab
+`tab_49829736-6cb1-4392-b6ed-d5dc678f8f41` with probe
+`1795473774467home` reported side `home`, wash at x = 0 with
+`linear-gradient(90deg, rgba(62, 207, 142, 0.12), transparent 82%)`, full-width
+glow with `linear-gradient(0deg, rgba(62, 207, 142, 0.14), transparent 100%)`,
+header `rgb(62, 207, 142)`, core names `DAMAGE CORE ONE ALEXANDRIA FITZGERALD
+MONTGOMERY`, `DAMAGE CORE TWO`, `TANK CORE ONE`, `TANK CORE TWO` and `SUPPORT
+CORE ONE`, substitute names `DAMAGE SUB ONE`, `DAMAGE SUB TWO`, `TANK SUB ONE`
+and `SUPPORT SUB ONE`, a long core name at the 18px floor with 236/552, core
+badge 56×56, plate 126, pronouns 18px, substitute badge 46×54 with 34px icon,
+inset 8, centre offset 0, zero stage/rail/hex nodes, `orderOk: true`, gutters
+0/0, hidden overflow and an empty console. Away tab
+`tab_8c6523f8-0880-4827-bba5-9bcedbaac459` with probe
+`1795473774467away` reported side `away`, wash at x = 1160 with the mirrored
+90/270 gradient, full-width glow with
+`linear-gradient(0deg, rgba(255, 92, 122, 0.14), transparent 100%)`, header
+`rgb(255, 92, 122)`, the same sorted names and geometry, `orderOk: true`,
+gutters 0/0, hidden overflow and an empty console. Screenshots were saved at
+`C:\Users\Cameron\AppData\Local\Temp\opencode-browser-o9d97V\0\screenshot.png`
+and
+`C:\Users\Cameron\AppData\Local\Temp\opencode-browser-wpa6Rl\0\screenshot.png`.
+
+**Result: Pass - assistant 2026-11-23.** Both rosters now sort deterministically,
+frame the cards without extra side decoration, use a proportional substitute
+hexagon and paint a softer wash with one window-wide bottom glow. All static
+gates and real DOM probes passed. Visual confirmation in OBS at 1920×1080
+remains an owner check because the captured screenshots could not be reviewed in
+this session.

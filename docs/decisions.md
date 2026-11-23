@@ -1596,3 +1596,32 @@ by the existing byte-equality test. A79 verified the new geometry on fresh
 colour-off states, and empty consoles. Visual sign-off in OBS remains an owner
 check because the captured screenshots could not be reviewed by an observer in
 this session.
+
+### D15 - Roster roles are ordered and the frame is calmer
+
+**Decision.** The paired home and away rosters no longer carry the A79
+divider-style side rails. Both core and substitute rows are ordered Damage, Tank,
+Support regardless of payload order, with a stable sort inside each role. The
+substitute role hexagon is 46×54 with a 34×34 icon, replacing the 58×58 badge
+and 44×44 icon that looked squashed. The 56×56 core badge keeps its 40×40 icon
+and `bottom: 16px` inset. The side wash is softer, using alpha 0.12 by default
+and for live team colours, and the glow uses alpha 0.14. The glow is a single
+1920px-wide `::after` layer centred across the full bottom of the frame instead
+of a radial gradient anchored to the home or away side. The team wash still
+enters from the outer edge on each side, so home/away mirroring survives in the
+subtle linear wash only. No new payload field, role enum, asset or message type
+is added; the order comes from the existing lowercase role values.
+
+**Reason.** The owner said "We also haven't adjusted the gradient yet" and then
+clarified: "softer and subtler, but glow across the whole bottom of the window,
+not left/right by home/away". The same review asked to "remove the left/right
+decorations", to "fix the squished substitute hexagon by shrinking the role
+icon", and said "both core and sub rows must always order Damage, Tank,
+Support". A80 is one paired mechanism across both roster files, guarded by the
+byte-equality test. Real 1920×1080 DOM probes on fresh home and away tabs proved
+the role order, the new substitute geometry, zero rail nodes, the softened
+team-colour alphas, the mirrored side wash, the identical full-width bottom
+glow, ellipsized long names, separator order, zero gutters and empty consoles.
+Screenshots were captured, but vision review was unavailable because the
+observer subagent hit the OpenCode Go usage limit, so OBS visual sign-off
+remains an owner check.

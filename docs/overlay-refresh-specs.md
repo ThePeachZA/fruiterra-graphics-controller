@@ -1608,3 +1608,97 @@ A79's real-browser evidence is in `docs/manual-qa.md` row A79, with repeatable
 steps in `docs/manual-qa-runbook.md` section A79. Screenshots were captured,
 but observer review failed because of an OpenCode Go usage limit, so OBS
 visual sign-off at 1920×1080 remains an owner check.
+
+## 15. Roster overlays - role order, proportion and full-width glow (A80)
+
+### 15.1 Purpose and scope
+
+A80 continues the paired `team-roster-home.html` and `team-roster-away.html`
+refresh. The owner asked to remove the left and right decorations, fix the
+squashed substitute hexagon by shrinking the role icon, force both rows into
+Damage, Tank, Support order, and soften the gradient so the glow spans the whole
+bottom of the window rather than following the home or away side. A80 supersedes
+only the A79 side rails and the side-anchored radial glow. It keeps the A79 core
+badge, taller plate, smaller pronouns, removal of the code chip, separator and
+zero-gutter contract. The two files remain byte-identical apart from `<title>`
+and `TEAM_SIDE`. No new asset, font, message type, payload field, FX sentinel or
+filename is introduced.
+
+### 15.2 Surface plan
+
+The `.core-stage` wrapper and both `.core-rail` elements are gone.
+`.core-players` is again the direct 1500×600 flex row with a 20px gap; the
+A61 flexible card widths and the 284px substitute cards are unchanged. The
+`.roster-separator` remains between core and substitutes.
+
+The core badge stays at 56×56 with a 40×40 image, `left: 50%`, `bottom: 16px`
+inside the 740×474 `.hero-image`, hexagon clipped and hidden by `:empty`. The
+126px `.player-info` keeps `padding: 20px 24px`, 18px/22px pronouns, ellipsis
+and the full-value `title`. Substitute cards stay 76px high. Their `.sub-portrait`
+is 72×76; the badge is now 46×54 with a 34×34 image, `bottom: 8px`, zero
+centre offset and the shared hexagon clip. The old 58×58 badge and 44×44 image
+are forbidden.
+
+The `.roster-wash` stays 760px wide and side-anchored: home uses 90deg from the
+left, away uses 270deg from the right. Its alpha is softer. The defaults are
+`--fgc-wash: rgb(255 122 26 / 12%)` and
+`--fgc-glow: rgb(255 122 26 / 12%)`. When team colours are enabled the JS sets
+`--fgc-wash` to `rgba(r, g, b, 0.12)` and `--fgc-glow` to
+`rgba(r, g, b, 0.14)`, and removes both properties when they are disabled.
+`.roster-wash::after` spans the whole 1920px canvas with `left: 50%` and
+`transform: translateX(-50%)`, height 320px, `bottom: -120px`,
+`filter: blur(14px)` and `linear-gradient(0deg, var(--fgc-glow), transparent
+100%)`. Side-specific radial glows are removed.
+
+### 15.3 State matrix
+
+| State | Required result |
+|---|---|
+| Scrambled core and substitute input | Both rows render Damage, then Tank, then Support, with stable order inside each role. |
+| Unknown role | Ranked with Damage so the player remains visible in a deterministic slot. |
+| Team colours on | Header uses the team colour; wash alpha is 0.12 and glow alpha is 0.14. |
+| Team colours off | Inline wash and glow properties are removed; the orange 12% defaults return. |
+| Role icon present | Core badge shows a 40px icon; substitute badge shows a 34px icon in the 46×54 hexagon. |
+| Role icon absent | `:empty` hides the badge. |
+| Long name | Font shrinks to the core 18px or substitute 14px floor, then ellipsizes; `title` keeps the full value. |
+| No substitutes | Separator and substitute strip remain in place with no rows added. |
+| Fresh or reloaded source | A80 styling is intrinsic HTML/CSS/JS; A77 init replay and A78 overflow guard remain in force. |
+
+### 15.4 JS helpers
+
+`escapeHtml()`, `fitText()`, `fitRosterText()` and `getRoleIcon()` are unchanged.
+A80 adds `ROLE_RANK` with `damage: 0`, `tank: 1`, `support: 2`, `roleRank(role)`
+and `sortPlayersByRole(players)`. `roleRank()` lowercases and trims the role,
+returns the mapped rank or 0 for unknown and empty roles, and
+`sortPlayersByRole()` copies the array, attaches the original index and sorts by
+rank then index. `updateRoster()` calls the sorter on both filtered lists before
+creating cards. The incoming payload is not mutated and no new field is read.
+The application model in `crates/core/src/model.rs` stores `tank`, `damage` and
+`support`; the visible labels are `Tank`, `Damage` and `Support`.
+
+### 15.5 CDP-verifiable assertions
+
+On fresh home and away probe tabs at the 1920×1080 design canvas:
+
+- Both `#core-players` and `#substitutes` expose names in Damage, Damage, Tank,
+  Tank, Support order for the scrambled A80 fixture.
+- `.core-stage`, `.core-rail` and `.core-rail__hex` counts are all zero, and
+  `.core-players` measures 1500×600.
+- `.player-card-sub .role-badge` measures 46×54 with an 8px inset and a 34×34
+  image; its centre offset is 0. Core badge remains 56×56 with a 40×40 image.
+- `.roster-wash` remains 760px; home and away keep their 90deg and 270deg side
+  gradients with alpha 0.12.
+- `.roster-wash::after` measures 1920×320, is centred on the window, and paints
+  `linear-gradient(0deg, rgba(<team>, 0.14), rgba(0, 0, 0, 0) 100%)`.
+- No `radial-gradient`, `.core-rail`, 58×58 substitute badge or 44×44 substitute
+  image remains.
+- Long names report ellipsis and a full `title`; the verified core name reaches
+  the 18px floor with 236/552.
+- Core bottom <= separator top and separator bottom <= substitutes top.
+- `innerWidth - clientWidth` and `innerHeight - clientHeight` are zero; html and
+  body overflow both compute `hidden`; console is empty.
+
+A80's real-browser evidence is in `docs/manual-qa.md` row A80, with repeatable
+steps in `docs/manual-qa-runbook.md` section A80. Screenshots were captured, but
+the observer subagent again failed with an OpenCode Go usage limit, so OBS visual
+sign-off at 1920×1080 remains an owner check.
