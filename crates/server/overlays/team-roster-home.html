@@ -112,6 +112,13 @@
       overflow: hidden;
     }
 
+    .overlay {
+      --fgc-team: var(--fgc-accent);
+      --fgc-wash: rgb(255 122 26 / 16%);
+      --fgc-glow: rgb(255 122 26 / 20%);
+      --fgc-hex-cell: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    }
+
     /* === ANIMATIONS === */
     @keyframes fadeSlideDown {
       from {
@@ -142,8 +149,78 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      position: relative;
+      z-index: 1;
       padding: 100px 200px;
       row-gap: 25px;
+    }
+
+    .roster-wash {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 760px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .roster-wash::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -120px;
+      height: 320px;
+      filter: blur(14px);
+    }
+
+    .overlay[data-roster-side="home"] .roster-wash {
+      left: 0;
+      background: linear-gradient(90deg, var(--fgc-wash), transparent 82%);
+    }
+
+    .overlay[data-roster-side="home"] .roster-wash::after {
+      background: radial-gradient(58% 100% at 22% 100%, var(--fgc-glow), transparent 72%);
+    }
+
+    .overlay[data-roster-side="away"] .roster-wash {
+      right: 0;
+      background: linear-gradient(270deg, var(--fgc-wash), transparent 82%);
+    }
+
+    .overlay[data-roster-side="away"] .roster-wash::after {
+      background: radial-gradient(58% 100% at 78% 100%, var(--fgc-glow), transparent 72%);
+    }
+
+    .roster-separator {
+      width: 1500px;
+      height: 20px;
+      flex-shrink: 0;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .roster-separator::before,
+    .roster-separator::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: calc(50% - 32px);
+      height: 1px;
+      background: var(--fgc-line);
+      transform: translateY(-50%);
+    }
+
+    .roster-separator::before { left: 0; }
+    .roster-separator::after { right: 0; }
+
+    .roster-separator__hex {
+      width: 18px;
+      height: 20px;
+      background: var(--fgc-line-strong);
+      clip-path: var(--fgc-hex-cell);
     }
 
     /* === TEAM HEADER === */
@@ -187,16 +264,57 @@
     }
 
     /* === CORE PLAYERS === */
-    .core-players {
+    .core-stage {
       width: 1500px;
+      height: 600px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .core-players {
+      width: 100%;
+      height: 100%;
       display: flex;
       gap: 20px;
+    }
+
+    .core-rail {
+      position: absolute;
+      top: 40px;
+      bottom: 40px;
+      width: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .core-rail::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: var(--fgc-line);
+      transform: translateX(-50%);
+    }
+
+    .core-rail--left { left: -92px; }
+    .core-rail--right { right: -92px; }
+
+    .core-rail__hex {
+      position: relative;
+      width: 18px;
+      height: 20px;
+      background: var(--fgc-line-strong);
+      clip-path: var(--fgc-hex-cell);
     }
 
     /* === SUBSTITUTES === */
     .substitutes {
       width: 1500px;
-      height: 60px;
+      height: 76px;
       display: flex;
       gap: 20px;
       justify-content: flex-end;
@@ -222,25 +340,31 @@
 
     .player-card-core .role-badge {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 55px;
-      height: 55px;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      width: 56px;
+      height: 56px;
       background: var(--fgc-surface);
-      border-end-start-radius: 6px;
-      z-index: 1;
+      clip-path: var(--fgc-hex-cell);
+      z-index: 3;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
+    .player-card-core .role-badge:empty {
+      display: none;
+    }
+
     .player-card-core .role-badge img {
-      width: 46px;
-      height: 46px;
+      width: 40px;
+      height: 40px;
       object-fit: contain;
     }
 
     .player-card-core .hero-image {
+      position: relative;
       width: 100%;
       flex: 1;
       background-size: cover;
@@ -250,11 +374,13 @@
     }
 
     .player-card-core .player-info {
-      height: 106px;
-      padding: 16px 24px;
+      height: 126px;
+      padding: 20px 24px;
       box-sizing: border-box;
+      position: relative;
       display: flex;
       flex-direction: column;
+      justify-content: center;
       gap: 4px;
       overflow: hidden;
     }
@@ -267,12 +393,15 @@
       color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     .player-card-core .player-pronouns {
       font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
-      font-size: 24px;
-      line-height: 28px;
+      font-size: 18px;
+      line-height: 22px;
       color: var(--fgc-text-muted);
       text-transform: uppercase;
       text-align: center;
@@ -286,24 +415,42 @@
       border-radius: 6px;
       overflow: hidden;
       display: flex;
-      align-items: center;
+      align-items: stretch;
       flex-shrink: 0;
+      position: relative;
       clip-path: inset(0 round 6px);
     }
 
-    .player-card-sub .role-badge {
-      width: 55px;
+    .player-card-sub .sub-portrait {
+      position: relative;
+      width: 72px;
       height: 100%;
-      background: var(--fgc-surface);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background: var(--fgc-surface-muted);
       flex-shrink: 0;
     }
 
+    .player-card-sub .role-badge {
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      transform: translateX(-50%);
+      width: 58px;
+      height: 58px;
+      background: var(--fgc-surface);
+      clip-path: var(--fgc-hex-cell);
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .player-card-sub .role-badge:empty {
+      display: none;
+    }
+
     .player-card-sub .role-badge img {
-      width: 46px;
-      height: 46px;
+      width: 44px;
+      height: 44px;
       object-fit: contain;
     }
 
@@ -311,7 +458,8 @@
       flex: 1;
       min-width: 0;
       height: 100%;
-      padding: 0 16px;
+      padding: 8px 20px 8px 12px;
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -328,12 +476,15 @@
       color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
     .player-card-sub .player-pronouns {
       font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
-      font-size: 18px;
-      line-height: 20px;
+      font-size: 14px;
+      line-height: 16px;
       color: var(--fgc-text-muted);
       text-transform: uppercase;
       text-align: center;
@@ -461,6 +612,7 @@
   <div class="fgc-bg" aria-hidden="true"></div>
   <div class="fgc-fx" aria-hidden="true"></div>
   <div class="overlay">
+    <div class="roster-wash" aria-hidden="true"></div>
     <div class="main-container">
       <!-- Team Header -->
       <div class="team-header" id="team-header" style="opacity: 0;">
@@ -469,7 +621,20 @@
       </div>
 
       <!-- Core Players -->
-      <div class="core-players" id="core-players" style="opacity: 0;"></div>
+      <div class="core-stage">
+        <div class="core-rail core-rail--left" aria-hidden="true">
+          <div class="core-rail__hex"></div>
+        </div>
+        <div class="core-players" id="core-players" style="opacity: 0;"></div>
+        <div class="core-rail core-rail--right" aria-hidden="true">
+          <div class="core-rail__hex"></div>
+        </div>
+      </div>
+
+      <!-- Hexagon separator, outside the rectangular rows -->
+      <div class="roster-separator" aria-hidden="true">
+        <div class="roster-separator__hex"></div>
+      </div>
 
       <!-- Substitutes -->
       <div class="substitutes" id="substitutes" style="opacity: 0;"></div>
@@ -541,6 +706,8 @@
       overlay: document.querySelector('.overlay')
     };
 
+    el.overlay.dataset.rosterSide = TEAM_SIDE === 'A' ? 'home' : 'away';
+
     let roleIcons = {};
     let teamColorsEnabled = false;
     let showPlayerPortraits = true;
@@ -599,15 +766,15 @@
       } else {
         heroImageUrl = null;
       }
+      const roleBadge = `<div class="role-badge">${getRoleIcon(player.role)}</div>`;
       const heroImageHtml = heroImageUrl
-        ? `<div class="hero-image" style="background-image: url('${heroImageUrl}')"></div>`
-        : `<div class="hero-image" style="background-color: var(--fgc-surface-muted)"></div>`;
+        ? `<div class="hero-image" style="background-image: url('${heroImageUrl}')">${roleBadge}</div>`
+        : `<div class="hero-image" style="background-color: var(--fgc-surface-muted)">${roleBadge}</div>`;
 
       card.innerHTML = `
-        <div class="role-badge">${getRoleIcon(player.role)}</div>
         ${heroImageHtml}
         <div class="player-info">
-          <div class="player-name">${escapeHtml(player.name || 'PLAYER')}</div>
+          <div class="player-name" title="${escapeHtml(player.name || 'PLAYER')}">${escapeHtml(player.name || 'PLAYER')}</div>
           <div class="player-pronouns">${escapeHtml(player.pronouns || '')}</div>
         </div>
       `;
@@ -624,9 +791,11 @@
       card.style.transform = 'translateY(30px)';
 
       card.innerHTML = `
-        <div class="role-badge">${getRoleIcon(player.role)}</div>
+        <div class="sub-portrait">
+          <div class="role-badge">${getRoleIcon(player.role)}</div>
+        </div>
         <div class="player-info">
-          <div class="player-name">${escapeHtml(player.name || 'PLAYER')}</div>
+          <div class="player-name" title="${escapeHtml(player.name || 'PLAYER')}">${escapeHtml(player.name || 'PLAYER')}</div>
           <div class="player-pronouns">${escapeHtml(player.pronouns || '')}</div>
         </div>
       `;
@@ -665,6 +834,7 @@
 
       // Apply team color if enabled
       if (teamColorsEnabled && teamData.color) {
+        el.overlay.style.setProperty('--fgc-team', teamData.color);
         el.teamHeader.style.backgroundColor = teamData.color;
         // Calculate text contrast color
         const hex = teamData.color.replace('#', '');
@@ -674,7 +844,12 @@
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         const textColor = luminance > 0.5 ? '#0b0d12' : '#eef2f8';
         el.teamName.style.color = textColor;
+        el.overlay.style.setProperty('--fgc-wash', `rgba(${r}, ${g}, ${b}, 0.16)`);
+        el.overlay.style.setProperty('--fgc-glow', `rgba(${r}, ${g}, ${b}, 0.22)`);
       } else {
+        el.overlay.style.removeProperty('--fgc-team');
+        el.overlay.style.removeProperty('--fgc-wash');
+        el.overlay.style.removeProperty('--fgc-glow');
         el.teamHeader.style.backgroundColor = 'var(--fgc-surface)';
         el.teamName.style.color = 'var(--fgc-text)';
       }

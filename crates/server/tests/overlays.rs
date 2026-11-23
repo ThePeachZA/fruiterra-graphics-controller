@@ -583,6 +583,114 @@ fn roster_overlays_use_night_broadcast_tokens() {
 }
 
 #[test]
+fn roster_overlays_use_hexagon_identity_without_touching_the_rows() {
+    for file in ["team-roster-home.html", "team-roster-away.html"] {
+        let text = overlay_text(file);
+
+        assert!(
+            text.contains(
+                "--fgc-hex-cell: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);"
+            ),
+            "{file} should declare one pointy-top hexagon cell shape"
+        );
+        assert!(
+            text.contains(".player-card-core .role-badge {")
+                && text.contains(".player-card-sub .role-badge {")
+                && text.contains("clip-path: var(--fgc-hex-cell);")
+                && text.contains("bottom: 16px;")
+                && text.contains("width: 56px;")
+                && text.contains("height: 56px;")
+                && text.contains("width: 40px;")
+                && text.contains("height: 40px;")
+                && text.contains(".player-card-sub .sub-portrait {")
+                && text.contains("bottom: 8px;")
+                && text.contains("left: 50%;")
+                && text.contains("transform: translateX(-50%);"),
+            "{file} should centre both clipped role badges and keep the core badge inside the portrait"
+        );
+        assert!(
+            text.contains(".core-stage {")
+                && text.contains(".core-rail::before {")
+                && text.contains(".core-rail__hex {")
+                && text.matches("class=\"core-rail core-rail--left\"").count() == 1
+                && text.matches("class=\"core-rail core-rail--right\"").count() == 1
+                && text.contains("background: var(--fgc-line);")
+                && text.contains("background: var(--fgc-line-strong);"),
+            "{file} should frame the core row with divider-style vertical rails"
+        );
+        assert!(
+            !text.contains("data-initials")
+                && !text.contains("playerInitials")
+                && !text.contains("teamCode")
+                && !text.contains("player-code"),
+            "{file} should leave the name plate plain and defer country or tag codes to the backlog"
+        );
+        assert!(
+            text.contains("text-overflow: ellipsis;")
+                && text.contains("white-space: nowrap;")
+                && text
+                    .matches("title=\"${escapeHtml(player.name || 'PLAYER')}\"")
+                    .count()
+                    == 2,
+            "{file} should truncate long names and keep the full value available"
+        );
+        assert!(
+            text.contains("height: 126px;")
+                && text.contains("padding: 20px 24px;")
+                && text.contains("font-size: 18px;\n      line-height: 22px;")
+                && text.contains("font-size: 14px;\n      line-height: 16px;"),
+            "{file} should grow the name plate and reduce both pronoun lines"
+        );
+
+        assert!(
+            text.contains(".roster-wash {")
+                && text.contains("width: 760px;")
+                && text.contains(".roster-wash::after {")
+                && text.contains("radial-gradient(58% 100% at 22% 100%")
+                && text.contains("radial-gradient(58% 100% at 78% 100%")
+                && text.contains(
+                    "el.overlay.dataset.rosterSide = TEAM_SIDE === 'A' ? 'home' : 'away';"
+                )
+                && text
+                    .contains(".overlay[data-roster-side=\"home\"] .roster-wash {\n      left: 0;")
+                && text.contains(
+                    ".overlay[data-roster-side=\"away\"] .roster-wash {\n      right: 0;"
+                ),
+            "{file} should spread the wash across the frame and add a mirrored bottom glow"
+        );
+        assert!(
+            text.contains("el.overlay.style.setProperty('--fgc-team', teamData.color);")
+                && text.contains("el.overlay.style.setProperty('--fgc-wash'")
+                && text.contains("el.overlay.style.setProperty('--fgc-glow'")
+                && text.contains("el.overlay.style.removeProperty('--fgc-team');")
+                && text.contains("el.overlay.style.removeProperty('--fgc-wash');")
+                && text.contains("el.overlay.style.removeProperty('--fgc-glow');"),
+            "{file} should drive wash and glow from the team colour and reset with the theme"
+        );
+
+        let core = text
+            .find("id=\"core-players\"")
+            .unwrap_or_else(|| panic!("{file} should keep the core player root"));
+        let separator = text
+            .find("class=\"roster-separator\"")
+            .unwrap_or_else(|| panic!("{file} should place a hexagon separator"));
+        let subs = text
+            .find("id=\"substitutes\"")
+            .unwrap_or_else(|| panic!("{file} should keep the substitute root"));
+        assert!(
+            core < separator && separator < subs,
+            "{file} should place the separator between the two rectangular rows"
+        );
+
+        assert!(
+            text.contains(".player-card-core .player-name {\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;")
+                && text.contains(".player-card-core .player-pronouns {\n      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;"),
+            "{file} should keep the existing name and pronoun type rules"
+        );
+    }
+}
+
+#[test]
 fn timer_overlay_uses_night_broadcast_tokens_and_keeps_hour_rollup() {
     let text = overlay_text("timer.html");
 
