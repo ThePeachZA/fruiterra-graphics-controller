@@ -467,10 +467,42 @@ pub fn overlay_source_files() -> impl Iterator<Item = &'static str> {
     std::iter::once(AUTO_OVERLAY_FILE).chain(OVERLAY_FILES)
 }
 
+/// Sources that understand the shared background-mode query parameter.
+///
+/// The timer and game overlay deliberately have no background treatment, so
+/// their URLs stay clean. The auto page forwards the mode to its scene frames.
+pub const BACKGROUND_MODE_FILES: [&str; 10] = [
+    AUTO_OVERLAY_FILE,
+    "background.html",
+    "hero-bans.html",
+    "map-pool.html",
+    "map-select.html",
+    "row-casters.html",
+    "row-hosts.html",
+    "row-interviews.html",
+    "team-roster-away.html",
+    "team-roster-home.html",
+];
+
 /// Builds the full Browser Source URL for one overlay file.
 #[must_use]
 pub fn overlay_url(base_url: &str, file: &str) -> String {
     format!("{}/overlays/{file}", base_url.trim_end_matches('/'))
+}
+
+/// Builds a Browser Source URL with the chosen background mode.
+///
+/// Opaque mode paints a theme-coloured plate and removes the lattice;
+/// transparent mode keeps the lattice. Files without a background treatment
+/// are left unchanged.
+#[must_use]
+pub fn overlay_url_with_background(base_url: &str, file: &str, opaque: bool) -> String {
+    let url = overlay_url(base_url, file);
+    if !BACKGROUND_MODE_FILES.contains(&file) {
+        return url;
+    }
+    let mode = if opaque { "opaque" } else { "transparent" };
+    format!("{url}?bg={mode}")
 }
 
 /// Projects every overlay section into broadcast frames.
@@ -591,6 +623,30 @@ mod tests {
         assert_eq!(
             overlay_url("http://127.0.0.1:3001/", "game-overlay.html"),
             "http://127.0.0.1:3001/overlays/game-overlay.html"
+        );
+    }
+
+    #[test]
+    fn background_mode_url_is_added_only_to_sources_that_use_it() {
+        assert_eq!(
+            overlay_url_with_background("http://127.0.0.1:3001/", "hero-bans.html", true),
+            "http://127.0.0.1:3001/overlays/hero-bans.html?bg=opaque"
+        );
+        assert_eq!(
+            overlay_url_with_background("http://127.0.0.1:3001/", "background.html", false),
+            "http://127.0.0.1:3001/overlays/background.html?bg=transparent"
+        );
+        assert_eq!(
+            overlay_url_with_background("http://127.0.0.1:3001/", "auto.html", true),
+            "http://127.0.0.1:3001/overlays/auto.html?bg=opaque"
+        );
+        assert_eq!(
+            overlay_url_with_background("http://127.0.0.1:3001/", "game-overlay.html", true),
+            "http://127.0.0.1:3001/overlays/game-overlay.html"
+        );
+        assert_eq!(
+            overlay_url_with_background("http://127.0.0.1:3001/", "timer.html", true),
+            "http://127.0.0.1:3001/overlays/timer.html"
         );
     }
 

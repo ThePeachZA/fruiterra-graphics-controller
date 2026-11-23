@@ -89,6 +89,18 @@
       background: transparent;
     }
 
+    /* Opaque is this page's default. Transparent keeps the glow and the
+       lattice but removes the plate, so the same URL toggle can make any
+       background-bearing overlay behave like the others. */
+    html[data-bg="transparent"],
+    html[data-bg="transparent"] body {
+      background: transparent;
+    }
+
+    html[data-bg="transparent"] .background {
+      background-color: transparent;
+    }
+
     .background {
       /* These aliases refer to theme tokens instead of replacing them, so a
          theme message still owns the shared palette. Team colours live on this
@@ -219,6 +231,14 @@
     // need another bundled page or a settings round-trip through the server.
     root.classList.toggle('motion-still', query.get('motion') === 'still');
     root.classList.toggle('tone-team', query.get('tone') === 'team');
+
+    const requestedBg = query.get('bg');
+    const bgMode =
+      requestedBg === 'off' ? 'opaque' :
+      requestedBg === 'on' ? 'transparent' :
+      requestedBg;
+    root.dataset.bg =
+      bgMode === 'opaque' || bgMode === 'transparent' ? bgMode : 'opaque';
 
     // === OVERLAY THEME ===
     // The app sends the active theme as a `theme` message. Its `tokens` are

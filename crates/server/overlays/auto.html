@@ -63,8 +63,14 @@
       const params = new URLSearchParams();
       const host = query.get('host');
       const port = query.get('port');
+      const bg = query.get('bg');
       if (host) params.set('host', host);
       if (port) params.set('port', port);
+      // The app-level background toggle lives on the auto URL too, so every
+      // scene frame inherits the same mode without a second toggle.
+      if (bg === 'opaque' || bg === 'transparent' || bg === 'on' || bg === 'off') {
+        params.set('bg', bg);
+      }
       const suffix = params.toString();
       return `./${file}${suffix ? `?${suffix}` : ''}`;
     }

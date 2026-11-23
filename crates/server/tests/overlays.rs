@@ -1093,6 +1093,16 @@ fn every_overlay_carries_the_same_fx_block() {
             1,
             "{file} should contain exactly one canonical FX block"
         );
+        assert_eq!(
+            text.matches("class=\"fgc-bg\"").count(),
+            1,
+            "{file} should contain exactly one background plate sibling"
+        );
+        assert_eq!(
+            text.matches("class=\"fgc-fx\"").count(),
+            1,
+            "{file} should contain exactly one lattice sibling"
+        );
         let start = text.find(START).expect("FX start sentinel should exist");
         let end = text[start..]
             .find(END)
@@ -1132,6 +1142,56 @@ fn every_overlay_carries_the_same_fx_block() {
             && canonical.contains("@media (prefers-reduced-motion: reduce)")
             && canonical.contains("animation: none"),
         "the canonical block should carry the toggle and the reduced-motion freeze"
+    );
+    assert!(
+        canonical.contains(".fgc-bg {")
+            && canonical.contains("background-color: var(--fgc-surface)")
+            && canonical.contains("html[data-bg=\"opaque\"] .fgc-bg")
+            && canonical.contains("html[data-bg=\"opaque\"] .fgc-fx"),
+        "the canonical block should carry the opaque plate and hide the lattice in that mode"
+    );
+    assert!(
+        canonical.contains("requestedBg === 'off' ? 'opaque'")
+            && canonical.contains("requestedBg === 'on' ? 'transparent'")
+            && canonical.contains("root.dataset.bg = bgMode"),
+        "the canonical block should read the background mode from the URL"
+    );
+}
+
+#[test]
+fn background_mode_is_absent_from_sources_without_a_background() {
+    for file in ["timer.html", "game-overlay.html"] {
+        let text = overlay_text(file);
+        assert!(
+            !text.contains("data-bg") && !text.contains("fgc-bg"),
+            "{file} must not gain a background treatment"
+        );
+    }
+}
+
+#[test]
+fn background_html_supports_the_transparent_variant() {
+    let text = overlay_text("background.html");
+    assert!(
+        text.contains("html[data-bg=\"transparent\"]")
+            && text.contains("html[data-bg=\"transparent\"] .background")
+            && text.contains("background-color: transparent"),
+        "the standalone background should be able to drop its opaque plate"
+    );
+    assert!(
+        text.contains("requestedBg === 'off' ? 'opaque'") && text.contains("root.dataset.bg"),
+        "the standalone background should read the same URL toggle"
+    );
+}
+
+#[test]
+fn auto_overlay_forwards_the_background_mode_to_its_scenes() {
+    let text = overlay_text("auto.html");
+    assert!(
+        text.contains("const bg = query.get('bg');")
+            && text.contains("bg === 'opaque' || bg === 'transparent'")
+            && text.contains("params.set('bg', bg)"),
+        "the auto overlay should pass the background mode to every scene frame"
     );
 }
 

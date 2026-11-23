@@ -347,10 +347,21 @@
       to { transform: translate3d(180px, 0, 0); }
     }
 
-    /* The FX sibling comes first; the existing roots stay above it without
+    /* The FX siblings come first; the existing roots stay above them without
        changing their geometry, colours or layout. */
     .overlay {
       z-index: 1;
+    }
+
+    /* Opaque mode is one plain plate taken from the theme. The lattice is
+       hidden in this mode, so a solid background never carries hexagons. */
+    .fgc-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      display: none;
+      background-color: var(--fgc-surface);
     }
 
     .fgc-fx {
@@ -379,6 +390,14 @@
       display: none;
     }
 
+    html[data-bg="opaque"] .fgc-bg {
+      display: block;
+    }
+
+    html[data-bg="opaque"] .fgc-fx {
+      display: none;
+    }
+
     /* Reduced motion freezes the drift but keeps the static lattice. */
     @media (prefers-reduced-motion: reduce) {
       .fgc-fx {
@@ -388,17 +407,35 @@
   </style>
   <script>
     (() => {
-      const requestedFx = new URLSearchParams(location.search).get('fx');
+      const query = new URLSearchParams(location.search);
+      const root = document.documentElement;
+
+      const requestedFx = query.get('fx');
       if (requestedFx === 'on' || requestedFx === 'off') {
-        document.documentElement.dataset.fx = requestedFx;
-      } else if (document.documentElement.dataset.fx !== 'off') {
-        document.documentElement.dataset.fx = 'on';
+        root.dataset.fx = requestedFx;
+      } else if (root.dataset.fx !== 'off') {
+        root.dataset.fx = 'on';
+      }
+
+      // Opaque turns transparency off; transparent turns it back on. The
+      // short aliases read naturally in a Browser Source URL. A document-level
+      // data-bg attribute lets a host page choose the default.
+      const requestedBg = query.get('bg');
+      const bgMode =
+        requestedBg === 'off' ? 'opaque' :
+        requestedBg === 'on' ? 'transparent' :
+        requestedBg;
+      if (bgMode === 'opaque' || bgMode === 'transparent') {
+        root.dataset.bg = bgMode;
+      } else if (root.dataset.bg !== 'opaque') {
+        root.dataset.bg = 'transparent';
       }
     })();
   </script>
   <!-- === FGC CANONICAL FX END === -->
 </head>
 <body>
+  <div class="fgc-bg" aria-hidden="true"></div>
   <div class="fgc-fx" aria-hidden="true"></div>
   <div class="overlay">
     <div class="main-container">

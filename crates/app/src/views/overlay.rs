@@ -10,7 +10,9 @@ use crate::assets_io::open_browser;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
 use crate::components::{CollapsiblePanel, Disclosure, KeyValue, KeyValues, Panel};
 use crate::remote_access::{self, OverlayUrlGroup};
-use crate::server::{OVERLAY_FILES, SCENE_OVERLAY_FILES, overlay_source_files, overlay_url};
+use crate::server::{
+    OVERLAY_FILES, SCENE_OVERLAY_FILES, overlay_source_files, overlay_url_with_background,
+};
 use crate::state::AppStore;
 use crate::status::{broadcast_age_text, client_count_text, status_text, status_tone};
 
@@ -28,6 +30,7 @@ pub fn OverlayView() -> Element {
     let label = status_text(&status);
     let urls_visible = store.urls_visible();
     let overlays_visible = store.overlays_visible();
+    let background_opaque = store.background_opaque();
     let mut clock = use_signal(Instant::now);
 
     use_future(move || async move {
@@ -76,6 +79,10 @@ pub fn OverlayView() -> Element {
                             value: if overlays_visible { "Visible".to_owned() } else { "Hidden".to_owned() },
                         }
                         KeyValue {
+                            label: "Background".to_owned(),
+                            value: if background_opaque { "Opaque".to_owned() } else { "Transparent".to_owned() },
+                        }
+                        KeyValue {
                             label: "Connected clients".to_owned(),
                             value: client_count_text(clients),
                         }
@@ -97,6 +104,13 @@ pub fn OverlayView() -> Element {
                             aria_pressed: overlays_visible,
                             onclick: move |_| store.set_overlays_visible(!overlays_visible),
                             if overlays_visible { "Hide overlays" } else { "Show overlays" }
+                        }
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            disabled: !running || busy,
+                            aria_pressed: background_opaque,
+                            onclick: move |_| store.set_background_opaque(!background_opaque),
+                            if background_opaque { "Use transparent background" } else { "Use opaque background" }
                         }
                         if running {
                             Button {
@@ -122,6 +136,9 @@ pub fn OverlayView() -> Element {
                     }
                     p { class: "fgc-note",
                         "The base URL and Browser Source URLs stay hidden until you reveal them below. Port, remote access, asset URLs and auto-start are configured in Settings."
+                    }
+                    p { class: "fgc-note",
+                        "The background toggle changes the generated Browser Source URLs. Refresh each OBS source after changing it; connected sources keep their current mode until then."
                     }
                     if needs_reconnect {
                         p { class: "fgc-note", role: "status",
@@ -312,6 +329,8 @@ pub(crate) fn OverlayUrls() -> Element {
 /// One access path's ten Browser Source URLs.
 #[component]
 fn UrlGroupCard(group: OverlayUrlGroup, visible: bool) -> Element {
+    let store = use_context::<AppStore>();
+    let background_opaque = store.background_opaque();
     let key = group.key;
     let base_url = group.base_url.clone();
     let count = format!("{} sources", overlay_source_files().count());
@@ -337,7 +356,7 @@ fn UrlGroupCard(group: OverlayUrlGroup, visible: bool) -> Element {
                     SourceRow {
                         key: "{file}",
                         file: file.to_owned(),
-                        url: overlay_url(&group.base_url, file),
+                        url: overlay_url_with_background(&group.base_url, file, background_opaque),
                         visible,
                     }
                 }

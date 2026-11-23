@@ -118,6 +118,8 @@ pub struct AppStore {
     reveal_urls: Signal<bool>,
     /// Ephemeral live visibility state broadcast to connected overlays.
     overlay_visible: Signal<bool>,
+    /// Session-only choice of opaque or transparent Browser Source backgrounds.
+    background_opaque: Signal<bool>,
     /// Session-only bundled overlays included in the auto-overlay switcher.
     auto_overlay_included: Signal<Vec<String>>,
     /// Session-only active scene in the auto-overlay switcher.
@@ -166,6 +168,7 @@ impl AppStore {
         let serve = use_signal(ServeState::default);
         let reveal_urls = use_signal(|| false);
         let overlay_visible = use_signal(|| true);
+        let background_opaque = use_signal(|| false);
         let (auto_included, auto_active) = default_auto_overlay();
         let auto_overlay_included = use_signal(|| auto_included);
         let auto_overlay_active = use_signal(|| auto_active);
@@ -187,6 +190,7 @@ impl AppStore {
             serve,
             reveal_urls,
             overlay_visible,
+            background_opaque,
             auto_overlay_included,
             auto_overlay_active,
             thumb_urls,
@@ -229,6 +233,7 @@ impl AppStore {
             serve: Signal::new(ServeState::Off),
             reveal_urls: Signal::new(false),
             overlay_visible: Signal::new(true),
+            background_opaque: Signal::new(false),
             auto_overlay_included: Signal::new(auto_included),
             auto_overlay_active: Signal::new(auto_active),
             thumb_urls: Signal::new(HashMap::new()),
@@ -400,6 +405,21 @@ impl AppStore {
         let mut overlay_visible = self.overlay_visible;
         overlay_visible.set(visible);
         self.server.broadcast(Outbound::Show { visible });
+    }
+
+    /// Whether new Browser Source URLs should request an opaque background.
+    #[must_use]
+    pub fn background_opaque(&self) -> bool {
+        *self.background_opaque.read()
+    }
+
+    /// Chooses opaque or transparent backgrounds in generated source URLs.
+    ///
+    /// This is session-only. Existing Browser Sources keep the mode they were
+    /// opened with until they are refreshed with the newly generated URL.
+    pub fn set_background_opaque(&self, opaque: bool) {
+        let mut background_opaque = self.background_opaque;
+        background_opaque.set(opaque);
     }
 
     /// Bundled overlays currently included in the auto scene switcher.
@@ -3696,6 +3716,26 @@ mod tests {
 
             store.set_overlays_visible(true);
             assert!(store.overlays_visible());
+            assert!(!*store.dirty.peek());
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
+    }
+
+    #[test]
+    fn background_mode_toggle_is_ephemeral() {
+        fn scenario() -> Element {
+            let store = AppStore::test_store(AppState::default());
+            assert!(!store.background_opaque());
+
+            store.set_background_opaque(true);
+            assert!(store.background_opaque());
+            assert!(!*store.dirty.peek());
+
+            store.set_background_opaque(false);
+            assert!(!store.background_opaque());
             assert!(!*store.dirty.peek());
             VNode::empty()
         }
