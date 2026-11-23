@@ -73,6 +73,10 @@ identity — and re-tunes them to Fruiterra’s own brand: near-black blue-charc
 Fruiterra orange, high-contrast near-white type, and the existing Archivo
 broadcast face.
 
+The current overlay design language, the per-overlay playbook and the motion
+rules live in [`docs/overlay-design-language.md`](overlay-design-language.md).
+This document keeps the original refresh pass.
+
 ### Principles
 
 1. **The game is the picture.** The overlay is chrome, not content. Dark

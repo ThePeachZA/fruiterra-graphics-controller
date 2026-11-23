@@ -24,6 +24,21 @@ across all milestones is in `docs/manual-qa.md`.
 | 13 | `team-roster-home` / `team-roster-away` show the correct side | ☑ |
 | 14 | `row-casters` order and social icons are correct | ☑ |
 | 15 | A third-party timer overlay receives `matchTimer` ticks and actions | ☑ |
+| 16 | Team colour enters only from the outer edge of each frame; there is no centre colour bar or seam | ☑ |
+| 17 | Ban-order text is neutral `--fgc-ink-on-art` on `--fgc-plate-dark`, never a team colour | ☑ |
+| 18 | A transparent hero cut-out fills half the frame height and stands on the bottom, with no letterboxing | ☑ |
+| 19 | Moment overlays wait 0.8s for the stinger; dense overlays use the shorter planned 0.35s delay | ☑ |
+| 20 | The separate background source paints a solid opaque theme plate and sits below the scene sources in OBS | ☑ |
+| 21 | `?motion=still`, `?tone=team` and `?fx=off` variants work from the Browser Source URL | ☑ |
+| 22 | Reduced motion freezes the lattice but keeps the static composition | ☑ |
+| 23 | Only `transform` and `opacity` animate; there is no per-frame JavaScript | ☑ |
+| 24 | The canonical FX block exists only in the eight agreed overlays; timer and game overlay have none | ☑ |
+| 25 | `every_overlay_carries_the_same_fx_block` passes and the sentinelled copies are byte-identical | ☑ |
+
+The current design language, the per-overlay playbook and the motion rules are
+in [`docs/overlay-design-language.md`](overlay-design-language.md). The
+post-v1 evidence for these checks is in `docs/manual-qa.md` §7 and the repeatable
+steps are in `docs/manual-qa-runbook.md` sections A72, A73 and A74.
 
 ## Automated pre-check
 

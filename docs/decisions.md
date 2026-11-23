@@ -1341,3 +1341,156 @@ blocked-accepted, R5 used the owner-accepted computer substitution, and A17's
 second-machine import remains unrun but explicitly accepted for release. The tag
 stays on the release commit; the R9 evidence is recorded in a follow-up
 documentation-only commit.
+
+## Overlay design language decisions (2026-11-23)
+
+These decisions close the design pass that began with the hero bans rework and
+the animated background. They are recorded here because they change the visual
+contract of the overlays, not just their layout. The reasoning is kept with the
+decision so a later pass does not undo it for the sake of consistency. The
+canonical reference for the resulting language is
+[`docs/overlay-design-language.md`](overlay-design-language.md); the open work
+is in [`docs/backlog.md`](backlog.md) section AM.
+
+### D1 - The hexagon marks identity only
+
+**Decision.** The hexagon is the product's shape language, and it belongs to
+identity marks: the team logo badge, the role badge, status chips, avatars and
+plates. It is forbidden on table rows and on map thumbnails. The hero bans logo
+badge is 100×115 and the role badge is 60×68, both using the pointy-top path
+`polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)`.
+
+**Reason.** A hex grid destroys the horizontal rhythm used to scan a table and
+makes a map thumbnail read as texture rather than as a place. An identity mark is
+looked at; a table is scanned. One shape cannot serve both well. The shared
+56×100 SVG mask and the 180×322 CSS tile are the pattern form; the clip path is
+the badge form.
+
+### D2 - Team colour enters from the outer edge
+
+**Decision.** The centre of a frame is never a colour bar and never a seam.
+Team colour washes in from the outer edge, over the art and the honeycomb, and
+fades out before the middle. On hero bans this is `.hero-half__edge`: 46% of the
+team colour at the outer edge, 16% at 18% across, transparent by 38%, mirrored
+on the away half. The colours are written as `--team-a-color` and
+`--team-b-color` on the `#hero-bans` container with `style.setProperty`, not on
+`:root`.
+
+**Reason.** The previous centre banner split the full-bleed frame into two
+slides and put identity colour where the viewer expects the subject. The owner
+called for the colour to come from the outside. Keeping the variables on a local
+container also stops a theme override on `:root` from colliding with a live team
+colour, and clearing the properties stops a later match inheriting an earlier
+wash.
+
+### D3 - Text over artwork is neutral
+
+**Decision.** Text laid over artwork uses `--fgc-ink-on-art` (`#eef2f8`) on
+`--fgc-plate-dark` (`#0b0d12`). It never uses the team colour. The ban order
+reads `First ban` and `Second ban` in markup and `updateBanOrder()`, and CSS
+`text-transform: uppercase` renders `FIRST BAN` and `SECOND BAN`. The old
+`1ST BAN` / `2ND BAN` literals and `color: var(--fgc-accent)` are retired.
+
+**Reason.** A team colour is not a contrast guarantee. It can be a light yellow,
+a deep navy or a saturated pink, and hero art varies just as much. Neutral ink
+on a known dark plate is predictable. Keeping the words in the markup also keeps
+the accessibility tree aligned with the visible frame.
+
+### D4 - Transparent cut-outs are placed by script
+
+**Decision.** The transparent hero files are full 1920×1080 canvases with the
+subject standing at the bottom. `subjectBox(img)` scans the alpha channel above
+8 for the opaque bounding box, and `placeCutout(img, box)` uses
+`const scale = box.height / subject.height;` to fill the half and anchor the
+subject to the bottom. The image keeps its natural size and is moved with a
+single transform. A canvas that cannot be read falls back to
+`object-fit: cover` with `object-position: center bottom`.
+
+**Reason.** Neither `contain` nor `cover` worked on a canvas that is mostly
+transparent: `contain` letterboxed the hero and `cover` cropped it. Scanning the
+alpha channel places the subject rather than the file. The accepted caveat is
+that a weapon or an outstretched arm widens the bounding box, putting its centre
+about 19px, roughly 1% of the half width, from the visual centre of the hero. A
+19px offset is accepted rather than a hand-tuned value that would break on the
+next asset.
+
+### D5 - The reveal waits for the stinger
+
+**Decision.** `--hero-reveal-delay: 0.8s` on `:root` delays the hero bans reveal
+so a stinger or scene transition can finish. The away half adds 0.12s and the
+captions add 0.35s and 0.47s. The rule for the rest of the product is 0.8s for
+moment overlays and a planned shorter 0.35s, `--fgc-reveal-local`, for dense
+overlays such as the roster and map pool.
+
+**Reason.** A broadcast moment has a hand-off. Information that arrives before
+the stinger finishes fights it for attention. Dense overlays are different: the
+operator wants the table readable as soon as the scene lands. One delay cannot
+serve both jobs.
+
+### D6 - The background is a persistent source, not a scene
+
+**Decision.** `background.html` is a tenth entry in `OVERLAY_FILES` and is
+deliberately absent from `SCENE_OVERLAY_FILES`. The auto scene switcher and its
+number hotkeys still hold nine scenes. The background has its own Browser Source
+URL and stays on screen for the whole broadcast.
+
+**Reason.** The scene overlays replace one another; the backdrop does not. If it
+were a scene, switching scenes would remove it. Keeping the two lists separate
+also keeps the hotkeys predictable.
+
+### D7 - The background paints a solid, opaque theme plate
+
+**Decision.** `html`, `body` and `.background` all paint `var(--fgc-surface)`:
+`#0b0d12` under Night Broadcast and `#f4f6fb` under Light. The source is a real
+backdrop, not a wash over the desktop, so it must sit **below** the scene
+overlays in OBS. A `show` message of `visible: false` adds `background-hidden`
+to `<html>` and takes the plate away with the artwork.
+
+**Reason.** The owner specified a "completely solid and opaque colour based on
+the theme colour tokens". A token, rather than a literal, means a theme message
+repaints the whole frame. The hide rule is needed because an opaque Browser
+Source left behind while hidden would cover the show.
+
+### D8 - The FX layer is copied, not built
+
+**Decision.** There is no bundler and no shared CSS URL, so the canonical FX
+layer is inlined into each carrier between two sentinel comments and guarded by
+`every_overlay_carries_the_same_fx_block` in `crates/server/tests/overlays.rs`.
+The block uses one `--fgc-hex-mask` token, overscans by at least one 180×322
+tile, travels exactly one tile, animates only `transform` and `opacity`, sets
+`will-change: transform` on the moving layer only, freezes on reduced motion
+while keeping the static lattice, and toggles through `?fx=off` / `?fx=on` with
+document-level `data-fx` as the app-level default.
+
+The owner clarified on 2026-11-23 that there should be no background overlay
+attached to the timer or the game overlay. The block therefore ships in eight
+scene overlays and is absent from `timer.html`, `game-overlay.html`, `auto.html`
+and `background.html`. Hero bans is the first native carrier; the timer is not a
+pilot.
+
+**Reason.** Independent Browser Sources are more valuable than a shared build
+step in this project. A byte-equality test is the only way to keep copied CSS
+honest. The owner's exclusion protects two overlays where an ambient lattice
+would compete with either a pure time readout or the game capture.
+
+### D9 - One overlay or one mechanism per change
+
+**Decision.** Each shipped overlay change carries four artefacts: a technical
+section in `docs/overlay-refresh-specs.md`, a row in `docs/manual-qa.md` §7.1 and
+a sign-off in §7.2, a runbook section in `docs/manual-qa-runbook.md`, and a
+source-text test where the rule cannot be checked by rendering. The frozen
+v1.0.0 sign-off in `docs/manual-qa.md` §5 is never edited for post-v1 work.
+
+**Reason.** The overlays are visual, and a visual change that is not written
+down cannot be audited later. Splitting changes by mechanism also keeps the
+commit history readable when the same block touches eight files.
+
+### D10 - The platform floor is OBS 31.0.4
+
+**Decision.** OBS 31.0.4 with CEF 116 remains the supported floor.
+`color-mix()` needs Chrome 111 or later, so the hero bans edge wash is safe at
+that floor. No feature may require a newer Chromium without a new decision.
+
+**Reason.** The floor is what the owner's OBS install can run. A feature that
+silently disappears on an older build leaves an edge bare, which is worse than
+not having the feature. Recording the floor turns an assumption into a gate.

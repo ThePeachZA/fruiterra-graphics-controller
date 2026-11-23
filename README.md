@@ -230,6 +230,7 @@ install it from the URL
 | [`docs/fonts.md`](docs/fonts.md) | Font choices and licences |
 | [`docs/build.md`](docs/build.md) | Packaging and release process |
 | [`docs/implementation-plan.md`](docs/implementation-plan.md) | Milestones, tests and exit criteria |
+| [`docs/overlay-design-language.md`](docs/overlay-design-language.md) | Overlay design language and philosophy reference |
 | [`docs/decisions.md`](docs/decisions.md) | Decision log |
 | [`docs/overlay-qa.md`](docs/overlay-qa.md) | Overlay QA checklist |
 | [`docs/manual-qa.md`](docs/manual-qa.md) | Manual QA and intervention register |

@@ -1898,3 +1898,126 @@ shared 180px 322px hexagon mask, the `?motion=still` and `?tone=team` variants,
 an empty console, and `cargo test -p fgc-server --test overlays` passing 30
 tests. A screenshot of the running page showed the opaque plate with the lattice
 over it.
+
+## AM. Overlay design language rollout (2026-11-23)
+
+This section tracks the work that grew out of the hero bans rework, the
+animated background and the design council review of 2026-11-23. The owner asked
+for all of the overlay updates, the design philosophy and the ideas to be
+written down in detail; the canonical reference is
+[`docs/overlay-design-language.md`](overlay-design-language.md). This section
+records what is done and what is still open. Decisions are locked in
+[`docs/decisions.md`](decisions.md) under "Overlay design language decisions".
+
+### The ordered rollout
+
+The council set a deliberate order so each step has a stable base. One overlay
+or one mechanism is changed at a time, and each change carries a spec section,
+a QA row, a runbook section and a source-text test where needed.
+
+1. **Tokens in every overlay - done.** Every overlay inlines its own
+   `--fgc-*` token block; there is no shared stylesheet URL. `auto.html` is the
+   preview host and does not need the block itself.
+2. **The canonical FX block plus the standalone background - partly done.**
+   `background.html` shipped in commit `9600a65` with the solid opaque plate.
+   The transparent canonical FX block shipped in eight scene overlays on
+   2026-11-23.
+3. **The block-equality test - done.**
+   `every_overlay_carries_the_same_fx_block` extracts the sentinelled text and
+   compares it byte for byte across the eight carriers. It also guards the
+   overscan, mask tile, toggle, reduced-motion rule and the absence of
+   per-frame JavaScript.
+4. **Pilot the FX in `timer.html` - cancelled by the owner.** The owner said on
+   2026-11-23 that there should be no background overlay attached to the timer
+   or the game overlay. The first native carrier is `hero-bans.html`, which
+   already had the hexagon wall. No FX block, sentinel or `.fgc-fx` element is
+   present in `timer.html`.
+5. **`game-overlay.html` and `hero-bans.html` - planned.** Hero bans shipped the
+   FX mechanism and its visual rework in A72. The game-overlay visual refresh is
+   still planned and will not add the FX layer, because of the owner's
+   exclusion.
+6. **The rest of the overlays - the transparent FX part is done.** The block is
+   now in `map-pool.html`, `map-select.html`, `row-casters.html`,
+   `team-roster-home.html`, `team-roster-away.html`, `row-hosts.html` and
+   `row-interviews.html`, alongside hero bans. The individual visual refreshes
+   below are still open.
+7. **Reuse the cut-out locator - open.** `subjectBox()` and `placeCutout()` in
+   `hero-bans.html` should be copied into any other overlay that receives a
+   transparent 1920×1080 subject. If more than three overlays need it, guard the
+   copies with another byte-equality test.
+8. **The per-overlay design refreshes - open.** The council's plan is below.
+9. **The app-level FX toggle - open.** The server should inject `data-fx` from a
+   single app setting, with the query-string override kept for individual OBS
+   sources. An OBS Browser Source will need a source refresh to pick it up; the
+   runbook must say so when the toggle is built.
+10. **Documentation - continuous.** The design-language reference, the specs,
+    the checklist, the QA register, the runbook, the decisions log and this
+    backlog are part of each change, not a final tidy-up.
+
+### Per-overlay visual plan
+
+- **Game overlay.** Replace the centre bar with a hexagon score plate and
+  hexagonal logo chips, leave the centre of the frame for the game capture, and
+  wash team colour in from both outer edges. Keep the existing bars, names,
+  scores, bans and side indicators otherwise unchanged. No FX layer.
+- **Hero bans.** Shipped in A72: two full-bleed halves, subtler hexagons, the
+  alpha-scanned cut-out placed on the bottom of each half, the outer-edge wash,
+  neutral ban-order labels and the 0.8s reveal. The FX layer is now in place;
+  further polish should be small and measured.
+- **Map pool.** Keep the rectangular table so rows remain scannable. Add
+  hexagon status chips, an outer-edge wash and staggered reveal rows. Never put
+  a hex grid on a map thumbnail.
+- **Map select.** Add a hexagon name plate and hexagon vote chips. A hexagon
+  clip on the thumbnail is acceptable only if it does not cut the corners off
+  the image. Put the team washes at the bottom outer corners, not in a centre
+  bar. Keep the ban thumbnails and their diamond numbers working.
+- **Row casters, row hosts and row interviews.** Add hexagon portrait frames and
+  role chips, a per-card outer-edge wash, and reuse the cut-out locator where a
+  transparent portrait is supplied. Keep the current role filtering exactly as
+  it is: casters, hosts and interviewers with their guest card.
+- **Team roster home and away.** Add hexagon role badges and avatar cells. The
+  home wash enters from the left edge and the away wash from the right. A
+  hexagon separator may sit between the core and substitutes, but the table
+  rows stay rectangular and readable. Keep the flexible card widths from A61.
+- **Timer.** Add a hexagon plate and keep tabular figures. Do not add
+  per-frame JavaScript, an FX layer or a background plate. The owner's
+  exclusion is absolute.
+- **Auto.** Add hexagon preview cards and load every preview with `?fx=off`, so
+  the preview and the live source do not render the lattice twice. The previews
+  are the only place where the FX state is deliberately forced off.
+
+### Risks and mitigations
+
+| Risk | Mitigation in place or planned |
+|---|---|
+| OBS GPU cost over a long broadcast | Only `transform` and `opacity` animate; cycles are 72s or longer; `will-change` is on one layer; `?fx=off` and `?motion=still` give an immediate escape. Planned: a one-minute OBS watch in each overlay sign-off. |
+| A visible drift seam if the hexagon SVG does not tile on 180×322 | The FX drift travels exactly `(180px, 322px)`, one mask repeat, and the layer overscans by `-360px`. The equality test guards both numbers. Planned: a visual seam check on the per-overlay refreshes. |
+| OBS may not honour `prefers-reduced-motion` | The CSS media query freezes motion but keeps the lattice; explicit `?motion=still` and `?fx=off` variants do not depend on the OS preference. |
+| The alpha-scan locator is fragile against soft edges and drop shadows | Threshold 8 is recorded; a canvas that cannot be read uses the `object-fit: cover` fallback. Planned: reuse the same two functions and test each new transparent asset before sign-off. |
+| Neutral ink on very light artwork | `--fgc-ink-on-art` always sits on `--fgc-plate-dark`, never directly on the art. Planned: check both themes on every new text-over-art treatment. |
+| Hexagon clipping cuts the corners off a logo | Badges use one inscribed band at 100×115 and 60×68. Planned: inspect any new clipped asset at both sizes before rollout. |
+| Table readability | Hexagons are forbidden on table rows and map thumbnails; the roster cards keep their existing widths. Planned: keep the rectangular table in map pool and rosters. |
+| Source-text tests break on unrelated markup edits | The equality test narrows its extraction to the sentinel block and asserts specific rules. When an unrelated edit breaks it, fix the copy or narrow the assertion; do not delete the equality check. |
+| Copy-paste drift between duplicated blocks | Sentinel comments and byte comparison across exactly eight files, with the file list asserted so removing a carrier is deliberate. |
+| Preview and live sources render the effect twice | Planned: `auto.html` previews load `?fx=off`. Today the auto previews do not carry the block. |
+| OBS source-refresh semantics for the app-level toggle | Planned: document that changing the injected `data-fx` needs a Browser Source refresh; do not promise live propagation. |
+| OBS version floor | Floor is 31.0.4 / CEF 116; `color-mix()` is safe there. Any newer requirement needs a new decision. |
+| Schedule realism | One overlay or one mechanism per change, each with four artefacts. Ideas stay here until they have a QA row and a runbook section. |
+
+### Ideas not yet scheduled
+
+A stinger hand-off tuned to the 0.8s reveal, a flythrough introduction overlay,
+a single app switch for every overlay's FX, a shared cut-out locator helper, and
+a stable OBS capture for visual regression testing. These are ideas only. They
+do not change the shipped contract until they are promoted with a decision and
+a QA gate.
+
+### QA
+
+A74 in [`docs/manual-qa.md`](manual-qa.md) and
+[`docs/manual-qa-runbook.md`](manual-qa-runbook.md) records the browser evidence
+for the canonical FX block: one `.fgc-fx` at `display: block`, `inset: -360px`,
+`mask-size: 180px 322px`, `opacity: 0.16`, a 72s drift, `?fx=off` removing it,
+a transparent body and an empty console. The timer and game overlay exclusions
+are part of the gate. Reduced motion is covered by the source-text assertion
+because the test browser reported the preference false.
