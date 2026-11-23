@@ -1071,6 +1071,28 @@ const ALL_OVERLAYS: [&str; 12] = [
 ];
 
 #[test]
+fn every_overlay_has_an_early_document_overflow_guard() {
+    const GUARD: &str =
+        "    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }";
+
+    for file in ALL_OVERLAYS {
+        let text = overlay_text(file).replace('\r', "");
+        let guard = text
+            .find(GUARD)
+            .unwrap_or_else(|| panic!("{file} should contain the early document overflow guard"));
+
+        for later in [".fgc-fx {", "<iframe"] {
+            if let Some(index) = text.find(later) {
+                assert!(
+                    guard < index,
+                    "{file} should declare the document guard before {later}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn every_overlay_carries_the_same_fx_block() {
     const START: &str = "<!-- === FGC CANONICAL FX START === -->";
     const END: &str = "<!-- === FGC CANONICAL FX END === -->";
@@ -1151,8 +1173,8 @@ fn every_overlay_carries_the_same_fx_block() {
         canonical.contains(".fgc-bg {")
             && canonical.contains("background-color: var(--fgc-surface)")
             && canonical.contains("html[data-bg=\"opaque\"] .fgc-bg")
-            && canonical.contains("html[data-bg=\"opaque\"] .fgc-fx"),
-        "the canonical block should carry the opaque plate and hide the lattice in that mode"
+            && !canonical.contains("html[data-bg=\"opaque\"] .fgc-fx"),
+        "the canonical block should carry the opaque plate and keep the lattice in that mode"
     );
     assert!(
         canonical.contains("requestedBg === 'off' ? 'opaque'")
@@ -1162,8 +1184,9 @@ fn every_overlay_carries_the_same_fx_block() {
     );
     assert!(
         canonical.contains("window.fgcUpdateBackground = (data) => {")
-            && canonical.contains("payload.opaque"),
-        "the canonical block should accept a live background section message"
+            && canonical.contains("payload.background")
+            && canonical.contains("candidate.opaque"),
+        "the canonical block should accept the background section from both live messages and init"
     );
 }
 
@@ -1192,8 +1215,10 @@ fn background_html_supports_the_transparent_variant() {
         "the standalone background should read the same URL toggle"
     );
     assert!(
-        text.contains("data.type === 'background'") && text.contains("d.opaque"),
-        "the standalone background should accept a live background section message"
+        text.contains("data.type === 'background'")
+            && text.contains("data.type === 'init' && d.background")
+            && text.contains("payload.opaque"),
+        "the standalone background should accept the background section from both live messages and init"
     );
 }
 

@@ -6,6 +6,8 @@
   <link rel="icon" href="data:,">
   <title>Animated Background</title>
   <style>
+    /* Critical document guard: contain overscanned FX/lattice layers during load so transient scrollbars never appear. */
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     /* === NIGHT BROADCAST TOKENS ===
        Shared design tokens for the Fruiterra overlay refresh. Each overlay
        inlines this block, exactly as it inlines its own font faces. */
@@ -279,9 +281,10 @@
       if (!data || typeof data !== 'object') return;
       const d = data.data && typeof data.data === 'object' ? data.data : data;
 
-      if (data.type === 'background') {
-        if (typeof d.opaque === 'boolean') {
-          root.dataset.bg = d.opaque ? 'opaque' : 'transparent';
+      if (data.type === 'background' || (data.type === 'init' && d.background)) {
+        const payload = data.type === 'init' ? d.background : d;
+        if (payload && typeof payload.opaque === 'boolean') {
+          root.dataset.bg = payload.opaque ? 'opaque' : 'transparent';
         }
       }
 

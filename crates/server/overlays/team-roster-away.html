@@ -6,6 +6,8 @@
   <link rel="icon" href="data:,">
   <title>Team Roster - Away</title>
   <style>
+    /* Critical document guard: contain overscanned FX/lattice layers during load so transient scrollbars never appear. */
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     @font-face {
       font-family: 'FGC Display Light';
       font-weight: 300;
@@ -362,8 +364,8 @@
       z-index: 1;
     }
 
-    /* Opaque mode is one plain plate taken from the theme. The lattice is
-       hidden in this mode, so a solid background never carries hexagons. */
+    /* Opaque mode is one plain plate taken from the theme. The lattice stays
+       on top of it, so both modes carry the hexagon display. */
     .fgc-bg {
       position: absolute;
       inset: 0;
@@ -403,9 +405,6 @@
       display: block;
     }
 
-    html[data-bg="opaque"] .fgc-fx {
-      display: none;
-    }
 
     /* Reduced motion freezes the drift but keeps the static lattice. */
     @media (prefers-reduced-motion: reduce) {
@@ -441,10 +440,15 @@
       }
 
       // A cached section message lets the app switch every connected source
-      // without an OBS refresh. The URL is only the starting state.
+      // without an OBS refresh. It also arrives inside the keyed init frame
+      // when a source refreshes, so the URL is only the starting state.
       window.fgcUpdateBackground = (data) => {
         const payload = data && typeof data === 'object' ? (data.data || data) : null;
-        const opaque = payload && typeof payload.opaque === 'boolean' ? payload.opaque : null;
+        const section = payload && payload.background && typeof payload.background === 'object'
+          ? payload.background
+          : null;
+        const candidate = section || payload;
+        const opaque = candidate && typeof candidate.opaque === 'boolean' ? candidate.opaque : null;
         if (opaque !== null) {
           root.dataset.bg = opaque ? 'opaque' : 'transparent';
         }

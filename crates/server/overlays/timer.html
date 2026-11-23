@@ -6,6 +6,8 @@
   <link rel="icon" href="data:,">
   <title>Timer Overlay</title>
   <style>
+    /* Critical document guard: contain overscanned FX/lattice layers during load so transient scrollbars never appear. */
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     @font-face {
       font-family: 'FGC Display SemiBold';
       font-weight: 600;
