@@ -1985,10 +1985,17 @@ a QA row, a runbook section and a source-text test where needed.
   role chips, a per-card outer-edge wash, and reuse the cut-out locator where a
   transparent portrait is supplied. Keep the current role filtering exactly as
   it is: casters, hosts and interviewers with their guest card.
-- **Team roster home and away.** Add hexagon role badges and avatar cells. The
-  home wash enters from the left edge and the away wash from the right. A
-  hexagon separator may sit between the core and substitutes, but the table
-  rows stay rectangular and readable. Keep the flexible card widths from A61.
+- **Team roster home and away - role badges, wash and rails done in A79.** The
+  home wash enters from the left edge and the away wash from the right, both
+  760px wide with a subtle bottom glow. The core role badge is a 56×56 hexagon
+  fully inside the portrait; the substitute badge is 58×58 inside a 72×76
+  portrait. Divider-style vertical rails sit outside the 1500px core row. The
+  core plate is 126px with smaller pronouns. A hexagon separator still sits
+  between core and substitutes, and the table rows stay rectangular and
+  readable. Keep the flexible card widths from A61. The original avatar-cell
+  abbreviation is not shipped in this iteration: the name plate is plain after
+  the owner scrapped both the initials and the country/tag experiment. See
+  decision D14 and QA gate A79.
 - **Timer.** Add a hexagon plate and keep tabular figures. Do not add
   per-frame JavaScript, an FX layer or a background plate. The owner's
   exclusion is absolute.
@@ -2007,6 +2014,9 @@ a QA row, a runbook section and a source-text test where needed.
 | Neutral ink on very light artwork | `--fgc-ink-on-art` always sits on `--fgc-plate-dark`, never directly on the art. Planned: check both themes on every new text-over-art treatment. |
 | Hexagon clipping cuts the corners off a logo | Badges use one inscribed band at 100×115 and 60×68. Planned: inspect any new clipped asset at both sizes before rollout. |
 | Table readability | Hexagons are forbidden on table rows and map thumbnails; the roster cards keep their existing widths. Planned: keep the rectangular table in map pool and rosters. |
+| A core role badge crosses back into the name plate | Guarded by A79: the badge is 56×56 at `bottom: 16px`, the plate is 126px, and the source-text plus browser probes require a negative overlap. The old 76px badge at `bottom: -36px` is forbidden. |
+| Divider-style rails invade the card row | Guarded by A79: rails are siblings outside `.core-players` inside `.core-stage`; browser geometry requires them at x = 118 and x = 1782 outside the 1500px row. |
+| Country flag or team tag code returns as a half-finished identity chip | Deferred by the owner in A79. No `player-code` or `teamCode` remains; source-text assertions forbid them, and a real implementation needs a new payload field with its own decision and QA gate. |
 | Source-text tests break on unrelated markup edits | The equality test narrows its extraction to the sentinel block and asserts specific rules. When an unrelated edit breaks it, fix the copy or narrow the assertion; do not delete the equality check. |
 | Copy-paste drift between duplicated blocks | Sentinel comments and byte comparison across exactly eight files, with the file list asserted so removing a carrier is deliberate. |
 | Preview and live sources render the effect twice | Planned: `auto.html` previews load `?fx=off`. Today the auto previews do not carry the block. |
@@ -2022,7 +2032,11 @@ A stinger hand-off tuned to the 0.8s reveal, a flythrough introduction overlay,
 a single app switch for every overlay's FX backed by `data-fx` injection (the
 shipped `bg` toggle uses the same cached-section pattern but only changes
 `data-bg`), a shared cut-out locator helper, and a stable OBS capture for visual
-regression testing. These are ideas only. They
+regression testing. Also deferred: a country flag or country code in the roster
+name plate. The owner asked to experiment with it during A79, then said to
+scrap it and revisit it later. No country or nationality field exists in
+`Player`, `PlayerDto` or `TeamDto`, so a real implementation requires a new
+payload field and a separate decision. These are ideas only. They
 do not change the shipped contract until they are promoted with a decision and
 a QA gate.
 
@@ -2045,5 +2059,15 @@ sources without a refresh. A77 supersedes both on the lattice rule and adds
 the refresh proof: a fresh and reloaded hero-bans tab kept `bgMode: opaque`,
 the `rgb(11, 13, 18)` plate and a visible drifting lattice, while background
 kept its opaque plate through reload. A78 records the early overflow guard and
-zero scrollbar gutters on fresh and reloaded tabs. Visual sign-off at 1920x1080
-and browser-emulated reduced motion remain outstanding.
+zero scrollbar gutters on fresh and reloaded tabs. A79 records the paired roster
+refinement: a 760px wash with a mirrored 320px bottom glow, a 56×56 core role
+badge fully inside the portrait instead of overlapping the plate, 20×520
+divider-style rails outside the 1500px card row, a 126px core plate with
+18px/22px pronouns, a 76px substitute strip with 14px/16px pronouns, no code
+chip, and long names guarded by fit plus ellipsis and `title`. Fresh home and
+away probe tabs proved the colour-on and colour-off states, badge and rail
+geometry, separator order, zero gutters, hidden overflow and empty consoles;
+fmt, clippy, workspace tests and `dx build --desktop` passed. Screenshots were
+captured but could not be reviewed by an observer because of an OpenCode Go
+usage limit, so visual sign-off at 1920x1080 and browser-emulated reduced
+motion remain outstanding owner checks.

@@ -1566,3 +1566,33 @@ until later styles applied. The early guard prevents the transient gutters
 without changing the overlays' visual composition. A78 verified zero scrollbar
 gutters on fresh and reloaded tabs for hero-bans, background, map-pool,
 game-overlay and auto.
+
+### D14 - Roster identity stays on the portrait, not in the name plate
+
+**Decision.** The paired home and away rosters keep the wider team wash and
+bottom glow, but the identity mark on a core player is the small hexagon role
+badge inside the portrait. It is 56×56 at `bottom: 16px` with a 40×40 icon, so
+it never overlaps the 126px name plate. Divider-style vertical rails flank the
+1500px core row from outside the cards. The core plate is taller with a
+`20px 24px` padding and smaller pronouns. Substitute cards keep their existing
+58×58 badge in a 72×76 portrait. The temporary rectangular team-code chip,
+its `teamCode()` helper and all code parameters are removed. The idea of a
+country flag or country code in the name plate is deferred to the backlog,
+because the current `Player`, `PlayerDto` and `TeamDto` types carry no country
+or nationality field. No new payload field is added in A79.
+
+**Reason.** The owner's first review asked for a wider gradient, a subtle
+bottom glow, role icons at the bottom centre of the portrait slightly
+overlapping a taller name plate, smaller pronouns, and an experiment with a
+country flag or country code. After seeing that iteration, the owner reversed
+two points: "Scrap the idea about the country flag or tag for now. We'll
+revisit this later in the backlog. Maybe for the core team, let's try reduceing
+the size of the role icon and move it up more so it doesn't overlap over the
+name plate like we originally tried. On top of that, let's add some decorative
+lines on the left and right side (similar design to the divider between core
+and subs)." The paired change keeps one mechanism across both files, guarded
+by the existing byte-equality test. A79 verified the new geometry on fresh
+1920×1080 probe tabs, with zero gutters, ellipsized long names, colour-on and
+colour-off states, and empty consoles. Visual sign-off in OBS remains an owner
+check because the captured screenshots could not be reviewed by an observer in
+this session.

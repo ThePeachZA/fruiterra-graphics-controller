@@ -594,8 +594,8 @@ can be made transparent. Timer and game overlay have no background mode at all.
 | `row-casters.html` | caster row | planned hexagon portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
 | `row-hosts.html` | host and analyst row | planned portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
 | `row-interviews.html` | interviewer and guest row | planned portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
-| `team-roster-home.html` | home core and substitutes | planned hexagon role badge and avatar cells | wash from the left edge | 0.35s reveal planned | shipped transparent FX |
-| `team-roster-away.html` | away core and substitutes | planned hexagon role badge and avatar cells | wash from the right edge | 0.35s reveal planned | shipped transparent FX |
+| `team-roster-home.html` | home core and substitutes | 56×56 core role hexagon inside the portrait; 58×58 substitute hexagon; left/right divider-style rails outside the row | 760px wash from the left edge plus bottom glow | 0.35s reveal planned | shipped transparent FX and A79 refinement |
+| `team-roster-away.html` | away core and substitutes | mirrored 56×56 role hexagons and the same outside rails | 760px wash from the right edge plus bottom glow | 0.35s reveal planned | shipped transparent FX and A79 refinement |
 | `auto.html` | preview host for the scene switcher | planned hexagon preview cards | previews load `?fx=off` | scene swaps only | excluded; previews default FX off |
 
 ### 9.1 Planned per-overlay refinements
@@ -611,9 +611,6 @@ These are agreed ideas, not changes in the tree:
   washes at the bottom outer corners.
 - **Talent rows.** Add hexagon portrait frames and role chips, a per-card outer
   wash, and reuse `subjectBox()` where a transparent portrait is supplied.
-- **Rosters.** Add hexagon role and avatar cells, a home wash from the left, an
-  away wash from the right, and a hexagon separator that does not invade the
-  table rows.
 - **Timer.** Add a hexagon plate and keep tabular figures; no per-frame
   JavaScript and no FX layer.
 - **Auto.** Add hexagon preview cards and load every preview with `?fx=off`, so
@@ -708,7 +705,7 @@ narrowly; do not weaken the equality rule.
 7. Reuse `subjectBox()` in other overlays that receive transparent artwork.
    Planned.
 8. Run the per-overlay design refreshes from §9.1, one overlay per change.
-   Planned.
+   Rosters are done in A79; the remaining overlays are still planned.
 9. The app-level background toggle - done as a URL rewrite plus a cached
    `background` section. It appends `?bg=` to the ten modes-aware Browser Source
    URLs for new sources, broadcasts `data-bg` changes to connected pages, and
@@ -732,6 +729,9 @@ narrowly; do not weaken the equality rule.
 | Neutral ink on very light artwork | plausible | `--fgc-ink-on-art` sits on `--fgc-plate-dark`, never directly on the art |
 | Hexagon clipping cuts the corners off a logo | plausible in the planned refreshes | keep the inscribed band; inspect at 100×115 and 60×68 before rollout |
 | Table readability | guarded by the shape rule | no hexagons on table rows or map thumbnails |
+| A core role badge crosses back into the name plate | fixed by A79 after the owner reversal | the badge is 56×56 at `bottom: 16px`, the plate is 126px, and source-text plus browser probes require a negative overlap; the old 76px badge at `bottom: -36px` is forbidden |
+| Divider-style rails invade the card row | guarded by A79 | rails are siblings outside `.core-players` inside `.core-stage`; browser geometry requires them at x = 118 and x = 1782 outside the 1500px row |
+| Country flag or team tag code returns as a half-finished identity chip | deferred by the owner in A79 | no `player-code` or `teamCode` remains; source-text assertions forbid them, and `docs/backlog.md` records the idea for a later decision |
 | Source-text tests break on unrelated markup edits | known cost | narrow the assertion; never remove the equality check |
 | Copy-paste drift between duplicated blocks | guarded | sentinel comments and `every_overlay_carries_the_same_fx_block` |
 | Preview and live sources render FX twice | planned | `auto.html` previews load `?fx=off` |
@@ -748,6 +748,11 @@ narrowly; do not weaken the equality rule.
 - A single app switch for every overlay's FX, backed by `data-fx` injection.
   The shipped `bg` toggle already uses the cached-section pattern, but it only
   changes `data-bg` and does not cover this.
+- A country flag or country code in the roster name plate. The owner asked to
+  experiment with it in A79, then said to scrap it and revisit it later in the
+  backlog. No country or nationality field exists in `Player`, `PlayerDto` or
+  `TeamDto`; a real implementation needs a new payload field and a separate
+  decision with its own QA gate.
 - A locator helper shared by more than one cut-out overlay.
 - A visual regression capture per overlay, if a stable OBS capture harness can be
   built without making CI slow.
@@ -770,3 +775,4 @@ it has shipped.
 | 2026-11-23 | The mode toggle became live: a cached `background` section changes `data-bg` on connected sources, the app control became an accessible `Switch` in a `ToggleRow`, and no OBS source refresh is needed (A76). |
 | 2026-11-23 | A77 superseded A75/A76 on the lattice rule: opaque keeps the hexagons over the plate, and the cached `background` section is parsed from the keyed init frame so a Browser Source refresh restores the selected mode. |
 | 2026-11-23 | A78 added an early `html, body` overflow guard to all twelve overlays, stopping the transient scrollbars seen on refresh; a source-text test and browser gutter probe record the result. |
+| 2026-11-23 | A79 refined both rosters together: wider wash and bottom glow, smaller core role badge fully inside the portrait, divider-style vertical rails outside the card row, taller plate with smaller pronouns, and removal of the country/tag code chip experiment. |

@@ -1486,3 +1486,125 @@ records for the URL-mode values, the live message and Switch proof, with their
 question and adds refresh persistence. A78 records the early document overflow
 guard and the zero-gutter browser proof. Visual sign-off at 1920x1080 in OBS
 and browser-emulated reduced motion remain outstanding owner checks.
+
+## 14. Roster overlays - wash, role icon and edge rails (A79)
+
+### 14.1 Purpose and scope
+
+A79 refines the paired `team-roster-home.html` and `team-roster-away.html`
+overlays. It keeps the Night Broadcast tokens, the 1500px flexible card row
+from A61, the rectangular substitute strip, and the hexagon separator outside
+the rows. It does not change the wire protocol, filenames, fonts, assets, FX
+block, background-mode handling or early overflow guard. The two files remain
+byte-identical apart from `<title>` and `TEAM_SIDE`. The owner first asked for a
+wider gradient, a subtle bottom glow, role icons at the bottom centre of the
+portrait overlapping a taller name plate, smaller pronouns, and an experiment
+with a country flag or country code. After the first implementation the owner
+reversed the last point and the overlap: "Scrap the idea about the country flag
+or tag for now. We'll revisit this later in the backlog. Maybe for the core
+team, let's try reduceing the size of the role icon and move it up more so it
+doesn't overlap over the name plate like we originally tried. On top of that,
+let's add some decorative lines on the left and right side (similar design to
+the divider between core and subs)." The experiment and its deferred status are
+recorded in `docs/backlog.md`.
+
+### 14.2 Surface plan
+
+The `.roster-wash` is 760px wide and spans the full 1080px height. It no
+longer has element-level opacity; its alpha lives in the token colours.
+`.roster-wash::after` adds a 320px bottom glow at `bottom: -120px` with
+`filter: blur(14px)`. Home anchors the wash at `left: 0`, paints
+`linear-gradient(90deg, var(--fgc-wash), transparent 82%)` and puts the glow at
+`22% 100%`. Away anchors at `right: 0`, mirrors the angle to 270deg and the
+glow centre to `78% 100%`. The default custom properties are
+`--fgc-wash: rgb(255 122 26 / 16%)` and
+`--fgc-glow: rgb(255 122 26 / 20%)`.
+
+The core row is wrapped in `.core-stage`, a 1500×600 positioned box. The
+`.core-players` child fills that box and keeps the 20px gap and flexible card
+widths. Two `.core-rail` siblings sit at `left: -92px` and `right: -92px`,
+each 20px wide and 520px tall with `top: 40px` and `bottom: 40px`. Their
+`::before` is a 1px `var(--fgc-line)` rule; their `.core-rail__hex` is an
+18×20 `var(--fgc-line-strong)` hexagon using `--fgc-hex-cell`. This repeats
+the `.roster-separator` construction as a vertical motif without changing the
+row geometry.
+
+The core role badge lives inside `.hero-image` and is 56×56 at
+`left: 50%`, `bottom: 16px`, `transform: translateX(-50%)`. It uses
+`--fgc-surface`, the shared hexagon clip, `z-index: 3`, and a centred flex
+layout. Its image is 40×40 and `:empty` hides the badge when no icon exists.
+The hero remains 740×474 and `position: relative`. With a 126px plate below,
+the badge bottom sits 16px above the plate top. The earlier 76px badge at
+`bottom: -36px` is forbidden; source-text assertions guard both numbers.
+
+The substitute badge is unchanged by the reversal: it stays in the 72×76
+`.sub-portrait` at 58×58, `bottom: 8px`, with a 44×44 image. The substitute
+card, row and plate are 76px high. Core `.player-info` is 126px high with
+`padding: 20px 24px` and `justify-content: center`. Core pronouns are 18px
+with 22px line height; substitute pronouns are 14px with 16px line height.
+Names use `overflow: hidden`, `white-space: nowrap` and `text-overflow:
+ellipsis`, with the full value retained in `title`. `fitRosterText()` still
+shifts from 36px to an 18px floor on core and from 24px to a 14px floor on
+substitutes.
+
+There is no name-plate code chip. The `NAME-PLATE CODE CHIP` CSS block,
+`teamCode()`, `rosterCode` and every `code` parameter were removed. The
+constructor signatures are `createCorePlayerCard(player, index)` and
+`createSubCard(player, index, totalSubs)`. Source-text assertions require the
+absence of `player-code`, `teamCode`, `data-initials` and `playerInitials`.
+
+### 14.3 State matrix
+
+| State | Required result |
+|---|---|
+| Team colours on | Header uses the team colour; `--fgc-team`, `--fgc-wash` and `--fgc-glow` are set from the hex, with alpha 0.16 and 0.22. |
+| Team colours off | All three inline properties are removed; header returns to `var(--fgc-surface)`; wash and glow return to orange. |
+| Role icon present | Hexagon badge renders the icon at 40px on core and 44px on substitutes. |
+| Role icon absent | `:empty` hides the badge; no empty hexagon remains. |
+| Long core name | Font shrinks to the 18px floor if needed, then ellipsizes; `title` keeps the full name. |
+| Long substitute name | Font shrinks to the 14px floor if needed, then ellipsizes; `title` keeps the full name. |
+| No substitutes | Separator and substitute strip remain in place with no rows added. |
+| Fresh or reloaded source | A79 styling is intrinsic HTML/CSS/JS; no cached message is required. The A77 background init replay and A78 overflow guard remain in force. |
+
+### 14.4 JS helpers
+
+`escapeHtml()` and `fitText()` are unchanged. `fitRosterText()` keeps the
+floors described above and runs from `document.fonts.ready`. `getRoleIcon()`
+still normalises the role to lower case and returns an `<img>` only when a URL
+exists. `updateRoster()` chooses the team and players from `TEAM_SIDE`, applies
+or removes the three team-colour properties, filters players by
+`position === 'core'` and `position === 'sub'`, and passes only the player and
+row metadata to the constructors. No new payload field, helper or message type
+was introduced.
+
+### 14.5 CDP-verifiable assertions
+
+On a fresh home probe tab at the 1920×1080 design canvas:
+
+- `.overlay` reports `dataset.rosterSide === 'home'`; `.roster-wash` is 760×1080
+  at x = 0; its computed background starts
+  `linear-gradient(90deg, rgba(62, 207, 142, 0.16)`; the `::after` background
+  is `radial-gradient(58% 100% at 22% 100%, rgba(62, 207, 142, 0.22)` with
+  height 320px, bottom -120px and `blur(14px)`.
+- Away mirrors the wash at x = 1160 with 270deg and `78% 100%`.
+- `--fgc-team`, `--fgc-wash` and `--fgc-glow` match the live team colour when
+  enabled and are empty after `teamColorsEnabled: false`.
+- Core hero is 740×474; badge is 56×56 with a 40px icon, hex clip, centre
+  offset 0 and badge-bottom minus plate-top equal to -16px; plate is 126px
+  with `20px 24px` padding; pronouns are 18px.
+- Sub portrait is 72×76; badge is 58×58 with 8px inset, 44px icon and 0px
+  centre offset; pronouns are 14px.
+- `.core-stage` is 1500×600; left and right rails are 20×520 at x = 118 and
+  x = 1782, outside the card row; line and hex colours are
+  `rgb(42, 49, 64)` and `rgb(58, 67, 86)`.
+- Long names report ellipsis, a full `title`, and `scrollWidth >=
+  clientWidth` only after the fit floor is reached.
+- No `.player-code`, `teamCode`, `data-initials` or `playerInitials` exists.
+- Core bottom <= separator top and separator bottom <= substitutes top.
+- `innerWidth - clientWidth` and `innerHeight - clientHeight` are zero;
+  html and body overflow both compute `hidden`; console is empty.
+
+A79's real-browser evidence is in `docs/manual-qa.md` row A79, with repeatable
+steps in `docs/manual-qa-runbook.md` section A79. Screenshots were captured,
+but observer review failed because of an OpenCode Go usage limit, so OBS
+visual sign-off at 1920×1080 remains an owner check.

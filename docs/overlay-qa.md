@@ -45,13 +45,16 @@ across all milestones is in `docs/manual-qa.md`.
 | 34 | A `{"type":"init","data":{"background":{"opaque":true\|false}}}` frame restores the app-selected mode on a fresh or reloaded Browser Source | ☑ |
 | 35 | All twelve overlays carry the early `html, body` overflow guard before any FX rule or iframe, so a refresh shows no transient scrollbars | ☑ |
 | 36 | FX carriers report zero scrollbar gutters in a 1000x700 tab even though the `-360px` overscan reports `scrollWidth: 1360` and `scrollHeight: 738` | ☑ |
+| 37 | Roster overlays use the wider team wash and bottom glow, a small core role badge fully inside the portrait, divider-style vertical rails outside the card row, a taller core plate with smaller pronouns, no name-plate code chip, and no long-name overflow | ☑ |
 
 The current design language, the per-overlay playbook and the motion rules are
 in [`docs/overlay-design-language.md`](overlay-design-language.md). The
 post-v1 evidence for these checks is in `docs/manual-qa.md` §7 and the repeatable
-steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74, A75, A76, A77
-and A78. A75 and A76 remain historical records; A77 supersedes their
-hexagons-hidden claim and its refresh caveat.
+steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74, A75, A76, A77,
+A78 and A79. A75 and A76 remain historical records; A77 supersedes their
+hexagons-hidden claim and its refresh caveat. A79 supersedes the earlier roster
+experiment that put the reduced hexagon abbreviation, then the team tag or
+country code, in the name plate; that idea is deferred to the backlog.
 
 ## Automated pre-check
 

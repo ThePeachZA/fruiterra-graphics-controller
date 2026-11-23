@@ -5122,3 +5122,122 @@ overflow from the first style rule, so the transient scrollbars reported by the
 owner have no gutter in which to appear. The overscanned FX composition is
 unchanged and the zero-gutter measurement confirms it is clipped rather than
 removed. Visual confirmation in OBS at 1920x1080 remains an owner check.
+
+### A79 - Roster wash, role badge and edge rails
+
+**Covers:** the owner's 2026-11-23 roster review. The first requests were a
+slightly adjusted and wider gradient, a subtle bottom glow, role icons at the
+bottom centre of the portrait with slight name-plate overlap, a taller name
+plate, smaller pronouns, and an experiment replacing the hexagon initials with
+a country flag or country code. The owner then narrowed the work: "Scrap the
+idea about the country flag or tag for now. We'll revisit this later in the
+backlog. Maybe for the core team, let's try reduceing the size of the role icon
+and move it up more so it doesn't overlap over the name plate like we originally
+tried. On top of that, let's add some decorative lines on the left and right
+side (similar design to the divider between core and subs)." A79 is the paired
+home and away roster change. The country/tag idea is deliberately not shipped
+and is recorded in `docs/backlog.md`.
+
+**Steps:**
+
+1. Run `dx build --desktop`, restart the app with
+   `$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'`,
+   and confirm `/health` reports the overlay server on `127.0.0.1:3001`. The
+   verified run reported 33 overlays, status `ok` and version `1.0.0`.
+2. Open a fresh tab for `team-roster-home.html?probe=<stamp>home` and another for
+   `team-roster-away.html?probe=<stamp>away`. Do not reuse an older URL; the
+   browser cache masks the changed file.
+3. Send a `teamRoster` payload whose player objects use `position: 'core'` or
+   `position: 'sub'`. The older `kind` field does not select rows. Use long
+   names, a tag, a team colour, `teamColorsEnabled: true`,
+   `showPlayerPortraits: false`, and role-icon data URLs for top, jungle, mid,
+   adc and support.
+4. After `document.fonts.ready`, read the wash geometry and computed styles.
+   Home must report a 760×1080 wash at x = 0, `linear-gradient(90deg,
+   rgba(<team>, 0.16), transparent 82%)`, and a `::after` glow at `22% 100%`
+   with `rgba(<team>, 0.22)`, height 320px, bottom -120px and `blur(14px)`.
+   Away must mirror the wash to x = 1160, the linear angle to 270deg and the
+   glow to `78% 100%`. The inline custom properties must match the live team
+   colour; sending `teamColorsEnabled: false` must remove all three inline
+   properties and restore the orange defaults.
+5. Read the core hero, badge and plate. The hero is 740×474. The badge is
+   56×56 at `bottom: 16px`, horizontally centred on the hero to 0px, hexagon
+   clipped, and contains a 40×40 icon. The badge bottom minus the plate top
+   must be negative; the verified value was -16px, proving there is no
+   overlap. The plate is 126px high with `padding: 20px 24px`, pronouns at
+   18px/22px, and no code chip.
+6. Read the substitute portrait, badge and plate. The portrait is 72×76, the
+   badge is 58×58 with an 8px bottom inset and 0px centre offset, the icon is
+   44×44, pronouns are 14px/16px, and no code chip exists.
+7. Read `.core-stage` and the two `.core-rail` nodes. The stage is 1500×600 at
+   the card row position. The rails are 20×520 outside the row at x = 118 and
+   x = 1782 in the 1920×1080 canvas. Each has a 1px `var(--fgc-line)` pseudo
+   line and an 18×20 `var(--fgc-line-strong)` hexagon with the shared cell
+   clip. They must not enter or resize any card.
+8. Read long names. `fitRosterText()` may shrink to its floors of core 18px and
+   sub 14px. Beyond the floor the name must use `overflow: hidden`,
+   `white-space: nowrap`, `text-overflow: ellipsis`, and retain the full value
+   in `title`. In the verified run the home core name fitted to 33px with
+   `clientWidth`/`scrollWidth` 692/692, the away core name stayed 36px with
+   692/692, and long substitute names read 180/191 at 14px or 19px.
+9. Read the separator order and gutters. The core row must end before the
+   separator top, and the separator bottom must be before the substitute row
+   top. `innerWidth - clientWidth` and `innerHeight - clientHeight` must be
+   zero, html and body overflow must both compute `hidden`, and the console
+   must be empty.
+10. Run `git diff --check`, `cargo fmt --all`, `cargo fmt --all -- --check`,
+    `cargo clippy --workspace --all-targets -- -D warnings` and
+    `cargo test --workspace`. The overlay suite must contain 36 tests,
+    including the byte-equality guard between the two roster files and the
+    A79 source-text assertions.
+
+**Gotchas:**
+
+- The country/tag chip is not a half-finished feature. It was removed from
+  both files, its helper was deleted and the backlog records the idea. Do not
+  reintroduce it accidentally while editing the name plate.
+- A negative plate overlap is intentional. A positive number means the badge
+  has crossed back into the name plate and the owner's instruction has not
+  been met.
+- The rails live outside `.core-players`, inside `.core-stage`. Putting them
+  inside the flex row changes card widths and breaks the A61 contract.
+- The existing substitute badge and portrait were not part of the reversal;
+  they remain inside the 76px substitute card.
+- `document.fonts.ready` is required before measuring names. Measuring before
+  fonts load produces different fitted sizes.
+- `requestAnimationFrame` waits hung in the in-app browser. Use
+  `document.fonts.ready.then(measure)`.
+- Screenshot focus and capture must be separate browser calls. A focus call
+  inside the same `execute` block was not sufficient in this environment.
+- The observer subagents were unavailable during the verified run because of
+  an OpenCode Go usage limit. The captured screenshots could not be reviewed
+  by a vision model; record that limitation rather than claiming visual
+  sign-off.
+
+**Evidence:** home tab
+`tab_e090c55d-4554-4987-af37-c12e0b6832ba` with probe
+`1795472622480home` reported side `home`, wash 760×1080 at x = 0, team wash
+`rgba(62, 207, 142, 0.16)`, glow `rgba(62, 207, 142, 0.22)` at `22% 100%`,
+header `rgb(62, 207, 142)`, core badge 56×56 at (552, 628), 40px icon, centre
+offset 0, inset 16, overlap -16, plate 126 at y = 700 with `20px 24px` padding,
+pronouns 18px, long core name 33px with 692/692, rails at x = 118 and 1782,
+substitute badge inset 8, long substitute name 180/191, zero code chips,
+`orderOk: true`, gutters 0/0, `hidden`/`hidden` overflow and an empty console.
+Away tab `tab_03c007dd-9e20-4643-93a8-7c907b2b1457` with probe
+`1795472622480away` reported side `away`, wash at x = 1160, mirrored gradient
+and glow with `rgba(255, 92, 122, 0.22)`, header `rgb(255, 92, 122)`, the same
+badge and rail geometry, names ellipsized, zero code chips, `orderOk: true`,
+gutters 0/0, hidden overflow and an empty console. Sending
+`teamColorsEnabled: false` on the home tab removed the three inline custom
+properties and restored the orange defaults. Screenshots were saved at
+`C:\Users\Cameron\AppData\Local\Temp\opencode-browser-Sg3Eep\0\screenshot.png`
+and
+`C:\Users\Cameron\AppData\Local\Temp\opencode-browser-CS6jBi\0\screenshot.png`.
+
+**Result: Pass - assistant 2026-11-23.** The paired roster overlays satisfy the
+revised design: the core role icon is smaller, higher and clear of the name
+plate; divider-style vertical rails frame the row outside the cards; the
+country/tag experiment is gone; and the wider wash and bottom glow remain. All
+static gates and real DOM probes passed. Visual confirmation in OBS at
+1920×1080 remains an owner check because the captured screenshots could not be
+reviewed in this session.
