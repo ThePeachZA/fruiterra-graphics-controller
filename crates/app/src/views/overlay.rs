@@ -8,7 +8,8 @@ use fgc_server::ServerStatus;
 
 use crate::assets_io::open_browser;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
-use crate::components::{CollapsiblePanel, Disclosure, KeyValue, KeyValues, Panel};
+use crate::components::switch::Switch;
+use crate::components::{CollapsiblePanel, Disclosure, KeyValue, KeyValues, Panel, ToggleRow};
 use crate::remote_access::{self, OverlayUrlGroup};
 use crate::server::{
     OVERLAY_FILES, SCENE_OVERLAY_FILES, overlay_source_files, overlay_url_with_background,
@@ -105,13 +106,6 @@ pub fn OverlayView() -> Element {
                             onclick: move |_| store.set_overlays_visible(!overlays_visible),
                             if overlays_visible { "Hide overlays" } else { "Show overlays" }
                         }
-                        Button {
-                            variant: ButtonVariant::Outline,
-                            disabled: !running || busy,
-                            aria_pressed: background_opaque,
-                            onclick: move |_| store.set_background_opaque(!background_opaque),
-                            if background_opaque { "Use transparent background" } else { "Use opaque background" }
-                        }
                         if running {
                             Button {
                                 variant: ButtonVariant::Secondary,
@@ -134,11 +128,24 @@ pub fn OverlayView() -> Element {
                             }
                         }
                     }
+                    ToggleRow {
+                        title: "Opaque background".to_owned(),
+                        hint: Some(
+                            "Paint a solid theme colour with no hexagon lattice, or keep every overlay transparent. Connected Browser Sources switch straight away."
+                                .to_owned(),
+                        ),
+                        Switch {
+                            checked: background_opaque,
+                            disabled: !running || busy,
+                            aria_label: "Opaque background",
+                            on_checked_change: move |value| store.set_background_opaque(value),
+                        }
+                    }
                     p { class: "fgc-note",
                         "The base URL and Browser Source URLs stay hidden until you reveal them below. Port, remote access, asset URLs and auto-start are configured in Settings."
                     }
                     p { class: "fgc-note",
-                        "The background toggle changes the generated Browser Source URLs. Refresh each OBS source after changing it; connected sources keep their current mode until then."
+                        "The background toggle updates connected Browser Sources straight away. It also changes the generated Browser Source URLs for sources opened later."
                     }
                     if needs_reconnect {
                         p { class: "fgc-note", role: "status",

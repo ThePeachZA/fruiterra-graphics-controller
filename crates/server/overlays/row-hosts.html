@@ -344,6 +344,16 @@
       } else if (root.dataset.bg !== 'opaque') {
         root.dataset.bg = 'transparent';
       }
+
+      // A cached section message lets the app switch every connected source
+      // without an OBS refresh. The URL is only the starting state.
+      window.fgcUpdateBackground = (data) => {
+        const payload = data && typeof data === 'object' ? (data.data || data) : null;
+        const opaque = payload && typeof payload.opaque === 'boolean' ? payload.opaque : null;
+        if (opaque !== null) {
+          root.dataset.bg = opaque ? 'opaque' : 'transparent';
+        }
+      };
     })();
   </script>
   <!-- === FGC CANONICAL FX END === -->
@@ -608,6 +618,7 @@
       });
     }
     function updateOverlay(data) {
+      if (window.fgcUpdateBackground) window.fgcUpdateBackground(data);
       const d = data.data || data;
       if (data.type === 'theme') {
         applyTheme(d);

@@ -1103,6 +1103,10 @@ fn every_overlay_carries_the_same_fx_block() {
             1,
             "{file} should contain exactly one lattice sibling"
         );
+        assert!(
+            text.contains("if (window.fgcUpdateBackground) window.fgcUpdateBackground(data);"),
+            "{file} should forward section messages to the live background handler"
+        );
         let start = text.find(START).expect("FX start sentinel should exist");
         let end = text[start..]
             .find(END)
@@ -1156,6 +1160,11 @@ fn every_overlay_carries_the_same_fx_block() {
             && canonical.contains("root.dataset.bg = bgMode"),
         "the canonical block should read the background mode from the URL"
     );
+    assert!(
+        canonical.contains("window.fgcUpdateBackground = (data) => {")
+            && canonical.contains("payload.opaque"),
+        "the canonical block should accept a live background section message"
+    );
 }
 
 #[test]
@@ -1181,6 +1190,10 @@ fn background_html_supports_the_transparent_variant() {
     assert!(
         text.contains("requestedBg === 'off' ? 'opaque'") && text.contains("root.dataset.bg"),
         "the standalone background should read the same URL toggle"
+    );
+    assert!(
+        text.contains("data.type === 'background'") && text.contains("d.opaque"),
+        "the standalone background should accept a live background section message"
     );
 }
 

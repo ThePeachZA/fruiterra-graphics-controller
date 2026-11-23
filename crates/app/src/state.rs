@@ -72,6 +72,11 @@ fn auto_overlay_outbound(included: &[String], active: Option<&str>) -> Option<Ou
     }
 }
 
+fn background_outbound(opaque: bool) -> Outbound {
+    let payload = serde_json::json!({ "opaque": opaque });
+    Outbound::section("background", &payload).expect("serialise background mode")
+}
+
 fn default_auto_overlay() -> (Vec<String>, Option<String>) {
     let first = SCENE_OVERLAY_FILES[0].to_owned();
     (vec![first.clone()], Some(first))
@@ -413,13 +418,15 @@ impl AppStore {
         *self.background_opaque.read()
     }
 
-    /// Chooses opaque or transparent backgrounds in generated source URLs.
+    /// Chooses opaque or transparent backgrounds for every connected overlay.
     ///
-    /// This is session-only. Existing Browser Sources keep the mode they were
-    /// opened with until they are refreshed with the newly generated URL.
+    /// This is session-only. The generated Browser Source URLs carry the mode
+    /// for new sources, and a cached `background` section updates sources that
+    /// are already connected.
     pub fn set_background_opaque(&self, opaque: bool) {
         let mut background_opaque = self.background_opaque;
         background_opaque.set(opaque);
+        self.server.broadcast(background_outbound(opaque));
     }
 
     /// Bundled overlays currently included in the auto scene switcher.
@@ -2907,6 +2914,7 @@ impl AppStore {
         if let Some(frame) = auto_overlay_outbound(&included, active.as_deref()) {
             outbound.push(frame);
         }
+        outbound.push(background_outbound(self.background_opaque()));
         outbound.push(Outbound::Show {
             visible: self.overlays_visible(),
         });
@@ -3729,14 +3737,20 @@ mod tests {
         fn scenario() -> Element {
             let store = AppStore::test_store(AppState::default());
             assert!(!store.background_opaque());
+            let (_config, _base_url, outbound) = store.server_plan();
+            assert!(outbound.contains(&background_outbound(false)));
 
             store.set_background_opaque(true);
             assert!(store.background_opaque());
             assert!(!*store.dirty.peek());
+            let (_config, _base_url, outbound) = store.server_plan();
+            assert!(outbound.contains(&background_outbound(true)));
 
             store.set_background_opaque(false);
             assert!(!store.background_opaque());
             assert!(!*store.dirty.peek());
+            let (_config, _base_url, outbound) = store.server_plan();
+            assert!(outbound.contains(&background_outbound(false)));
             VNode::empty()
         }
 

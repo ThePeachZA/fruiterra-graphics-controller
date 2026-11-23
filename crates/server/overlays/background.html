@@ -279,6 +279,12 @@
       if (!data || typeof data !== 'object') return;
       const d = data.data && typeof data.data === 'object' ? data.data : data;
 
+      if (data.type === 'background') {
+        if (typeof d.opaque === 'boolean') {
+          root.dataset.bg = d.opaque ? 'opaque' : 'transparent';
+        }
+      }
+
       if (data.type === 'theme') {
         applyTheme(d);
         return;
