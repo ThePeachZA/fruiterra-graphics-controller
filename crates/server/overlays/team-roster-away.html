@@ -114,8 +114,8 @@
 
     .overlay {
       --fgc-team: var(--fgc-accent);
-      --fgc-wash: rgb(255 122 26 / 16%);
-      --fgc-glow: rgb(255 122 26 / 20%);
+      --fgc-wash: rgb(255 122 26 / 12%);
+      --fgc-glow: rgb(255 122 26 / 12%);
       --fgc-hex-cell: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     }
 
@@ -167,11 +167,13 @@
     .roster-wash::after {
       content: '';
       position: absolute;
-      left: 0;
-      right: 0;
+      left: 50%;
       bottom: -120px;
+      width: 1920px;
       height: 320px;
+      transform: translateX(-50%);
       filter: blur(14px);
+      background: linear-gradient(0deg, var(--fgc-glow), transparent 100%);
     }
 
     .overlay[data-roster-side="home"] .roster-wash {
@@ -179,17 +181,9 @@
       background: linear-gradient(90deg, var(--fgc-wash), transparent 82%);
     }
 
-    .overlay[data-roster-side="home"] .roster-wash::after {
-      background: radial-gradient(58% 100% at 22% 100%, var(--fgc-glow), transparent 72%);
-    }
-
     .overlay[data-roster-side="away"] .roster-wash {
       right: 0;
       background: linear-gradient(270deg, var(--fgc-wash), transparent 82%);
-    }
-
-    .overlay[data-roster-side="away"] .roster-wash::after {
-      background: radial-gradient(58% 100% at 78% 100%, var(--fgc-glow), transparent 72%);
     }
 
     .roster-separator {
@@ -264,51 +258,11 @@
     }
 
     /* === CORE PLAYERS === */
-    .core-stage {
+    .core-players {
       width: 1500px;
       height: 600px;
-      position: relative;
-      flex-shrink: 0;
-    }
-
-    .core-players {
-      width: 100%;
-      height: 100%;
       display: flex;
       gap: 20px;
-    }
-
-    .core-rail {
-      position: absolute;
-      top: 40px;
-      bottom: 40px;
-      width: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-    }
-
-    .core-rail::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 50%;
-      width: 1px;
-      background: var(--fgc-line);
-      transform: translateX(-50%);
-    }
-
-    .core-rail--left { left: -92px; }
-    .core-rail--right { right: -92px; }
-
-    .core-rail__hex {
-      position: relative;
-      width: 18px;
-      height: 20px;
-      background: var(--fgc-line-strong);
-      clip-path: var(--fgc-hex-cell);
     }
 
     /* === SUBSTITUTES === */
@@ -434,8 +388,8 @@
       left: 50%;
       bottom: 8px;
       transform: translateX(-50%);
-      width: 58px;
-      height: 58px;
+      width: 46px;
+      height: 54px;
       background: var(--fgc-surface);
       clip-path: var(--fgc-hex-cell);
       z-index: 1;
@@ -449,8 +403,8 @@
     }
 
     .player-card-sub .role-badge img {
-      width: 44px;
-      height: 44px;
+      width: 34px;
+      height: 34px;
       object-fit: contain;
     }
 
@@ -621,15 +575,7 @@
       </div>
 
       <!-- Core Players -->
-      <div class="core-stage">
-        <div class="core-rail core-rail--left" aria-hidden="true">
-          <div class="core-rail__hex"></div>
-        </div>
-        <div class="core-players" id="core-players" style="opacity: 0;"></div>
-        <div class="core-rail core-rail--right" aria-hidden="true">
-          <div class="core-rail__hex"></div>
-        </div>
-      </div>
+      <div class="core-players" id="core-players" style="opacity: 0;"></div>
 
       <!-- Hexagon separator, outside the rectangular rows -->
       <div class="roster-separator" aria-hidden="true">
@@ -752,6 +698,26 @@
       return `<img src="${iconUrl}" alt="${escapeHtml(roleName)}" />`;
     }
 
+    // Broadcast ordering is Damage, Tank, Support. Keep the source order inside
+    // one role. Unknown role labels are treated as Damage so legacy names do
+    // not drop behind tanks or supports.
+    const ROLE_RANK = { damage: 0, tank: 1, support: 2 };
+
+    function roleRank(role) {
+      const slug = String(role || '').toLowerCase();
+      return Object.prototype.hasOwnProperty.call(ROLE_RANK, slug)
+        ? ROLE_RANK[slug]
+        : 0;
+    }
+
+    function sortPlayersByRole(list) {
+      return list
+        .map((player, index) => ({ player, index }))
+        .sort((a, b) => roleRank(a.player.role) - roleRank(b.player.role)
+          || a.index - b.index)
+        .map((entry) => entry.player);
+    }
+
     function createCorePlayerCard(player, index) {
       const card = document.createElement('div');
       card.className = 'player-card-core';
@@ -844,8 +810,8 @@
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         const textColor = luminance > 0.5 ? '#0b0d12' : '#eef2f8';
         el.teamName.style.color = textColor;
-        el.overlay.style.setProperty('--fgc-wash', `rgba(${r}, ${g}, ${b}, 0.16)`);
-        el.overlay.style.setProperty('--fgc-glow', `rgba(${r}, ${g}, ${b}, 0.22)`);
+        el.overlay.style.setProperty('--fgc-wash', `rgba(${r}, ${g}, ${b}, 0.12)`);
+        el.overlay.style.setProperty('--fgc-glow', `rgba(${r}, ${g}, ${b}, 0.14)`);
       } else {
         el.overlay.style.removeProperty('--fgc-team');
         el.overlay.style.removeProperty('--fgc-wash');
@@ -854,16 +820,20 @@
         el.teamName.style.color = 'var(--fgc-text)';
       }
 
-      // Filter and populate core players
-      const corePlayersList = players.filter(p => p && p.position === 'core');
+      // Filter, order and populate core players
+      const corePlayersList = sortPlayersByRole(
+        players.filter(p => p && p.position === 'core')
+      );
       el.corePlayers.innerHTML = '';
       corePlayersList.forEach((player, index) => {
         const card = createCorePlayerCard(player, index);
         el.corePlayers.appendChild(card);
       });
 
-      // Filter and populate substitutes
-      const subs = players.filter(p => p && p.position === 'sub');
+      // Filter, order and populate substitutes
+      const subs = sortPlayersByRole(
+        players.filter(p => p && p.position === 'sub')
+      );
       el.substitutes.innerHTML = '';
       subs.forEach((player, index) => {
         const card = createSubCard(player, index, subs.length);

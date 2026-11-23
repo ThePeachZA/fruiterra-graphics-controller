@@ -605,18 +605,26 @@ fn roster_overlays_use_hexagon_identity_without_touching_the_rows() {
                 && text.contains(".player-card-sub .sub-portrait {")
                 && text.contains("bottom: 8px;")
                 && text.contains("left: 50%;")
-                && text.contains("transform: translateX(-50%);"),
-            "{file} should centre both clipped role badges and keep the core badge inside the portrait"
+                && text.contains("transform: translateX(-50%);")
+                && text.contains("width: 46px;")
+                && text.contains("height: 54px;")
+                && text.contains("width: 34px;")
+                && text.contains("height: 34px;"),
+            "{file} should centre both clipped role badges and use a proportional sub hexagon"
         );
         assert!(
-            text.contains(".core-stage {")
-                && text.contains(".core-rail::before {")
-                && text.contains(".core-rail__hex {")
-                && text.matches("class=\"core-rail core-rail--left\"").count() == 1
-                && text.matches("class=\"core-rail core-rail--right\"").count() == 1
-                && text.contains("background: var(--fgc-line);")
-                && text.contains("background: var(--fgc-line-strong);"),
-            "{file} should frame the core row with divider-style vertical rails"
+            !text.contains(".core-stage")
+                && !text.contains(".core-rail")
+                && !text.contains("core-rail--left")
+                && !text.contains("core-rail--right"),
+            "{file} should not decorate the sides of the core row"
+        );
+        assert!(
+            text.contains("const ROLE_RANK = { damage: 0, tank: 1, support: 2 };")
+                && text.contains("function sortPlayersByRole(list)")
+                && text.contains("const corePlayersList = sortPlayersByRole(")
+                && text.contains("const subs = sortPlayersByRole("),
+            "{file} should order both rows Damage, Tank, Support and keep order inside a role"
         );
         assert!(
             !text.contains("data-initials")
@@ -646,8 +654,14 @@ fn roster_overlays_use_hexagon_identity_without_touching_the_rows() {
             text.contains(".roster-wash {")
                 && text.contains("width: 760px;")
                 && text.contains(".roster-wash::after {")
-                && text.contains("radial-gradient(58% 100% at 22% 100%")
-                && text.contains("radial-gradient(58% 100% at 78% 100%")
+                && text.contains("width: 1920px;")
+                && text.contains("transform: translateX(-50%);")
+                && text.contains("linear-gradient(0deg, var(--fgc-glow), transparent 100%);")
+                && !text.contains("radial-gradient(")
+                && text.contains("--fgc-wash: rgb(255 122 26 / 12%);")
+                && text.contains("--fgc-glow: rgb(255 122 26 / 12%);")
+                && text.contains("rgba(${r}, ${g}, ${b}, 0.12)")
+                && text.contains("rgba(${r}, ${g}, ${b}, 0.14)")
                 && text.contains(
                     "el.overlay.dataset.rosterSide = TEAM_SIDE === 'A' ? 'home' : 'away';"
                 )
@@ -656,7 +670,7 @@ fn roster_overlays_use_hexagon_identity_without_touching_the_rows() {
                 && text.contains(
                     ".overlay[data-roster-side=\"away\"] .roster-wash {\n      right: 0;"
                 ),
-            "{file} should spread the wash across the frame and add a mirrored bottom glow"
+            "{file} should keep the side wash, soften its alphas and stretch the glow across the frame"
         );
         assert!(
             text.contains("el.overlay.style.setProperty('--fgc-team', teamData.color);")
