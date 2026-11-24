@@ -456,8 +456,10 @@ fn build_match(state: &AppState) -> Result<Match> {
         interviewer: None,
         interviewee: Some(IntervieweeRef {
             talent_id: Some(sam),
+            player_id: None,
             custom_name: None,
             custom_subtext: None,
+            custom_portrait: None,
         }),
     };
 

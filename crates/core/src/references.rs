@@ -5,7 +5,7 @@
 //! referenced and remove those references when the user explicitly asks to
 //! clean up and delete.
 
-use crate::{AppState, Round, TalentId, TeamId, TournamentId};
+use crate::{AppState, PlayerId, Round, TalentId, TeamId, TournamentId};
 
 /// One place a team is referenced.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -198,6 +198,22 @@ pub fn clear_talent_references(state: &mut AppState, talent: &TalentId) {
     }
 }
 
+/// Clears the current match's interviewee when it points at `player`.
+pub fn clear_player_references(state: &mut AppState, player: &PlayerId) {
+    let Some(current) = &mut state.current_match else {
+        return;
+    };
+
+    let clear = current
+        .talent
+        .interviewee
+        .as_ref()
+        .is_some_and(|interviewee| interviewee.player_id.as_ref() == Some(player));
+    if clear {
+        current.talent.interviewee = None;
+    }
+}
+
 fn rounds_reference(rounds: &[Round], team: &TeamId) -> bool {
     rounds.iter().flat_map(|round| &round.matches).any(|game| {
         game.slot1.as_ref() == Some(team)
@@ -209,7 +225,7 @@ fn rounds_reference(rounds: &[Round], team: &TeamId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Match, TalentId, TeamId, Tournament};
+    use crate::{Match, PlayerId, TalentId, TeamId, Tournament};
     use serde_json::json;
 
     fn tournament(value: serde_json::Value) -> Tournament {
@@ -346,6 +362,23 @@ mod tests {
         let current = state.current_match.as_ref().expect("current match");
         assert!(current.talent.caster1.is_none());
         assert!(current.talent.panel3.is_none());
+        assert!(current.talent.interviewee.is_none());
+    }
+
+    #[test]
+    fn deleting_a_player_clears_interviewee_assignment() {
+        let mut state = AppState::default();
+        let player = PlayerId::from_raw("player-1");
+        state.current_match = Some(current_match(json!({
+            "id": "match-1",
+            "talent": {
+                "interviewee": { "playerId": "player-1", "customName": "Guest" }
+            }
+        })));
+
+        clear_player_references(&mut state, &player);
+
+        let current = state.current_match.as_ref().expect("current match");
         assert!(current.talent.interviewee.is_none());
     }
 }

@@ -43,7 +43,8 @@ pub use paths::{
     state_file,
 };
 pub use references::{
-    TeamReference, clear_talent_references, remove_team_references, team_references,
+    TeamReference, clear_player_references, clear_talent_references, remove_team_references,
+    team_references,
 };
 pub use store::{JsonStore, MemoryStore, Store};
 pub use tournament::*;

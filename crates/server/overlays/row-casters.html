@@ -121,7 +121,7 @@
       padding: 100px 100px;
     }
 
-    /* Casters Container */
+    /* Talent row */
     .casters-container {
       display: flex;
       gap: 20px;
@@ -134,48 +134,75 @@
       max-width: 900px;
     }
 
-    /* Camera Card */
+    /* A card is a portrait stage. The photograph stays unobstructed: no frame,
+       wash, or gradient paints on top of it. */
     .caster-card {
       flex: 1;
       display: flex;
       flex-direction: column;
-      border-radius: 6px;
+      min-width: 0;
+      border-radius: var(--fgc-radius-lg);
       overflow: hidden;
       max-width: none;
-      clip-path: inset(0 round 6px);
+      background: var(--fgc-surface);
+      clip-path: inset(0 round var(--fgc-radius-lg));
+      box-shadow: 0 24px 64px rgb(0 0 0 / 32%);
     }
 
-    /* Talent Image */
-    .talent-image {
+    .talent-media {
+      position: relative;
       flex: 1;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-color: var(--fgc-surface-muted);
-      border-radius: 6px 6px 0 0;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--fgc-surface-muted);
     }
 
-    /* Talent Text */
+    .talent-image {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .talent-image:not([src]),
+    .talent-image[src=""] {
+      display: none;
+    }
+
+    /* A transparent portrait keeps its own subject box; the image is sized and
+       centred on that box rather than on unused canvas pixels. */
+    .talent-image.portrait--cutout {
+      object-fit: contain;
+    }
+
     .talent-text {
-      background: var(--fgc-surface-raised);
-      padding: 15px 10px 20px;
+      position: relative;
+      z-index: 5;
+      flex: 0 0 auto;
+      min-height: 156px;
+      padding: 18px 28px 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(180deg, var(--fgc-surface-raised), var(--fgc-surface));
+      border-top: 1px solid color-mix(in srgb, var(--fgc-accent) 32%, var(--fgc-line));
     }
 
-    /* Talent Name */
     .talent-name {
       width: 100%;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 48px;
+      font-size: 44px;
+      line-height: 1.02;
       color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
     }
 
-    /* Subtext Row */
     .talent-subtext {
       display: flex;
       align-items: center;
@@ -184,20 +211,10 @@
       min-width: 0;
     }
 
-    .talent-role {
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 14px;
-      letter-spacing: 0.12em;
-      line-height: 1;
-      color: var(--fgc-text-muted);
-      text-transform: uppercase;
-    }
-
-    /* Social Icon */
     .social-icon {
-      flex: 0 0 20px;
-      width: 20px;
-      height: 20px;
+      flex: 0 0 22px;
+      width: 22px;
+      height: 22px;
     }
 
     .social-icon svg {
@@ -205,37 +222,30 @@
       height: 100%;
     }
 
-    /* Social icons are neutral metadata, so they take the muted text tier.
-       A stylesheet rule keeps them on the shared token; an SVG presentation
-       attribute could not read a custom property. */
+    /* Social icons are neutral metadata, so they take the muted text tier. */
     .social-icon path {
       fill: var(--fgc-text-muted);
     }
 
-    /* Social Handle */
     .social-handle {
       font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
-      font-size: 24px;
+      font-size: 22px;
       color: var(--fgc-text-muted);
     }
 
-    /* Separator */
     .separator {
       flex: 0 0 auto;
       font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
-      font-size: 24px;
+      font-size: 22px;
       color: var(--fgc-text-muted);
     }
 
-    /* Pronouns */
     .pronouns {
       font-family: 'FGC Display Light', 'Apotek Light', sans-serif;
-      font-size: 24px;
+      font-size: 22px;
       color: var(--fgc-text-muted);
     }
 
-    /* Long handles and pronouns ellipsize inside the card instead of
-       widening the row beyond the card's clipped edge. */
     .social-handle,
     .pronouns {
       min-width: 0;
@@ -244,7 +254,37 @@
       white-space: nowrap;
     }
 
-    /* Hidden elements */
+    @keyframes talentCardReveal {
+      from { opacity: 0; transform: translateY(28px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes talentContentReveal {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .caster-card.animate-card {
+      animation: talentCardReveal 620ms var(--fgc-ease-out) both;
+      animation-delay: var(--card-delay, 0ms);
+    }
+
+    .caster-card.animate-card .talent-text > * {
+      animation: talentContentReveal 480ms var(--fgc-ease-out) both;
+      animation-delay: calc(var(--card-delay, 0ms) + 140ms);
+    }
+
+    .caster-card.animate-card .talent-text > :nth-child(2) {
+      animation-delay: calc(var(--card-delay, 0ms) + 200ms);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .caster-card.animate-card,
+      .caster-card.animate-card .talent-text > * {
+        animation: none !important;
+      }
+    }
+
     .hidden {
       display: none !important;
     }
@@ -419,7 +459,7 @@
 
     function fitCasterNames() {
       el.castersContainer.querySelectorAll('.talent-name').forEach((name) => {
-        fitText(name, 48, 24);
+        fitText(name, 44, 22);
       });
     }
 
@@ -482,93 +522,234 @@
     // assigned as a caster. Hosts, analysts and the interviewer have their own
     // overlays.
     const ACCEPTED_ROLES = ['caster'];
-    const ROLE_LABELS = {
-      caster: 'Caster',
-      host: 'Host',
-      analyst: 'Analyst',
-      interviewer: 'Interviewer',
-      other: 'Other',
-    };
-    const SHOW_ROLE_BADGE = false;
+    // A transparent portrait carries useful pixels only in part of its canvas.
+    // Locate that subject once so the card can centre the person instead of the
+    // empty margin. Opaque or tainted images simply keep the cover treatment.
+    function subjectBox(img) {
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+      if (!width || !height) return null;
 
-    // Cards are only rebuilt when the rendered set actually changes, so the
-    // frequent scoreboard frames do not re-create the desk on every message.
-    let renderedSignature = '';
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return null;
 
-    function createCasterCard(caster) {
+      let pixels;
+      try {
+        context.clearRect(0, 0, width, height);
+        context.drawImage(img, 0, 0);
+        pixels = context.getImageData(0, 0, width, height).data;
+      } catch (error) {
+        return null;
+      }
+
+      let minX = width;
+      let minY = height;
+      let maxX = -1;
+      let maxY = -1;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (pixels[(y * width + x) * 4 + 3] > 8) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < 0 || maxY < 0) return null;
+      return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+    }
+
+    function fitPortrait(img) {
+      if (!img || !img.complete || !img.naturalWidth) return;
+      const media = img.parentElement;
+      const subject = subjectBox(img);
+      const coverage = subject
+        ? (subject.width * subject.height) / (img.naturalWidth * img.naturalHeight)
+        : 1;
+      if (!subject || coverage > 0.82 || media.clientWidth <= 56 || media.clientHeight <= 42) {
+        img.classList.remove('portrait--cutout');
+        img.style.width = '';
+        img.style.height = '';
+        img.style.left = '';
+        img.style.top = '';
+        return;
+      }
+
+      const scale = Math.min(
+        (media.clientWidth - 56) / subject.width,
+        (media.clientHeight - 42) / subject.height
+      );
+      const centreX = subject.x + subject.width / 2;
+      const centreY = subject.y + subject.height / 2;
+      img.classList.add('portrait--cutout');
+      img.style.width = `${img.naturalWidth * scale}px`;
+      img.style.height = `${img.naturalHeight * scale}px`;
+      img.style.left = `${media.clientWidth / 2 - centreX * scale}px`;
+      img.style.top = `${media.clientHeight / 2 - centreY * scale}px`;
+    }
+
+    // Cards are keyed by slot. A repeated frame leaves every card untouched,
+    // and a changed frame animates only the slots whose visible data moved.
+    const renderedCards = new Map();
+    let openingPlayed = false;
+    let openingSettled = false;
+    let overlayVisible = true;
+    const LOAD_IN_START_DELAY = 500;
+
+    function cardSignature(item) {
+      const entry = item.entry;
+      const social = entry.socialMedia || {};
+      return [
+        item.slot,
+        entry.displayName || '',
+        entry.portraitUrl || '',
+        social.platform || '',
+        social.handle || '',
+        entry.pronouns || '',
+      ].join('|');
+    }
+
+    function createCard() {
       const card = document.createElement('div');
       card.className = 'caster-card';
+      card.innerHTML = `
+        <div class="talent-media">
+          <img class="talent-image" alt="" />
+        </div>
+        <div class="talent-text">
+          <div class="talent-name"></div>
+          <div class="talent-subtext hidden"></div>
+        </div>
+      `;
+      const img = card.querySelector('.talent-image');
+      img.addEventListener('load', () => fitPortrait(img));
+      return card;
+    }
 
-      const imageStyle = caster.portraitUrl
-        ? `background-image: url('${caster.portraitUrl}')`
-        : 'background-color: var(--fgc-surface-muted)';
+    function applyCardContent(card, item) {
+      const entry = item.entry;
+      const signature = cardSignature(item);
+      if (card.dataset.signature === signature) return false;
 
-      const socialIconSvg = caster.socialMedia?.platform
-        ? getSocialIcon(caster.socialMedia.platform)
-        : '';
-      const socialIcon = socialIconSvg
-        ? `<div class="social-icon">${socialIconSvg}</div>`
-        : '';
-      const handle = String(caster.socialMedia?.handle ?? '').trim();
+      card.querySelector('.talent-name').textContent = entry.displayName || 'TALENT NAME';
+
+      const social = entry.socialMedia || {};
+      const socialIconSvg = social.platform ? getSocialIcon(social.platform) : '';
+      const socialIcon = socialIconSvg ? `<div class="social-icon">${socialIconSvg}</div>` : '';
+      const handle = String(social.handle ?? '').trim();
       const displayHandle = handle.startsWith('@') ? handle : `@${handle}`;
       const socialHandle = handle
         ? `<span class="social-handle" title="${escapeHtml(displayHandle)}">${escapeHtml(displayHandle)}</span>`
         : '';
-      const separator = (socialIcon || socialHandle) && caster.pronouns 
-        ? '<span class="separator">|</span>' 
+      const separator = (socialIcon || socialHandle) && entry.pronouns
+        ? '<span class="separator">|</span>'
         : '';
-      const pronouns = caster.pronouns 
-        ? `<span class="pronouns">${escapeHtml(caster.pronouns)}</span>`
+      const pronouns = entry.pronouns
+        ? `<span class="pronouns">${escapeHtml(entry.pronouns)}</span>`
         : '';
+      const parts = [socialIcon, socialHandle, separator, pronouns].filter(Boolean);
+      const subtext = card.querySelector('.talent-subtext');
+      subtext.innerHTML = parts.join('');
+      subtext.classList.toggle('hidden', parts.length === 0);
 
-      const socialHtml = (socialIcon || socialHandle) ? `
-        <div class="talent-subtext">
-          ${socialIcon}
-          ${socialHandle}
-          ${separator}
-          ${pronouns}
-        </div>
-      ` : caster.pronouns ? `
-        <div class="talent-subtext">
-          <span class="pronouns">${escapeHtml(caster.pronouns)}</span>
-        </div>
-      ` : '';
+      const img = card.querySelector('.talent-image');
+      const source = entry.portraitUrl || '';
+      if (source) {
+        if (img.getAttribute('src') !== source) img.src = source;
+      } else if (img.hasAttribute('src')) {
+        img.removeAttribute('src');
+        img.classList.remove('portrait--cutout');
+        img.style.width = '';
+        img.style.height = '';
+        img.style.left = '';
+        img.style.top = '';
+      }
 
-      const roleChip = SHOW_ROLE_BADGE && ROLE_LABELS[caster.role]
-        ? `<div class="talent-role">${escapeHtml(ROLE_LABELS[caster.role])}</div>`
-        : '';
+      card.dataset.slot = item.slot;
+      card.dataset.signature = signature;
+      fitPortrait(img);
+      return true;
+    }
 
-      card.innerHTML = `
-        <div class="talent-image" style="${imageStyle}"></div>
-        <div class="talent-text">
-          ${roleChip}
-          <div class="talent-name">${escapeHtml(caster.displayName || 'TALENT NAME')}</div>
-          ${socialHtml}
-        </div>
-      `;
+    function prefersReducedMotion() {
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
 
-      return card;
+    function animateCard(card, delay) {
+      if (prefersReducedMotion()) return;
+      if (card.__fgcAnimationTimer) {
+        window.clearTimeout(card.__fgcAnimationTimer);
+        card.__fgcAnimationTimer = null;
+      }
+      card.classList.remove('animate-card');
+      void card.offsetWidth;
+      card.style.setProperty('--card-delay', `${delay}ms`);
+      card.classList.add('animate-card');
+      card.__fgcAnimationTimer = window.setTimeout(() => {
+        card.classList.remove('animate-card');
+        card.style.removeProperty('--card-delay');
+        card.__fgcAnimationTimer = null;
+      }, 900 + delay);
+    }
+
+    function replayLoadIn(startDelay = 0) {
+      [...renderedCards.values()].forEach((card, index) => animateCard(card, startDelay + index * 110));
+    }
+
+    function syncCards(items) {
+      const active = new Set(items.map((item) => item.slot));
+      const changed = [];
+
+      items.forEach((item, index) => {
+        let card = renderedCards.get(item.slot);
+        if (!card) {
+          card = createCard();
+          renderedCards.set(item.slot, card);
+          el.castersContainer.appendChild(card);
+        }
+        if (applyCardContent(card, item)) changed.push(card);
+      });
+
+      renderedCards.forEach((card, slot) => {
+        if (!active.has(slot)) {
+          card.remove();
+          renderedCards.delete(slot);
+        }
+      });
+
+      items.forEach((item, index) => {
+        const card = renderedCards.get(item.slot);
+        if (card && el.castersContainer.children[index] !== card) {
+          el.castersContainer.insertBefore(card, el.castersContainer.children[index] || null);
+        }
+      });
+
+      el.castersContainer.classList.toggle('single-caster', items.length === 1);
+      document.fonts.ready.then(fitCasterNames);
+
+      if (items.length && !openingPlayed) {
+        openingPlayed = true;
+        replayLoadIn(LOAD_IN_START_DELAY);
+        window.setTimeout(() => { openingSettled = true; }, LOAD_IN_START_DELAY + 1100 + items.length * 110);
+      } else if (changed.length) {
+        const startDelay = openingSettled ? 0 : LOAD_IN_START_DELAY;
+        changed.forEach((card, index) => animateCard(card, startDelay + index * 90));
+      }
     }
 
     function updateCasters() {
       const all = currentData?.castersData || currentData?.casters?.castersData || [];
-      const casters = all.filter((entry) => entry && ACCEPTED_ROLES.includes(entry.role));
-
-      const signature = casters
-        .map((entry) => `${entry.role}:${entry.displayName}:${entry.portraitUrl || ''}`)
-        .join('|');
-      if (signature === renderedSignature) {
-        return;
-      }
-      renderedSignature = signature;
-
-      el.castersContainer.innerHTML = '';
-      casters.forEach(caster => {
-        el.castersContainer.appendChild(createCasterCard(caster));
-      });
-
-      el.castersContainer.classList.toggle('single-caster', casters.length === 1);
-      document.fonts.ready.then(fitCasterNames);
+      const casters = all
+        .filter((entry) => entry && ACCEPTED_ROLES.includes(entry.role))
+        .map((entry, index) => ({
+          slot: `caster:${index}`,
+          entry,
+        }));
+      syncCards(casters);
     }
 
     function connect() {
@@ -641,7 +822,11 @@
       }
 
       if (data.type === 'show') {
-        el.overlay.style.display = data.visible ? 'block' : 'none';
+        const visible = Boolean(data.visible);
+        const wasVisible = overlayVisible;
+        overlayVisible = visible;
+        el.overlay.style.display = visible ? 'block' : 'none';
+        if (visible && !wasVisible) replayLoadIn();
       }
     }
 

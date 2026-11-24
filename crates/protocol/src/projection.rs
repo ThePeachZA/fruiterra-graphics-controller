@@ -168,38 +168,85 @@ impl<'a> Projector<'a> {
         }
     }
 
-    /// Builds the interview subject, from the talent library or a custom entry.
+    /// Builds the interview subject from a talent, a rostered player, or a
+    /// custom entry, in that order.
     #[must_use]
     fn interviewee(&self, match_state: &Match) -> Option<IntervieweeDto> {
         let interviewee = match_state.talent.interviewee.as_ref()?;
-        let talent = interviewee
-            .talent_id
-            .as_ref()
-            .and_then(|id| self.state.talents.iter().find(|talent| &talent.id == id));
 
-        let (display_name, subtext) = match talent {
-            Some(talent) => (
-                talent.display_name.clone(),
-                talent
+        if let Some(talent_id) = interviewee.talent_id.as_ref() {
+            let talent = self
+                .state
+                .talents
+                .iter()
+                .find(|talent| &talent.id == talent_id)?;
+            let display_name = talent.display_name.clone();
+            if display_name.trim().is_empty() {
+                return None;
+            }
+            return Some(IntervieweeDto {
+                display_name,
+                subtext: talent
                     .pronouns
                     .clone()
-                    .or_else(|| interviewee.custom_subtext.clone()),
-            ),
-            None => (
-                interviewee.custom_name.clone()?,
-                interviewee.custom_subtext.clone(),
-            ),
-        };
+                    .or_else(|| interviewee.custom_subtext.clone())
+                    .filter(|text| !text.trim().is_empty()),
+                portrait_url: talent.portrait.as_ref().and_then(|id| self.resolve(id)),
+            });
+        }
 
+        if let Some(player_id) = interviewee.player_id.as_ref() {
+            let (team, player) = self.state.teams.iter().find_map(|team| {
+                team.players
+                    .iter()
+                    .find(|player| &player.id == player_id)
+                    .map(|player| (team, player))
+            })?;
+            let display_name = player.name.clone();
+            if display_name.trim().is_empty() {
+                return None;
+            }
+            let mut parts = vec![team.name.trim().to_owned(), player.role.label().to_owned()];
+            parts.push(player.position.label().to_owned());
+            if let Some(pronouns) = player
+                .pronouns
+                .as_ref()
+                .map(|text| text.trim())
+                .filter(|text| !text.is_empty())
+            {
+                parts.push(pronouns.to_owned());
+            }
+            let portrait_url = player
+                .portrait
+                .as_ref()
+                .and_then(|id| self.resolve(id))
+                .or_else(|| {
+                    player
+                        .featured_hero
+                        .as_ref()
+                        .and_then(|id| self.catalog.get(id))
+                        .and_then(|asset| self.hero_art_url(asset))
+                });
+            return Some(IntervieweeDto {
+                display_name,
+                subtext: Some(parts.join(" · ")),
+                portrait_url,
+            });
+        }
+
+        let display_name = interviewee.custom_name.clone()?;
         if display_name.trim().is_empty() {
             return None;
         }
-
         Some(IntervieweeDto {
             display_name,
-            subtext: subtext.filter(|text| !text.trim().is_empty()),
-            portrait_url: talent
-                .and_then(|talent| talent.portrait.as_ref())
+            subtext: interviewee
+                .custom_subtext
+                .clone()
+                .filter(|text| !text.trim().is_empty()),
+            portrait_url: interviewee
+                .custom_portrait
+                .as_ref()
                 .and_then(|id| self.resolve(id)),
         })
     }

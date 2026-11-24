@@ -23,13 +23,14 @@ use fgc_core::{
     Team, TeamId, TeamReference, TeamSide, ThemePreset, Tiebreaker, TimerAlignment, TimerMode,
     Tournament, TournamentId, TournamentStage, TournamentStatus, UnusedAssets,
     add_entrant as core_add_entrant, add_group_fixture as core_add_group_fixture,
-    add_match as core_add_match, add_round as core_add_round, clear_talent_references,
-    derived_scores, insert_map, match_mut as core_match_mut, move_map as move_map_slot,
-    move_map_pool as move_map_pool_slot, new_match, new_tournament, recalculate_loser_picks,
-    referenced_hashes, refresh as core_refresh_tournament, remove_entrant as core_remove_entrant,
-    remove_group as core_remove_group, remove_group_fixture as core_remove_group_fixture,
-    remove_map, remove_match as core_remove_match, remove_round as core_remove_round,
-    remove_team_references, rename_group as core_rename_group, rename_round as core_rename_round,
+    add_match as core_add_match, add_round as core_add_round, clear_player_references,
+    clear_talent_references, derived_scores, insert_map, match_mut as core_match_mut,
+    move_map as move_map_slot, move_map_pool as move_map_pool_slot, new_match, new_tournament,
+    recalculate_loser_picks, referenced_hashes, refresh as core_refresh_tournament,
+    remove_entrant as core_remove_entrant, remove_group as core_remove_group,
+    remove_group_fixture as core_remove_group_fixture, remove_map,
+    remove_match as core_remove_match, remove_round as core_remove_round, remove_team_references,
+    rename_group as core_rename_group, rename_round as core_rename_round,
     reset_bracket_match as core_reset_bracket_match, reset_hero_bans, reset_maps,
     reset_stage as core_reset_stage, resize_maps_for_first_to,
     set_bracket_result as core_set_bracket_result, set_bracket_winner as core_set_bracket_winner,
@@ -1040,32 +1041,48 @@ impl AppStore {
         });
     }
 
-    /// Assigns an interviewee from the talent library, or switches to a custom
-    /// interviewee when `talent` is `None`.
+    /// Assigns an interviewee from the talent library.
     pub fn set_interviewee_talent(&self, talent: Option<TalentId>) {
         self.update_match(|current| {
             let interviewee = current
                 .talent
                 .interviewee
                 .get_or_insert_with(IntervieweeRef::default);
-            let has_talent = talent.is_some();
             interviewee.talent_id = talent;
-            if has_talent {
-                interviewee.custom_name = None;
-                interviewee.custom_subtext = None;
-            }
+            interviewee.player_id = None;
+            interviewee.custom_name = None;
+            interviewee.custom_subtext = None;
+            interviewee.custom_portrait = None;
         });
     }
 
-    /// Sets the custom interviewee name and subtext.
-    pub fn set_interviewee_custom(&self, name: &str, subtext: &str) {
+    /// Assigns an interviewee from one of the current match teams.
+    pub fn set_interviewee_player(&self, _team_id: TeamId, player_id: PlayerId) {
         self.update_match(|current| {
             let interviewee = current
                 .talent
                 .interviewee
                 .get_or_insert_with(IntervieweeRef::default);
+            interviewee.player_id = Some(player_id);
+            interviewee.talent_id = None;
+            interviewee.custom_name = None;
+            interviewee.custom_subtext = None;
+            interviewee.custom_portrait = None;
+        });
+    }
+
+    /// Sets a custom interviewee name, subtext and uploaded portrait.
+    pub fn set_interviewee_custom(&self, name: &str, subtext: &str, portrait: Option<AssetId>) {
+        self.update_match(|current| {
+            let interviewee = current
+                .talent
+                .interviewee
+                .get_or_insert_with(IntervieweeRef::default);
+            interviewee.talent_id = None;
+            interviewee.player_id = None;
             interviewee.custom_name = non_empty(name);
             interviewee.custom_subtext = non_empty(subtext);
+            interviewee.custom_portrait = portrait;
         });
     }
 
@@ -1178,6 +1195,7 @@ impl AppStore {
             if let Some(team) = state.teams.iter_mut().find(|team| &team.id == team_id) {
                 team.players.retain(|player| &player.id != player_id);
             }
+            clear_player_references(state, player_id);
         });
     }
 

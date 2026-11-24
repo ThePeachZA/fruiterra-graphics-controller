@@ -798,19 +798,26 @@ pub struct TalentRef {
     pub role: TalentType,
 }
 
-/// An interview subject, which may be a talent member or a custom name.
+/// An interview subject, which may be a talent member, a rostered player, or
+/// a custom name.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntervieweeRef {
     /// Talent identifier, when the interviewee is in the talent library.
     #[serde(default)]
     pub talent_id: Option<TalentId>,
+    /// Player identifier, when the interviewee is on one of the match teams.
+    #[serde(default)]
+    pub player_id: Option<PlayerId>,
     /// Custom display name.
     #[serde(default)]
     pub custom_name: Option<String>,
     /// Custom subtext.
     #[serde(default)]
     pub custom_subtext: Option<String>,
+    /// Custom portrait asset.
+    #[serde(default)]
+    pub custom_portrait: Option<AssetId>,
 }
 
 /// Talent assignments for the current match.

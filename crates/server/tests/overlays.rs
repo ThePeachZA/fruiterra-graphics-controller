@@ -551,7 +551,7 @@ fn row_casters_social_row_stays_inside_the_card() {
         "the social row must be constrained to the card's content box"
     );
     assert!(
-        text.contains("flex: 0 0 20px;"),
+        text.contains("flex: 0 0 22px;"),
         "the social icon must not shrink away"
     );
     assert!(
@@ -1426,15 +1426,16 @@ fn row_casters_overlay_uses_night_broadcast_tokens() {
         "row-casters should inline the canonical Night Broadcast token block"
     );
     assert!(
-        text.contains(".talent-text {\n      background: var(--fgc-surface-raised);"),
+        text.contains(".talent-text {")
+            && text.contains("background: linear-gradient(180deg, var(--fgc-surface-raised), var(--fgc-surface));"),
         "the caster text panel should sit on the raised surface"
     );
     assert!(
-        text.contains(".talent-name {\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 48px;\n      color: var(--fgc-text);"),
+        text.contains(".talent-name {\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 44px;\n      line-height: 1.02;\n      color: var(--fgc-text);"),
         "the caster name should use the Night Broadcast text token"
     );
     assert!(
-        text.contains(".social-handle {\n      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;\n      font-size: 24px;\n      color: var(--fgc-text-muted);"),
+        text.contains(".social-handle {\n      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;\n      font-size: 22px;\n      color: var(--fgc-text-muted);"),
         "social handles should use muted text"
     );
     assert!(
@@ -1442,8 +1443,9 @@ fn row_casters_overlay_uses_night_broadcast_tokens() {
         "social icons should take the muted tier from a stylesheet rule"
     );
     assert!(
-        text.contains(": 'background-color: var(--fgc-surface-muted)';"),
-        "a missing portrait should fall back to the muted surface in JS"
+        text.contains(".talent-image:not([src]),\n    .talent-image[src=\"\"] {")
+            && !text.contains("background-image"),
+        "a missing portrait should hide the image, and portraits should never be painted as CSS backgrounds"
     );
     for retired in [
         "#fff", "#ffffff", "#090909", "#151515", "#eeeeee", "#eee", "#ac46f7", "#444444",
@@ -1467,6 +1469,118 @@ fn row_casters_overlay_uses_night_broadcast_tokens() {
         text.contains("ws.send(JSON.stringify({ type: 'requestInit' }));"),
         "row-casters must keep asking the server for its initial frame"
     );
+}
+
+#[test]
+fn talent_rows_keep_portraits_unobstructed() {
+    for file in ["row-casters.html", "row-hosts.html", "row-interviews.html"] {
+        let text = overlay_text(file);
+        assert!(
+            text.contains("The photograph stays unobstructed")
+                && text.contains("<img class=\"talent-image\" alt=\"\" />"),
+            "{file} should render a real image with no decorative cover"
+        );
+        for retired in [
+            ".talent-image-frame",
+            ".caster-card::before",
+            ".talent-media::after",
+            "--wash-angle",
+            ".talent-role",
+            "background-image",
+            "talentFrameReveal",
+        ] {
+            assert!(
+                !text.contains(retired),
+                "{file} still carries the retired talent overlay decoration {retired}"
+            );
+        }
+    }
+}
+
+#[test]
+fn talent_rows_reconcile_cards_by_stable_slot() {
+    for (file, slot) in [
+        ("row-casters.html", "caster:${index}"),
+        ("row-hosts.html", "talent:${index}"),
+        ("row-interviews.html", "interviewer:${index}"),
+    ] {
+        let text = overlay_text(file);
+        assert!(
+            text.contains("const renderedCards = new Map();")
+                && text.contains("card.dataset.slot = item.slot;")
+                && text.contains("card.dataset.signature = signature;")
+                && text.contains("if (card.dataset.signature === signature) return false;"),
+            "{file} should reuse cards and ignore repeated frames"
+        );
+        assert!(
+            text.contains(slot),
+            "{file} should key cards by a stable slot"
+        );
+        assert!(
+            text.contains("if (items.length && !openingPlayed)")
+                && text.contains("} else if (changed.length) {"),
+            "{file} should play the opening once and animate only changed slots afterwards"
+        );
+    }
+
+    let text = overlay_text("row-interviews.html");
+    assert!(
+        text.contains("slot: 'guest'") && text.contains("item.kind === 'guest'"),
+        "the interview guest should keep its own stable slot"
+    );
+    assert!(
+        text.contains(".talent-card--guest .talent-name {\n      color: var(--fgc-accent);\n    }")
+            && text.contains("entry.subtext"),
+        "the guest should keep the accent name and supplied subtext"
+    );
+}
+
+#[test]
+fn talent_rows_replay_load_in_when_shown() {
+    for file in ["row-casters.html", "row-hosts.html", "row-interviews.html"] {
+        let text = overlay_text(file);
+        assert!(
+            text.contains("let overlayVisible = true;")
+                && text.contains("function replayLoadIn(startDelay = 0) {")
+                && text.contains("if (visible && !wasVisible) replayLoadIn();")
+                && text.contains("card.__fgcAnimationTimer"),
+            "{file} should replay the load-in only on a hidden-to-visible transition"
+        );
+    }
+}
+
+#[test]
+fn talent_rows_delay_the_opening_load_in() {
+    for file in ["row-casters.html", "row-hosts.html", "row-interviews.html"] {
+        let text = overlay_text(file);
+        assert!(
+            text.contains("const LOAD_IN_START_DELAY = 500;")
+                && text.contains("replayLoadIn(LOAD_IN_START_DELAY);")
+                && text.contains("LOAD_IN_START_DELAY + 1100 + items.length * 110")
+                && text.contains("animateCard(card, startDelay + index * 110)")
+                && text.contains("const startDelay = openingSettled ? 0 : LOAD_IN_START_DELAY;")
+                && text.contains("animateCard(card, startDelay + index * 90)"),
+            "{file} should hold the first load-in card until the startup delay elapses"
+        );
+    }
+}
+
+#[test]
+fn talent_rows_fit_transparent_portraits_by_subject_box() {
+    for file in ["row-casters.html", "row-hosts.html", "row-interviews.html"] {
+        let text = overlay_text(file);
+        assert!(
+            text.contains("function subjectBox(img)")
+                && text.contains("pixels[(y * width + x) * 4 + 3] > 8")
+                && text.contains(
+                    ".talent-image.portrait--cutout {\n      object-fit: contain;\n    }"
+                )
+                && text.contains("img.addEventListener('load', () => fitPortrait(img));")
+                && text.contains("fitText(name, 44, 22)")
+                && !text.contains("fitText(name, 48, 24)"),
+            "{file} should centre transparent portraits on their visible subject"
+        );
+    }
 }
 
 #[test]

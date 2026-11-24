@@ -10,8 +10,9 @@ use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
 use fgc_core::{
-    AssetCategory, AssetId, Match, MatchStatus, Scoring, Side, Talent, TalentId, TalentSlot,
-    TalentType, Team, TeamId, TeamSide, ThemePreset, default_map_slots, empty_hero_bans,
+    AssetCategory, AssetId, Match, MatchStatus, PlayerId, Scoring, Side, Talent, TalentId,
+    TalentSlot, TalentType, Team, TeamId, TeamSide, ThemePreset, default_map_slots,
+    empty_hero_bans,
 };
 use fgc_protocol::AssetCatalog;
 use fgc_server::ServerStatus;
@@ -165,7 +166,7 @@ pub fn MatchControllerView() -> Element {
                     MapSelectionTab { match_state: match_state.clone() }
                 },
                 MatchTab::Talent => rsx! {
-                    TalentTab { match_state: match_state.clone(), talents }
+                    TalentTab { match_state: match_state.clone(), talents, teams }
                 },
                 MatchTab::MapPool => rsx! {
                     MapPoolTab { match_state: match_state.clone() }
@@ -1023,17 +1024,51 @@ fn MapSelectionTab(match_state: Match) -> Element {
 
 /// Caster, panel and interview assignments.
 #[component]
-fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
+fn TalentTab(match_state: Match, talents: Vec<Talent>, teams: Vec<Team>) -> Element {
     let store = use_context::<AppStore>();
     let interviewee = match_state.talent.interviewee.clone().unwrap_or_default();
-    let interviewee_talent = interviewee
-        .talent_id
-        .as_ref()
-        .map_or_else(String::new, |id| id.as_str().to_owned());
+    let interviewee_source = if let Some(id) = interviewee.talent_id.as_ref() {
+        format!("talent:{}", id.as_str())
+    } else if let Some(id) = interviewee.player_id.as_ref() {
+        format!("player:{}", id.as_str())
+    } else {
+        String::new()
+    };
     let custom_name = interviewee.custom_name.clone().unwrap_or_default();
     let custom_subtext = interviewee.custom_subtext.clone().unwrap_or_default();
     let custom_name_for_subtext = custom_name.clone();
     let custom_subtext_for_name = custom_subtext.clone();
+    let custom_name_for_image = custom_name.clone();
+    let custom_subtext_for_image = custom_subtext.clone();
+    let custom_portrait = interviewee.custom_portrait;
+    let custom_portrait_for_name = custom_portrait.clone();
+    let custom_portrait_for_subtext = custom_portrait.clone();
+    let match_team_ids = [match_state.team_a.clone(), match_state.team_b.clone()];
+    let player_options: Vec<(TeamId, PlayerId, String, String)> = teams
+        .iter()
+        .filter(|team| match_team_ids.iter().flatten().any(|id| id == &team.id))
+        .flat_map(|team| {
+            let team_label = if !team.name.trim().is_empty() {
+                team.name.clone()
+            } else if !team.tag.trim().is_empty() {
+                team.tag.clone()
+            } else {
+                team.id.as_str().to_owned()
+            };
+            team.players
+                .iter()
+                .map(move |player| {
+                    (
+                        team.id.clone(),
+                        player.id.clone(),
+                        team_label.clone(),
+                        player.name.clone(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    let player_options_for_change = player_options.clone();
 
     rsx! {
         div { class: "fgc-view",
@@ -1116,29 +1151,47 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                         span { class: "fgc-field__label", "Interviewee" }
                         select {
                             class: "fgc-native-select",
-                            value: "{interviewee_talent}",
+                            value: "{interviewee_source}",
                             onchange: move |event| {
                                 let value = event.value();
-                                store.set_interviewee_talent(
-                                    if value.is_empty() {
-                                        None
-                                    } else {
-                                        Some(TalentId::from_raw(value))
-                                    },
-                                );
+                                if let Some(raw) = value.strip_prefix("player:") {
+                                    if let Some((team_id, player_id, _, _)) = player_options_for_change
+                                        .iter()
+                                        .find(|(_, id, _, _)| id.as_str() == raw)
+                                    {
+                                        store.set_interviewee_player(team_id.clone(), player_id.clone());
+                                    }
+                                } else if let Some(raw) = value.strip_prefix("talent:") {
+                                    store.set_interviewee_talent(Some(TalentId::from_raw(raw.to_owned())));
+                                } else {
+                                    store.set_interviewee_talent(None);
+                                }
                             },
-                            option { value: "", "Custom…" }
+                            option { value: "", selected: interviewee_source.is_empty(), "Custom…" }
                             for talent in talents.iter() {
                                 option {
-                                    key: "{talent.id}",
-                                    value: "{talent.id}",
-                                    selected: talent.id.as_str() == interviewee_talent.as_str(),
-                                    "{talent.display_name}"
+                                    key: "talent:{talent.id}",
+                                    value: "talent:{talent.id}",
+                                    selected: interviewee_source == format!("talent:{}", talent.id),
+                                    "Talent · {talent.display_name}"
+                                }
+                            }
+                            for (_team_id, player_id, team_label, player_name) in player_options.iter() {
+                                option {
+                                    key: "player:{player_id}",
+                                    value: "player:{player_id}",
+                                    selected: interviewee_source == format!("player:{player_id}"),
+                                    "{team_label} · {player_name}"
                                 }
                             }
                         }
+                        if player_options.is_empty() {
+                            span { class: "fgc-field__hint",
+                                "No players on the match teams yet. Choose Custom… to enter a name."
+                            }
+                        }
                     }
-                    if interviewee.talent_id.is_none() {
+                    if interviewee_source.is_empty() {
                         label { class: "fgc-field",
                             span { class: "fgc-field__label", "Custom name" }
                             Input {
@@ -1148,6 +1201,7 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                                     store.set_interviewee_custom(
                                         &event.value(),
                                         &custom_subtext_for_name,
+                                        custom_portrait_for_name.clone(),
                                     );
                                 },
                             }
@@ -1161,9 +1215,28 @@ fn TalentTab(match_state: Match, talents: Vec<Talent>) -> Element {
                                     store.set_interviewee_custom(
                                         &custom_name_for_subtext,
                                         &event.value(),
+                                        custom_portrait_for_subtext.clone(),
                                     );
                                 },
                             }
+                        }
+                        div { class: "fgc-field",
+                            AssetPicker {
+                                label: "Guest image".to_owned(),
+                                category: AssetCategory::Portrait,
+                                value: custom_portrait,
+                                on_change: move |portrait| {
+                                    store.set_interviewee_custom(
+                                        &custom_name_for_image,
+                                        &custom_subtext_for_image,
+                                        portrait,
+                                    );
+                                },
+                            }
+                        }
+                    } else if interviewee_source.starts_with("player:") {
+                        span { class: "fgc-field__hint",
+                            "Portrait, team, role, position and pronouns come from the roster."
                         }
                     }
                 }

@@ -6,10 +6,12 @@
 mod support;
 
 use fgc_core::{
-    Asset, AssetCategory, AssetId, AssetOrigin, Match, Scoring, Side, TeamId, TeamSide,
+    Asset, AssetCategory, AssetId, AssetOrigin, IntervieweeRef, Match, PlayerId, Scoring, Side,
+    TeamId, TeamSide,
 };
 use fgc_protocol::{
-    AssetCatalog, AssetUrlResolver, DataUrlResolver, Projector, SCOREBOARD_TYPES, scores,
+    AssetCatalog, AssetUrlResolver, DataUrlResolver, Projector, SCOREBOARD_TYPES,
+    ServedAssetResolver, scores,
 };
 use serde_json::Value;
 
@@ -27,6 +29,16 @@ fn full_parts() -> (
 
 fn scoreboard_value(projector: &Projector<'_>, match_state: &Match) -> Value {
     serde_json::to_value(projector.scoreboard(match_state)).expect("scoreboard JSON")
+}
+
+fn interviewee_value(
+    state: &fgc_core::AppState,
+    catalog: &AssetCatalog,
+    resolver: &ServedAssetResolver,
+) -> Value {
+    let projector = Projector::new(state, catalog, resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+    serde_json::to_value(projector.casters(match_state)).expect("casters")["interviewee"].clone()
 }
 
 #[test]
@@ -84,6 +96,86 @@ fn casters_skip_slots_with_no_matching_talent() {
     let casters = projector.casters(match_state);
     assert_eq!(casters.casters_data.len(), 1);
     assert_eq!(casters.casters_data[0].display_name, "Caster Two");
+}
+
+#[test]
+fn interviewee_player_uses_roster_portrait_and_subtext() {
+    let (mut state, catalog, resolver) = full_parts();
+    state
+        .current_match
+        .as_mut()
+        .expect("fixture match")
+        .talent
+        .interviewee = Some(IntervieweeRef {
+        player_id: Some(PlayerId::from_raw("player-ace")),
+        ..IntervieweeRef::default()
+    });
+
+    let interviewee = interviewee_value(&state, &catalog, &resolver);
+
+    assert_eq!(interviewee["displayName"], "Ace");
+    assert_eq!(interviewee["subtext"], "Alpha · Tank · Core · they/them");
+    assert!(
+        interviewee["portraitUrl"]
+            .as_str()
+            .expect("portrait URL")
+            .contains(&support::hash(0x14))
+    );
+}
+
+#[test]
+fn interviewee_player_falls_back_to_hero_art() {
+    let (mut state, catalog, resolver) = full_parts();
+    let team = &mut state.teams[0];
+    let player = &mut team.players[1];
+    player.featured_hero = Some(AssetId::from_raw("asset-ana"));
+    state
+        .current_match
+        .as_mut()
+        .expect("fixture match")
+        .talent
+        .interviewee = Some(IntervieweeRef {
+        player_id: Some(PlayerId::from_raw("player-bench")),
+        ..IntervieweeRef::default()
+    });
+
+    let interviewee = interviewee_value(&state, &catalog, &resolver);
+
+    assert_eq!(interviewee["displayName"], "Bench");
+    assert_eq!(interviewee["subtext"], "Alpha · Damage · Sub");
+    assert!(
+        interviewee["portraitUrl"]
+            .as_str()
+            .expect("hero art URL")
+            .contains(&support::hash(0x18))
+    );
+}
+
+#[test]
+fn interviewee_custom_uses_uploaded_portrait() {
+    let (mut state, catalog, resolver) = full_parts();
+    state
+        .current_match
+        .as_mut()
+        .expect("fixture match")
+        .talent
+        .interviewee = Some(IntervieweeRef {
+        custom_name: Some("Guest Star".to_owned()),
+        custom_subtext: Some("Analyst · she/her".to_owned()),
+        custom_portrait: Some(AssetId::from_raw("asset-portrait-t1")),
+        ..IntervieweeRef::default()
+    });
+
+    let interviewee = interviewee_value(&state, &catalog, &resolver);
+
+    assert_eq!(interviewee["displayName"], "Guest Star");
+    assert_eq!(interviewee["subtext"], "Analyst · she/her");
+    assert!(
+        interviewee["portraitUrl"]
+            .as_str()
+            .expect("portrait URL")
+            .contains(&support::hash(0x15))
+    );
 }
 
 #[test]
