@@ -102,23 +102,40 @@ that map is relevant.
 
 ## Talent
 
-**Match assignments** links the casters row, panel and interview to people in the
-Talent library:
+**Match assignments** links the casters row and panel to people in the Talent
+library:
 
 | Slot | Overlay role |
 |---|---|
 | **Caster 1**, **Caster 2** | The two casters in the row |
 | **Panel 1** to **Panel 3** | Up to three panel members |
-| **Interviewee** | The person shown on the interview desk |
 
 Each person slot also has a **Role** select: **Caster**, **Host**, **Analyst**,
 **Interviewer** or **Other**. The role belongs to this match assignment, so the
 same person can be a host in one match and an analyst in another.
 
-**Interview details** adds the interview title and a short subject line. The
-**Current interviewee** field is separate text and is not the same as the
-**Interviewee** selection above it. Set the interviewee in both places if you
-use both.
+### Interview
+
+The **Interview** panel chooses one interview subject from three mutually
+exclusive sources. The **Interviewee** select starts with **Custom…**, then lists
+every Talent library entry as `Talent · <name>`, then lists every player on the
+two teams currently set on the Match tab as `<team> · <player>`. Players from
+teams outside this match are not offered. If neither team has a roster yet, the
+panel says that you should choose **Custom…** instead.
+
+Selecting a talent uses that person's portrait and pronoun subtext. Selecting a
+player uses the player's portrait, falling back to the linked featured hero's
+art, and composes the subtext from the team name, on-air role, position and
+pronouns separated by ` · `. In player mode the custom fields are hidden and a
+hint explains that the details come from the roster.
+
+Selecting **Custom…** shows **Custom name**, **Custom subtext** and **Guest
+image**. Type the on-air name and any short line you want beneath it, then choose
+a portrait from the asset library. The **Quick upload…** action in that picker
+imports a new image straight into the Portrait category and selects it, so a
+one-off guest does not need a separate asset-library visit. The saved interview
+reference keeps only the fields for the chosen source; changing source clears
+the others.
 
 ## Map Pool
 

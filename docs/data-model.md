@@ -106,7 +106,7 @@ pub struct MatchTalent {
     pub panel2: Option<TalentRef>,
     pub panel3: Option<TalentRef>,
     pub interviewer: Option<TalentRef>,
-    pub interviewee: Option<IntervieweeRef>, // talent_id + custom_name + custom_subtext
+    pub interviewee: Option<IntervieweeRef>, // talent, player, or custom source
 }
 
 // ---------- assets ----------
@@ -208,6 +208,18 @@ pub struct Settings {
     pub timer: TimerSettings,        // mode, alignment, leading_zeroes, standalone
 }
 ```
+
+`IntervieweeRef` has five serde-default fields: `talent_id`, `player_id`,
+`custom_name`, `custom_subtext` and `custom_portrait`. Only one source is active
+at a time, and the Match Controller setters clear the other fields when the
+source changes. A talent reference uses the Talent library portrait and pronouns.
+A player reference stores only the player id; the projection resolves the
+portrait and subtext from the roster every time, so roster edits appear without
+rewriting the saved reference. A
+custom reference stores the name and subtext directly and points `custom_portrait`
+at an asset in the Portrait category. Deleting a player clears any player
+interviewee reference that pointed at it. The server projects all three shapes
+into the same `IntervieweeDto` used by the overlays.
 
 ### Deliberate removals (C12)
 

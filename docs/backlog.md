@@ -2196,3 +2196,31 @@ Fixed risks from A84 and A85:
 | Game-mode icons regain hexagon frames | Fixed by A85 | No `clip-path` remains in `map-pool.html`, and the source test forbids `clip-path: polygon(`. |
 | Pick state falls back to orange from nested init data | Fixed by A85 | Init unwraps `d.scoreboard || d`; live probe proved `127 120 149` for `#17093e`. |
 | Dark team colours disappear against picked art | Fixed by A85 | `PICK_LIGHTEN_MIX = 0.45` lifts the derived glow toward white while preserving hue. |
+
+A86 refreshes the three talent-row overlays and widens the interview subject to
+the active match. The Match Controller Interview panel can now select a talent,
+a player restricted to the two teams on the Match tab, or a custom name with its
+own subtext and quick-uploaded portrait. The projection composes these sources
+into the same `interviewee` wire object, so no consumer needs a schema change. A
+player uses their portrait first and their featured hero's art as the fallback,
+with team, role, position and pronouns in the subtext. On screen, the role pill,
+hexagon frame, wash and photo gradients are gone; the guest keeps its accent
+name and stable `guest` slot.
+
+The owner also asked for load-in animations. All three row overlays now hold the
+first reveal for 500ms, replay that reveal when the controller hides and shows a
+source, and animate only changed slots after the opening settles. A late guest
+data frame is no longer skipped: it receives the same startup delay as the
+interviewers. The canonical FX block and the opaque Night Broadcast plate stay
+untouched. The owner reviewed the running controller and overlays and approved
+A86 on 2026-11-25.
+
+Fixed risks from A86:
+
+| Risk | Status | Guard |
+|---|---|---|
+| Interview subject cannot come from the active roster | Fixed by A86 | The source select lists only players on the two current match teams, and projection precedence is talent → player → custom. |
+| Custom guests need a slow asset-library detour | Fixed by A86 | The Guest image picker exposes one `Quick upload…` action and stores the selected asset on the custom reference. |
+| Role chips and hexagon frames obscure the row photos | Fixed by A86 | Source assertions forbid `.talent-role`, `.talent-image-frame`, the wash and both photo gradients. |
+| Replaying the row reveal also replays unrelated slots | Fixed by A86 | Duplicate frames are no-ops; after the opening settles only changed stable slots animate. |
+| The guest arrives after the opening frame and never animates | Fixed by A86 | Late changed cards use the startup delay, and the live-load trace shows the guest animating with a 500ms delay. |

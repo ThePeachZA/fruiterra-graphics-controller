@@ -5741,3 +5741,50 @@ duplicate, targeted-update and pick-change batches. The live probe first exposed
 the nested-init orange bug, then proved the unwrapped team colour and, after the
 readability change, the lightened `127 120 149` team hue. The owner replied
 "Approve A85". All gates passed with 94 app tests and 44 overlay tests.
+
+### A86 - Talent rows, flexible interviewee and replayable load-in reveals
+
+1. Build the fixture with two teams, rostered players, at least six talents,
+   an uploaded portrait and a match using those teams. Confirm the talent and
+   player libraries contain every role, position and pronoun value needed for
+   the composed subtext.
+2. Open **Match Controller → Talent → Interview**. Confirm the **Interviewee**
+   select offers **Custom…**, every talent as `Talent · <name>`, and only players
+   from the two teams on the Match tab. Pick a player and verify the custom
+   fields disappear, the roster hint appears, `/state.casters.interviewee` shows
+   the composed team/role/position/pronoun subtext, and a player portrait or its
+   featured-hero fallback is present.
+3. Switch to **Custom…**. Type a name and subtext, open **Guest image**, use
+   **Quick upload…** to import a new portrait, and select it. Verify only the
+   custom fields persist in `currentMatch.talent.interviewee`, the projection
+   shows that name, subtext and portrait, and switching back to a talent or
+   player clears the custom fields.
+4. With the overlay server running, load `row-casters.html`, `row-hosts.html`
+   and `row-interviews.html` at 1920×1080. Confirm the Night Broadcast plate is
+   `rgb(11, 13, 18)`, the body keeps the canonical FX block, no `.talent-role`
+   or `.talent-image-frame` exists, no wash or photo gradient remains, and the
+   guest keeps the accent name and `guest` data slot.
+5. Trace the real initial load of `row-interviews.html` against the live server.
+   The guest card must be added with `animate-card` and `--card-delay: 500ms`
+   even when it arrives in a later frame. Sample computed opacity at 100ms,
+   700ms and 1300ms; it must go from 0 to a partially revealed value and then
+   to 1, with the class clearing after the reveal settles.
+6. Send `show:false` and confirm `.overlay` is `display: none`. Send
+   `show:true` and confirm every stable slot replays `animate-card`. Send a
+   duplicate `show:true` and confirm zero animations. After the opening
+   settles, change one card and confirm only that slot animates.
+7. Repeat the duplicate and changed-slot checks for `row-casters.html` and
+   `row-hosts.html`. All three overlays must report zero console errors.
+8. Confirm the authoritative `app.json` still contains the owner's selected
+   interview source. Stop the app, run `dx build --desktop`, relaunch it and ask
+   the owner to approve the running controller and overlays in person.
+9. Run `git diff --check`, `cargo fmt --all -- --check`,
+   `cargo clippy --workspace --all-targets -- -D warnings` and
+   `cargo test --workspace --quiet` after any change.
+
+**Result: Pass - owner 2026-11-25.** The live trace proved the guest animates
+with a 500ms startup delay; visibility samples showed opacity 0.00, 0.93 and
+1.00 at 100ms, 700ms and 1300ms. The replay check showed all stable slots on
+show, zero on a duplicate show, and one slot on a later change. The A86 reproof
+recorded no frames, no pills, no wash, no gradients, an opaque canvas
+and zero console errors. The owner reviewed the final app and approved A86.

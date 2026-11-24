@@ -131,9 +131,9 @@ no `data` object.
 |---|---|---|
 | `init` | A keyed map of the last payloads | Keys appear once that section has been broadcast at least once. Paint from this on connect. |
 | `scoreboard`, `gameOverlay`, `mapSelect`, `heroBans`, `teamRoster` | The same scoreboard payload | The type name selects the subscriber, not the content. Read the key your overlay needs. |
-| `casters` | `{ "castersData": [...], "interviewee": { ... } }` | The same array is also embedded in the scoreboard payload. Each entry carries the on-air `role` (`caster`, `host`, `analyst`, `interviewer`, `other`). |
+| `casters` | `{ "castersData": [...], "interviewee": { ... } }` | The same array is also embedded in the scoreboard payload. Each entry carries the on-air `role` (`caster`, `host`, `analyst`, `interviewer`, `other`). The interviewee is composed from a talent, a player on a current match team, or a custom entry, but always arrives as `displayName`, `subtext` and `portraitUrl`. |
 | `matchTimer` | A tick (`hours`, `minutes`, `seconds`, `settings.showHours`) or an action (`start`, `pause`, `reset`) | The standalone `timer.html` renders ticks and folds hours into minutes when `showHours` is `false`; third-party timer overlays use the same frames. |
-| `show` | No `data`; top-level `visible` | Supported by the seven bundled match overlays and `timer.html`; added after v1. |
+| `show` | No `data`; top-level `visible` | Supported by the seven bundled match overlays and `timer.html`; added after v1. A86 makes the three row overlays replay their card load-in reveal when `visible` changes from `false` to `true`; a duplicate `true` frame does not replay it. |
 
 Unchanged sections are not re-sent. If you join late or miss an update, use
 `requestInit` to get the current map again.

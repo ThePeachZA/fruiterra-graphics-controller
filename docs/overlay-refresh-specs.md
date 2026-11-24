@@ -2069,3 +2069,48 @@ repeatable steps in `docs/manual-qa-runbook.md` section A85. The source guards
 are `map_pool_applies_the_clean_canvas_and_targeted_update_contract`,
 `map_pool_animates_mode_marks_and_team_pick_reveal` and
 `map_pool_lifts_dark_team_colours_for_the_pick_glow`.
+
+## 21. Talent rows - clear photos and replayable reveals (A86)
+
+### 21.1 Layout and photo treatment
+
+`row-casters.html`, `row-hosts.html` and `row-interviews.html` share the same
+Clean Canvas card: square portraits stay unobstructed, and the role pill,
+hexagon frame, wash and photo gradients are gone. The guest card keeps its
+accent-coloured name and stable `guest` slot. The Night Broadcast plate remains
+opaque at `rgb(11, 13, 18)` and the canonical FX block is byte-for-byte the same
+as the other carriers.
+
+### 21.2 Interview sources
+
+The `interviewee` object keeps its `displayName`, `subtext` and `portraitUrl`
+shape. The server composes it in talent → player → custom order. A talent uses
+portrait and pronouns. A player uses the player portrait with the featured
+hero's art as fallback, and joins team name, role label, position label and
+pronouns with ` · `. A custom entry uses its saved name, subtext and uploaded
+portrait. Match Controller writes only the selected source fields.
+
+### 21.3 Motion contract
+
+`LOAD_IN_START_DELAY` is 500. The opening calls
+`replayLoadIn(LOAD_IN_START_DELAY)`. A changed card arriving before the opening
+settles uses the same delay with a 90ms stagger; after settling, changed slots
+animate immediately. Hidden→visible calls `replayLoadIn()` with no delay.
+Duplicate frames are no-ops, and only changed stable slots animate after the
+opening settles. Reduced motion is still guarded.
+
+### 21.4 CDP-verifiable assertions
+
+- 1920×1080 document, opaque canvas, canonical FX block and zero console errors.
+- No `.talent-role`, `.talent-image-frame`, wash or photo gradient in any row.
+- Guest keeps the accent name and `guest` data slot.
+- A late guest frame has `animate-card` and `--card-delay: 500ms`.
+- Guest opacity is 0.00 at 100ms, about 0.93 at 700ms and 1.00 at 1300ms.
+- `show:false` gives `display: none`; `show:true` animates every stable slot.
+- A duplicate show animates nothing; a later change animates only its slot.
+
+A86's evidence is in `docs/manual-qa.md` row A86 and sign-off table, with
+repeatable steps in `docs/manual-qa-runbook.md` section A86. The source guards
+include `talent_rows_reconcile_cards_by_stable_slot`,
+`talent_rows_delay_the_opening_load_in` and
+`talent_rows_replay_load_in_when_shown`.

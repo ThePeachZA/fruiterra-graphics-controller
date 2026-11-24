@@ -201,7 +201,7 @@ All five carry **the identical scoreboard payload**. The type name selects the s
 
 - Order: `caster1`, `caster2`, `panel1`, `panel2`, `panel3`, `interviewer`.
 - `role` is the on-air role of the assignment, not of the person: `caster`, `host`, `analyst`, `interviewer` or `other`. The same talent can be a host in one match and a caster in the next.
-- `interviewee` is the interview subject. It is present only when the match has an interviewee, and `subtext` and `portraitUrl` are omitted when they are unknown.
+- `interviewee` is the interview subject. It is present only when the match has an interviewee, and `subtext` and `portraitUrl` are omitted when they are unknown. The wire shape is unchanged, but the server composes it from three mutually exclusive saved sources: a talent, a player on one of the current match teams, or a custom entry. A talent supplies its portrait and pronoun subtext. A player supplies the team name, role label, position label and pronouns joined with ` · `, and uses the player's portrait first with the featured hero's art as the fallback. A custom entry supplies its own name, subtext and uploaded portrait. The controller writes only the fields for the selected source.
 - `row-casters.html`, `row-hosts.html` and `row-interviews.html` also accept `castersData` at the top level and inside the scoreboard payload, so the same array is embedded in `scoreboard` as well. The bundled overlays split the array by `role`: `row-casters.html` shows `caster`, `row-hosts.html` shows `host` and `analyst`, and `row-interviews.html` shows `interviewer` plus `interviewee`. Third-party overlays can use every entry.
 
 ### 3.3 `matchTimer`
@@ -230,7 +230,8 @@ Two shapes, exactly as the original sends them:
 ```
 
 - `visible` sits at the **top level** of the frame, beside `type`. There is no `data` object; every bundled overlay reads `data.visible` where `data` is the whole frame.
-- Implemented by all seven overlays; **not sent by the app in v1** (no UI toggle). The B1 backlog item turns it on.
+- Implemented by all seven overlays; A86 uses it to hide and show the controller's Browser Sources without a page reload.
+- The three row overlays replay their card load-in reveal when `visible` changes from `false` to `true`. A duplicate `visible: true` frame does not replay it, and a late data frame arriving before the opening settles still honours the same startup delay.
 - Must remain supported server-side; no schema change.
 
 ### 3.5 `theme`

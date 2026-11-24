@@ -1743,3 +1743,25 @@ orange fallback. Live evidence showed the fallback came from nested init data,
 not from a CSS mistake. A lightened derivative keeps the team's hue without
 letting a near-black colour disappear against the darkened artwork. The owner
 reviewed the final live render and answered "Approve A85".
+
+### D21 - Talent rows become a clear guest-ready canvas with replayable reveals
+
+**Decision.** A86 removes the role pill, hexagon frame, wash and photo gradients
+from `row-casters.html`, `row-hosts.html` and `row-interviews.html`. The guest
+keeps its accent name and `guest` slot. The interview subject can come from a
+talent, a player on either current match team, or a custom name with its own
+subtext and quickly uploaded portrait, while the wire `interviewee` object stays
+the same. The row reveal waits 500ms on startup, replays when a source goes from
+hidden to visible, and animates only changed slots after the opening settles. A
+late guest frame shares the startup delay instead of being skipped.
+
+**Reason.** The owner wanted the interview guest to be a real participant from
+the match rather than a separate free-text field, but still wanted a fast path
+for a one-off guest. Restricting player choices to the active teams avoids
+offering someone who is not on air, and composing the subtext server-side keeps
+the overlays simple. The old frames, chips and washes obscured the portraits, so
+the Clean Canvas treatment extends to all three rows. The owner asked for load-in
+animations and then for a startup delay; the show replay lets the controller
+bring a source back without a manual OBS refresh, while the late-guest fix keeps
+the first animation consistent when data arrives in separate frames. The owner
+approved the final running app in person on 2026-11-25.

@@ -49,7 +49,10 @@ URLs** to hide them again.
    connected to keep its state.
 7. If you want the entrance animations to replay every time the scene becomes
    active, turn on **Refresh browser when scene becomes active**. With the
-   source kept loaded, OBS does not replay CSS animations on its own.
+   source kept loaded, OBS does not replay CSS animations on its own. The three
+   row overlays also replay their reveal when the controller hides and shows a
+   source, so an OBS refresh is only needed for scene activation that the
+   controller does not drive.
 8. Leave the background transparent. Do not add a colour source behind the
    overlay unless your scene needs one.
 9. Select **OK**, then check the source in the preview.
