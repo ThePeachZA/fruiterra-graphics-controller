@@ -649,6 +649,7 @@ fn team_dto(team: &Team, logo_url: Option<String>) -> TeamDto {
         tag: team.tag.clone(),
         record,
         color: team.color.clone(),
+        text_color: team.text_color.clone(),
         logo_bg_color: if !team.logo_background {
             team.color.clone()
         } else if team.aux_color.is_empty() {

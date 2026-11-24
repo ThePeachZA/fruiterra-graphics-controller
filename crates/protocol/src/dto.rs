@@ -160,6 +160,8 @@ pub struct TeamDto {
     pub record: String,
     /// Primary colour.
     pub color: String,
+    /// Text colour.
+    pub text_color: String,
     /// Logo background colour.
     pub logo_bg_color: String,
     /// Logo URL, or `null`.

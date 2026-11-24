@@ -142,6 +142,27 @@
       }
     }
 
+    @keyframes dividerReveal {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes dividerLine {
+      from { transform: translateY(-50%) scaleX(0); }
+      to { transform: translateY(-50%) scaleX(1); }
+    }
+
+    @keyframes dividerHex {
+      from {
+        opacity: 0;
+        transform: scale(0.4) rotate(-45deg);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) rotate(0);
+      }
+    }
+
     .main-container {
       width: 100%;
       height: 100%;
@@ -185,6 +206,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      opacity: 0;
+      animation: dividerReveal 360ms ease-out 1.6s both;
     }
 
     .roster-separator::before,
@@ -196,16 +219,36 @@
       height: 1px;
       background: var(--fgc-line);
       transform: translateY(-50%);
+      animation: dividerLine 480ms var(--fgc-ease-out) 1.6s both;
     }
 
-    .roster-separator::before { left: 0; }
-    .roster-separator::after { right: 0; }
+    .roster-separator::before {
+      left: 0;
+      transform-origin: left center;
+    }
+
+    .roster-separator::after {
+      right: 0;
+      transform-origin: right center;
+    }
 
     .roster-separator__hex {
       width: 18px;
       height: 20px;
       background: var(--fgc-line-strong);
       clip-path: var(--fgc-hex-cell);
+      animation: dividerHex 480ms var(--fgc-ease-out) 1.7s both;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .roster-separator,
+      .roster-separator::before,
+      .roster-separator::after,
+      .roster-separator__hex {
+        animation: none !important;
+        opacity: 1;
+        transform: none;
+      }
     }
 
     /* === TEAM HEADER === */
@@ -225,9 +268,11 @@
     .team-logo {
       width: 100px;
       height: 100%;
+      padding: 12px;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
+      background-origin: content-box;
       background-color: var(--fgc-surface-inverse);
       flex-shrink: 0;
     }
@@ -762,6 +807,41 @@
       return card;
     }
 
+    const DARK_TEXT = '#0b0d12';
+    const LIGHT_TEXT = '#eef2f8';
+
+    function parseHexColor(value) {
+      if (typeof value !== 'string') return null;
+      const hex = value.trim().replace(/^#/, '');
+      if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16)
+      };
+    }
+
+    function relativeLuminance(rgb) {
+      const channel = (value) => {
+        const c = value / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+      };
+      return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+    }
+
+    function contrastTextColor(rgb) {
+      const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+      return luminance > 0.5 ? DARK_TEXT : LIGHT_TEXT;
+    }
+
+    function gradientAlphas(rgb) {
+      const luminance = relativeLuminance(rgb);
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+      const wash = Math.round(clamp(0.20 - luminance * 0.16, 0.08, 0.20) * 100) / 100;
+      const glow = Math.round(clamp(wash + 0.01, 0.09, 0.21) * 100) / 100;
+      return { wash, glow };
+    }
+
     function updateRoster() {
       if (!currentData) return;
 
@@ -791,18 +871,20 @@
 
       // Apply team color if enabled
       if (teamColorsEnabled && teamData.color) {
+        const rgb = parseHexColor(teamData.color);
         el.overlay.style.setProperty('--fgc-team', teamData.color);
         el.teamHeader.style.backgroundColor = teamData.color;
-        // Calculate text contrast color
-        const hex = teamData.color.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        const textColor = luminance > 0.5 ? '#0b0d12' : '#eef2f8';
-        el.teamName.style.color = textColor;
-        el.overlay.style.setProperty('--fgc-wash', `rgba(${r}, ${g}, ${b}, 0.08)`);
-        el.overlay.style.setProperty('--fgc-glow', `rgba(${r}, ${g}, ${b}, 0.09)`);
+        if (rgb) {
+          const selectedText = parseHexColor(teamData.textColor);
+          el.teamName.style.color = selectedText ? teamData.textColor : contrastTextColor(rgb);
+          const alphas = gradientAlphas(rgb);
+          el.overlay.style.setProperty('--fgc-wash', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alphas.wash})`);
+          el.overlay.style.setProperty('--fgc-glow', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alphas.glow})`);
+        } else {
+          el.teamName.style.color = LIGHT_TEXT;
+          el.overlay.style.setProperty('--fgc-wash', 'rgb(255 122 26 / 8%)');
+          el.overlay.style.setProperty('--fgc-glow', 'rgb(255 122 26 / 9%)');
+        }
       } else {
         el.overlay.style.removeProperty('--fgc-team');
         el.overlay.style.removeProperty('--fgc-wash');
@@ -892,9 +974,14 @@
       }
 
 
-      // Handle init message
+      // Handle init message. The saved top-level display settings must travel
+      // with the nested roster so a Browser Source refresh keeps team colours.
       if (data.type === 'init' && d.teamRoster) {
-        return updateOverlay({ type: 'teamRoster', data: d.teamRoster });
+        const roster = Object.assign({}, d.teamRoster);
+        for (const key of ['teamColorsEnabled', 'roleIcons', 'showPlayerPortraits']) {
+          if (d[key] !== undefined) roster[key] = d[key];
+        }
+        return updateOverlay({ type: 'teamRoster', data: roster });
       }
 
       // Store all incoming data

@@ -595,6 +595,15 @@ pub struct Team {
     /// Text colour.
     #[serde(default = "default_text_color")]
     pub text_color: String,
+    /// Whether the background colour is recommended from the selected logo.
+    #[serde(default)]
+    pub color_from_logo: bool,
+    /// Whether the text colour is recommended from the selected logo.
+    #[serde(default)]
+    pub text_color_from_logo: bool,
+    /// Whether a high-contrast colour is computed for the text only.
+    #[serde(default)]
+    pub computed_contrast: bool,
     /// Auxiliary colour.
     #[serde(default = "default_aux_color")]
     pub aux_color: String,

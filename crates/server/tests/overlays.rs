@@ -561,7 +561,10 @@ fn roster_overlays_use_night_broadcast_tokens() {
             );
         }
         assert!(
-            text.contains("const textColor = luminance > 0.5 ? '#0b0d12' : '#eef2f8';"),
+            text.contains("const DARK_TEXT = '#0b0d12';")
+                && text.contains("const LIGHT_TEXT = '#eef2f8';")
+                && text.contains("function contrastTextColor(rgb) {")
+                && text.contains("return luminance > 0.5 ? DARK_TEXT : LIGHT_TEXT;"),
             "{file} should resolve team-name contrast to the Night Broadcast palette"
         );
         assert!(
@@ -668,8 +671,8 @@ fn roster_overlays_use_hexagon_identity_without_touching_the_rows() {
                 && !text.contains(".overlay[data-roster-side=\"away\"] .roster-wash")
                 && text.contains("--fgc-wash: rgb(255 122 26 / 8%);")
                 && text.contains("--fgc-glow: rgb(255 122 26 / 9%);")
-                && text.contains("rgba(${r}, ${g}, ${b}, 0.08)")
-                && text.contains("rgba(${r}, ${g}, ${b}, 0.09)")
+                && text.contains("rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alphas.wash})")
+                && text.contains("rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alphas.glow})")
                 && text.contains(
                     "el.overlay.dataset.rosterSide = TEAM_SIDE === 'A' ? 'home' : 'away';"
                 ),
@@ -703,6 +706,73 @@ fn roster_overlays_use_hexagon_identity_without_touching_the_rows() {
             text.contains(".player-card-core .player-name {\n      width: 100%;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;")
                 && text.contains(".player-card-core .player-pronouns {\n      font-family: 'FGC Display Light', 'Apotek Light', sans-serif;"),
             "{file} should keep the existing name and pronoun type rules"
+        );
+    }
+}
+
+#[test]
+fn roster_overlays_apply_a82_team_bar_divider_and_colour_options() {
+    for file in ["team-roster-home.html", "team-roster-away.html"] {
+        let text = overlay_text(file);
+
+        assert!(
+            text.contains("@keyframes dividerReveal {")
+                && text.contains("@keyframes dividerLine {")
+                && text.contains("@keyframes dividerHex {")
+                && text.contains("animation: dividerReveal 360ms ease-out 1.6s both;")
+                && text.contains("animation: dividerLine 480ms var(--fgc-ease-out) 1.6s both;")
+                && text.contains("animation: dividerHex 480ms var(--fgc-ease-out) 1.7s both;")
+                && text.contains("@media (prefers-reduced-motion: reduce) {")
+                && text.contains("animation: none !important;"),
+            "{file} should animate the core/sub divider and respect reduced motion"
+        );
+
+        assert!(
+            text.contains(".team-logo {")
+                && text.contains("padding: 12px;")
+                && text.contains("background-origin: content-box;")
+                && text.contains("background-color: var(--fgc-surface-inverse);"),
+            "{file} should inset uploaded logos inside the full team-logo panel"
+        );
+
+        assert!(
+            text.contains("function parseHexColor(value) {")
+                && text.contains("/^[0-9a-fA-F]{6}$/.test(hex)")
+                && text.contains("function relativeLuminance(rgb) {")
+                && text.contains(
+                    "0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b)"
+                )
+                && text.contains("function gradientAlphas(rgb) {")
+                && text.contains("0.20 - luminance * 0.16")
+                && text.contains("clamp(0.20 - luminance * 0.16, 0.08, 0.20)")
+                && text.contains("clamp(wash + 0.01, 0.09, 0.21)"),
+            "{file} should compensate gradient strength by perceived luminance"
+        );
+
+        assert!(
+            text.contains("const rgb = parseHexColor(teamData.color);")
+                && text.contains("const selectedText = parseHexColor(teamData.textColor);")
+                && text.contains(
+                    "el.teamName.style.color = selectedText ? teamData.textColor : contrastTextColor(rgb);"
+                )
+                && text.contains("const alphas = gradientAlphas(rgb);")
+                && text.contains("rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alphas.wash})")
+                && text.contains("rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alphas.glow})")
+                && !text.contains("rgba(${r}, ${g}, ${b}, 0.08)")
+                && !text.contains("rgba(${r}, ${g}, ${b}, 0.09)"),
+            "{file} should honour the selected team text colour and use compensated alphas"
+        );
+
+        assert!(
+            text.contains("const roster = Object.assign({}, d.teamRoster);")
+                && text.contains(
+                    "for (const key of ['teamColorsEnabled', 'roleIcons', 'showPlayerPortraits']) {"
+                )
+                && text.contains("if (d[key] !== undefined) roster[key] = d[key];")
+                && text.contains("return updateOverlay({ type: 'teamRoster', data: roster });")
+                && !text
+                    .contains("return updateOverlay({ type: 'teamRoster', data: d.teamRoster });"),
+            "{file} should carry saved display settings through init replay"
         );
     }
 }

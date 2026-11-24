@@ -216,6 +216,7 @@
       "swapSides": true,
       "teamA": {
         "color": "#ff0000",
+        "textColor": "#ffffff",
         "logoBgColor": "#111111",
         "logoUrl": "http://127.0.0.1:3001/assets/1111111111111111111111111111111111111111111111111111111111111111.png",
         "name": "Alpha",
@@ -241,6 +242,7 @@
       ],
       "teamB": {
         "color": "#00ff00",
+        "textColor": "#000000",
         "logoBgColor": "#090909",
         "logoUrl": null,
         "name": "Bravo",
@@ -460,6 +462,7 @@
       "swapSides": true,
       "teamA": {
         "color": "#ff0000",
+        "textColor": "#ffffff",
         "logoBgColor": "#111111",
         "logoUrl": "http://127.0.0.1:3001/assets/1111111111111111111111111111111111111111111111111111111111111111.png",
         "name": "Alpha",
@@ -485,6 +488,7 @@
       ],
       "teamB": {
         "color": "#00ff00",
+        "textColor": "#000000",
         "logoBgColor": "#090909",
         "logoUrl": null,
         "name": "Bravo",
@@ -704,6 +708,7 @@
       "swapSides": true,
       "teamA": {
         "color": "#ff0000",
+        "textColor": "#ffffff",
         "logoBgColor": "#111111",
         "logoUrl": "http://127.0.0.1:3001/assets/1111111111111111111111111111111111111111111111111111111111111111.png",
         "name": "Alpha",
@@ -729,6 +734,7 @@
       ],
       "teamB": {
         "color": "#00ff00",
+        "textColor": "#000000",
         "logoBgColor": "#090909",
         "logoUrl": null,
         "name": "Bravo",
@@ -959,6 +965,7 @@
       "swapSides": true,
       "teamA": {
         "color": "#ff0000",
+        "textColor": "#ffffff",
         "logoBgColor": "#111111",
         "logoUrl": "http://127.0.0.1:3001/assets/1111111111111111111111111111111111111111111111111111111111111111.png",
         "name": "Alpha",
@@ -984,6 +991,7 @@
       ],
       "teamB": {
         "color": "#00ff00",
+        "textColor": "#000000",
         "logoBgColor": "#090909",
         "logoUrl": null,
         "name": "Bravo",
@@ -1203,6 +1211,7 @@
       "swapSides": true,
       "teamA": {
         "color": "#ff0000",
+        "textColor": "#ffffff",
         "logoBgColor": "#111111",
         "logoUrl": "http://127.0.0.1:3001/assets/1111111111111111111111111111111111111111111111111111111111111111.png",
         "name": "Alpha",
@@ -1228,6 +1237,7 @@
       ],
       "teamB": {
         "color": "#00ff00",
+        "textColor": "#000000",
         "logoBgColor": "#090909",
         "logoUrl": null,
         "name": "Bravo",

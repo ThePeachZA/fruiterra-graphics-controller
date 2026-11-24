@@ -13,6 +13,7 @@ use crate::components::focus_element_later;
 use crate::components::input::Input;
 use crate::components::switch::Switch;
 use crate::components::{CollapsiblePanel, Field, Panel, ToggleRow};
+use crate::logo_colors::{contrast_text_color, harmonize_text_color, sample_logo};
 use crate::state::AppStore;
 
 /// The two sections of the selected team.
@@ -304,6 +305,81 @@ fn TeamDetail(
     }
 }
 
+#[derive(Clone, Copy)]
+struct ColorRules {
+    color_from_logo: bool,
+    text_color_from_logo: bool,
+    computed_contrast: bool,
+}
+
+async fn sample_logo_colors(
+    store: AppStore,
+    team_id: TeamId,
+    asset_id: fgc_core::AssetId,
+    rules: ColorRules,
+) {
+    let asset = {
+        let state = store.state();
+        state
+            .read()
+            .assets
+            .iter()
+            .find(|asset| asset.id == asset_id)
+            .cloned()
+    };
+    let Some(asset) = asset else {
+        return;
+    };
+    let Some(url) = store.asset_data_url(asset).await else {
+        return;
+    };
+    let Some(palette) = sample_logo(&url).await else {
+        store.notify("The selected logo has no colours to sample.");
+        return;
+    };
+
+    let current_background = {
+        let state = store.state();
+        state
+            .read()
+            .teams
+            .iter()
+            .find(|team| team.id == team_id)
+            .map(|team| team.color.clone())
+            .unwrap_or_default()
+    };
+    let background = if rules.color_from_logo {
+        palette.background().to_owned()
+    } else {
+        current_background
+    };
+    let text = if rules.text_color_from_logo {
+        palette.text_for_background(&background, rules.computed_contrast)
+    } else if rules.computed_contrast {
+        contrast_text_color(&background)
+    } else {
+        None
+    };
+
+    store.update_team(&team_id, move |team| {
+        if rules.color_from_logo {
+            team.color = palette.background().to_owned();
+        }
+        if let Some(text) = text {
+            team.text_color = text;
+        }
+    });
+    store.notify("Recommended colours applied from the logo.");
+}
+
+fn rules_for(team: &Team) -> ColorRules {
+    ColorRules {
+        color_from_logo: team.color_from_logo,
+        text_color_from_logo: team.text_color_from_logo,
+        computed_contrast: team.computed_contrast,
+    }
+}
+
 /// Basic information, logo, colours and a live team preview.
 #[component]
 fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
@@ -315,8 +391,18 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
     let sample_id = team.id.clone();
     let color_id = team.id.clone();
     let text_color_id = team.id.clone();
+    let color_from_logo_id = team.id.clone();
+    let text_from_logo_id = team.id.clone();
+    let computed_contrast_id = team.id.clone();
     let aux_color_id = team.id.clone();
-    let background_id = team.id.clone();
+    let logo_background_id = team.id.clone();
+    let background_value = team.color.clone();
+    let text_value = team.text_color.clone();
+    let logo_value = team.logo.clone();
+    let logo_rules = rules_for(&team);
+    let color_from_logo = team.color_from_logo;
+    let text_color_from_logo = team.text_color_from_logo;
+    let computed_contrast = team.computed_contrast;
 
     rsx! {
         div { class: "fgc-grid fgc-grid--two",
@@ -361,48 +447,172 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
                     label: "Team logo".to_owned(),
                     category: AssetCategory::Logo,
                     value: team.logo.clone(),
-                    on_change: move |id: Option<fgc_core::AssetId>| {
-                        store.update_team(&logo_id, {
-                            let id = id.clone();
-                            move |team| team.logo = id
-                        });
-                        if let Some(id) = id {
-                            let store = store;
-                            let team_id = sample_id.clone();
-                            spawn(async move {
-                                let asset = {
-                                    let state = store.state();
-                                    state.read().assets.iter().find(|asset| asset.id == id).cloned()
-                                };
-                                let Some(asset) = asset else { return; };
-                                let Some(url) = store.asset_data_url(asset).await else { return; };
-                                if let Some((color, text)) =
-                                    crate::logo_colors::sample_logo(&url).await
-                                {
-                                    store.update_team(&team_id, move |team| {
-                                        team.color = color;
-                                        team.text_color = text;
-                                    });
-                                    store.notify("Colours sampled from the logo.");
-                                }
+                    on_change: {
+                        let rules = logo_rules;
+                        let team_id = sample_id.clone();
+                        move |id: Option<fgc_core::AssetId>| {
+                            store.update_team(&logo_id, {
+                                let id = id.clone();
+                                move |team| team.logo = id
                             });
+                            if let Some(id) = id {
+                                let store = store;
+                                let team_id = team_id.clone();
+                                spawn(async move {
+                                    sample_logo_colors(store, team_id, id, rules).await;
+                                });
+                            }
                         }
                     },
                 }
                 p { class: "fgc-note",
-                    "Logos come from the Logo category. Colours are sampled automatically when a logo is chosen; adjust them below if needed."
+                    "Logos come from the Logo category. Automatic from logo fills the selected colour field with the recommended value."
                 }
             }
             Panel { title: "Colours".to_owned(),
                 ColorField {
                     label: "Background".to_owned(),
                     value: team.color.clone(),
-                    on_change: move |value| store.update_team(&color_id, move |team| team.color = value),
+                    disabled: team.color_from_logo,
+                    on_change: {
+                        let color_id = color_id.clone();
+                        let text_color_id = text_color_id.clone();
+                        let rules = logo_rules;
+                        let text_value = text_value.clone();
+                        move |value: String| {
+                            let background = value.clone();
+                            store.update_team(&color_id, move |team| team.color = background);
+                            if rules.text_color_from_logo {
+                                if let Some(text) = harmonize_text_color(&text_value, &value, rules.computed_contrast) {
+                                    store.update_team(&text_color_id, move |team| team.text_color = text);
+                                }
+                            } else if rules.computed_contrast
+                                && let Some(text) = contrast_text_color(&value)
+                            {
+                                store.update_team(&text_color_id, move |team| team.text_color = text);
+                            }
+                        }
+                    },
+                }
+                ToggleRow {
+                    title: "Background from logo".to_owned(),
+                    hint: Some("Fills Background with the recommended logo colour.".to_owned()),
+                    Switch {
+                        checked: team.color_from_logo,
+                        aria_label: "Background from logo",
+                        on_checked_change: {
+                            let id = color_from_logo_id.clone();
+                            let logo = logo_value.clone();
+                            let team_id = sample_id.clone();
+                            move |checked| {
+                                let rules = ColorRules {
+                                    color_from_logo: checked,
+                                    text_color_from_logo,
+                                    computed_contrast,
+                                };
+                                store.update_team(&id, move |team| team.color_from_logo = checked);
+                                if checked {
+                                    if let Some(asset_id) = logo.clone() {
+                                        let store = store;
+                                        let team_id = team_id.clone();
+                                        spawn(async move {
+                                            sample_logo_colors(store, team_id, asset_id, rules).await;
+                                        });
+                                    } else {
+                                        store.notify("Choose a logo first.");
+                                    }
+                                }
+                            }
+                        },
+                    }
                 }
                 ColorField {
-                    label: "Text".to_owned(),
+                    label: if team.text_color_from_logo {
+                        "Text (from logo)".to_owned()
+                    } else if team.computed_contrast {
+                        "Text (computed)".to_owned()
+                    } else {
+                        "Text".to_owned()
+                    },
                     value: team.text_color.clone(),
-                    on_change: move |value| store.update_team(&text_color_id, move |team| team.text_color = value),
+                    disabled: team.text_color_from_logo || team.computed_contrast,
+                    on_change: {
+                        let id = text_color_id.clone();
+                        move |value| store.update_team(&id, move |team| team.text_color = value)
+                    },
+                }
+                ToggleRow {
+                    title: "Text from logo".to_owned(),
+                    hint: Some("Fills Text with the recommended logo colour.".to_owned()),
+                    Switch {
+                        checked: team.text_color_from_logo,
+                        aria_label: "Text from logo",
+                        on_checked_change: {
+                            let id = text_from_logo_id.clone();
+                            let text_id = text_color_id.clone();
+                            let logo = logo_value.clone();
+                            let team_id = sample_id.clone();
+                            let background = background_value.clone();
+                            move |checked| {
+                                let rules = ColorRules {
+                                    color_from_logo,
+                                    text_color_from_logo: checked,
+                                    computed_contrast,
+                                };
+                                store.update_team(&id, move |team| team.text_color_from_logo = checked);
+                                if checked {
+                                    if let Some(asset_id) = logo.clone() {
+                                        let store = store;
+                                        let team_id = team_id.clone();
+                                        spawn(async move {
+                                            sample_logo_colors(store, team_id, asset_id, rules).await;
+                                        });
+                                    } else {
+                                        store.notify("Choose a logo first.");
+                                    }
+                                } else if rules.computed_contrast
+                                    && let Some(text) = contrast_text_color(&background)
+                                {
+                                    store.update_team(&text_id, move |team| team.text_color = text);
+                                }
+                            }
+                        },
+                    }
+                }
+                ToggleRow {
+                    title: "Computed contrast".to_owned(),
+                    hint: Some("Applies to Text only and can run with automatic logo colours.".to_owned()),
+                    Switch {
+                        checked: team.computed_contrast,
+                        aria_label: "Computed contrast",
+                        on_checked_change: {
+                            let id = computed_contrast_id.clone();
+                            let text_id = text_color_id.clone();
+                            let background = background_value.clone();
+                            let text = text_value.clone();
+                            move |checked| {
+                                let rules = ColorRules {
+                                    color_from_logo,
+                                    text_color_from_logo,
+                                    computed_contrast: checked,
+                                };
+                                store.update_team(&id, move |team| team.computed_contrast = checked);
+                                let text = if rules.text_color_from_logo {
+                                    harmonize_text_color(&text, &background, checked)
+                                } else if checked {
+                                    contrast_text_color(&background)
+                                } else {
+                                    None
+                                };
+                                if let Some(text) = text {
+                                    store.update_team(&text_id, move |team| team.text_color = text);
+                                }
+                            }
+                        },
+                    }
+                }
+                p { class: "fgc-note",
+                    "Computed contrast changes Text only. Turn off an automatic option to edit that colour by hand."
                 }
                 ColorField {
                     label: "Logo background".to_owned(),
@@ -423,7 +633,7 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
                         checked: team.logo_background,
                         aria_label: "Separate logo background",
                         on_checked_change: move |checked| {
-                            store.update_team(&background_id, move |team| team.logo_background = checked);
+                            store.update_team(&logo_background_id, move |team| team.logo_background = checked);
                         },
                     }
                 }
@@ -437,7 +647,12 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
 
 /// A native colour input with its current hex value.
 #[component]
-fn ColorField(label: String, value: String, on_change: EventHandler<String>) -> Element {
+fn ColorField(
+    label: String,
+    value: String,
+    on_change: EventHandler<String>,
+    #[props(default)] disabled: bool,
+) -> Element {
     rsx! {
         Field { label: label.clone(),
             div { class: "fgc-color-field",
@@ -445,6 +660,7 @@ fn ColorField(label: String, value: String, on_change: EventHandler<String>) -> 
                     r#type: "color",
                     value: "{value}",
                     aria_label: "{label}",
+                    disabled: disabled,
                     oninput: move |event: FormEvent| on_change.call(event.value()),
                 }
                 code { class: "fgc-color-field__value", "{value}" }
