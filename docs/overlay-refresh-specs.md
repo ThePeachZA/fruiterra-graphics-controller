@@ -1867,3 +1867,81 @@ target. Turning off an automatic switch enables manual editing of that field.
 A82's real-browser evidence is in `docs/manual-qa.md` row A82, with repeatable
 steps in `docs/manual-qa-runbook.md` section A82. The owner opened the app in OBS
 at 1920×1080 and reported: "A82 is a pass." The visual sign-off is complete.
+
+## 18. Map select clarity, scores and winner treatment (A83)
+
+### 18.1 Purpose and scope
+
+A83 refreshes `map-select.html` only. The owner chose it over game overlay and
+gave five goals: continue the established theme philosophy, rework map scores,
+make the winning team logo more visible with a subtle map glow, keep hero square
+images for now, and make the current map unmistakable. A83 does not change the
+canonical FX block, the early overflow guard, the five bundled fonts, the
+Night Broadcast tokens, the projected card count, the legacy tiebreaker card or
+the ban portrait source. Hexagonal hero images remain a later consideration.
+
+### 18.2 Current-map treatment
+
+`.map-card--current` keeps its wider `flex: 1.8` layout and gains a 2px inset
+accent border. A new `.map-card__current` badge sits at top 16 and left 16 with
+z-index 4. It is an accent plate with on-accent text, 14px SemiBold uppercase
+type and 0.08em letter spacing. Its `::before` uses the Night Broadcast
+hexagon `clip-path` as a dot. The card HTML inserts exactly one badge for the
+card whose index matches `currentMapIndex`. Upcoming cards do not receive it.
+
+### 18.3 Score rework
+
+The old translucent 60px board and bare numeric divider are removed. Each
+completed board is now a 64px surface panel at top 286 with a 1px line border,
+medium radius, a 10px gap and 5px padding. It contains two `.map-card__score-team`
+plates, each using its own team colour through `--team-a-color` or
+`--team-b-color` with a 0.16-opacity wash. The winner plate adds a 2px coloured
+border and a 14px coloured glow through `::after`. A faint colon separates the
+two scores. Team tags appear above or beside the numbers so a viewer can tell
+which side each score belongs to without relying on order alone.
+
+`safeHexColor()` sanitises values before they are written to CSS variables.
+Unknown or malformed colours fall back to Night Broadcast tokens instead of
+breaking the board. `createMapCard()` derives `aWon` and `bWon` from completed
+scores, applies the winner class and passes the winning colour to the card.
+
+### 18.4 Winner logo and map glow
+
+The winning logo receives `.map-card__logo--winner`, which adds a drop shadow
+and a hexagon `::before` halo behind the 120×120 image. Completed map images
+receive a 0.12-opacity radial winner-colour wash through `::before` while the
+existing 0.16-opacity accent scrim remains on `::after`. Upcoming maps keep their
+placeholder, hidden board and hidden logo. The glow is deliberately subtle and
+never replaces the map artwork.
+
+### 18.5 Square ban portraits
+
+`createBanStrip()` continues to use `heroPortraits[heroName]` for each ban and
+keeps the 58×58 square `<img>` element. This slice must not apply a hexagon
+clip-path or border-radius to ban portraits. The rotated orange ban-order
+diamond remains outside the image. A future slice may evaluate hexagonal hero
+art when the owner is ready.
+
+### 18.6 CDP-verifiable assertions
+
+- One current card, one `Current map` badge and one board per projected map.
+- Current card inset border is `rgb(255,122,26) 0 0 0 2px` under Night Broadcast.
+- The badge measures 150×28 with orange background, dark text, 14px SemiBold and
+  a hexagon `::before` clip-path.
+- Completed boards measure 215×64 at top 286 with `rgb(11,13,18)`, a 1px
+  `rgb(42,49,64)` border, 6px radius, 10px gap, 5px padding and z-index 3.
+- Each completed board has two 86×52 score plates; the winner plate has a 2px
+  coloured border, a 14px coloured glow and 0.55 opacity.
+- The winner logo is 120×120 with a hexagon halo at 0.24 opacity and 10px blur;
+  the completed map radial wash is 0.12 opacity.
+- With `#0f3b8f` and `#ff5c7a`, the winner treatment follows the higher score and
+  reverses on the next completed map.
+- Ban portraits report 58×58, natural 1920×1080 art, `border-radius: 0`,
+  `clip-path: none` and `object-fit: cover`.
+- Overlay geometry stays 1920×1080 with hidden overflow, zero gutters and no
+  console errors. The canonical FX sentinels are unchanged.
+
+A83's real-browser evidence is in `docs/manual-qa.md` row A83, with repeatable
+steps in `docs/manual-qa-runbook.md` section A83. A screenshot could not be
+captured because the desktop window was not visible, so OBS visual sign-off
+remains with the owner.

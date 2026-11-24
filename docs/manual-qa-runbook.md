@@ -5551,3 +5551,86 @@ background fallback. The final hue-preserving fallback is covered by a unit test
 after the browser run. All gates passed with 93 app tests and 36 overlay tests.
 The restored app state hash was unchanged. The owner then opened the app in OBS
 at 1920×1080 and reported: "A82 is a pass." Visual sign-off is complete.
+
+### A83 - Map select clarity, scores, winner glow and square bans
+
+**Covers:** the owner's 2026-11-24 choice to refresh `map-select.html` next
+instead of the game overlay. Their exact request was: "Let's do the map select
+next rather. For the map select: Keep going with the theme philosphy we have got
+for ourselves; rework of the map scores is needed; team winning team logo
+visibility and maybe a subtle glow over the map; use hero square images (for
+now, but we might look at the hexagon images later instead); ensure clarity on
+what the current map is". A83 changes one overlay only. It keeps the Night
+Broadcast token block, five bundled Archivo fonts, early overflow guard,
+canonical FX block, square hero portraits, projected card count and legacy
+tiebreaker behaviour. Hexagonal ban thumbnails remain deferred.
+
+**Steps:**
+
+1. Run `git status --short` and confirm only `map-select.html` and
+   `crates/server/tests/overlays.rs` are modified for this visual mechanism.
+2. Confirm the file still carries the canonical Night Broadcast tokens, the
+   five-font block, the early `html, body` overflow guard and the sentinelled FX
+   block. The FX and background-mode tests must still pass unchanged.
+3. Inspect `.map-card--current`. It must keep `flex: 1.8` and add a 2px inset
+   accent border. Inspect `.map-card__current`: it must be absolutely positioned
+   at top 16 and left 16, use the accent surface with on-accent text, and carry a
+   Night Broadcast hexagon dot through `::before`. The badge text must be
+   `Current map`.
+4. Inspect `.map-card__board`. The old translucent 60px bar is gone. The board
+   is now 64px high at top 286, uses `var(--fgc-surface)`, a 1px
+   `var(--fgc-line)` border, `var(--fgc-radius-md)`, 10px gap and 5px padding.
+5. Inspect `.map-card__score-team`. Each completed board must render two
+   team-coloured plates with a faint team-colour wash. The winning plate uses
+   `.map-card__score-team--winner`, a 2px border and a 14px glow from
+   `--score-color`. The divider is a colon, not a dash.
+6. Inspect `safeHexColor()` and `createMapCard()`. Colour variables must be
+   sanitised before being written to `--team-a-color`, `--team-b-color` and
+   `--winner-color`. `aWon` and `bWon` must depend on completed scores, and the
+   winner logo must receive `.map-card__logo--winner`.
+7. Inspect `.map-card__logo--winner::before` and
+   `.map-card__image--completed::before`. The first is a 0.24-opacity, 10px-blur
+   hexagon halo behind the 120×120 logo. The second is a 0.12-opacity radial
+   wash over the map image. Both use the winner team colour with the orange
+   accent as fallback. Future maps must render neither.
+8. Confirm `createBanStrip()` still uses `heroPortraits[heroName]` and square
+   `<img>` elements. A source assertion forbids clipping the ban portraits in
+   this slice. Hexagonal ban art can be reconsidered later.
+9. Open the rebuilt app with
+   `$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'`
+   and a fresh tab at `http://127.0.0.1:3001/overlays/map-select.html?probe=a83`.
+   Wait for `MAP SELECT`. Confirm an empty console, one current badge, five cards
+   and five boards from cached state.
+10. Measure the current card and badge. Expected values: inset
+    `rgb(255,122,26) 0 0 0 2px`; badge 150×28 at x216/y287, orange background,
+    dark text, 14px SemiBold, letter-spacing 1.12px and a hexagon `::before`.
+11. Measure a completed card. Expected values: 120×120 winner logo with drop
+    shadow and a 0.24-opacity blurred hexagon halo; radial map glow at 0.12;
+    board 215×64 at top 286 with `rgb(11,13,18)`, a 1px `rgb(42,49,64)` border,
+    6px radius, 10px gap, 5px padding and z-index 3; two 86×52 score plates;
+    winner `::after` with a 2px coloured border, 14px coloured glow and 0.55
+    opacity.
+12. Measure ban portraits on a completed card. They must be 58×58 with natural
+    1920×1080 art, `border-radius: 0`, `clip-path: none` and `object-fit: cover`.
+13. Inject a second temporary `mapSelect` payload with team A `#0f3b8f`, team B
+    `#ff5c7a`, two completed maps won in opposite directions and one upcoming
+    map. Confirm the current badge count is one and the board count is three.
+    Card 1 must expose `--winner-color: #0f3b8f`, radial and logo glows in that
+    colour, an AA winner plate in that colour and a BB plate in
+    `rgb(255,92,122)`. Card 2 must reverse them. Card 3 must have no winner
+    glow, a hidden logo and the default accent fallback. Close the temporary tab.
+14. Confirm zero scrollbar gutters, hidden overflow on html and body, a
+    1920×1080 overlay box and an empty console. Try to capture a screenshot. If
+    the desktop window is not visible, record that no screenshot was captured.
+15. Run `git diff --check`, `cargo fmt --all -- --check`,
+    `cargo clippy --workspace --all-targets -- -D warnings`,
+    `cargo test --workspace --quiet` and `dx build --desktop`. Stop the running
+    app before rebuilding if the executable is locked.
+
+**Result: Pass - assistant 2026-11-24.** The source assertions, 38-test overlay
+suite and full workspace gates passed. Real DOM and computed-style probes proved
+the current-map badge, score plates, winner border and glow, radial map wash,
+winner logo halo, square ban portraits and colour reversal. The overlay stayed
+1920×1080 with zero gutters, hidden overflow and an empty console. OBS visual
+sign-off remains an owner check because the desktop window was not visible for
+a screenshot.

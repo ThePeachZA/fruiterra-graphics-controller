@@ -2145,3 +2145,18 @@ Blasters proved every switch and combination, and the original state was
 restored with its hash unchanged. All gates passed with 93 app tests and 36
 overlay tests. The owner opened the app in OBS at 1920×1080 and reported: "A82
 is a pass." This closes the visual sign-off.
+
+A83 refreshes `map-select.html` after the owner chose it over the game overlay.
+They asked to keep the current theme philosophy, rework the map scores, make the
+winning team logo more visible with a subtle map glow, keep square hero images
+for now, and make the current map clear. The active card now carries a 2px inset
+accent border and one `Current map` hexagon badge. Completed boards use two
+team-coloured score plates with a glowing winner plate and a colon divider. The
+winning logo has a hexagon halo, and completed map images have a faint radial
+winner-colour wash. `safeHexColor()` keeps malformed colours from breaking the
+card, and `createMapCard()` derives both winners from completed scores. Ban
+portraits remain 58×58 square images; hexagonal hero art stays deferred. Browser
+probes measured the badge, borders, plates, glows and square portraits, then
+proved the winner treatment reverses between `#0f3b8f` and `#ff5c7a`. All gates
+passed with 38 overlay tests. Screenshot capture failed because the desktop
+window was not visible, so OBS visual sign-off remains with the owner.

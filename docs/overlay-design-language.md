@@ -590,7 +590,7 @@ can be made transparent. Timer and game overlay have no background mode at all.
 | `timer.html` | non-game countdown and lower-third bug | no FX hexagon; planned hex plate | transparent body, theme text | no reveal delay, no per-frame clock | explicitly excluded by owner |
 | `game-overlay.html` | chrome around the game capture | planned logo chips and score plate; no centre bar | dual outer-edge washes, neutral centre | 0.8s reveal when refreshed | explicitly excluded by owner |
 | `map-pool.html` | map grid by mode | planned status chips, never on thumbnails | outer-edge wash, staggered rows | 0.35s reveal planned | shipped transparent FX |
-| `map-select.html` | vertical map slots and ban thumbnails | planned name plate and vote chips; thumbnails stay rectangular | bottom outer-corner washes | 0.35s reveal planned | shipped transparent FX |
+| `map-select.html` | vertical map slots; current card is wider and explicitly badged | score plates use team colours with a glowing winner plate; ban thumbnails stay rectangular and square for now; winner logo gains a subtle hexagon halo | bottom outer-corner washes remain planned; completed maps use a faint radial winner wash over the artwork | 0.35s reveal planned | shipped transparent FX and A83 result clarity |
 | `row-casters.html` | caster row | planned hexagon portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
 | `row-hosts.html` | host and analyst row | planned portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
 | `row-interviews.html` | interviewer and guest row | planned portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
@@ -606,9 +606,10 @@ These are agreed ideas, not changes in the tree:
   chips, keep the centre clear, and wash team colour in from both outer edges.
 - **Map pool.** Keep the rectangular table, add hexagon status chips, an outer
   wash and staggered rows. Do not clip the map thumbnails.
-- **Map select.** Add a hexagon name plate, hexagon vote chips and a hexagon
-  clipping only if it does not cut the corners off the thumbnail. Put both team
-  washes at the bottom outer corners.
+- **Map select.** A83 delivered the current-map badge, team-coloured score
+  plates and winner treatment while keeping ban images square. A later pass may
+  still add a hexagon name plate and vote chips. Do not clip rectangular thumbnails
+  or ban portraits. Both team washes at the bottom outer corners remain planned.
 - **Talent rows.** Add hexagon portrait frames and role chips, a per-card outer
   wash, and reuse `subjectBox()` where a transparent portrait is supplied.
 - **Timer.** Add a hexagon plate and keep tabular figures; no per-frame
@@ -738,6 +739,9 @@ narrowly; do not weaken the equality rule.
 | A dark and a bright team colour read at very different gradient strengths | fixed by A82 | `relativeLuminance()` and `gradientAlphas()` scale the wash from 0.20 down to 0.08 and the glow from 0.21 down to 0.09. Probes measured 0.19/0.20 for `#0f3b8f` and 0.15/0.16 for `#ff5c7a`; the full-width bottom-only geometry is unchanged |
 | Uploaded logos touch the panel edge or the selected text colour is ignored | fixed by A82 | `.team-logo` uses 12px padding with `background-origin: content-box`, so the artwork breathes while the panel still fills; `teamData.textColor` is parsed and applied before the Night Broadcast fallback, and a settled browser probe measured a 100×92 inset logo with exact selected text colours |
 | Automatic logo text clashes with a manual background | fixed by A82 | Team properties keep Background from logo, Text from logo and Computed contrast as independent controls. `harmonize_text_color()` preserves the sampled hue while raising contrast to 3:1, or 4.5:1 when computed contrast is also enabled; the monochrome-logo case has a dedicated unit test |
+| The current map is only identifiable by card width | fixed by A83 | `.map-card--current` adds a 2px inset accent border and a single `Current map` hexagon badge; the browser probe measured one badge at 150×28 with the Night Broadcast accent plate |
+| A map score does not show which team won or how much | fixed by A83 | completed boards now carry two team-coloured 86×52 plates, a winner border and glow, and a colon divider; `safeHexColor()` sanitises colours before they reach the CSS variables |
+| The winner glow hides the map or turns ban portraits into hexagons | guarded by A83 | the radial map wash is 0.12 opacity and the logo halo is 0.24 opacity with the existing scrim retained; ban portraits still report 58×58, no clip-path and no border-radius |
 | Country flag or team tag code returns as a half-finished identity chip | deferred by the owner in A79 | no `player-code` or `teamCode` remains; source-text assertions forbid them, and `docs/backlog.md` records the idea for a later decision |
 | Source-text tests break on unrelated markup edits | known cost | narrow the assertion; never remove the equality check |
 | Copy-paste drift between duplicated blocks | guarded | sentinel comments and `every_overlay_carries_the_same_fx_block` |
@@ -786,3 +790,4 @@ it has shipped.
 | 2026-11-23 | A80 superseded A79's rails and side-anchored glow: both rosters dropped the rails, used a 46×54 substitute hexagon with a 34px icon, ordered core and substitutes Damage/Tank/Support, softened the wash to 12% and the glow to 14%, and stretched the glow across the full 1920px bottom of the frame. |
 | 2026-11-23 | A81 replaced the remaining A80 side wash with one full-width bottom gradient, then softened it again after the owner said it looked harsh: wash alpha 0.08, glow alpha 0.09, 420px gradient and a 300px blurred glow layer. |
 | 2026-11-24 | A82 inset roster logos, animated the core/sub divider, applied stored text colours, balanced the bottom gradient by background luminance, and replaced the single text-colour mode with independent Background from logo, Text from logo and Computed contrast rules that recommend colours and preserve logo hue when a manual background is too close. |
+| 2026-11-24 | A83 clarified map select with a current-map badge and inset accent border, replaced the generic score bar with team-coloured winner-aware score plates, added a subtle winner logo and map glow, and kept ban portraits square. |

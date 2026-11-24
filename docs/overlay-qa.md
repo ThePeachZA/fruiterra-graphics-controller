@@ -49,12 +49,13 @@ across all milestones is in `docs/manual-qa.md`.
 | 38 | Roster overlays remove the side rails, use proportional substitute hexagons, order both rows Damage, Tank, Support, and use a softer side wash with a full-width bottom glow | ☑ |
 | 39 | Roster overlays replace the side wash with one subtle full-width bottom gradient that reaches both ends of the window, with no side-anchored or cut-off glow | ☑ |
 | 40 | Roster logos have inset breathing room, the core/sub divider animates in, stored text colours are respected, and the bottom gradient balance compensates for background luminance; team properties can recommend Background and Text from the logo independently and can combine computed contrast with automatic logo colours | ☑ |
+| 41 | Map select marks the current map clearly, presents team-coloured score plates with a visible winner, gives the winning logo and map a subtle themed glow, and keeps banned hero portraits square | ☑ |
 
 The current design language, the per-overlay playbook and the motion rules are
 in [`docs/overlay-design-language.md`](overlay-design-language.md). The
 post-v1 evidence for these checks is in `docs/manual-qa.md` §7 and the repeatable
 steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74, A75, A76, A77,
-A78, A79, A80, A81 and A82. A75 and A76 remain historical records; A77 supersedes
+A78, A79, A80, A81, A82 and A83. A75 and A76 remain historical records; A77 supersedes
 their hexagons-hidden claim and its refresh caveat. A79 supersedes the earlier
 roster experiment that put the reduced hexagon abbreviation, then the team tag or
 country code, in the name plate; that idea remains deferred to the backlog. A80

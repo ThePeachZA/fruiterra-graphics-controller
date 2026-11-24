@@ -1681,3 +1681,26 @@ rules directly. Scaling the sampled colour preserves more of the logo than
 mixing it toward white or black, while the two contrast targets keep display
 text and body text legible. The old single select could not express the
 simultaneous states and is not retained.
+
+### D18 - Map select uses explicit state, team-coloured scores and a subtle winner halo
+
+**Decision.** A83 keeps the existing map artwork and ban strip but makes the
+current map and result explicit. The active card gains a 2px inset accent border
+and a single `Current map` hexagon badge. Completed maps replace the translucent
+generic score bar with two team-coloured plates, mark the winner with a coloured
+border and glow, and use a colon rather than a dash between scores. The winning
+logo gains a hexagon halo and the map image gains a faint radial winner wash.
+Both use the winner team colour with the Night Broadcast accent as fallback.
+Ban portraits stay square. No new asset, font, sentinel, payload field or
+filename is introduced, and the canonical FX block is unchanged.
+
+**Reason.** The owner chose map select over game overlay and said: "Keep going
+with the theme philosphy we have got for ourselves", "rework of the map scores is
+needed", "team winning team logo visibility and maybe a subtle glow over the
+map", "use hero square images (for now, but we might look at the hexagon images
+later instead)", and "ensure clarity on what the current map is". Width alone did
+not make the active card obvious, and a generic score bar did not identify the
+winner quickly. Team-coloured plates and a subtle halo communicate the result
+inside the established visual language without turning the map into a decorative
+surface. Square bans stay because the owner explicitly limited hexagon imagery
+to a later review.
