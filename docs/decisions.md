@@ -1704,3 +1704,42 @@ winner quickly. Team-coloured plates and a subtle halo communicate the result
 inside the established visual language without turning the map into a decorative
 surface. Square bans stay because the owner explicitly limited hexagon imagery
 to a later review.
+
+### D19 - Map select and hero bans use a Clean Canvas with one-shot reveals
+
+**Decision.** A84 removes the remaining chrome from `map-select.html` and
+`hero-bans.html`: score slabs, per-card headers, mode icons and the `Now
+playing` pill are gone. The winning logo is centred on the artwork with a soft
+circular halo in the winning team's colour, not a large hexagon plate. The
+opening reveal plays once; later frames reconcile existing cards, animate only
+changed data, crossfade ghost text, preserve unchanged image elements and
+reveal only changed bans. Hero pickers use native selects. Scene overlays
+default to an opaque background, with transparent available as an explicit
+override. No new asset, font, sentinel, payload field or filename is introduced.
+
+**Reason.** The owner accepted the Clean Canvas direction after reviewing the
+running overlays. The previous badges, score plates and mode icons read as
+dashboard chrome and pulled attention away from the map art and winner identity.
+A centred logo communicates the result without another hex plate, and targeted
+animation stops unrelated live updates from replaying the whole scene. Opaque
+default matches the intended OBS composition while preserving the existing
+transparent mode for operators who need it.
+
+### D20 - Map pool derives a readable pick glow from the choosing team
+
+**Decision.** A85 rebuilds `map-pool.html` in the same Clean Canvas language:
+no heading, five columns, plain mode icons, wrapped names, a bottom gradient
+and staggered marks/cards. A picked map darkens and receives a radial wash,
+bottom wash, crest reveal and name rule. Every pick colour comes from the
+choosing team, lifted 45% toward white so dark teams remain legible. The keyed
+init frame is unwrapped before the pool read so team colours survive. Stable
+slots reconcile broadcasts with duplicate no-ops and one animation batch.
+
+**Reason.** The owner asked why the heading was removed; it was intentional
+because the mode row and map labels already supply context and a heading was
+chrome. They then asked for more animation, the map-select winner-gradient
+treatment, a darker picked image, removal of the game-mode hexagons, and no
+orange fallback. Live evidence showed the fallback came from nested init data,
+not from a CSS mistake. A lightened derivative keeps the team's hue without
+letting a near-black colour disappear against the darkened artwork. The owner
+reviewed the final live render and answered "Approve A85".

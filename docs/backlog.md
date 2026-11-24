@@ -2160,3 +2160,39 @@ probes measured the badge, borders, plates, glows and square portraits, then
 proved the winner treatment reverses between `#0f3b8f` and `#ff5c7a`. All gates
 passed with 38 overlay tests. Screenshot capture failed because the desktop
 window was not visible, so OBS visual sign-off remains with the owner.
+
+A84 applies the Clean Canvas direction to map select and hero bans. Map select
+loses the score slabs, per-card header, mode icon and `Now playing` pill; the
+winner sits at the art centre with a soft circular team-colour halo instead of a
+large hex plate. Completed art darkens under a subtle radial winner wash. The
+opening reveal settles once, after which duplicate frames cause no animation,
+changed map content crosses through a ghost text fade under a dark curtain, and
+only a changed ban runs its per-side reveal. Unchanged hero art and role icons
+stay mounted. Match Controller hero pickers became native selects, and scene
+overlays now default to an opaque background. The owner reviewed the running
+overlays and accepted A84 on 2026-11-24.
+
+A85 refreshes `map-pool.html` with the same philosophy. The heading and
+`fitText`/`fitMapNames` pass are gone; a five-column canvas uses a bottom
+gradient, seam overscan and two-line name wrapping. Mode icons are plain marks.
+Columns, cards and mode marks enter on staggered beats. A picked image darkens
+to `grayscale(1) brightness(0.56) saturate(0.45)` and gains a radial winner
+wash, bottom wash, crest reveal and name rule in the choosing team's colour.
+The keyed init frame is unwrapped before the pool read, fixing the fallback to
+orange. `lightenedRgbTriplet()` lifts dark teams 45% toward white while keeping
+the hue. Stable slot reconciliation keeps duplicate broadcasts as no-ops and
+runs changed content and picks in one batch. The owner reviewed the final live
+probe, asked for the lighter dark-team colour, then approved A85 on 2026-11-24.
+
+Fixed risks from A84 and A85:
+
+| Risk | Status | Guard |
+|---|---|---|
+| Map select returns to dashboard chrome | Fixed by A84 | Source assertions forbid the current badge, score boards, mode icons and `Now playing`; the Clean Canvas test also forbids the old inset accent border. |
+| A live update replays the opening animation | Fixed by A84 | Opening state settles once; duplicate payloads produce zero animations and only changed cards animate. |
+| Unchanged hero art reloads when another ban changes | Fixed by A84 | Image `src` is compared before replacement; role icon updates are conditional. |
+| Scene overlays open transparent by default | Fixed by A84 | `AppStore` seeds `background_opaque` as `true`; transparent remains explicit. |
+| Map pool keeps a redundant heading or clipping long names | Fixed by A85 | No header or fit pass remains; names shrink, then clamp to two lines. |
+| Game-mode icons regain hexagon frames | Fixed by A85 | No `clip-path` remains in `map-pool.html`, and the source test forbids `clip-path: polygon(`. |
+| Pick state falls back to orange from nested init data | Fixed by A85 | Init unwraps `d.scoreboard || d`; live probe proved `127 120 149` for `#17093e`. |
+| Dark team colours disappear against picked art | Fixed by A85 | `PICK_LIGHTEN_MIX = 0.45` lifts the derived glow toward white while preserving hue. |

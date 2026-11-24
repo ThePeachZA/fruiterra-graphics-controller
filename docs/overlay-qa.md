@@ -50,19 +50,26 @@ across all milestones is in `docs/manual-qa.md`.
 | 39 | Roster overlays replace the side wash with one subtle full-width bottom gradient that reaches both ends of the window, with no side-anchored or cut-off glow | ☑ |
 | 40 | Roster logos have inset breathing room, the core/sub divider animates in, stored text colours are respected, and the bottom gradient balance compensates for background luminance; team properties can recommend Background and Text from the logo independently and can combine computed contrast with automatic logo colours | ☑ |
 | 41 | Map select marks the current map clearly, presents team-coloured score plates with a visible winner, gives the winning logo and map a subtle themed glow, and keeps banned hero portraits square | ☑ |
+| 42 | Map select and hero bans use the Clean Canvas: no score slabs, per-card headers, mode icons or `Now playing` pill; winners are centred in a soft circular halo; the opening plays once and later updates animate only changed data; scene overlays default to opaque | ☑ |
+| 43 | Map pool uses the Clean Canvas without a heading, with plain mode icons, five columns, wrapped map names, a darker picked image and a readable pick glow derived from the choosing team's lightened colour; duplicate broadcasts are no-ops | ☑ |
 
 The current design language, the per-overlay playbook and the motion rules are
 in [`docs/overlay-design-language.md`](overlay-design-language.md). The
 post-v1 evidence for these checks is in `docs/manual-qa.md` §7 and the repeatable
 steps are in `docs/manual-qa-runbook.md` sections A72, A73, A74, A75, A76, A77,
-A78, A79, A80, A81, A82 and A83. A75 and A76 remain historical records; A77 supersedes
+A78, A79, A80, A81, A82, A83, A84 and A85. A75 and A76 remain historical records; A77 supersedes
 their hexagons-hidden claim and its refresh caveat. A79 supersedes the earlier
 roster experiment that put the reduced hexagon abbreviation, then the team tag or
 country code, in the name plate; that idea remains deferred to the backlog. A80
 supersedes the A79 side rails and the side-anchored glow; the owner rejected both
 after review and asked for the full-width bottom glow instead. A81 supersedes
 the remaining A80 side wash: both rosters now paint one subtle bottom gradient
-across the entire 1920px frame, so no home or away edge treatment remains.
+across the entire 1920px frame, so no home or away edge treatment remains. A84
+supersedes the A83 chrome direction: map select and hero bans now use the Clean
+Canvas, centred winner treatment and targeted one-shot reveal, with opaque
+backgrounds as the default. A85 applies the same philosophy to map pool, removes
+the heading and mode hexagons, darkens picked art, and derives a readable glow
+from the choosing team's colour.
 
 ## Automated pre-check
 

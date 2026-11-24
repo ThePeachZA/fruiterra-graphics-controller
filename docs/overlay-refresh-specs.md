@@ -1945,3 +1945,127 @@ A83's real-browser evidence is in `docs/manual-qa.md` row A83, with repeatable
 steps in `docs/manual-qa-runbook.md` section A83. A screenshot could not be
 captured because the desktop window was not visible, so OBS visual sign-off
 remains with the owner.
+
+## 19. Map select and hero bans - Clean Canvas and targeted reveals (A84)
+
+**Status:** **implemented and QA'd 2026-11-24.** A84 was reviewed by the owner in
+the running overlays and accepted. It supersedes the chrome-heavy A83 treatment
+on `map-select.html` while retaining the Night Broadcast tokens, the five
+bundled faces, the early overflow guard, the canonical FX block, square ban
+portraits, the projected card count and the legacy tiebreaker behaviour.
+
+**Scope (this spec):** `map-select.html`, `hero-bans.html`, the eight canonical
+FX carriers, `crates/app/src/state.rs`, the Match Controller hero picker and
+`crates/server/tests/overlays.rs`.
+
+### 19.1 Clean Canvas
+
+Map select removes `.map-card__current`, the 2px inset accent border, the score
+board, the per-card game-mode icon and the `Now playing` pill. The footer keeps
+only the map type text. The current card keeps `flex: var(--current-grow, 1.8) 1
+0;` while opening, then settles to 1.8 after the row reveals; a later current-
+map change trades width in one handoff. No card header competes with the art.
+
+### 19.2 Winner treatment
+
+The winning logo is centred at `top: calc(50% - 52px)` and `left: 50%`, 112px
+wide, with a dark drop shadow and a soft team-colour glow. The old giant hexagon
+`::after` plate and its `-12px` inset are gone. Completed art uses
+`brightness(0.52) saturate(0.45)` under a radial team-colour wash at 0.13
+opacity. `safeHexColor()` validates six-digit hex values before they reach
+`--winner-color`, so malformed team data cannot break the glow.
+
+### 19.3 Opening and live reconciliation
+
+The opening reveal is a one-shot. After `settleInitialAnimations()`, duplicate
+payloads produce zero animations. Stable card identity lets the overlay call
+`reconcileMaps()`, `refreshCardContent()`, `animateContentSwap()`,
+`setCurrentVisual()` and `animateCardWidth()` instead of rebuilding the row.
+Only changed art, type and name animate; the old text is cloned into a ghost,
+faded out and removed while the new text fades in. A dark curtain covers art
+swaps; empty slots update in place without a curtain. Unchanged image elements
+stay mounted so unrelated updates do not reload the same art.
+
+### 19.4 Hero bans and app controls
+
+Hero bans reveal the changed side only. `animateBanReveal(side, firstSide)`
+animates art blur/opacity, name translation and role scale over 560ms, with a
+90ms stagger for the second side. `renderedHomeHero` and `renderedAwayHero`
+track the last painted hero so the opening does not replay on every broadcast.
+Match Controller hero pickers use native `<select>` elements so long hero lists
+remain visible. `AppStore` now seeds `background_opaque` as `true`; transparent
+remains an explicit override and the cached `background` broadcast is unchanged.
+
+### 19.5 Evidence
+
+A84's evidence is in `docs/manual-qa.md` row A84 and sign-off table, with
+repeatable steps in `docs/manual-qa-runbook.md` section A84. The source guards
+are `map_select_keeps_a_clean_canvas_with_centred_winners`,
+`map_select_reconciles_live_data_without_replaying_the_opening`,
+`hero_bans_reveals_each_new_ban_without_replaying_the_opening` and
+`hero_bans_keeps_unchanged_images_when_another_ban_updates`.
+
+## 20. Map pool - Clean Canvas and readable team-colour picks (A85)
+
+**Status:** **implemented and QA'd 2026-11-24.** The owner reviewed the final
+live render and answered "Approve A85". The overlay keeps the Night Broadcast
+tokens, five bundled faces, early overflow guard, canonical FX block, grouped
+mode order and existing payload contract.
+
+### 20.1 Layout and motion
+
+`map-pool.html` renders a centred 1768×968 grid with 56px vertical and 72px
+horizontal padding, five mode columns and no `Map Pool` heading. `fitText` and
+`fitMapNames` are removed. Names use `container-type: inline-size`,
+`font-size: clamp(13px, 9cqw, 20px)` and a two-line clamp. Map art overscans
+flex rounding by `-1px` on each side and keeps the black bottom gradient. Mode
+marks are plain contain-style icons with a drop shadow; no `.mode-icon` rule or
+image uses `clip-path`. Columns, cards and mode marks enter on staggered beats,
+and the reduced-motion branch includes the mode marks.
+
+### 20.2 Pick state
+
+A picked image uses `grayscale(100%) brightness(0.56) saturate(0.45)`. A radial
+winner wash sits above the art, the existing black footer gradient remains
+above that, and a team-colour bottom wash, crest reveal and name rule complete
+the state. Every pick colour is `rgb(var(--pick-glow-rgb, 255 122 26) / ...)`;
+no static `--fgc-pick-glow*` token remains. The crest drop shadow, radial wash,
+bottom wash and inset name rule all use that same derived colour. The pick
+animation is 620ms, delayed 60ms, and joins the card's existing animation batch.
+
+### 20.3 Colour derivation and init contract
+
+`lightenedRgbTriplet()` lifts each team channel 45% toward white with
+`PICK_LIGHTEN_MIX = 0.45`, preserving hue while making dark teams readable.
+Only the derived pick treatment uses it; logo artwork remains untouched. The
+keyed init frame wraps the scoreboard, so `updateOverlay()` now reads
+`const scoreboard = d.scoreboard || d;` and forwards
+`{ ...scoreboard, mapPoolData }`. Without this unwrap, the pool renders but
+loses team colours and falls back to orange.
+
+### 20.4 Live-update contract
+
+Cards are matched by stable `dataset.slot`. Repeated payloads with the same
+pool and pick signature cause no animation. Changed slots run one batch of
+card, content, mode-mark and pick animations; `refreshPickedState()` reveals
+the crest only when the pick key changes. Opening marks are cancelled and
+removed by `settleOpening()`, and post-opening updates cannot restart the
+opening. Reduced motion remains guarded.
+
+### 20.5 CDP-verifiable assertions
+
+- 1920×1080 document, opaque canvas, zero headings and no console errors.
+- Five columns, seven fixture cards, five plain mode icons and `modeClip: none`.
+- Bottom black gradient, `-1px` image margin, wrapped two-line names.
+- Picked filter is `grayscale(1) brightness(0.56) saturate(0.45)`.
+- Pick glow, wash, name rule and crest shadow use the same lightened team rgb.
+- Live Inglorious Blasters evidence derives `127 120 149` from `#17093e`.
+- Opening reports 22 CSS animations; duplicates report zero.
+- A name change produces one four-animation batch.
+- A pick change produces one six-animation batch including glow and crest.
+
+A85's evidence is in `docs/manual-qa.md` row A85 and sign-off table, with
+repeatable steps in `docs/manual-qa-runbook.md` section A85. The source guards
+are `map_pool_applies_the_clean_canvas_and_targeted_update_contract`,
+`map_pool_animates_mode_marks_and_team_pick_reveal` and
+`map_pool_lifts_dark_team_colours_for_the_pick_glow`.

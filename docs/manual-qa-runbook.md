@@ -5634,3 +5634,110 @@ winner logo halo, square ban portraits and colour reversal. The overlay stayed
 1920×1080 with zero gutters, hidden overflow and an empty console. OBS visual
 sign-off remains an owner check because the desktop window was not visible for
 a screenshot.
+
+### A84 - Clean Canvas, centred winners and targeted live reveals
+
+**Covers:** the owner's 2026-11-24 review of the A83 map-select and hero-bans
+work. The Clean Canvas direction removed chrome that competed with the artwork:
+no score slabs, per-card headers, mode icons or `Now playing` pill. The winner
+moves to the visual centre with a soft team-colour halo rather than a large hex
+plate. The opening reveal plays once; later broadcasts animate only the data
+that changed. The same review made scene overlays default to an opaque
+background while keeping transparent as an explicit override.
+
+**Steps:**
+
+1. Run `git status --short` and confirm the A84 mechanism touches
+   `map-select.html`, `hero-bans.html`, the eight canonical FX carriers,
+   `crates/app/src/state.rs`, the match controller hero picker and
+   `crates/server/tests/overlays.rs` only. Do not edit the FX sentinels.
+2. Inspect `map-select.html`. Confirm `map-card__board`, `map-card__score-team`,
+   `map-card__mode-icon`, `gameModeIcons`, `map-card__current` and
+   `Now playing` are absent. The footer keeps the map type text only.
+3. Confirm the winner logo is 112px, centred on the art, and carries a circular
+   halo with a team-colour drop shadow. The old giant hexagon `::after` plate
+   and its `-12px` inset must not return. Ban portraits stay square.
+4. Confirm completed art uses `brightness(0.52) saturate(0.45)` under a radial
+   team-colour wash at 0.13 opacity. `safeHexColor()` validates
+   `#rrggbb`/`rrggbb` values before they reach `--winner-color`.
+5. Open a fresh 1920×1080 map-select probe tab. Confirm the opening card width
+   settles from 1 to 1.8 after the row has revealed, then send the same payload
+   twice. The settled tab must report zero running animations for duplicates.
+6. Change only one map name and image. Confirm the old text is cloned into a
+   ghost that fades while the new type/name fade in, a dark curtain covers the
+   art swap, and the width handoff runs only when the current map changes.
+   Unchanged images must keep the same DOM element rather than reloading.
+7. In hero bans, change one ban at a time. The changed side must run the
+   560ms art/name/role reveal with a 90ms side stagger; the other side must
+   keep its image `src` and run no animation. Reopening the overlay must still
+   play the normal one-shot opening.
+8. In Match Controller, open a hero picker. Confirm it uses a native `<select>`
+   and that every hero option remains reachable instead of being hidden by a
+   datalist popup.
+9. Confirm `AppStore` seeds `background_opaque` as `true` and still broadcasts
+   `{ "opaque": true|false }`; transparent must remain an explicit choice.
+10. Run `git diff --check`, `cargo fmt --all -- --check`,
+    `cargo clippy --workspace --all-targets -- -D warnings`,
+    `cargo test --workspace --quiet` and `dx build --desktop`. Stop the app
+    before rebuilding if the executable is locked.
+
+**Result: Pass - owner 2026-11-24.** Source assertions covered the removed
+chrome, centred winner treatment, one-shot opening, targeted reconciliation,
+ghost crossfade, unchanged-image preservation, native selects and opaque
+default. Real WebView2/CDP checks proved the settled duplicate no-ops, changed-
+data batches and per-side ban reveal. The owner reviewed the running overlays
+and accepted the A84 visual result.
+
+### A85 - Map pool Clean Canvas, team-colour picks and readable glow
+
+**Covers:** the owner's 2026-11-24 request to restyle the map pool with the same
+design philosophy and animation concepts as map select, hero bans and the roster
+overlays. Follow-up corrections asked why the heading disappeared, requested
+more animation, asked for the map-select winner-gradient treatment with a darker
+picked map, rejected the orange fallback, asked to remove the mode-icon
+hexagons, and finally asked for a lighter version of dark team colours.
+
+**Steps:**
+
+1. Run `git status --short` and confirm the mechanism is limited to
+   `map-pool.html`, `crates/server/tests/overlays.rs` and the documentation.
+   The canonical FX block and filename must not change.
+2. Inspect the layout source. There is no `Map Pool` heading, `fitText` or
+   `fitMapNames` pass. The 1768×968 grid has five columns, bottom gradient and
+   `margin-inline: -1px` overscan. Map names shrink with
+   `font-size: clamp(13px, 9cqw, 20px)` and wrap to two lines.
+3. Inspect the mode row. `.mode-icon` and `.mode-icon img` must have no
+   `background`, `clip-path` or inset frame; icons are plain contain-style marks
+   with a drop shadow. A source assertion forbids `clip-path: polygon(`.
+4. Inspect the picked state. The image uses
+   `grayscale(100%) brightness(0.56) saturate(0.45)`. Every pick wash, name
+   rule and crest shadow uses `rgb(var(--pick-glow-rgb, 255 122 26) / ...)`;
+   no static `--fgc-pick-glow*` token remains.
+5. Confirm `lightenedRgbTriplet()` lifts each team channel 45% toward white and
+   that `teamColors()` uses it for both sides. The raw team colour still drives
+   the logo; only the derived glow, wash, rule and crest shadow are lightened.
+6. Confirm the keyed init branch unwraps `d.scoreboard || d` before reading
+   `mapPoolData`. Without this, the pool renders but loses `teamA`/`teamB` and
+   falls back to orange.
+7. Open a fresh 1920×1080 map-pool probe tab with the fake fixture. Confirm
+   zero headings, five columns, seven cards, five mode icons, an opaque canvas,
+   the black bottom gradient, `-1px` image margin, `modeClip: none`, the darker
+   picked filter and 22 opening animations across columns, cards and mode marks.
+8. Send duplicate payloads and confirm zero animations. Change one map name and
+   confirm one four-animation batch. Change the pick and confirm one six-
+   animation batch containing the crest, glow and `animate-pick` class; the
+   class must clear after the animation settles. Console errors must be empty.
+9. Stop the app, run `dx build --desktop`, relaunch it with CDP 9222 and run
+   `a85-live-pick-probe.mjs` against the real server state. Final evidence must
+   show `pickRgb: "127 120 149"` for Inglorious Blasters' `#17093e`, the same
+   colour in every glow and rule, the darker filter and `modeClip: none`.
+10. Open the final screenshot in Review and obtain owner sign-off.
+11. Run `git diff --check`, `cargo fmt --all -- --check`,
+    `cargo clippy --workspace --all-targets -- -D warnings`,
+    `cargo test --workspace --quiet` and `dx build --desktop` after any change.
+
+**Result: Pass - owner 2026-11-24.** The fake-fixture proof passed the opening,
+duplicate, targeted-update and pick-change batches. The live probe first exposed
+the nested-init orange bug, then proved the unwrapped team colour and, after the
+readability change, the lightened `127 120 149` team hue. The owner replied
+"Approve A85". All gates passed with 94 app tests and 44 overlay tests.

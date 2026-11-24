@@ -586,11 +586,11 @@ can be made transparent. Timer and game overlay have no background mode at all.
 | Overlay | Purpose | Hexagon use | Colour rule | Motion | FX state |
 |---|---|---|---|---|---|
 | `background.html` | persistent backdrop beneath every scene | two drifting lattices, the product's mask alone | solid opaque `--fgc-surface` plate; `?tone=team` only for the washes | glow 84s, forward 88s, reverse 72s | not applicable; it is the richer standalone treatment |
-| `hero-bans.html` | full-bleed ban moment | logo 100×115, role 60×68, wall and grid | outer-edge team wash, neutral ink on art, no seam | 0.8s reveal, 0.9s halves | shipped 2026-11-23 |
+| `hero-bans.html` | full-bleed ban moment | logo 100×115, role 60×68, wall and grid | outer-edge team wash, neutral ink on art, no seam | 0.8s initial reveal; A84 adds a 560ms per-side ban reveal with 90ms stagger and preserves unchanged images | shipped 2026-11-23, A84 reveal refinement 2026-11-24 |
 | `timer.html` | non-game countdown and lower-third bug | no FX hexagon; planned hex plate | transparent body, theme text | no reveal delay, no per-frame clock | explicitly excluded by owner |
 | `game-overlay.html` | chrome around the game capture | planned logo chips and score plate; no centre bar | dual outer-edge washes, neutral centre | 0.8s reveal when refreshed | explicitly excluded by owner |
-| `map-pool.html` | map grid by mode | planned status chips, never on thumbnails | outer-edge wash, staggered rows | 0.35s reveal planned | shipped transparent FX |
-| `map-select.html` | vertical map slots; current card is wider and explicitly badged | score plates use team colours with a glowing winner plate; ban thumbnails stay rectangular and square for now; winner logo gains a subtle hexagon halo | bottom outer-corner washes remain planned; completed maps use a faint radial winner wash over the artwork | 0.35s reveal planned | shipped transparent FX and A83 result clarity |
+| `map-pool.html` | five-column map grid by mode with no header | plain mode icons with no hexagon; map art stays rectangular; no clip-path on thumbnails | bottom gradient, -1px seam overscan, wrapped names; picked art darkens and gains a lightened winner-colour wash, rule and crest shadow | A85 opens columns, cards and mode marks on staggered beats; live updates use stable slots, duplicate no-ops and one animation batch | shipped transparent FX and A85 Clean Canvas 2026-11-24 |
+| `map-select.html` | vertical map slots; A84 Clean Canvas removes the score slabs, per-card headers, mode icons and `Now playing` pill | ban portraits stay square inside hexes; the 112px winner logo is centred in a team-colour halo with no giant hex plate | completed art uses `brightness(0.52) saturate(0.45)` under a 0.13 radial winner wash | one-shot opening settle; live changes use stable slots, a dark swap curtain, ghost text crossfade and one animation batch | shipped transparent FX, A83 result clarity and A84 Clean Canvas 2026-11-24 |
 | `row-casters.html` | caster row | planned hexagon portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
 | `row-hosts.html` | host and analyst row | planned portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
 | `row-interviews.html` | interviewer and guest row | planned portrait frames and role chips | per-card outer-edge wash | 0.35s reveal planned | shipped transparent FX |
@@ -604,12 +604,16 @@ These are agreed ideas, not changes in the tree:
 
 - **Game overlay.** Replace the centre bar with a hexagon score plate and logo
   chips, keep the centre clear, and wash team colour in from both outer edges.
-- **Map pool.** Keep the rectangular table, add hexagon status chips, an outer
-  wash and staggered rows. Do not clip the map thumbnails.
-- **Map select.** A83 delivered the current-map badge, team-coloured score
-  plates and winner treatment while keeping ban images square. A later pass may
-  still add a hexagon name plate and vote chips. Do not clip rectangular thumbnails
-  or ban portraits. Both team washes at the bottom outer corners remain planned.
+- **Map pool.** A85 delivered the five-column Clean Canvas: no header or fit
+  pass, plain mode icons, wrapped map names, a bottom gradient and staggered
+  opening beats. The picked map darkens and uses a readable, lightened version
+  of the choosing team's colour. Do not restore mode hexagons, the heading or
+  orange fallback colours; never clip rectangular thumbnails.
+- **Map select.** A83 delivered the current-map badge and score plates, then A84
+  superseded that chrome with Clean Canvas, a centred winner halo and targeted
+  live reveals while keeping ban images square. A hexagon name plate and vote
+  chips remain unplanned ideas. Do not clip rectangular thumbnails or ban
+  portraits; both team washes at the bottom outer corners remain unshipped.
 - **Talent rows.** Add hexagon portrait frames and role chips, a per-card outer
   wash, and reuse `subjectBox()` where a transparent portrait is supplied.
 - **Timer.** Add a hexagon plate and keep tabular figures; no per-frame
@@ -706,8 +710,8 @@ narrowly; do not weaken the equality rule.
 7. Reuse `subjectBox()` in other overlays that receive transparent artwork.
    Planned.
 8. Run the per-overlay design refreshes from §9.1, one overlay per change.
-   Rosters are done in A79 and refined again in A80; the remaining overlays are
-   still planned.
+   Rosters are done in A79–A82, map select and hero bans were refined in A84,
+   and map pool was refined in A85; the remaining overlays are still planned.
 9. The app-level background toggle - done as a URL rewrite plus a cached
    `background` section. It appends `?bg=` to the ten modes-aware Browser Source
    URLs for new sources, broadcasts `data-bg` changes to connected pages, and
@@ -742,6 +746,12 @@ narrowly; do not weaken the equality rule.
 | The current map is only identifiable by card width | fixed by A83 | `.map-card--current` adds a 2px inset accent border and a single `Current map` hexagon badge; the browser probe measured one badge at 150×28 with the Night Broadcast accent plate |
 | A map score does not show which team won or how much | fixed by A83 | completed boards now carry two team-coloured 86×52 plates, a winner border and glow, and a colon divider; `safeHexColor()` sanitises colours before they reach the CSS variables |
 | The winner glow hides the map or turns ban portraits into hexagons | guarded by A83 | the radial map wash is 0.12 opacity and the logo halo is 0.24 opacity with the existing scrim retained; ban portraits still report 58×58, no clip-path and no border-radius |
+| Map select chrome, score slabs or a second opening returns | fixed by A84 | headers, mode icons and `Now playing` are removed; the winner is a centred 112px logo in a team-colour halo, and source tests plus CDP prove one opening batch, duplicate no-ops and targeted live updates |
+| An unchanged hero-ban image reloads when another side changes | fixed by A84 | `preserve-img` skips image rebuilds when the hash is unchanged; source assertions and CDP prove each side reveals once without replaying the opening |
+| A map pool header, fit pass or clipped names return | fixed by A85 | no `Map Pool` header, `fitText` or `fitMapNames` remains; names use `clamp(13px, 9cqw, 20px)` with two-line clamp, and the grid keeps 56px/72px padding with -1px seam overscan |
+| Hexagons return around game mode icons | fixed by A85 | `.mode-icon` and `.mode-icon img` carry no `clip-path`; source tests forbid `clip-path: polygon(` and browser probes report `modeClip: none` |
+| A nested init frame falls back to orange | fixed by A85 | the init branch unwraps `d.scoreboard || d` before reading `mapPoolData`; live probe proved the picked map uses team B `23 9 62` before lightening |
+| Dark team colours disappear against picked map art | fixed by A85 | `PICK_LIGHTEN_MIX = 0.45` lifts the chosen team's rgb toward white while preserving hue; live probe measured `127 120 149` for `#17093e`, with all glow, wash, rule and crest shadow using that value |
 | Country flag or team tag code returns as a half-finished identity chip | deferred by the owner in A79 | no `player-code` or `teamCode` remains; source-text assertions forbid them, and `docs/backlog.md` records the idea for a later decision |
 | Source-text tests break on unrelated markup edits | known cost | narrow the assertion; never remove the equality check |
 | Copy-paste drift between duplicated blocks | guarded | sentinel comments and `every_overlay_carries_the_same_fx_block` |
@@ -791,3 +801,5 @@ it has shipped.
 | 2026-11-23 | A81 replaced the remaining A80 side wash with one full-width bottom gradient, then softened it again after the owner said it looked harsh: wash alpha 0.08, glow alpha 0.09, 420px gradient and a 300px blurred glow layer. |
 | 2026-11-24 | A82 inset roster logos, animated the core/sub divider, applied stored text colours, balanced the bottom gradient by background luminance, and replaced the single text-colour mode with independent Background from logo, Text from logo and Computed contrast rules that recommend colours and preserve logo hue when a manual background is too close. |
 | 2026-11-24 | A83 clarified map select with a current-map badge and inset accent border, replaced the generic score bar with team-coloured winner-aware score plates, added a subtle winner logo and map glow, and kept ban portraits square. |
+| 2026-11-24 | A84 moved map select and hero bans to Clean Canvas: removed score slabs and chrome, centred the winner halo, added one-shot openings with targeted live reveals, preserved unchanged ban images, replaced hero datalists with native selects, and made opaque backgrounds the app default. |
+| 2026-11-24 | A85 rebuilt map pool with the same design language: five columns, plain mode icons, no heading or fit pass, wrapped names, staggered opening beats, darker picked art, a readable lightened winner glow from the choosing team, nested-init unwrapping and stable-slot reconciliation. |
