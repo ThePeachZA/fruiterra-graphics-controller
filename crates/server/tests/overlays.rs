@@ -952,8 +952,8 @@ fn map_select_overlay_uses_night_broadcast_tokens() {
     assert_eq!(
         text.matches("background: var(--fgc-surface-raised);")
             .count(),
-        2,
-        "both the card and its text panel should sit on the raised surface"
+        3,
+        "the card, score plates and text panel should sit on the raised surface"
     );
     assert!(
         text.contains(
@@ -966,8 +966,8 @@ fn map_select_overlay_uses_night_broadcast_tokens() {
         "the completed map scrim should use the accent-soft token"
     );
     assert!(
-        text.contains("background: rgba(11, 13, 18, 0.6);"),
-        "the score board should be a token-derived translucent surface"
+        text.contains("background: var(--fgc-surface);"),
+        "the score board should sit on the canonical surface token"
     );
     assert!(
         text.contains(".map-card__type {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 18px;\n      color: var(--fgc-accent);"),
@@ -1046,6 +1046,55 @@ fn map_select_shows_the_banned_heroes_on_the_map() {
     assert!(
         text.contains(".map-card__ban-number span {\n      transform: rotate(-45deg);"),
         "the ban number should stay upright inside the diamond"
+    );
+}
+
+#[test]
+fn map_select_clarifies_current_map_and_winner_scores() {
+    let text = overlay_text("map-select.html");
+
+    assert!(
+        text.contains(
+            ".map-card--current {\n      flex: 1.8;\n      box-shadow: inset 0 0 0 2px var(--fgc-accent);\n    }"
+        ) && text.contains(".map-card__current {")
+            && text.contains("Current map")
+            && text.contains(".map-card__current::before {")
+            && text.contains(
+                "clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);"
+            ),
+        "the current map should read as a badge with an accent border, not just a wider card"
+    );
+    assert!(
+        text.contains("function safeHexColor(value, fallback) {")
+            && text.contains("/^#?([0-9a-fA-F]{6})$/")
+            && text.contains("--team-a-color: ${teamAColor}; --team-b-color: ${teamBColor}; --winner-color: ${winnerColor};"),
+        "team colours should be validated before they reach the card style"
+    );
+    assert!(
+        text.contains("const aWon = isCompleted && mapData.scoreA > mapData.scoreB;")
+            && text.contains("const bWon = isCompleted && mapData.scoreB > mapData.scoreA;")
+            && text
+                .contains("map-card__score-team--a ${aWon ? 'map-card__score-team--winner' : ''}")
+            && text
+                .contains("map-card__score-team--b ${bWon ? 'map-card__score-team--winner' : ''}")
+            && text.contains(".map-card__score-team--winner::after {")
+            && text.contains("box-shadow: 0 0 14px var(--score-color);"),
+        "completed scores should sit in team-coloured plates with the winner marked"
+    );
+    assert!(
+        text.contains(".map-card__image--completed::before {")
+            && text.contains(
+                "radial-gradient(circle at 50% 45%, var(--winner-color, var(--fgc-accent)), transparent 62%)"
+            )
+            && text.contains(".map-card__logo--winner::before {")
+            && text.contains("opacity: 0.24;"),
+        "the winner logo should carry a subtle team-coloured glow across the map"
+    );
+    assert!(
+        text.contains(".map-card__ban img {")
+            && text.contains("object-fit: cover;")
+            && !text.contains(".map-card__ban img {\n      display: block;\n      width: 100%;\n      height: 100%;\n      object-fit: cover;\n      clip-path:"),
+        "ban portraits should stay square for now rather than becoming hexagons"
     );
 }
 
@@ -1627,8 +1676,9 @@ fn the_timer_overlay_uses_the_semi_bold_alias() {
 fn the_type_scale_gives_each_role_one_weight() {
     // Scores are Strong everywhere.
     assert!(
-        overlay_text("map-select.html")
-            .contains(".map-card__score {\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"),
+        overlay_text("map-select.html").contains(
+            ".map-card__score-tag,\n    .map-card__score {\n      position: relative;\n      z-index: 1;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"
+        ),
         "the map select score should be SemiBold"
     );
     assert!(

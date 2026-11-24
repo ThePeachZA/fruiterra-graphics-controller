@@ -239,6 +239,34 @@
 
     .map-card--current {
       flex: 1.8;
+      box-shadow: inset 0 0 0 2px var(--fgc-accent);
+    }
+
+    .map-card__current {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 4;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: var(--fgc-radius-sm);
+      background: var(--fgc-accent);
+      color: var(--fgc-on-accent);
+      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
+      font-size: 14px;
+      line-height: 1;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .map-card__current::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background: currentColor;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     }
 
     /* === MAP CARD LOGO === */
@@ -259,6 +287,22 @@
       display: none;
     }
 
+    .map-card__logo--winner {
+      filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.55));
+    }
+
+    .map-card__logo--winner::before {
+      content: '';
+      position: absolute;
+      inset: -14px;
+      z-index: -1;
+      background: var(--winner-color, var(--fgc-accent));
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      opacity: 0.24;
+      filter: blur(10px);
+      pointer-events: none;
+    }
+
     /* === MAP CARD IMAGE === */
     .map-card__image {
       width: 100%;
@@ -271,6 +315,16 @@
 
     .map-card__image--completed {
       filter: grayscale(100%);
+    }
+
+    .map-card__image--completed::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: radial-gradient(circle at 50% 45%, var(--winner-color, var(--fgc-accent)), transparent 62%);
+      opacity: 0.12;
+      pointer-events: none;
     }
 
     .map-card__image--completed::after {
@@ -393,37 +447,92 @@
     /* === SCORE BOARD === */
     .map-card__board {
       position: absolute;
-      top: 290px;
+      top: 286px;
       left: 50%;
       transform: translateX(-50%);
       width: auto;
-      height: 60px;
-      background: rgba(11, 13, 18, 0.6);
-      border-radius: 6px;
+      height: 64px;
+      border: 1px solid var(--fgc-line);
+      border-radius: var(--fgc-radius-md);
+      background: var(--fgc-surface);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 20px;
-      padding: 0 20px;
-      z-index: 2;
+      gap: 10px;
+      padding: 5px;
+      z-index: 3;
     }
 
     .map-card__board--hidden {
       display: none;
     }
 
+    .map-card__score-team {
+      position: relative;
+      min-width: 86px;
+      height: 52px;
+      border-radius: var(--fgc-radius-sm);
+      background: var(--fgc-surface-raised);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .map-card__score-team--a {
+      --score-color: var(--team-a-color, var(--fgc-accent));
+    }
+
+    .map-card__score-team--b {
+      --score-color: var(--team-b-color, var(--fgc-line-strong));
+    }
+
+    .map-card__score-team::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--score-color);
+      opacity: 0.16;
+    }
+
+    .map-card__score-team--winner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--score-color);
+      border-radius: inherit;
+      box-shadow: 0 0 14px var(--score-color);
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .map-card__score-tag,
     .map-card__score {
+      position: relative;
+      z-index: 1;
       font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 48px;
-      color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
     }
 
+    .map-card__score-tag {
+      font-size: 14px;
+      color: var(--score-color);
+      letter-spacing: 0.06em;
+    }
+
+    .map-card__score {
+      font-size: 40px;
+      line-height: 1;
+      color: var(--fgc-text);
+    }
+
     .map-card__score-divider {
       font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 48px;
-      color: var(--fgc-text);
+      font-size: 32px;
+      color: var(--fgc-text-faint);
       text-align: center;
     }
 
@@ -669,6 +778,11 @@
       });
     }
 
+    function safeHexColor(value, fallback) {
+      const match = /^#?([0-9a-fA-F]{6})$/.exec(String(value || '').trim());
+      return match ? `#${match[1]}` : fallback;
+    }
+
     // The banned heroes are ordered by who banned first, so the number on the
     // diamond matches the order the bans were made in.
     function orderedBans(bans) {
@@ -715,16 +829,26 @@
       const modeName = hasMode ? mapType.toLowerCase() : '';
       const modeIconUrl = modeName ? gameModeIcons[modeName] : null;
 
+      const teamAColor = safeHexColor(teamAData && teamAData.color, '#3ecf8e');
+      const teamBColor = safeHexColor(teamBData && teamBData.color, '#ef51b7');
+      const aWon = isCompleted && mapData.scoreA > mapData.scoreB;
+      const bWon = isCompleted && mapData.scoreB > mapData.scoreA;
+      const winnerColor = aWon ? teamAColor : bWon ? teamBColor : 'var(--fgc-accent)';
+      card.setAttribute(
+        'style',
+        `--team-a-color: ${teamAColor}; --team-b-color: ${teamBColor}; --winner-color: ${winnerColor};`
+      );
+
       let logoContent = '';
       let logoClass = 'map-card__logo';
 
-      if (isCompleted) {
-        if (mapData.scoreA > mapData.scoreB && teamAData && teamAData.logoUrl) {
-          logoContent = `background-image: url('${teamAData.logoUrl}')`;
-        } else if (mapData.scoreB > mapData.scoreA && teamBData && teamBData.logoUrl) {
-          logoContent = `background-image: url('${teamBData.logoUrl}')`;
-        }
-      } else if (!hasMap && hasMode && modeIconUrl) {
+      if (aWon && teamAData && teamAData.logoUrl) {
+        logoContent = `background-image: url('${teamAData.logoUrl}')`;
+        logoClass += ' map-card__logo--winner';
+      } else if (bWon && teamBData && teamBData.logoUrl) {
+        logoContent = `background-image: url('${teamBData.logoUrl}')`;
+        logoClass += ' map-card__logo--winner';
+      } else if (!isCompleted && !hasMap && hasMode && modeIconUrl) {
         logoContent = `background-image: url('${modeIconUrl}')`;
       } else {
         logoClass += ' map-card__logo--hidden';
@@ -749,15 +873,22 @@
       const chosenByClass = chosenByText ? 'map-card__chosen-by' : 'map-card__chosen-by map-card__chosen-by--hidden';
 
       card.innerHTML = `
+        ${isCurrent ? '<div class="map-card__current">Current map</div>' : ''}
         <div class="${logoClass}" id="logo-${index}" style="${logoContent}"></div>
         <div class="map-card__visual">
           <div class="${imageClass}" id="image-${index}" style="${imageStyle}"></div>
           ${createBanStrip(bans)}
         </div>
         <div class="${boardClass}" id="board-${index}">
-          <div class="map-card__score" id="score-a-${index}">${escapeHtml(mapData.scoreA || 0)}</div>
-          <div class="map-card__score-divider">-</div>
-          <div class="map-card__score" id="score-b-${index}">${escapeHtml(mapData.scoreB || 0)}</div>
+          <div class="map-card__score-team map-card__score-team--a ${aWon ? 'map-card__score-team--winner' : ''}">
+            <span class="map-card__score-tag">${escapeHtml(teamAData && teamAData.tag ? teamAData.tag : 'A')}</span>
+            <span class="map-card__score" id="score-a-${index}">${escapeHtml(mapData.scoreA || 0)}</span>
+          </div>
+          <div class="map-card__score-divider">:</div>
+          <div class="map-card__score-team map-card__score-team--b ${bWon ? 'map-card__score-team--winner' : ''}">
+            <span class="map-card__score-tag">${escapeHtml(teamBData && teamBData.tag ? teamBData.tag : 'B')}</span>
+            <span class="map-card__score" id="score-b-${index}">${escapeHtml(mapData.scoreB || 0)}</span>
+          </div>
         </div>
         <div class="map-card__text">
           <div class="map-card__type">${escapeHtml(mapType || '')}</div>
