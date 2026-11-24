@@ -1651,3 +1651,33 @@ a 300px blurred glow at `bottom: -100px` with alpha 0.09, zero gutters, hidden
 overflow and empty consoles. Screenshots were captured, but the observer
 subagent still hit the OpenCode Go usage limit, so OBS visual sign-off remains
 an owner check.
+
+### D17 - Automatic colour rules are independent and harmonised
+
+**Decision.** A82 replaces the single `TeamTextColorMode` with three independent
+team flags: `colorFromLogo`, `textColorFromLogo` and `computedContrast`. The
+first two recommend Background and Text from the same sampled logo palette and
+can be switched on separately. Computed contrast changes Text only, uses the
+Night Broadcast palette when it is the sole active text rule, and can be enabled
+while either automatic rule is on. When automatic text and a manual background
+are too close, the app keeps the logo's dominant channel and scales that colour
+toward the required 3:1 or 4.5:1 contrast instead of replacing it with a generic
+ink. The stored `textColor` value stays the overlay's source of truth, and the
+rosters only fall back to computed contrast when that value is absent or
+invalid.
+
+**Reason.** The owner clarified that logo colouring must be individually
+applicable: "The automatic colour from logo should be applicable to both the
+background and text individually. Set a recommended value to the background and
+text. The computed contrast mode should apply to just the text and the
+background is manually set." They also asked for coexistence and smarter
+behaviour: "There should also be an way to turn on computed contrast at the
+same time as the automatic colour from logo. The functions should also be
+smart. For example, if the text colour is set automatically based on the logo,
+but the background colour set manually is too similar, then it should compute an
+appropriate colour that fits the colour scheme of the logo while not looking
+terrible against the background colour." Independent switches express those
+rules directly. Scaling the sampled colour preserves more of the logo than
+mixing it toward white or black, while the two contrast targets keep display
+text and body text legible. The old single select could not express the
+simultaneous states and is not retained.

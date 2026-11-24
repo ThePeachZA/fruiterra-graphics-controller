@@ -1779,3 +1779,92 @@ A81's real-browser evidence is in `docs/manual-qa.md` row A81, with repeatable
 steps in `docs/manual-qa-runbook.md` section A81. Screenshots were captured, but
 visual review was unavailable in this session, so OBS sign-off at 1920×1080
 remains an owner check.
+
+## 17. Roster overlays and team colour controls (A82)
+
+### 17.1 Purpose and scope
+
+A82 completes the owner's 2026-11-24 roster and team-properties review. The
+owner asked for spacing around uploaded logos, an animated divider between the
+core and substitute rows, stored team colours to be respected, a text colour
+option, and gradients that make dark blue and bright pink read with the same
+visual weight. They then refined the colour controls: automatic logo colouring
+must apply to Background and Text individually, both colours need recommended
+values, computed contrast must change Text only, computed contrast must be
+usable at the same time as automatic logo colours, and the functions must adjust
+a logo-derived text colour when a manually chosen background is too similar.
+A82 supersedes the single `Text colour mode` select from the in-progress A82
+work. It does not supersede A80 or A81 geometry: rails stay removed, the
+substitute hexagon stays 46×54 with a 34px icon, both rows stay sorted Damage,
+Tank, Support, and the bottom wash stays full width and bottom only.
+
+### 17.2 Roster surface plan
+
+`.team-logo` gains `padding: 12px` and `background-origin: content-box` while
+its background colour remains `var(--fgc-surface-inverse)`, so the panel still
+fills the same frame but an uploaded logo no longer touches its edge. The
+`.roster-separator` between the two rectangular rows gains three keyframe
+groups: `dividerReveal` for the container, `dividerLine` for the two rules, and
+`dividerHex` for the centre mark. The reveal starts after the existing 1.6s
+entrance beat, runs once with `both` fill, and is disabled under
+`prefers-reduced-motion: reduce`.
+
+### 17.3 Colour propagation
+
+`team_dto()` now writes `textColor` beside `color`, and the two protocol golden
+fixtures carry the stored value. Both roster files read `teamData.textColor`
+and use it directly for the team name when it parses as six-digit hex. If no
+valid colour is present, they fall back to the existing Night Broadcast
+contrast colour derived from the background. No new payload field is needed for
+the app's automatic-colour switches because they are editing inputs, not
+overlay state.
+
+### 17.4 Luminance-balanced wash
+
+The bottom-only gradient contracts from A81 stay fixed in geometry, but live
+team colours no longer produce the same alpha for every hue. Each roster
+computes sRGB relative luminance and uses
+`wash = clamp(0.20 - luminance * 0.16, 0.08, 0.20)` and
+`glow = clamp(wash + 0.01, 0.09, 0.21)`. A dark blue therefore gets a stronger
+wash and glow than a bright pink, so the two read as equally present. The
+default orange tokens remain unchanged at 8% and 9%; only the live colour path
+uses the compensation.
+
+### 17.5 Team-properties control plan
+
+The Colours panel exposes two automatic switches and one computed switch.
+`colorFromLogo` recommends a Background value from the sampled logo and disables
+the Background field while on. `textColorFromLogo` recommends a Text value from
+the same palette and disables the Text field while on. `computedContrast` always
+changes Text only, can be enabled with either automatic switch, and uses the
+Night Broadcast `#0b0d12` or `#eef2f8` colours when it is the only active text
+rule. When both `textColorFromLogo` and `computedContrast` are on, the sampled
+text is adjusted toward the contrast target instead of being replaced. Manual
+background changes re-harmonise an automatic text colour; computed contrast uses
+the stricter 4.5:1 target, while automatic text alone uses the 3:1 display-text
+target. Turning off an automatic switch enables manual editing of that field.
+
+### 17.6 CDP-verifiable assertions
+
+- Both roster sources keep the same normalised bytes apart from `<title>` and
+  `TEAM_SIDE`.
+- Source assertions require the 12px logo padding, content-box background
+  origin, three divider keyframe names, the reduced-motion fallback,
+  `teamData.textColor`, the luminance formula, and the nested init replay of
+  `teamColorsEnabled`, `roleIcons` and `showPlayerPortraits`.
+- At a fresh 1920×1080 tab with `#0f3b8f`, the wash alpha is 0.19 and the glow
+  alpha is 0.20; with `#ff5c7a`, they are 0.15 and 0.16.
+- A stored yellow or cyan `textColor` renders as that exact RGB value on the
+  team name.
+- The app panel shows independent `Background from logo`, `Text from logo` and
+  `Computed contrast` switches. Computed contrast changes only Text and can be
+  switched on while both automatic switches remain on.
+- The palette sampler reports opaque logo buckets, ignores alpha values below
+  128, and keeps at most eight quantised colours. Harmonisation preserves the
+  dominant channel of the sampled text while reaching the required contrast
+  ratio against the actual background.
+
+A82's real-browser evidence is in `docs/manual-qa.md` row A82, with repeatable
+steps in `docs/manual-qa-runbook.md` section A82. Screenshots were captured, but
+visual review was unavailable in this session, so OBS sign-off at 1920×1080
+remains an owner check.

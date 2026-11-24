@@ -2124,3 +2124,24 @@ consoles. `git diff --check`, fmt, fmt check, clippy, workspace tests and
 away screenshots were captured in `opencode-browser-3KLrG5` and
 `opencode-browser-SeRdqL`, but visual review remained unavailable because of the
 OpenCode Go usage limit, so OBS sign-off remains with the owner.
+
+A82 completes the roster polish and replaces the first text-colour-mode design.
+The owner asked for margin around uploaded logos, an animated divider between
+core and substitutes, respect for selected name and background colours, and a
+dark-blue and bright-pink gradient that read at the same strength. The paired
+rosters now give `.team-logo` a 12px content-box inset while the panel keeps its
+full background, animate the separator with `dividerReveal`, two `dividerLine`
+animations and `dividerHex` with a reduced-motion fallback, apply
+`teamData.textColor` before the Night Broadcast contrast fallback, and scale wash
+and glow alphas by sRGB luminance. The owner then revised team properties so
+automatic colour from logo applies to Background and Text individually with
+recommended values, computed contrast affects Text only, and both ideas can run
+together. `Team` now carries independent defaulted `colorFromLogo`,
+`textColorFromLogo` and `computedContrast` flags; the old single `textColorMode`
+is ignored. `sample_logo()` returns a palette of up to eight sampled colours,
+and `harmonize_text_color()` keeps the sampled hue while raising contrast when a
+logo-derived Text is too close to a manual Background. Raw CDP on Inglorious
+Blasters proved every switch and combination, and the original state was
+restored with its hash unchanged. All gates passed with 93 app tests and 36
+overlay tests. Screenshots exist but could not be visually reviewed, so OBS
+sign-off at 1920×1080 remains with the owner.

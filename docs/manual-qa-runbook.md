@@ -5456,3 +5456,99 @@ gradient across the whole frame. No side wash, radial glow or clipped centred
 pseudo layer remains. All static gates and real DOM probes passed. Visual
 confirmation in OBS at 1920×1080 remains an owner check because the captured
 screenshots could not be reviewed in this session.
+
+### A82 - Roster polish and independent logo colour rules
+
+**Covers:** the owner's 2026-11-24 review of A80 and A81. They asked for margin
+around uploaded logos, an animated divider between the core and substitute
+rows, respect for the selected team name and background colours, text-colour
+controls, and gradients that make a dark blue and a bright pink read at a
+similar strength. They then revised the team-properties design: "The automatic
+colour from logo should be applicable to both the background and text
+individually. Set a recommended value to the background and text. The computed
+contrast mode should apply to just the text and the background is manually set.
+There should also be an way to turn on computed contrast at the same time as the
+automatic colour from logo. The functions should also be smart. For example, if
+the text colour is set automatically based on the logo, but the background
+colour set manually is too similar, then it should compute an appropriate colour
+that fits the colour scheme of the logo while not looking terrible against the
+background colour." A82 supersedes only the A81 fixed alpha treatment and the
+original single-select text-mode design. The rail removal, substitute badge
+proportion, Damage/Tank/Support sort, full-width bottom-only gradient, no-asset
+constraint and byte-equality contract stay in force.
+
+**Steps:**
+
+1. Run `git status --short`. Only the two roster HTML files, the paired overlay
+   test, the core model and its literals, the protocol DTO/projection and
+   fixtures, and the app colour helper, state and Teams view should be in scope.
+   Do not add assets, fonts, sentinel markers or filenames.
+2. Read `team-roster-home.html` and `team-roster-away.html` together. Normalise
+   `<title>` and `const TEAM_SIDE` and compare the files byte for byte. The
+   `roster_overlays_apply_a82_team_bar_divider_and_colour_options()` test repeats
+   this guard.
+3. Confirm `.team-logo` uses `padding: 12px`, `background-origin: content-box`
+   and `background-color: var(--fgc-surface-inverse)`. The padding insets the
+   artwork while the background still fills the whole panel.
+4. Confirm the separator declares `dividerReveal`, two `dividerLine` animations
+   and `dividerHex`, and that the reduced-motion block forces `animation: none`.
+   In a settled 1920×1080 probe, the logo image measured 100×92 with a 12px
+   inset, content-box origin and border-box clip, and all four animation names
+   were present.
+5. Confirm the overlay parses `teamData.textColor` with `parseHexColor()` and
+   writes it to `el.teamName.style.color` before falling back to
+   `contrastTextColor(rgb)`. Probe both rosters with yellow and cyan text values
+   and require the computed colours to match exactly.
+6. Confirm `relativeLuminance()` and `gradientAlphas()` use sRGB weights and
+   `clamp(0.20 - luminance * 0.16, 0.08, 0.20)` for the wash and
+   `clamp(wash + 0.01, 0.09, 0.21)` for the glow. Probe dark `#0f3b8f` and
+   bright `#ff5c7a`: expected alphas are 0.19/0.20 and 0.15/0.16. The wash and
+   glow must still run edge to edge from the bottom, with no side wash.
+7. Confirm the init replay clones `d.teamRoster` and carries
+   `teamColorsEnabled`, `roleIcons` and `showPlayerPortraits` into the nested
+   payload. Refresh both rosters and require the same colours, role icons and
+   portraits after the reload, plus zero gutters, hidden overflow and empty
+   consoles.
+8. Inspect `crates/core/src/model.rs`. `Team` must expose defaulted
+   `colorFromLogo`, `textColorFromLogo` and `computedContrast` booleans instead
+   of the old single `textColorMode`. Old saved mode values are ignored. The
+   protocol continues to send the approved `textColor` field.
+9. Inspect the Teams view. Background and Text are separate colour fields.
+   "Background from logo" recommends a background and disables the manual field.
+   "Text from logo" recommends a text colour and disables the manual field.
+   "Computed contrast" changes Text only and may be enabled with either logo
+   switch. Turning off an automatic switch re-enables its manual field.
+10. Inspect `crates/app/src/logo_colors.rs`. `sample_logo()` must await its Dioxus
+    eval body and return the sampled palette; `harmonize_text_color()` must keep
+    the sampled hue while adjusting brightness toward the requested contrast.
+    Unit tests cover palette parsing, saturated background selection, relaxed
+    and strict harmonisation, and a monochrome logo that would otherwise resolve
+    to near-white.
+11. Launch the rebuilt desktop app with
+    `$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'`
+    from `target/dx/fruiterra-gc/debug/windows/app/fruiterra-gc.exe`, open Teams,
+    select Inglorious Blasters and read the controls over CDP. Starting state:
+    Background `#032248`, Text `#8c41af`, all three switches off.
+12. Exercise the switches one at a time and in combination. Expected results:
+    Background only `#8309c4` with Text unchanged; Text only `#9265a4` with
+    Background unchanged; Text plus computed `#a975be`; both automatic
+    `#8309c4` and `#cb8ce4`; all three `#8309c4` and `#eef2f8`. Manual changes to
+    Background while Text is automatic must re-harmonise Text. Set Background to
+    the current Text in that state and require Text to move away while preserving
+    the logo hue.
+13. Restore Inglorious Blasters to Background `#032248`, Text `#8c41af`, Logo
+    background `#1a1a24` and all three switches off. Confirm the app state hash
+    is unchanged and close the app.
+14. Run `git diff --check`, `cargo fmt --all`, `cargo fmt --all -- --check`,
+    `cargo clippy --workspace --all-targets -- -D warnings`,
+    `cargo test --workspace --quiet` and `dx build --desktop`.
+
+**Result: Pass - assistant 2026-11-24.** The paired roster source guard, source
+assertions, init replay probe, exact text-colour probe and luminance alpha probe
+all passed. Raw CDP proved independent Background and Text logo rules,
+text-only computed contrast, coexistence of all three rules and a similar-
+background fallback. The final hue-preserving fallback is covered by a unit test
+after the browser run. All gates passed with 93 app tests and 36 overlay tests.
+The restored app state hash was unchanged. OBS visual sign-off at 1920×1080
+remains an owner check because the captured screenshots could not be reviewed in
+this session.
