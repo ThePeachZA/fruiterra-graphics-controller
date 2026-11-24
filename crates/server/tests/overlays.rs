@@ -492,6 +492,57 @@ fn hero_bans_prefers_the_transparent_art_and_reads_the_role() {
 }
 
 #[test]
+fn hero_bans_reveals_each_new_ban_without_replaying_the_opening() {
+    let text = overlay_text("hero-bans.html");
+
+    assert!(
+        text.contains("function animateBanReveal(side, firstSide)")
+            && text.contains("function prefersReducedMotion()")
+            && text.contains("const BAN_REVEAL_DURATION = 560;")
+            && text.contains("const BAN_REVEAL_STAGGER = 90;")
+            && text.contains("let renderedHomeHero = '';")
+            && text.contains("let renderedAwayHero = '';"),
+        "each ban should have its own tracked reveal instead of replaying the scene"
+    );
+    assert!(
+        text.contains("[art, [{ opacity: 0, filter: 'blur(8px)' }, { opacity: 1, filter: 'blur(0px)' }]]")
+            && text.contains("[name, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'translateY(0)' }]]")
+            && text.contains("[role, [{ opacity: 0, transform: 'scale(0.8)' }, { opacity: 1, transform: 'scale(1)' }]]"),
+        "the hero art, name and role icon should all animate in"
+    );
+    assert!(
+        text.contains("const baseDelay = side === firstSide ? 0 : BAN_REVEAL_STAGGER;")
+            && text.contains(
+                "animation.finished.then(() => animation.cancel(), () => animation.cancel());"
+            ),
+        "the first ban should lead and each reveal should clean up its own fill"
+    );
+    assert!(
+        text.contains("if (nextHomeHero && renderedHomeHero !== nextHomeHero) {\n            animateBanReveal('home', firstSide);\n          }")
+            && text.contains("if (nextAwayHero && renderedAwayHero !== nextAwayHero) {\n            animateBanReveal('away', firstSide);\n          }")
+            && text.contains("if (opening) {\n          triggerAnimations();\n          animationsTriggered = true;\n        }"),
+        "updates should reveal only changed bans while the opening stays a one-shot"
+    );
+}
+
+#[test]
+fn hero_bans_keeps_unchanged_images_when_another_ban_updates() {
+    let text = overlay_text("hero-bans.html");
+
+    assert!(
+        text.contains("const currentImage = art.querySelector('img');")
+            && text.contains("if (!currentImage || currentImage.getAttribute('src') !== source) {")
+            && text.contains("if (roleIcon.getAttribute('src') !== icon) roleIcon.src = icon;"),
+        "unchanged hero art and role icons should stay mounted across ban updates"
+    );
+    assert!(
+        text.contains("// Keep an image whose source is unchanged so unrelated ban picks do not")
+            && text.contains("// make the browser reload the same art."),
+        "the overlay should explain why unchanged images are preserved"
+    );
+}
+
+#[test]
 fn row_casters_social_row_stays_inside_the_card() {
     let text = overlay_text("row-casters.html");
 
@@ -838,8 +889,9 @@ fn map_pool_overlay_uses_night_broadcast_tokens() {
         "empty map art should fall back to the muted surface in CSS and JS"
     );
     assert!(
-        text.contains("var(--fgc-pick-glow)") && text.contains("var(--fgc-pick-glow-mid)"),
-        "the chosen map should be lit by the pick glow gradient"
+        text.contains("rgb(var(--pick-glow-rgb, 255 122 26) / 62%)")
+            && text.contains("rgb(var(--pick-glow-rgb, 255 122 26) / 34%)"),
+        "the chosen map should be lit in the choosing team's colour"
     );
     assert!(
         text.contains("color: var(--fgc-text);"),
@@ -881,7 +933,7 @@ fn map_pool_staggers_each_mode_column() {
         text.contains("@keyframes columnReveal {")
             && text.contains(".animate-column {")
             && text.contains(
-                "animation: columnReveal var(--pool-anim-duration) var(--fgc-ease-out) forwards;"
+                "animation: columnReveal var(--pool-anim-duration) var(--fgc-ease-out) both;"
             )
             && text.contains("animation-delay: var(--column-delay, var(--pool-anim-delay));"),
         "map-pool should reveal each mode column with its own animation"
@@ -912,18 +964,125 @@ fn map_pool_lights_the_picked_map() {
     );
     assert!(
         text.contains(".map-pick-glow {")
-            && text.contains("var(--fgc-pick-glow)")
+            && text.contains("rgb(var(--pick-glow-rgb, 255 122 26) / 62%)")
             && text.contains("linear-gradient("),
-        "the picked map should carry a gradient wash above the artwork"
+        "the picked map should carry a team-colour gradient wash above the artwork"
     );
     assert!(
         text.contains(".map-card.picked .map-name {")
-            && text.contains("box-shadow: inset 0 2px 0 var(--fgc-accent);"),
-        "the picked map should keep an accent rule under the artwork"
+            && text.contains("box-shadow: inset 0 2px 0 rgb(var(--pick-glow-rgb, 255 122 26));"),
+        "the picked map should keep an accent rule in the choosing team's colour"
     );
     assert!(
         !text.contains(".map-image.chosen::after"),
         "the old flat wash behind the greyscale filter should be gone"
+    );
+}
+
+#[test]
+fn map_pool_applies_the_clean_canvas_and_targeted_update_contract() {
+    let text = overlay_text("map-pool.html");
+
+    assert!(
+        !text.contains("map-pool-header") && !text.contains("fitMapNames"),
+        "map-pool should drop the giant title and the old one-line fitting pass"
+    );
+    assert!(
+        text.contains(".map-image::after {")
+            && text.contains("rgba(0, 0, 0, 0.78) 100%")
+            && text.contains("margin-inline: -1px;"),
+        "map art should carry the same bottom gradient and seam overscan as map-select"
+    );
+    assert!(
+        text.contains("container-type: inline-size;")
+            && text.contains("font-size: clamp(13px, 9cqw, 20px);")
+            && text.contains("-webkit-line-clamp: 2;"),
+        "long map names should shrink and wrap rather than truncate"
+    );
+    assert!(
+        text.contains(".map-card__swap {")
+            && text.contains("<div class=\"map-card__swap\"></div>")
+            && text.contains(".map-card__text-ghost {")
+            && text.contains("nameGhost.animate("),
+        "a live map change should be covered once and crossfade the old name out"
+    );
+    assert!(
+        text.contains("delay: index === 0 ? 0 : 60,"),
+        "art should lead while the name crossfade shares one beat"
+    );
+    assert!(
+        text.contains("--pick-glow-rgb")
+            && text.contains("data?.teamA?.color")
+            && text.contains("data?.teamB?.color"),
+        "the picked map should glow in the choosing team's colour"
+    );
+    assert!(
+        text.contains("function reconcilePool(")
+            && text.contains("function refreshCard(")
+            && text.contains("function settleOpening(")
+            && text.contains("openingSettled")
+            && text.contains("if (signature === renderedSignature) return;"),
+        "live frames should reconcile changed cards instead of replaying the opening"
+    );
+    assert!(
+        !text.contains("el.mapPool.innerHTML = '';"),
+        "a pool update should never rebuild every column from scratch"
+    );
+}
+
+#[test]
+fn map_pool_animates_mode_marks_and_team_pick_reveal() {
+    let text = overlay_text("map-pool.html");
+
+    assert!(
+        text.contains("@keyframes modeMarkReveal")
+            && text.contains(".animate-mode {")
+            && text.contains("column.querySelectorAll('.mode-icon, .mode-name')")
+            && text.contains(".animate-column, .animate-card, .animate-mode"),
+        "mode marks should enter on their own staggered beat with the columns"
+    );
+    assert!(
+        !text.contains("clip-path: polygon("),
+        "game mode icons should be plain marks without a hexagon frame"
+    );
+    assert!(
+        text.contains("grayscale(100%) brightness(0.56) saturate(0.45);"),
+        "a picked map should sit darker behind the winner wash"
+    );
+    assert!(
+        text.contains("rgb(var(--pick-glow-rgb, 255 122 26) / 62%) 0%")
+            && text.contains("rgb(var(--pick-glow-rgb, 255 122 26) / 48%) 0%"),
+        "the pick gradient should carry a stronger team-colour bottom wash"
+    );
+    assert!(
+        text.contains("@keyframes pickWashReveal")
+            && text.contains(".map-card.animate-pick .map-image::before")
+            && text.contains("card.classList.add('animate-pick')"),
+        "the radial winner wash should fade up when a team takes a map"
+    );
+    assert!(
+        text.contains("const pickChanged = pickKey(previous) !== pickKey(nextMap);")
+            && text.contains("glow.animate(")
+            && text.contains("refreshPickedState(card, nextMap, colors, animations, pickChanged)"),
+        "a pick change should join the existing one-batch card update"
+    );
+    assert!(
+        text.contains("const scoreboard = d.scoreboard || d;")
+            && text.contains("data: { ...scoreboard, mapPoolData }"),
+        "the keyed init frame should unwrap the scoreboard so team colours survive"
+    );
+}
+
+#[test]
+fn map_pool_lifts_dark_team_colours_for_the_pick_glow() {
+    let text = overlay_text("map-pool.html");
+
+    assert!(
+        text.contains("const PICK_LIGHTEN_MIX = 0.45;")
+            && text.contains("function lightenedRgbTriplet(color)")
+            && text.contains("A: lightenedRgbTriplet(data?.teamA?.color)")
+            && text.contains("B: lightenedRgbTriplet(data?.teamB?.color)"),
+        "the pick glow should lift dark team colours toward white while keeping their hue"
     );
 }
 
@@ -952,8 +1111,8 @@ fn map_select_overlay_uses_night_broadcast_tokens() {
     assert_eq!(
         text.matches("background: var(--fgc-surface-raised);")
             .count(),
-        3,
-        "the card, score plates and text panel should sit on the raised surface"
+        2,
+        "the card and text panel should sit on the raised surface"
     );
     assert!(
         text.contains(
@@ -962,19 +1121,29 @@ fn map_select_overlay_uses_night_broadcast_tokens() {
         "the placeholder image should be a solid muted surface"
     );
     assert!(
-        text.contains("background: var(--fgc-accent-soft);"),
-        "the completed map scrim should use the accent-soft token"
+        !text.contains("background: var(--fgc-accent-soft);"),
+        "the map art should not carry an accent scrim"
     );
     assert!(
-        text.contains("background: var(--fgc-surface);"),
-        "the score board should sit on the canonical surface token"
+        text.contains(".map-card__image--complete {")
+            && text.contains("brightness(0.52) saturate(0.45);"),
+        "completed map art should fade back behind the winner crest"
     );
     assert!(
-        text.contains(".map-card__type {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 18px;\n      color: var(--fgc-accent);"),
+        text.contains(".map-card__image::after {")
+            && text.contains("background: linear-gradient(")
+            && text.contains("to bottom,")
+            && text.contains("rgba(0, 0, 0, 0) 0%,")
+            && text.contains("rgba(0, 0, 0, 0.28) 48%,")
+            && text.contains("rgba(0, 0, 0, 0.78) 100%"),
+        "map art should carry a black gradient that darkens towards its end"
+    );
+    assert!(
+        text.contains(".map-card__type {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;\n      font-size: 14px;\n      color: var(--fgc-accent);"),
         "the map mode label should carry the orange accent"
     );
     assert!(
-        text.contains(".map-card__chosen-by {\n      font-family: 'FGC Display', 'Apotek', sans-serif;\n      font-size: 14px;\n      color: var(--fgc-text-muted);"),
+        text.contains(".map-card__chosen-by {\n      width: 100%;\n      font-family: 'FGC Display', 'Apotek', sans-serif;\n      font-size: 12px;\n      color: var(--fgc-text-muted);"),
         "the chosen-by tag should use muted text"
     );
     assert!(
@@ -1011,7 +1180,7 @@ fn map_select_overlay_uses_night_broadcast_tokens() {
 }
 
 #[test]
-fn map_select_shows_the_banned_heroes_on_the_map() {
+fn map_select_shows_the_ban_icons_on_the_map() {
     let text = overlay_text("map-select.html");
 
     assert!(
@@ -1024,77 +1193,221 @@ fn map_select_shows_the_banned_heroes_on_the_map() {
         "the ban order should follow the team that banned first"
     );
     assert!(
-        text.contains("heroPortraits[heroName]"),
-        "the ban portraits should come from the projected hero portraits"
+        text.contains("const iconUrl = heroIcons[heroName];")
+            && !text.contains("heroPortraits")
+            && !text.contains("heroBadges"),
+        "the bans should use the hero ban icons, not portraits or badge artwork"
     );
     assert!(
         text.contains(
-            "<div class=\"map-card__visual\">\n          <div class=\"${imageClass}\" id=\"image-${index}\" style=\"${imageStyle}\"></div>\n          ${createBanStrip(bans)}\n        </div>"
+            "<div class=\"${visualClass}\">\n          <div class=\"${imageClass}\" id=\"image-${index}\" style=\"${imageStyle}\"></div>\n          <div class=\"map-card__swap\"></div>\n          ${createBanStrip(bans)}\n        </div>"
         ),
-        "the ban strip should sit beside the map image, not inside it"
+        "the ban strip should sit over the map image"
     );
     assert!(
         text.contains(
-            ".map-card__bans {\n      position: absolute;\n      left: 14px;\n      bottom: 14px;"
+            ".map-card__bans {\n      position: absolute;\n      left: 50%;\n      bottom: 16px;\n      transform: translateX(-50%);\n      display: flex;\n      gap: 18px;"
         ),
-        "the ban strip should overlay the bottom of the map image"
+        "the ban icons should align to the bottom of the map image"
     );
     assert!(
-        text.contains(".map-card__ban-number {\n      position: absolute;\n      top: -8px;\n      right: -8px;\n      width: 24px;\n      height: 24px;\n      transform: rotate(45deg);"),
-        "the ban order should be a small diamond in the corner"
+        text.contains(
+            ".map-card__ban {\n      position: relative;\n      width: 52px;\n      height: 60px;"
+        ) && text
+            .contains("clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);"),
+        "each ban icon should sit inside a hexagon mask"
     );
     assert!(
-        text.contains(".map-card__ban-number span {\n      transform: rotate(-45deg);"),
-        "the ban number should stay upright inside the diamond"
+        text.contains(".map-card__ban::before {")
+            && text.contains("background: var(--fgc-accent);"),
+        "each hex ban should carry an accent ring"
+    );
+    assert!(
+        text.contains(".map-card__ban img {")
+            && text.contains("object-fit: contain;")
+            && text.contains("inset: 2px;"),
+        "each ban icon should fill the inner hex with a small ring gap"
+    );
+    assert!(
+        text.contains(
+            ".map-card__ban-number {\n      position: absolute;\n      top: -9px;\n      right: -8px;\n      width: 26px;\n      height: 30px;\n      background: var(--fgc-accent);\n      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);"
+        ) && text.contains(".map-card__ban-number::before {")
+            && text.contains("inset: 2px;")
+            && !text.contains("border-radius: 10px;")
+            && !text.contains("transform: rotate(45deg);"),
+        "the ban order should use the same upright hexagon ring as the ban icon"
+    );
+    assert!(
+        text.contains("@keyframes banReveal {")
+            && text.contains("animation: banReveal 420ms var(--ease-out-expo) both;")
+            && text.contains("style=\"--ban-delay: ${banDelay}\""),
+        "ban icons should reveal in a stagger"
     );
 }
 
 #[test]
-fn map_select_clarifies_current_map_and_winner_scores() {
+fn map_select_keeps_a_clean_canvas_with_centred_winners() {
     let text = overlay_text("map-select.html");
 
     assert!(
         text.contains(
-            ".map-card--current {\n      flex: 1.8;\n      box-shadow: inset 0 0 0 2px var(--fgc-accent);\n    }"
-        ) && text.contains(".map-card__current {")
-            && text.contains("Current map")
-            && text.contains(".map-card__current::before {")
+            ".map-card--current {\n      flex: var(--current-grow, 1.8) 1 0;\n    }"
+        ) && !text.contains("map-card__current")
+            && !text.contains("box-shadow: inset 0 0 0 2px var(--fgc-accent);")
+            && !text.contains("Now playing")
+            && text.contains(".map-card--current.animate-card {\n      --current-grow: 1;")
+            && text.contains("@keyframes mapCardFocus {")
+            && text.contains("mapCardFocus 760ms var(--ease-out-expo) forwards;")
             && text.contains(
-                "clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);"
-            ),
-        "the current map should read as a badge with an accent border, not just a wider card"
+                "var(--focus-delay, calc(var(--card-delay, var(--anim-delay)) + 160ms));"
+            )
+            && text.contains(
+                "card.style.setProperty('--focus-delay', `calc(var(--anim-delay) + ${settleAfter}s)`);"
+            )
+            && text.contains("0.1 + (mapsToShow - 1) * 0.1 + 1.25;"),
+        "the current map should widen only after the rest of the row has settled"
     );
     assert!(
         text.contains("function safeHexColor(value, fallback) {")
             && text.contains("/^#?([0-9a-fA-F]{6})$/")
-            && text.contains("--team-a-color: ${teamAColor}; --team-b-color: ${teamBColor}; --winner-color: ${winnerColor};"),
-        "team colours should be validated before they reach the card style"
+            && text.contains("--winner-color: ${winnerColor};")
+            && text.contains("card.dataset.winner = aWon ? 'a' : bWon ? 'b' : 'none';"),
+        "team colours should be validated before they reach the winner glow"
     );
     assert!(
-        text.contains("const aWon = isCompleted && mapData.scoreA > mapData.scoreB;")
-            && text.contains("const bWon = isCompleted && mapData.scoreB > mapData.scoreA;")
-            && text
-                .contains("map-card__score-team--a ${aWon ? 'map-card__score-team--winner' : ''}")
-            && text
-                .contains("map-card__score-team--b ${bWon ? 'map-card__score-team--winner' : ''}")
-            && text.contains(".map-card__score-team--winner::after {")
-            && text.contains("box-shadow: 0 0 14px var(--score-color);"),
-        "completed scores should sit in team-coloured plates with the winner marked"
-    );
-    assert!(
-        text.contains(".map-card__image--completed::before {")
-            && text.contains(
-                "radial-gradient(circle at 50% 45%, var(--winner-color, var(--fgc-accent)), transparent 62%)"
-            )
+        text.contains(
+            ".map-card__logo {\n      position: absolute;\n      top: calc(50% - 52px);\n      left: 50%;\n      transform: translate(-50%, -50%);\n      width: 112px;"
+        ) && text.contains("drop-shadow(0 6px 18px rgba(0, 0, 0, 0.65))")
+            && text.contains("drop-shadow(0 0 16px var(--winner-color, var(--fgc-accent)))")
             && text.contains(".map-card__logo--winner::before {")
-            && text.contains("opacity: 0.24;"),
-        "the winner logo should carry a subtle team-coloured glow across the map"
+            && text.contains("border-radius: 50%;")
+            && !text.contains(".map-card__logo--winner::after")
+            && !text.contains("inset: -12px;"),
+        "the winner logo should sit at the image centre without the old giant hex plate"
     );
     assert!(
-        text.contains(".map-card__ban img {")
-            && text.contains("object-fit: cover;")
-            && !text.contains(".map-card__ban img {\n      display: block;\n      width: 100%;\n      height: 100%;\n      object-fit: cover;\n      clip-path:"),
-        "ban portraits should stay square for now rather than becoming hexagons"
+        !text.contains("filter: grayscale")
+            && !text.contains("background: var(--fgc-accent-soft);")
+            && text.contains(".map-card__image--complete {")
+            && text.contains("brightness(0.52) saturate(0.45);")
+            && text.contains(".map-card__visual--complete::after {")
+            && text.contains("radial-gradient(")
+            && text.contains("var(--winner-color, var(--fgc-accent)),")
+            && text.contains("opacity: 0.13;"),
+        "completed art should fade back under a subtle team-colour gradient glow"
+    );
+    assert!(
+        !text.contains("gameModeIcons")
+            && !text.contains("map-card__mode-icon")
+            && text.contains(".map-card__meta {")
+            && text.contains("<span class=\"map-card__type\">${escapeHtml(mapType || '')}</span>"),
+        "the footer should keep the map type text without a game mode icon"
+    );
+    assert!(
+        !text.contains("map-card__board")
+            && !text.contains("map-card__score-team")
+            && !text.contains("map-card__score-side"),
+        "map select should not show score slabs"
+    );
+    assert!(
+        text.contains("@keyframes winnerLogoReveal {")
+            && text.contains("@keyframes footerReveal {")
+            && text.contains("animation: footerReveal 420ms var(--ease-out-expo) both;")
+            && text.contains("@media (prefers-reduced-motion: reduce) {")
+            && text.contains(".map-card__ban,")
+            && text.contains(
+                ".map-card--current.animate-card {\n        --current-grow: 1.8;\n      }"
+            ),
+        "minor components should animate in and respect reduced motion"
+    );
+}
+
+#[test]
+fn map_select_reconciles_live_data_without_replaying_the_opening() {
+    let text = overlay_text("map-select.html");
+
+    assert!(
+        text.contains("margin-inline: -1px;")
+            && text
+                .contains("/* Flex rounding can leave a one-pixel gutter at either card edge. */"),
+        "map art should overscan flex rounding at both card edges"
+    );
+    assert!(
+        text.contains("/* A dark curtain covers map swaps so no empty surface can flash through. */")
+            && text.contains(".map-card__swap {\n      position: absolute;\n      inset: -1px;\n      z-index: 2;\n      opacity: 0;\n      pointer-events: none;\n      background:\n        linear-gradient(")
+            && text.contains("<div class=\"map-card__swap\"></div>")
+            && text.contains("swapLayer.style.opacity = '1';\n      applyUpdate();")
+            && text.contains("inAnimations.push(\n        swapLayer.animate(")
+            && text.contains("// Art leads; the old text fades out as type and name reveal together.")
+            && text.contains("delay: index === 0 ? 0 : 60,")
+            && !text.contains("CONTENT_OUT_DURATION")
+            && !text.contains("CURTAIN_OUT_DELAY"),
+        "map swaps should cover, swap once and reveal text as one fade in a single pass"
+    );
+    assert!(
+        text.contains("container-type: inline-size;")
+            && text.contains(
+                ".map-card__name {\n      width: 100%;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;\n      font-size: clamp(16px, 8cqw, 24px);\n      color: var(--fgc-text);\n      text-transform: uppercase;\n      text-align: center;\n      line-height: 1.1;\n      white-space: normal;\n      overflow-wrap: anywhere;\n      display: -webkit-box;\n      -webkit-box-orient: vertical;\n      -webkit-line-clamp: 2;\n      overflow: hidden;\n    }"
+            ),
+        "long map names should shrink with the card and then wrap to two lines"
+    );
+    assert!(
+        text.contains(
+            ".map-card--settled .map-card__ban,\n    .map-card--settled .map-card__text,\n    .map-card--settled .map-card__logo--winner {\n      animation: none !important;\n      opacity: 1;\n    }"
+        ) && text.contains(".map-card--settled .map-card__logo--winner {\n      transform: translate(-50%, -50%);\n    }"),
+        "post-opening updates should stop the CSS reveal animations from replaying"
+    );
+    assert!(
+        text.contains("function reconcileMaps(")
+            && text.contains("function refreshCardContent(")
+            && text.contains("function animateContentSwap(")
+            && text.contains("function setCurrentVisual(")
+            && text.contains("function animateCardWidth(")
+            && text.contains("function prefersReducedMotion()")
+            && text.contains("} else if (animationsTriggered) {\n          reconcileMaps(")
+            && text.contains("if (!openingSettled) {\n        settleInitialAnimations();\n        openingSettled = true;\n      }")
+            && text.contains("renderedCurrentIndex = currentMapIndex;")
+            && !text.contains("updateMapsContainer(d.maps, d.teamA, d.teamB);"),
+        "live updates should reconcile existing cards instead of rebuilding the row"
+    );
+    assert!(
+        text.contains("animateCardWidth(previousCard, 1.8, 1);")
+            && text.contains("animateCardWidth(nextCard, 1, 1.8, () => {")
+            && text.contains("[{ flexGrow: String(from) }, { flexGrow: String(to) }]")
+            && text.contains("animation.finished.then(finish, finish);"),
+        "a new current map should trade width with the old card in one handoff"
+    );
+    assert!(
+        text.contains("const identityChanged =")
+            && text.contains("!sameValue(previousMap.name, mapNameRaw)")
+            && text.contains("!sameValue(previousMap.type, mapTypeRaw)")
+            && text.contains("!sameValue(previousMap.mapImageUrl, mapImage)")
+            && text.contains("animateContentSwap(card, [image, type, name], applyMapContent);"),
+        "assigned map art and text should animate only when their own data changes"
+    );
+    assert!(
+        text.contains("const applyMapContent = () => {")
+            && text.contains("// Empty slots have no art to wipe, so a curtain only makes them flicker.")
+            && text.contains("if (hasArt) {\n          animateContentSwap(card, [image, type, name], applyMapContent);\n        } else {\n          cancelCardSwaps(card);\n          applyMapContent();\n        }"),
+        "empty map slots should update in place instead of fading through a curtain"
+    );
+    assert!(
+        text.contains(
+            ".map-card__text-ghost {\n      position: absolute;\n      box-sizing: border-box;\n      z-index: 4;\n      pointer-events: none;\n      animation: none !important;\n    }"
+        )
+            && text.contains("textGhost = text.cloneNode(true);")
+            && text.contains("textGhost.classList.add('map-card__text-ghost');")
+            && text.contains("// Art leads; the old text fades out as type and name reveal together.")
+            && text.contains("if (textGhost) textGhost.remove();")
+            && text.contains(
+                "card.querySelectorAll('.map-card__text-ghost').forEach((ghost) => ghost.remove());"
+            ),
+        "old map text should crossfade out while the new text fades in"
+    );
+    assert!(
+        text.contains("if (previousDetails.logoUrl !== details.logoUrl) {\n          animateLogoIn(logo, index);\n        }")
+            && text.contains("function animateLogoIn(logo, index)"),
+        "completion should reveal only the winning team logo"
     );
 }
 
@@ -1427,6 +1740,12 @@ fn every_overlay_carries_the_same_fx_block() {
         "the canonical block should read the background mode from the URL"
     );
     assert!(
+        canonical.contains(
+            "} else if (root.dataset.bg !== 'opaque' && root.dataset.bg !== 'transparent') {\n        root.dataset.bg = 'opaque';"
+        ),
+        "the canonical block should default to opaque while preserving a host override"
+    );
+    assert!(
         canonical.contains("window.fgcUpdateBackground = (data) => {")
             && canonical.contains("payload.background")
             && canonical.contains("candidate.opaque"),
@@ -1457,6 +1776,10 @@ fn background_html_supports_the_transparent_variant() {
     assert!(
         text.contains("requestedBg === 'off' ? 'opaque'") && text.contains("root.dataset.bg"),
         "the standalone background should read the same URL toggle"
+    );
+    assert!(
+        text.contains("bgMode === 'opaque' || bgMode === 'transparent' ? bgMode : 'opaque'"),
+        "the standalone background should keep its opaque default"
     );
     assert!(
         text.contains("data.type === 'background'")
@@ -1674,12 +1997,12 @@ fn the_timer_overlay_uses_the_semi_bold_alias() {
 
 #[test]
 fn the_type_scale_gives_each_role_one_weight() {
-    // Scores are Strong everywhere.
+    // Numeric labels are Strong everywhere.
     assert!(
         overlay_text("map-select.html").contains(
-            ".map-card__score-tag,\n    .map-card__score {\n      position: relative;\n      z-index: 1;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"
+            ".map-card__ban-number span {\n      position: relative;\n      z-index: 1;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;"
         ),
-        "the map select score should be SemiBold"
+        "the map select ban order should be SemiBold"
     );
     assert!(
         overlay_text("game-overlay.html")
@@ -1699,7 +2022,7 @@ fn the_type_scale_gives_each_role_one_weight() {
     // The game mode is a label, so it is Medium everywhere.
     assert!(
         overlay_text("map-pool.html").contains(
-            ".mode-name {\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"
+            ".mode-name {\n      display: inline-block;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"
         ),
         "the map pool mode name should be Medium"
     );

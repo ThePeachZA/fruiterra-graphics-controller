@@ -73,12 +73,8 @@
       --fgc-accent-soft: rgb(255 122 26 / 16%);
       --fgc-on-accent: #0b0d12;
 
-      /* The wash that lights a picked map. The gradient rises from the bottom
-         edge of the card, the way the OWWC27 map pool lifts a chosen map out
-         of the grid, so the art stays greyscale underneath it. */
-      --fgc-pick-glow: rgb(255 122 26 / 45%);
-      --fgc-pick-glow-mid: rgb(255 122 26 / 22%);
-      --fgc-pick-glow-faint: rgb(255 122 26 / 8%);
+      /* Picked maps use --pick-glow-rgb from the choosing team for every wash,
+         rule, and crest shadow. No fixed orange survives in the pick state. */
 
       --fgc-success: #3ecf8e;
       --fgc-warning: #f5b84b;
@@ -125,21 +121,10 @@
       overflow: hidden;
     }
 
-    @keyframes fadeSlideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-50px) scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-
     @keyframes columnReveal {
       from {
         opacity: 0;
-        transform: translateY(36px);
+        transform: translateY(32px);
       }
       to {
         opacity: 1;
@@ -147,46 +132,84 @@
       }
     }
 
+    @keyframes cardReveal {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes modeMarkReveal {
+      from {
+        opacity: 0;
+        transform: scale(0.72) translateY(-6px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes pickWashReveal {
+      from {
+        opacity: 0;
+        transform: scale(1.04);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
     .main-container {
       width: 100%;
       height: 100%;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 80px 200px 100px;
-      row-gap: 20px;
-    }
-
-    .map-pool-header {
-      font-family: 'FGC Display Black', 'Apotek Black', sans-serif;
-      font-size: 96px;
-      color: var(--fgc-text);
-      text-transform: uppercase;
-      letter-spacing: 4px;
-      opacity: 0;
-      line-height: 1;
+      padding: 56px 72px;
     }
 
     .map-pool-container {
-      width: 1520px;
-      height: 800px;
+      width: 1768px;
+      height: 968px;
       display: flex;
       align-items: stretch;
-      column-gap: 25px;
+      column-gap: 18px;
       overflow: hidden;
     }
 
-    .animate-header {
-      animation: fadeSlideDown 1.2s cubic-bezier(0.3, 1, 0.4, 1) 0.8s forwards;
+    /* The columns carry the reveal, so no whole-pool fade can wipe a live
+       update. Cards add a shorter beat inside each column. */
+    .animate-column {
+      animation: columnReveal var(--pool-anim-duration) var(--fgc-ease-out) both;
+      animation-delay: var(--column-delay, var(--pool-anim-delay));
     }
 
-    /* The columns carry the reveal, so the container stays visible. That also
-       keeps the empty-pool message readable, because the old container fade
-       never ran on the empty branch. */
-    .animate-column {
-      animation: columnReveal var(--pool-anim-duration) var(--fgc-ease-out) forwards;
-      animation-delay: var(--column-delay, var(--pool-anim-delay));
+    .animate-card {
+      animation: cardReveal 520ms var(--fgc-ease-out) both;
+      animation-delay: var(--card-delay, var(--pool-anim-delay));
+    }
+
+    /* Mode marks land just after their column so the header reads as a beat,
+       not as a label that was already sitting on the canvas. */
+    .animate-mode {
+      animation: modeMarkReveal 420ms var(--fgc-ease-out) both;
+      animation-delay: var(--mode-delay, var(--pool-anim-delay));
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .animate-column,
+      .animate-card,
+      .animate-mode {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
     }
 
     /* === MAP COLUMN === */
@@ -194,95 +217,171 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 15px;
-      overflow: hidden;
-      background: transparent;
-      opacity: 0;
+      gap: 14px;
+      min-width: 0;
+      opacity: 1;
     }
 
     .mode-header {
+      min-height: 62px;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 10px;
-      background: var(--fgc-surface);
-      border-radius: 6px;
-      padding: 10px;
+      gap: 12px;
+      background: var(--fgc-surface-raised);
+      border: 1px solid var(--fgc-line);
+      border-radius: 8px;
+      padding: 8px 12px;
     }
 
+    /* Mode icons are plain marks: the header carries the mode name, so no
+       hexagon needs to frame the icon. Map thumbnails stay rectangular too. */
     .mode-icon {
-      width: 50px;
-      height: 50px;
+      width: 42px;
+      height: 48px;
       flex-shrink: 0;
+      position: relative;
     }
 
     .mode-icon img {
+      position: absolute;
+      inset: 0;
+      display: block;
       width: 100%;
       height: 100%;
       object-fit: contain;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
     }
 
     .mode-name {
+      display: inline-block;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 20px;
+      font-size: 18px;
+      letter-spacing: 1.2px;
       color: var(--fgc-text);
       text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
 
     /* === MAP CARD === */
     .map-card {
       flex: 1;
-      border-radius: 6px;
+      min-height: 0;
+      border-radius: 10px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       position: relative;
-      background: transparent;
-      clip-path: inset(0 round 6px);
+      background: var(--fgc-surface-muted);
+      clip-path: inset(0 round 10px);
     }
 
+    /* Flex rounding can leave a one-pixel gutter at either card edge. */
     .map-image {
       flex: 1;
+      min-height: 0;
+      margin-inline: -1px;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
       background-color: var(--fgc-surface-muted);
       position: relative;
-      border-radius: 6px 6px 0 0;
+      border-radius: 10px 10px 0 0;
     }
 
-    .map-image.chosen {
-      filter: grayscale(100%);
-    }
-
-    /* The picked map is lit from the bottom edge. The wash lives on its own
-       layer above the artwork, because the greyscale filter on the artwork
-       would otherwise drain the colour out of it. */
-    .map-pick-glow {
+    /* The winner wash sits above the darkened art and under the black footer
+       gradient. It is the same radial language as the map-select winner card. */
+    .map-image::before {
+      content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 42px;
+      inset: 0;
+      z-index: 1;
+      background: radial-gradient(
+        circle at 50% 46%,
+        rgb(var(--pick-glow-rgb, 255 122 26) / 20%),
+        transparent 68%
+      );
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .map-image::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 2;
       background: linear-gradient(
-        to top,
-        var(--fgc-pick-glow) 0%,
-        var(--fgc-pick-glow-mid) 30%,
-        var(--fgc-pick-glow-faint) 52%,
-        rgb(255 122 26 / 0%) 72%
+        to bottom,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0.28) 48%,
+        rgba(0, 0, 0, 0.78) 100%
       );
       pointer-events: none;
     }
 
-    /* A thin accent rule separates the lit artwork from the name band. */
+    .map-image.chosen {
+      filter: grayscale(100%) brightness(0.56) saturate(0.45);
+    }
+
+    .map-card.picked .map-image::before {
+      opacity: 1;
+    }
+
+    .map-card.animate-pick .map-image::before {
+      animation: pickWashReveal 620ms var(--fgc-ease-out) 60ms both;
+    }
+
+    /* A dark curtain covers map swaps so no empty surface can flash through. */
+    .map-card__swap {
+      position: absolute;
+      inset: -1px;
+      z-index: 3;
+      opacity: 0;
+      pointer-events: none;
+      background: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 0.28) 48%,
+          rgba(0, 0, 0, 0.78) 100%
+        ),
+        var(--fgc-surface-muted);
+    }
+
+    /* The picked map is lit from its bottom edge in the choosing team's
+       colour. The wash lives above the artwork so greyscale cannot drain it. */
+    .map-pick-glow {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 52px;
+      z-index: 4;
+      background:
+        linear-gradient(
+          to top,
+          rgb(var(--pick-glow-rgb, 255 122 26) / 62%) 0%,
+          rgb(var(--pick-glow-rgb, 255 122 26) / 34%) 32%,
+          rgb(var(--pick-glow-rgb, 255 122 26) / 12%) 56%,
+          rgb(var(--pick-glow-rgb, 255 122 26) / 0%) 76%
+        ),
+        radial-gradient(
+          circle at 50% 100%,
+          rgb(var(--pick-glow-rgb, 255 122 26) / 48%) 0%,
+          rgb(var(--pick-glow-rgb, 255 122 26) / 0%) 72%
+        );
+      pointer-events: none;
+    }
+
     .map-card.picked .map-name {
       background-color: var(--fgc-surface);
       background-image: linear-gradient(
         to top,
-        var(--fgc-pick-glow-faint) 0%,
-        rgb(255 122 26 / 0%) 100%
+        rgb(var(--pick-glow-rgb, 255 122 26) / 12%) 0%,
+        rgb(var(--pick-glow-rgb, 255 122 26) / 0%) 100%
       );
-      box-shadow: inset 0 2px 0 var(--fgc-accent);
+      box-shadow: inset 0 2px 0 rgb(var(--pick-glow-rgb, 255 122 26));
     }
 
     .map-logo-overlay {
@@ -290,7 +389,8 @@
       top: 0;
       left: 0;
       right: 0;
-      bottom: 42px;
+      bottom: 52px;
+      z-index: 5;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -298,41 +398,64 @@
     }
 
     .map-logo-overlay img {
-      max-width: 80px;
-      max-height: 80px;
+      max-width: 92px;
+      max-height: 92px;
       object-fit: contain;
+      filter: drop-shadow(0 0 22px rgb(var(--pick-glow-rgb, 255 122 26) / 85%));
     }
 
     .map-name {
       background: var(--fgc-surface);
-      padding: 10px;
+      height: 52px;
+      container-type: inline-size;
+      padding: 8px 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 42px;
       flex-shrink: 0;
+      position: relative;
+      z-index: 6;
+      overflow: hidden;
     }
 
+    /* Long names shrink to the card, then wrap to two lines instead of
+       disappearing behind an ellipsis. */
     .map-name-text {
-      display: block;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
       width: 100%;
       font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 18px;
+      font-size: clamp(13px, 9cqw, 20px);
+      line-height: 1.05;
       color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
+      overflow-wrap: anywhere;
+      overflow: hidden;
+    }
+
+    .map-card__text-ghost {
+      position: absolute;
+      box-sizing: border-box;
+      z-index: 7;
+      pointer-events: none;
+      animation: none !important;
     }
 
     /* === ICON VISIBILITY === */
-    .icon-hidden {
-      display: none !important;
-    }
-
     .empty-pool {
-      color: var(--fgc-text);
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--fgc-text-muted);
       font-size: 24px;
       text-align: center;
-      padding: 100px;
+      background: var(--fgc-surface-raised);
+      border: 1px solid var(--fgc-line);
+      border-radius: 10px;
     }
   </style>
   <!-- === FGC CANONICAL FX START === -->
@@ -416,9 +539,9 @@
         root.dataset.fx = 'on';
       }
 
-      // Opaque turns transparency off; transparent turns it back on. The
-      // short aliases read naturally in a Browser Source URL. A document-level
-      // data-bg attribute lets a host page choose the default.
+      // Opaque is the default; transparent turns it back on. The short aliases
+      // read naturally in a Browser Source URL. A document-level data-bg
+      // attribute lets a host page override that default.
       const requestedBg = query.get('bg');
       const bgMode =
         requestedBg === 'off' ? 'opaque' :
@@ -426,8 +549,8 @@
         requestedBg;
       if (bgMode === 'opaque' || bgMode === 'transparent') {
         root.dataset.bg = bgMode;
-      } else if (root.dataset.bg !== 'opaque') {
-        root.dataset.bg = 'transparent';
+      } else if (root.dataset.bg !== 'opaque' && root.dataset.bg !== 'transparent') {
+        root.dataset.bg = 'opaque';
       }
 
       // A cached section message lets the app switch every connected source
@@ -453,13 +576,11 @@
   <div class="fgc-fx" aria-hidden="true"></div>
   <div class="overlay">
     <div class="main-container">
-      <h1 class="map-pool-header">Map Pool</h1>
-      <div class="map-pool-container" id="map-pool">
+      <div class="map-pool-container" id="map-pool" aria-label="Map pool">
         <!-- Map columns will be dynamically created -->
       </div>
     </div>
   </div>
-
   <script>
     // Escape user-supplied text before interpolating it into innerHTML.
     function escapeHtml(value) {
@@ -472,102 +593,90 @@
       })[character]);
     }
 
-    // Shrink text until it fits on one line, then ellipsize at the floor size.
-    function fitText(target, maxSize, minSize) {
-      if (!target) return;
-      target.style.whiteSpace = 'nowrap';
-      target.style.overflow = 'hidden';
-      target.style.textOverflow = 'ellipsis';
-
-      const style = getComputedStyle(target);
-      const available = target.clientWidth
-        - parseFloat(style.paddingLeft)
-        - parseFloat(style.paddingRight);
-      if (!(available > 0)) return;
-
-      // Ancestors animate with a transform, so convert the measured range
-      // back into layout pixels before comparing it with the layout width.
-      const measure = () => {
-        const range = document.createRange();
-        range.selectNodeContents(target);
-        const scale = target.offsetWidth
-          ? target.getBoundingClientRect().width / target.offsetWidth
-          : 1;
-        return scale > 0 ? range.getBoundingClientRect().width / scale : 0;
-      };
-
-      let size = maxSize;
-      target.style.fontSize = `${size}px`;
-      while (size > minSize && measure() > available) {
-        size -= 1;
-        target.style.fontSize = `${size}px`;
-      }
-    }
-
-    function fitMapNames() {
-      el.mapPool.querySelectorAll('.map-name-text').forEach((name) => {
-        fitText(name, 18, 11);
-      });
-    }
-
     const el = {
       mapPool: document.getElementById('map-pool'),
-      overlay: document.querySelector('.overlay'),
-      header: document.querySelector('.map-pool-header')
+      overlay: document.querySelector('.overlay')
     };
 
     let gameModeIcons = {};
     let currentData = null;
-    let isRendering = false;
-    let headerAnimated = false;
-    let columnsAnimated = false;
     let renderedSignature = '';
+    let renderedPool = null;
+    let openingSettled = false;
     let emptyShown = false;
 
-    // Seconds between one mode column and the next. The pool holds up to five
-    // columns, so the whole reveal still lands inside a couple of seconds.
+    // Seconds between reveals. The pool holds up to five columns and a few
+    // cards each, so the whole opening still lands inside a couple of seconds.
     const COLUMN_STAGGER_SECONDS = 0.13;
+    const CARD_STAGGER_SECONDS = 0.07;
+    const CONTENT_IN_DURATION = 420;
+    const CURTAIN_FADE_DURATION = 360;
+    const LOGO_REVEAL_DURATION = 620;
+    const PICK_GLOW_DURATION = 620;
+    // Dark team colours disappear against the pool art. Lift the glow toward
+    // white so a pick stays readable while keeping the team's hue.
+    const PICK_LIGHTEN_MIX = 0.45;
+    const FOCUS_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
 
-    // The pool arrives as a cached `init` frame and then as a live `scoreboard`
-    // frame. Rebuilding the columns for every frame would restart the reveal
-    // on each one, so the columns are only rebuilt when the pool really
-    // changed.
-    function poolSignature(sortedData) {
-      return sortedData
-        .map((group) =>
-          `${group.modeName}[${group.maps
-            .map((map) => `${map.name}:${map.chosenBy || ''}:${map.chosenByLogo || ''}`)
-            .join(',')}]`
-        )
-        .join('|');
+    function snapshot(value) {
+      return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
     }
 
-    function triggerAnimations() {
-      if (!headerAnimated) {
-        el.header.classList.add('animate-header');
-        headerAnimated = true;
-      }
+    function sameValue(left, right) {
+      return JSON.stringify(left) === JSON.stringify(right);
+    }
 
-      if (columnsAnimated) return;
+    function prefersReducedMotion() {
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
 
-      const columns = el.mapPool.querySelectorAll('.map-column');
-      if (columns.length === 0) return;
+    function hexToRgbTriplet(color) {
+      const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(color || '').trim());
+      if (!match) return '255 122 26';
+      const hex = match[1].length === 3
+        ? match[1].split('').map((part) => part + part).join('')
+        : match[1];
+      return `${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)}`;
+    }
 
-      // Each mode column enters on its own beat so the pool reads as a
-      // sequence of columns instead of one flat block.
-      columns.forEach((column, i) => {
-        column.style.setProperty(
-          '--column-delay',
-          `calc(var(--pool-anim-delay) + ${i * COLUMN_STAGGER_SECONDS}s)`
-        );
-        column.classList.add('animate-column');
+    function lightenedRgbTriplet(color) {
+      return hexToRgbTriplet(color)
+        .split(' ')
+        .map((channel) => Math.round(Number(channel) + (255 - Number(channel)) * PICK_LIGHTEN_MIX))
+        .join(' ');
+    }
+
+    function teamColors(data) {
+      return {
+        A: lightenedRgbTriplet(data?.teamA?.color),
+        B: lightenedRgbTriplet(data?.teamB?.color)
+      };
+    }
+
+    function pickRgb(mapData, colors) {
+      return mapData.chosenBy === 'B' ? colors.B : colors.A;
+    }
+
+    // The app broadcasts several identical scoreboard frames for one edit.
+    // Comparing the full visible state keeps all but the first one a no-op.
+    function poolSignature(sortedData, colors) {
+      return JSON.stringify({
+        groups: sortedData.map((group) => ({
+          modeName: group.modeName,
+          modeIcons: group.modeIcons || [],
+          maps: (group.maps || []).map((map) => ({
+            name: map.name,
+            imageUrl: map.imageUrl || '',
+            chosenBy: map.chosenBy || '',
+            chosenByLogo: map.chosenByLogo || ''
+          }))
+        })),
+        colors
       });
-
-      columnsAnimated = true;
     }
 
     function preloadImages(urls) {
-      urls.forEach(url => {
+      urls.forEach((url) => {
         if (url) {
           const img = new Image();
           img.src = url;
@@ -579,21 +688,93 @@
       if (modeData?.icons) {
         preloadImages(modeData.icons.filter(Boolean));
       }
-      
+
       if (!modeData || !modeData.icons || modeData.icons.length === 0) {
         return `<div class="mode-header"><span class="mode-name">${escapeHtml(modeName)}</span></div>`;
       }
-      
+
       const iconsHtml = modeData.icons
-        .filter(iconUrl => iconUrl)
-        .map(iconUrl => `<div class="mode-icon"><img src="${escapeHtml(iconUrl)}" alt="mode icon" /></div>`)
+        .filter((iconUrl) => iconUrl)
+        .map((iconUrl) => `<div class="mode-icon"><img src="${escapeHtml(iconUrl)}" alt="mode icon" /></div>`)
         .join('');
-      
+
       return `<div class="mode-header">${iconsHtml}<span class="mode-name">${escapeHtml(modeName)}</span></div>`;
     }
 
-    function createMapCard(mapData) {
+    function cancelCardAnimations(card) {
+      if (card._swapAnimations) {
+        card._swapAnimations.forEach((animation) => animation.cancel());
+      }
+      card._swapAnimations = [];
+      card.classList.remove('animate-pick');
+      const swapLayer = card.querySelector('.map-card__swap');
+      if (swapLayer) swapLayer.style.removeProperty('opacity');
+      card.querySelectorAll('.map-card__text-ghost').forEach((ghost) => ghost.remove());
+    }
+
+    function animateLogoIn(image, animations) {
+      if (!image || prefersReducedMotion()) return null;
+      image.getAnimations().forEach((animation) => animation.cancel());
+      const animation = image.animate(
+        [
+          { opacity: 0, transform: 'scale(0.86)' },
+          { opacity: 1, transform: 'scale(1)' }
+        ],
+        { duration: LOGO_REVEAL_DURATION, easing: FOCUS_EASE, fill: 'forwards' }
+      );
+      if (animations) {
+        animations.push(animation);
+      } else {
+        animation.finished.then(() => animation.cancel(), () => {});
+      }
+      return animation;
+    }
+
+    function refreshPickedState(card, mapData, colors, animations, revealPick) {
+      const image = card.querySelector('.map-image');
+      const nameBar = card.querySelector('.map-name');
+      const isPicked = !!(mapData.chosenBy && mapData.chosenByLogo);
+
+      image.classList.toggle('chosen', isPicked);
+      card.classList.toggle('picked', isPicked);
+      card.style.setProperty('--pick-glow-rgb', pickRgb(mapData, colors));
+
+      let glow = card.querySelector('.map-pick-glow');
+      let logoLayer = card.querySelector('.map-logo-overlay');
+
+      if (!isPicked) {
+        if (glow) glow.remove();
+        if (logoLayer) logoLayer.remove();
+        return;
+      }
+
+      if (!glow) {
+        glow = document.createElement('div');
+        glow.className = 'map-pick-glow';
+        card.insertBefore(glow, nameBar);
+      }
+      if (!logoLayer) {
+        logoLayer = document.createElement('div');
+        logoLayer.className = 'map-logo-overlay';
+        card.insertBefore(logoLayer, nameBar);
+      }
+
+      const logo = logoLayer.querySelector('img');
+      if (!logo) {
+        logoLayer.innerHTML = `<img src="${escapeHtml(mapData.chosenByLogo)}" alt="chosen by team" />`;
+      } else if (logo.getAttribute('src') !== mapData.chosenByLogo) {
+        logo.src = mapData.chosenByLogo;
+        if (revealPick) animateLogoIn(logo, animations);
+      } else if (revealPick) {
+        animateLogoIn(logo, animations);
+      }
+    }
+
+    function createMapCard(mapData, colors, slot) {
       const card = document.createElement('div');
+      card.className = 'map-card';
+      card.dataset.slot = String(slot);
+      card.style.setProperty('--pick-glow-rgb', pickRgb(mapData, colors));
 
       if (mapData.imageUrl) {
         preloadImages([mapData.imageUrl]);
@@ -603,51 +784,305 @@
         ? `background-image: url('${mapData.imageUrl}')`
         : 'background-color: var(--fgc-surface-muted)';
 
-      const isChosen = mapData.chosenBy && mapData.chosenByLogo;
-      const imageClass = isChosen ? 'map-image chosen' : 'map-image';
-
-      card.className = isChosen ? 'map-card picked' : 'map-card';
-
-      let overlayHtml = '';
-      if (isChosen) {
-        // The glow sits under the team logo, so the logo stays the brightest
-        // thing on the card.
-        overlayHtml = `
-          <div class="map-pick-glow"></div>
-          <div class="map-logo-overlay"><img src="${escapeHtml(mapData.chosenByLogo)}" alt="chosen by team" /></div>
-        `;
-      }
-
       card.innerHTML = `
-        <div class="${imageClass}" style="${imageStyle}"></div>
-        ${overlayHtml}
-        <div class="map-name">
-          <span class="map-name-text">${escapeHtml(mapData.name)}</span>
-        </div>
+        <div class="map-image" style="${imageStyle}"></div>
+        <div class="map-card__swap"></div>
+        <div class="map-name"><span class="map-name-text">${escapeHtml(mapData.name)}</span></div>
       `;
 
+      refreshPickedState(card, mapData, colors, null, false);
+      card._map = snapshot(mapData);
       return card;
     }
 
-    function createColumn(modeName, maps, modeData) {
+    // Cover first, swap once, then reveal. A separate fade-out made a map
+    // edit read as two animations, so image and text share one pass. A team
+    // pick joins that same pass: its bottom wash rises and the winner crest
+    // arrives with the new artwork instead of popping in afterwards.
+    function animateCardSwap(card, applyUpdate, options = {}) {
+      cancelCardAnimations(card);
+      const swapLayer = card.querySelector('.map-card__swap');
+      if (prefersReducedMotion() || !swapLayer) {
+        applyUpdate();
+        return;
+      }
+
+      const token = String(Number(card.dataset.swap || '0') + 1);
+      card.dataset.swap = token;
+      const animations = [];
+
+      const nameBar = card.querySelector('.map-name');
+      let nameGhost = null;
+      if (nameBar) {
+        const nameBox = nameBar.getBoundingClientRect();
+        const cardBox = card.getBoundingClientRect();
+        nameGhost = nameBar.cloneNode(true);
+        nameGhost.classList.add('map-card__text-ghost');
+        nameGhost.style.left = `${nameBox.left - cardBox.left}px`;
+        nameGhost.style.top = `${nameBox.top - cardBox.top}px`;
+        nameGhost.style.width = `${nameBox.width}px`;
+        nameGhost.style.height = `${nameBox.height}px`;
+        card.appendChild(nameGhost);
+      }
+
+      swapLayer.style.opacity = '1';
+      applyUpdate(animations);
+
+      if (options.pickChanged && card.classList.contains('picked')) {
+        card.classList.add('animate-pick');
+        const glow = card.querySelector('.map-pick-glow');
+        if (glow) {
+          animations.push(
+            glow.animate(
+              [
+                { opacity: 0, transform: 'translateY(28px)' },
+                { opacity: 1, transform: 'translateY(0)' }
+              ],
+              {
+                duration: PICK_GLOW_DURATION,
+                delay: 60,
+                easing: FOCUS_EASE,
+                fill: 'forwards'
+              }
+            )
+          );
+        }
+      }
+
+      // Art leads; the old name fades out as the new name reveals together.
+      const targets = [card.querySelector('.map-image'), card.querySelector('.map-name')].filter(Boolean);
+      targets.forEach((target, index) =>
+        animations.push(
+          target.animate(
+            [
+              { opacity: 0, transform: 'translateY(6px)' },
+              { opacity: 1, transform: 'translateY(0)' }
+            ],
+            {
+              duration: CONTENT_IN_DURATION,
+              delay: index === 0 ? 0 : 60,
+              easing: FOCUS_EASE,
+              fill: 'forwards'
+            }
+          )
+        )
+      );
+      animations.push(
+        swapLayer.animate(
+          [{ opacity: 1 }, { opacity: 0 }],
+          { duration: CURTAIN_FADE_DURATION, easing: FOCUS_EASE, fill: 'forwards' }
+        )
+      );
+      if (nameGhost) {
+        animations.push(
+          nameGhost.animate(
+            [{ opacity: 1 }, { opacity: 0 }],
+            { duration: CONTENT_IN_DURATION, delay: 60, easing: FOCUS_EASE, fill: 'forwards' }
+          )
+        );
+      }
+      card._swapAnimations = animations;
+
+      Promise.all(animations.map((animation) => animation.finished.catch(() => {}))).then(() => {
+        if (card.dataset.swap !== token) return;
+        swapLayer.style.removeProperty('opacity');
+        card.classList.remove('animate-pick');
+        if (nameGhost) nameGhost.remove();
+        animations.forEach((animation) => animation.cancel());
+        card._swapAnimations = [];
+      });
+    }
+
+    function refreshCard(card, nextMap, colors) {
+      const previous = card._map || {};
+      const pickKey = (map) =>
+        `${map.chosenBy || ''}|${map.chosenByLogo || ''}|${pickRgb(map, colors)}`;
+      const pickChanged = pickKey(previous) !== pickKey(nextMap);
+      const contentChanged =
+        (previous.name || '') !== (nextMap.name || '') ||
+        (previous.imageUrl || '') !== (nextMap.imageUrl || '') ||
+        pickChanged;
+
+      if (!contentChanged) {
+        card._map = snapshot(nextMap);
+        return;
+      }
+
+      animateCardSwap(
+        card,
+        (animations) => {
+          const image = card.querySelector('.map-image');
+          if (nextMap.imageUrl) {
+            image.style.backgroundImage = `url('${nextMap.imageUrl}')`;
+            image.style.removeProperty('background-color');
+          } else {
+            image.style.removeProperty('background-image');
+            image.style.backgroundColor = 'var(--fgc-surface-muted)';
+          }
+          const text = card.querySelector('.map-name-text');
+          if (text) text.textContent = nextMap.name;
+          refreshPickedState(card, nextMap, colors, animations, pickChanged);
+          card._map = snapshot(nextMap);
+        },
+        { pickChanged }
+      );
+    }
+
+    function createColumn(modeName, maps, modeData, colors) {
       const column = document.createElement('div');
       column.className = 'map-column';
+      column.dataset.mode = modeName;
+      column.dataset.icons = JSON.stringify(modeData?.icons || []);
+      column.innerHTML = createModeHeader(modeName, modeData);
+      maps.forEach((map, index) => column.appendChild(createMapCard(map, colors, index)));
+      return column;
+    }
 
-      const headerHtml = createModeHeader(modeName, modeData);
-      column.innerHTML = headerHtml;
+    function updateModeHeader(column, group) {
+      const icons = JSON.stringify(group.modeIcons || []);
+      if (column.dataset.icons === icons) return;
+      column.dataset.icons = icons;
+      const header = column.querySelector('.mode-header');
+      if (header) header.outerHTML = createModeHeader(group.modeName, { icons: group.modeIcons });
+    }
 
-      maps.forEach(map => {
-        column.appendChild(createMapCard(map));
+    function animateNodeIn(node, delaySeconds, fromY) {
+      if (prefersReducedMotion()) return;
+      const animation = node.animate(
+        [
+          { opacity: 0, transform: `translateY(${fromY}px)` },
+          { opacity: 1, transform: 'translateY(0)' }
+        ],
+        {
+          duration: 520,
+          delay: Math.round(delaySeconds * 1000),
+          easing: FOCUS_EASE,
+          fill: 'forwards'
+        }
+      );
+      animation.finished.then(() => animation.cancel(), () => {});
+    }
+
+    function findColumn(modeName) {
+      return Array.from(el.mapPool.querySelectorAll('.map-column'))
+        .find((column) => column.dataset.mode === modeName) || null;
+    }
+
+    function reconcilePool(sortedData, colors) {
+      const wanted = new Set(
+        sortedData.filter((group) => group.maps && group.maps.length).map((group) => group.modeName)
+      );
+
+      el.mapPool.querySelectorAll('.map-column').forEach((column) => {
+        if (!wanted.has(column.dataset.mode)) column.remove();
       });
 
-      return column;
+      const empty = el.mapPool.querySelector('.empty-pool');
+      if (empty) empty.remove();
+
+      sortedData.forEach((group, groupIndex) => {
+        if (!group.maps || group.maps.length === 0) return;
+
+        let column = findColumn(group.modeName);
+        const isNewColumn = !column;
+        if (isNewColumn) {
+          column = createColumn(group.modeName, group.maps, { icons: group.modeIcons }, colors);
+        } else {
+          updateModeHeader(column, group);
+        }
+
+        const atIndex = el.mapPool.children[groupIndex] || null;
+        if (el.mapPool.children[groupIndex] !== column) {
+          el.mapPool.insertBefore(column, atIndex);
+        }
+        if (isNewColumn && openingSettled) {
+          animateNodeIn(column, groupIndex * COLUMN_STAGGER_SECONDS, 32);
+          column.querySelectorAll('.mode-icon, .mode-name').forEach((mark) => {
+            animateNodeIn(mark, groupIndex * COLUMN_STAGGER_SECONDS + 0.18, -6);
+          });
+        }
+
+        // Cards keep a stable slot identity, so a renamed map crossfades in
+        // place instead of being torn down and rebuilt as a different card.
+        const existing = new Map(
+          Array.from(column.querySelectorAll('.map-card')).map((card) => [Number(card.dataset.slot), card])
+        );
+
+        existing.forEach((card, slot) => {
+          if (slot >= group.maps.length) {
+            cancelCardAnimations(card);
+            card.remove();
+          }
+        });
+
+        group.maps.forEach((map, cardIndex) => {
+          let card = existing.get(cardIndex);
+          if (!card) {
+            card = createMapCard(map, colors, cardIndex);
+            if (openingSettled) {
+              animateNodeIn(card, cardIndex * CARD_STAGGER_SECONDS, 10);
+            }
+          } else {
+            refreshCard(card, map, colors);
+          }
+
+          const cards = Array.from(column.querySelectorAll('.map-card'));
+          if (cards[cardIndex] !== card) {
+            column.insertBefore(card, cards[cardIndex] || null);
+          }
+        });
+      });
+    }
+
+    function triggerAnimations() {
+      if (openingSettled) return [];
+
+      const columns = Array.from(el.mapPool.querySelectorAll('.map-column'));
+      if (columns.length === 0) return [];
+
+      columns.forEach((column, columnIndex) => {
+        const columnDelay = `calc(var(--pool-anim-delay) + ${columnIndex * COLUMN_STAGGER_SECONDS}s)`;
+        column.style.setProperty('--column-delay', columnDelay);
+        column.classList.add('animate-column');
+        column.querySelectorAll('.mode-icon, .mode-name').forEach((mark) => {
+          mark.style.setProperty('--mode-delay', columnDelay);
+          mark.classList.add('animate-mode');
+        });
+        column.querySelectorAll('.map-card').forEach((card, cardIndex) => {
+          card.style.setProperty(
+            '--card-delay',
+            `calc(var(--pool-anim-delay) + ${columnIndex * COLUMN_STAGGER_SECONDS}s + ${cardIndex * CARD_STAGGER_SECONDS}s)`
+          );
+          card.classList.add('animate-card');
+        });
+      });
+
+      return Array.from(el.mapPool.querySelectorAll('.animate-column, .animate-card, .animate-mode'))
+        .flatMap((node) => node.getAnimations());
+    }
+
+    function settleOpening() {
+      openingSettled = true;
+      el.mapPool.querySelectorAll('.map-column').forEach((column) => {
+        column.style.opacity = '1';
+        column.style.transform = '';
+      });
+      el.mapPool.querySelectorAll('.animate-column, .animate-card, .animate-mode').forEach((node) => {
+        node.getAnimations().forEach((animation) => animation.cancel());
+        node.classList.remove('animate-column', 'animate-card', 'animate-mode');
+        node.style.removeProperty('--column-delay');
+        node.style.removeProperty('--card-delay');
+        node.style.removeProperty('--mode-delay');
+        node.style.opacity = '1';
+        node.style.transform = '';
+      });
     }
 
     function sortPoolData(poolData) {
       const flashpointPush = ['Flashpoint', 'Push'];
       const otherModes = [];
       const fpPushModes = [];
-      
+
       for (const modeGroup of poolData) {
         if (flashpointPush.includes(modeGroup.modeName)) {
           fpPushModes.push(modeGroup);
@@ -655,62 +1090,53 @@
           otherModes.push(modeGroup);
         }
       }
-      
+
       otherModes.sort((a, b) => a.modeName.localeCompare(b.modeName));
       fpPushModes.sort((a, b) => a.modeName.localeCompare(b.modeName));
-      
+
       return [...otherModes, ...fpPushModes];
     }
 
     function updateMapPool() {
-      if (!currentData || isRendering) return;
+      if (!currentData) return;
 
       const poolData = currentData.mapPoolData;
 
       if (!poolData || poolData.length === 0) {
         renderedSignature = '';
+        renderedPool = null;
         if (!emptyShown) {
           el.mapPool.innerHTML = '<div class="empty-pool">No maps in pool</div>';
           emptyShown = true;
         }
-        triggerAnimations();
+        // Keep the opening armed: an empty `init` frame can arrive before the
+        // first real pool, and that pool should still reveal column by column.
         return;
       }
 
       emptyShown = false;
-
       const sortedData = sortPoolData(poolData);
-      const signature = poolSignature(sortedData);
+      const colors = teamColors(currentData);
+      const signature = poolSignature(sortedData, colors);
 
-      if (signature === renderedSignature) {
-        // Nothing changed, so keep the columns and the reveal as they are.
-        return;
-      }
+      if (signature === renderedSignature) return;
 
-      isRendering = true;
+      const firstRender = renderedPool === null;
+      if (!firstRender && !openingSettled) settleOpening();
+
       renderedSignature = signature;
+      reconcilePool(sortedData, colors);
+      renderedPool = snapshot(sortedData);
 
-      el.mapPool.innerHTML = '';
-
-      for (const modeGroup of sortedData) {
-        if (modeGroup.maps && modeGroup.maps.length > 0) {
-          el.mapPool.appendChild(createColumn(modeGroup.modeName, modeGroup.maps, { icons: modeGroup.modeIcons }));
+      if (firstRender) {
+        const animations = triggerAnimations();
+        if (animations.length === 0) {
+          settleOpening();
+        } else {
+          Promise.all(animations.map((animation) => animation.finished.catch(() => {})))
+            .then(settleOpening);
         }
       }
-
-      document.fonts.ready.then(fitMapNames);
-      isRendering = false;
-
-      if (columnsAnimated) {
-        // The pool changed after the reveal, so show the new columns straight
-        // away instead of replaying it.
-        el.mapPool.querySelectorAll('.map-column').forEach((column) => {
-          column.style.opacity = '1';
-          column.style.transform = '';
-        });
-      }
-
-      triggerAnimations();
     }
 
     function connect() {
@@ -765,6 +1191,7 @@
         root.style.setProperty(name, String(tokens[name]));
       });
     }
+
     function updateOverlay(data) {
       if (window.fgcUpdateBackground) window.fgcUpdateBackground(data);
       const d = data.data || data;
@@ -776,11 +1203,13 @@
         applyTheme(d.theme);
       }
 
-
       if (data.type === 'init') {
-        const mapPoolData = d.scoreboard?.mapPoolData || d.mapPoolData;
+        // The keyed init frame wraps the scoreboard, so unwrap it before the
+        // pool read. Otherwise teamA/teamB colours fall back to orange.
+        const scoreboard = d.scoreboard || d;
+        const mapPoolData = scoreboard.mapPoolData || d.mapPoolData;
         if (mapPoolData && mapPoolData.length > 0) {
-          return updateOverlay({ type: 'mapPool', data: { ...d, mapPoolData } });
+          return updateOverlay({ type: 'mapPool', data: { ...scoreboard, mapPoolData } });
         }
         return;
       }
@@ -800,7 +1229,6 @@
       }
     }
 
-    document.fonts.ready.then(fitMapNames);
     connect();
   </script>
 </body>

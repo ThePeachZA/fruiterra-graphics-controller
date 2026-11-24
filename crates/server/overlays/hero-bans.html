@@ -497,9 +497,9 @@
         root.dataset.fx = 'on';
       }
 
-      // Opaque turns transparency off; transparent turns it back on. The
-      // short aliases read naturally in a Browser Source URL. A document-level
-      // data-bg attribute lets a host page choose the default.
+      // Opaque is the default; transparent turns it back on. The short aliases
+      // read naturally in a Browser Source URL. A document-level data-bg
+      // attribute lets a host page override that default.
       const requestedBg = query.get('bg');
       const bgMode =
         requestedBg === 'off' ? 'opaque' :
@@ -507,8 +507,8 @@
         requestedBg;
       if (bgMode === 'opaque' || bgMode === 'transparent') {
         root.dataset.bg = bgMode;
-      } else if (root.dataset.bg !== 'opaque') {
-        root.dataset.bg = 'transparent';
+      } else if (root.dataset.bg !== 'opaque' && root.dataset.bg !== 'transparent') {
+        root.dataset.bg = 'opaque';
       }
 
       // A cached section message lets the app switch every connected source
@@ -636,6 +636,11 @@
     let roleIcons = {};
     let currentMapIndex = 0;
     let animationsTriggered = false;
+    const BAN_REVEAL_DURATION = 560;
+    const BAN_REVEAL_STAGGER = 90;
+    const BAN_REVEAL_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+    let renderedHomeHero = '';
+    let renderedAwayHero = '';
 
     function triggerAnimations() {
       // The reveal waits for the scene to settle, so a stinger or a scene
@@ -646,6 +651,38 @@
       el.awayHalf.style.animation = `heroReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) calc(${delay} + 0.12s) both`;
       el.homeCaption.style.animation = `captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) calc(${delay} + 0.35s) both`;
       el.awayCaption.style.animation = `captionReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) calc(${delay} + 0.47s) both`;
+    }
+
+    function prefersReducedMotion() {
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    // A newly selected ban reveals its own art, name and role without replaying
+    // the scene opening. The first ban always leads, whichever side owns it.
+    function animateBanReveal(side, firstSide) {
+      if (prefersReducedMotion()) return;
+      const art = side === 'home' ? el.homeArt : el.awayArt;
+      const name = side === 'home' ? el.homeName : el.awayName;
+      const role = side === 'home' ? el.homeRole : el.awayRole;
+      const baseDelay = side === firstSide ? 0 : BAN_REVEAL_STAGGER;
+      const targets = [
+        [art, [{ opacity: 0, filter: 'blur(8px)' }, { opacity: 1, filter: 'blur(0px)' }]],
+        [name, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'translateY(0)' }]]
+      ];
+      if (!role.hidden) {
+        targets.push([role, [{ opacity: 0, transform: 'scale(0.8)' }, { opacity: 1, transform: 'scale(1)' }]]);
+      }
+
+      targets.forEach(([target, keyframes], index) => {
+        target.getAnimations().forEach((animation) => animation.cancel());
+        const animation = target.animate(keyframes, {
+          duration: BAN_REVEAL_DURATION,
+          delay: baseDelay + index * 70,
+          easing: BAN_REVEAL_EASE,
+          fill: 'both'
+        });
+        animation.finished.then(() => animation.cancel(), () => animation.cancel());
+      });
     }
 
     // Finds the hero inside a transparent canvas.
@@ -712,34 +749,42 @@
     // fills the half instead. The role hexagon only appears when the hero has
     // a role and the app has an icon for it.
     function renderHalf(art, role, roleIcon, name, heroName) {
-      art.querySelectorAll('img').forEach((image) => image.remove());
-      art.classList.remove('hero-half__art--cutout');
-
       name.textContent = heroName || '-';
 
       const cutout = heroName ? heroTransparent[heroName] : null;
       const fallback = heroName ? heroPortraits[heroName] : null;
       const source = cutout || fallback;
+      const currentImage = art.querySelector('img');
+
+      // Keep an image whose source is unchanged so unrelated ban picks do not
+      // make the browser reload the same art.
       if (source) {
-        const img = document.createElement('img');
-        img.src = source;
-        img.alt = heroName;
-        if (cutout) {
-          art.classList.add('hero-half__art--cutout');
-          img.addEventListener('load', () => {
-            const box = art.getBoundingClientRect();
-            if (box.width && box.height) {
-              placeCutout(img, { width: box.width, height: box.height });
-            }
-          });
+        if (!currentImage || currentImage.getAttribute('src') !== source) {
+          art.querySelectorAll('img').forEach((image) => image.remove());
+          art.classList.remove('hero-half__art--cutout');
+          const img = document.createElement('img');
+          img.src = source;
+          img.alt = heroName;
+          if (cutout) {
+            art.classList.add('hero-half__art--cutout');
+            img.addEventListener('load', () => {
+              const box = art.getBoundingClientRect();
+              if (box.width && box.height) {
+                placeCutout(img, { width: box.width, height: box.height });
+              }
+            });
+          }
+          art.appendChild(img);
         }
-        art.appendChild(img);
+      } else if (currentImage) {
+        currentImage.remove();
+        art.classList.remove('hero-half__art--cutout');
       }
 
       const slug = heroName ? heroRoles[heroName] : null;
       const icon = slug ? roleIcons[slug] : null;
       if (icon) {
-        roleIcon.src = icon;
+        if (roleIcon.getAttribute('src') !== icon) roleIcon.src = icon;
         roleIcon.alt = slug;
         role.hidden = false;
       } else {
@@ -860,12 +905,30 @@
         // Hero bans.
         const currentMapBans = (d.heroBans && d.heroBans[currentMapIndex])
           || { firstBanTeam: null, teamA: [], teamB: [] };
-        updateHeroBans(currentMapBans.teamA || [], currentMapBans.teamB || []);
+        const teamABans = currentMapBans.teamA || [];
+        const teamBBans = currentMapBans.teamB || [];
+        const nextHomeHero = teamABans[0] || '';
+        const nextAwayHero = teamBBans[0] || '';
+        const firstSide = currentMapBans.firstBanTeam === 'B' ? 'away' : 'home';
+        const opening = !animationsTriggered;
+
+        updateHeroBans(teamABans, teamBBans);
         updateBanOrder(currentMapBans.firstBanTeam);
+
+        if (!opening) {
+          if (nextHomeHero && renderedHomeHero !== nextHomeHero) {
+            animateBanReveal('home', firstSide);
+          }
+          if (nextAwayHero && renderedAwayHero !== nextAwayHero) {
+            animateBanReveal('away', firstSide);
+          }
+        }
+        renderedHomeHero = nextHomeHero;
+        renderedAwayHero = nextAwayHero;
 
         document.fonts.ready.then(fitHeroBanText);
 
-        if (!animationsTriggered) {
+        if (opening) {
           triggerAnimations();
           animationsTriggered = true;
         }

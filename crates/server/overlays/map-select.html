@@ -161,6 +161,44 @@
       }
     }
 
+    @keyframes mapCardFocus {
+      from { flex-grow: 1; }
+      to { flex-grow: 1.8; }
+    }
+
+    @keyframes banReveal {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.78);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes winnerLogoReveal {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.6);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    @keyframes footerReveal {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     /* === INITIAL HIDDEN STATES === */
     .map-select-title,
     .map-card,
@@ -180,9 +218,26 @@
       animation-delay: var(--card-delay, var(--anim-delay));
     }
 
-    .animate-card-expand {
-      flex: 1.8 !important;
-      transition: flex 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    .map-card--current.animate-card {
+      --current-grow: 1;
+      animation:
+        cardReveal var(--anim-duration) var(--ease-out-expo) forwards,
+        mapCardFocus 760ms var(--ease-out-expo) forwards;
+      animation-delay:
+        var(--card-delay, var(--anim-delay)),
+        var(--focus-delay, calc(var(--card-delay, var(--anim-delay)) + 160ms));
+    }
+
+    /* After the opening reveal, later data changes drive their own animations. */
+    .map-card--settled .map-card__ban,
+    .map-card--settled .map-card__text,
+    .map-card--settled .map-card__logo--winner {
+      animation: none !important;
+      opacity: 1;
+    }
+
+    .map-card--settled .map-card__logo--winner {
+      transform: translate(-50%, -50%);
     }
 
     .animate-watermark {
@@ -218,7 +273,7 @@
     /* === MAP CARDS CONTAINER === */
     .maps-container {
       display: flex;
-      gap: 20px;
+      gap: 16px;
       justify-content: center;
       width: 100%;
     }
@@ -226,61 +281,33 @@
     /* === MAP CARD === */
     .map-card {
       height: 600px;
-      border-radius: 6px;
+      border-radius: 8px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       background: var(--fgc-surface-raised);
       position: relative;
-      clip-path: inset(0 round 6px);
-      flex: 1;
+      clip-path: inset(0 round 8px);
+      flex: 1 1 0;
       min-width: 0;
     }
 
     .map-card--current {
-      flex: 1.8;
-      box-shadow: inset 0 0 0 2px var(--fgc-accent);
-    }
-
-    .map-card__current {
-      position: absolute;
-      top: 16px;
-      left: 16px;
-      z-index: 4;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border-radius: var(--fgc-radius-sm);
-      background: var(--fgc-accent);
-      color: var(--fgc-on-accent);
-      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 14px;
-      line-height: 1;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .map-card__current::before {
-      content: '';
-      width: 7px;
-      height: 7px;
-      background: currentColor;
-      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      flex: var(--current-grow, 1.8) 1 0;
     }
 
     /* === MAP CARD LOGO === */
     .map-card__logo {
       position: absolute;
-      top: 151px;
+      top: calc(50% - 52px);
       left: 50%;
-      transform: translateX(-50%);
-      width: 120px;
-      height: 120px;
+      transform: translate(-50%, -50%);
+      width: 112px;
+      height: 112px;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      z-index: 2;
+      z-index: 3;
     }
 
     .map-card__logo--hidden {
@@ -288,18 +315,23 @@
     }
 
     .map-card__logo--winner {
-      filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.55));
+      isolation: isolate;
+      filter:
+        drop-shadow(0 6px 18px rgba(0, 0, 0, 0.65))
+        drop-shadow(0 0 16px var(--winner-color, var(--fgc-accent)));
+      animation: winnerLogoReveal 620ms var(--ease-out-expo) both;
+      animation-delay: calc(var(--card-delay, var(--anim-delay)) + 520ms);
     }
 
     .map-card__logo--winner::before {
       content: '';
       position: absolute;
-      inset: -14px;
+      inset: -20px;
       z-index: -1;
-      background: var(--winner-color, var(--fgc-accent));
-      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-      opacity: 0.24;
-      filter: blur(10px);
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--winner-color, var(--fgc-accent)), transparent 70%);
+      opacity: 0.28;
+      filter: blur(12px);
       pointer-events: none;
     }
 
@@ -307,46 +339,54 @@
     .map-card__image {
       width: 100%;
       flex: 1;
+      /* Flex rounding can leave a one-pixel gutter at either card edge. */
+      margin-inline: -1px;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
       position: relative;
     }
 
-    .map-card__image--completed {
-      filter: grayscale(100%);
-    }
-
-    .map-card__image--completed::before {
+    .map-card__image::after {
       content: '';
       position: absolute;
       inset: 0;
       z-index: 1;
-      background: radial-gradient(circle at 50% 45%, var(--winner-color, var(--fgc-accent)), transparent 62%);
-      opacity: 0.12;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0.28) 48%,
+        rgba(0, 0, 0, 0.78) 100%
+      );
       pointer-events: none;
     }
 
-    .map-card__image--completed::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: var(--fgc-accent-soft);
-      pointer-events: none;
+    .map-card__image--complete {
+      filter: brightness(0.52) saturate(0.45);
     }
 
     .map-card__image--placeholder {
       background: var(--fgc-surface-muted);
     }
 
+    /* A dark curtain covers map swaps so no empty surface can flash through. */
+    .map-card__swap {
+      position: absolute;
+      inset: -1px;
+      z-index: 2;
+      opacity: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 0.28) 48%,
+          rgba(0, 0, 0, 0.78) 100%
+        ),
+        var(--fgc-surface-muted);
+    }
+
     /* === MAP CARD BANS === */
-    /* The banned heroes sit inside the map image, the way the OWCS27 map
-       select does it, so the card keeps one clean image area. The strip lives
-       beside the image instead of inside it, because a greyscaled completed
-       image would otherwise drain the portraits too. */
     .map-card__visual {
       position: relative;
       flex: 1;
@@ -354,186 +394,162 @@
       display: flex;
     }
 
+    .map-card__visual--complete::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: radial-gradient(
+        circle at 50% 50%,
+        var(--winner-color, var(--fgc-accent)),
+        transparent 68%
+      );
+      opacity: 0.13;
+      pointer-events: none;
+    }
+
     .map-card__bans {
       position: absolute;
-      left: 14px;
-      bottom: 14px;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
       display: flex;
-      gap: 10px;
-      z-index: 2;
+      gap: 18px;
+      z-index: 4;
       pointer-events: none;
     }
 
     .map-card__ban {
       position: relative;
-      width: 58px;
-      height: 58px;
-      background: var(--fgc-surface-inverse);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+      width: 52px;
+      height: 60px;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.55));
+      animation: banReveal 420ms var(--ease-out-expo) both;
+      animation-delay: calc(var(--card-delay, var(--anim-delay)) + var(--ban-delay, 0.38s));
+    }
+
+    .map-card__ban::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--fgc-accent);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     }
 
     .map-card__ban img {
+      position: absolute;
+      inset: 2px;
       display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+      width: calc(100% - 4px);
+      height: calc(100% - 4px);
+      object-fit: contain;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     }
 
-    /* The ban order is a small diamond in the corner, matching the OWCS27
-       map select. */
     .map-card__ban-number {
       position: absolute;
-      top: -8px;
+      top: -9px;
       right: -8px;
-      width: 24px;
-      height: 24px;
-      transform: rotate(45deg);
+      width: 26px;
+      height: 30px;
       background: var(--fgc-accent);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
       display: flex;
       align-items: center;
       justify-content: center;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
+    }
+
+    .map-card__ban-number::before {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: var(--fgc-surface);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     }
 
     .map-card__ban-number span {
-      transform: rotate(-45deg);
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 13px;
+      position: relative;
+      z-index: 1;
+      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
+      font-size: 11px;
       line-height: 1;
-      color: var(--fgc-on-accent);
+      color: var(--fgc-accent);
     }
 
     /* === MAP CARD TEXT === */
     .map-card__text {
       width: 100%;
-      min-height: 120px;
+      height: 112px;
+      container-type: inline-size;
       background: var(--fgc-surface-raised);
+      border-top: 1px solid var(--fgc-line);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 10px 20px;
+      gap: 2px;
+      padding: 8px 16px;
+      overflow: hidden;
+      animation: footerReveal 420ms var(--ease-out-expo) both;
+      animation-delay: calc(var(--card-delay, var(--anim-delay)) + 260ms);
+    }
+
+    .map-card__meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 20px;
     }
 
     .map-card__type {
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 18px;
+      font-size: 14px;
       color: var(--fgc-accent);
       text-transform: uppercase;
       text-align: center;
+      line-height: 1;
     }
 
     .map-card__name {
+      width: 100%;
       font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 24px;
+      font-size: clamp(16px, 8cqw, 24px);
       color: var(--fgc-text);
       text-transform: uppercase;
       text-align: center;
-      line-height: 1.15;
+      line-height: 1.1;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
     }
 
     .map-card__chosen-by {
+      width: 100%;
       font-family: 'FGC Display', 'Apotek', sans-serif;
-      font-size: 14px;
+      font-size: 12px;
       color: var(--fgc-text-muted);
       text-transform: uppercase;
       text-align: center;
-      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .map-card__chosen-by--hidden {
       display: none;
     }
 
-    /* === SCORE BOARD === */
-    .map-card__board {
+    .map-card__text-ghost {
       position: absolute;
-      top: 286px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: auto;
-      height: 64px;
-      border: 1px solid var(--fgc-line);
-      border-radius: var(--fgc-radius-md);
-      background: var(--fgc-surface);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 5px;
-      z-index: 3;
-    }
-
-    .map-card__board--hidden {
-      display: none;
-    }
-
-    .map-card__score-team {
-      position: relative;
-      min-width: 86px;
-      height: 52px;
-      border-radius: var(--fgc-radius-sm);
-      background: var(--fgc-surface-raised);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      overflow: hidden;
-    }
-
-    .map-card__score-team--a {
-      --score-color: var(--team-a-color, var(--fgc-accent));
-    }
-
-    .map-card__score-team--b {
-      --score-color: var(--team-b-color, var(--fgc-line-strong));
-    }
-
-    .map-card__score-team::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--score-color);
-      opacity: 0.16;
-    }
-
-    .map-card__score-team--winner::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border: 2px solid var(--score-color);
-      border-radius: inherit;
-      box-shadow: 0 0 14px var(--score-color);
-      opacity: 0.55;
+      box-sizing: border-box;
+      z-index: 4;
       pointer-events: none;
-    }
-
-    .map-card__score-tag,
-    .map-card__score {
-      position: relative;
-      z-index: 1;
-      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      text-transform: uppercase;
-      text-align: center;
-    }
-
-    .map-card__score-tag {
-      font-size: 14px;
-      color: var(--score-color);
-      letter-spacing: 0.06em;
-    }
-
-    .map-card__score {
-      font-size: 40px;
-      line-height: 1;
-      color: var(--fgc-text);
-    }
-
-    .map-card__score-divider {
-      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
-      font-size: 32px;
-      color: var(--fgc-text-faint);
-      text-align: center;
+      animation: none !important;
     }
 
     /* === WATERMARK === */
@@ -571,6 +587,28 @@
 
     .tournament-logo.icon-hidden {
       display: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .animate-title,
+      .animate-card,
+      .animate-watermark,
+      .animate-logo,
+      .map-card__logo--winner,
+      .map-card__ban,
+      .map-card__text {
+        animation: none !important;
+        opacity: 1;
+        transform: none;
+      }
+
+      .map-card__logo--winner {
+        transform: translate(-50%, -50%);
+      }
+
+      .map-card--current.animate-card {
+        --current-grow: 1.8;
+      }
     }
   </style>
   <!-- === FGC CANONICAL FX START === -->
@@ -654,9 +692,9 @@
         root.dataset.fx = 'on';
       }
 
-      // Opaque turns transparency off; transparent turns it back on. The
-      // short aliases read naturally in a Browser Source URL. A document-level
-      // data-bg attribute lets a host page choose the default.
+      // Opaque is the default; transparent turns it back on. The short aliases
+      // read naturally in a Browser Source URL. A document-level data-bg
+      // attribute lets a host page override that default.
       const requestedBg = query.get('bg');
       const bgMode =
         requestedBg === 'off' ? 'opaque' :
@@ -664,8 +702,8 @@
         requestedBg;
       if (bgMode === 'opaque' || bgMode === 'transparent') {
         root.dataset.bg = bgMode;
-      } else if (root.dataset.bg !== 'opaque') {
-        root.dataset.bg = 'transparent';
+      } else if (root.dataset.bg !== 'opaque' && root.dataset.bg !== 'transparent') {
+        root.dataset.bg = 'opaque';
       }
 
       // A cached section message lets the app switch every connected source
@@ -730,13 +768,52 @@
       tournamentLogo: document.getElementById('tournament-logo')
     };
 
-    let gameModeIcons = {};
-    let heroPortraits = {};
+    let heroIcons = {};
     let heroBans = [];
     let currentMapIndex = -1;
     let loserPicks = true;
     let animationsTriggered = false;
+    let openingSettled = false;
     const TIEBREAKER_INDEX = 7;
+    const RESIZE_DURATION = 720;
+    const CONTENT_IN_DURATION = 420;
+    const CURTAIN_FADE_DURATION = 360;
+    const LOGO_REVEAL_DURATION = 720;
+    const FOCUS_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+    // Reconciliation compares each message with the last rendered snapshot.
+    // Only the fields that actually changed are animated after the opening reveal.
+    let renderedMaps = null;
+    let renderedHeroBans = null;
+    let renderedHeroIcons = null;
+    let renderedTeamA = null;
+    let renderedTeamB = null;
+    let renderedLoserPicks = true;
+    let renderedCurrentIndex = -1;
+
+    function snapshot(value) {
+      return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+    }
+
+    function sameValue(left, right) {
+      return JSON.stringify(left) === JSON.stringify(right);
+    }
+
+    function emptyMap() {
+      return {
+        name: '',
+        type: '',
+        scoreA: 0,
+        scoreB: 0,
+        mapImageUrl: '',
+        completed: false,
+        chosenByName: null
+      };
+    }
+
+    function prefersReducedMotion() {
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
 
     // The projected maps array is the source of truth. The legacy tiebreaker
     // only adds a card when the old seven-map boundary is selected as current.
@@ -752,18 +829,10 @@
       el.tournamentLogo.classList.add('animate-logo');
 
       const cards = el.mapsContainer.querySelectorAll('.map-card');
-      const currentCard = el.mapsContainer.querySelector('.map-card--current');
-
       cards.forEach((card, i) => {
         card.style.setProperty('--card-delay', `calc(var(--anim-delay) + ${0.1 + i * 0.1}s)`);
         card.classList.add('animate-card');
       });
-
-      if (currentCard) {
-        setTimeout(() => {
-          currentCard.classList.add('animate-card-expand');
-        }, 3500);
-      }
     }
 
     function resetAnimations() {
@@ -773,9 +842,143 @@
 
       const cards = el.mapsContainer.querySelectorAll('.map-card');
       cards.forEach(card => {
-        card.classList.remove('animate-card', 'animate-card-expand');
+        card.classList.remove('animate-card');
         card.style.removeProperty('--card-delay');
       });
+    }
+
+    // The opening reveal uses CSS `forwards` fills. Cancel them once live
+    // updates begin so targeted WAAPI animations own the final state.
+    function settleInitialAnimations() {
+      el.mapsContainer.querySelectorAll('.map-card').forEach(card => {
+        card.getAnimations().forEach(animation => animation.cancel());
+        card.classList.remove('animate-card');
+        card.classList.add('map-card--settled');
+        card.style.opacity = '1';
+        card.style.transform = '';
+        card.style.removeProperty('--card-delay');
+        card.style.removeProperty('--focus-delay');
+        if (card.classList.contains('map-card--current')) {
+          card.style.setProperty('--current-grow', '1.8');
+        }
+        card.querySelectorAll('.map-card__logo, .map-card__ban, .map-card__text').forEach(child => {
+          child.getAnimations().forEach(animation => animation.cancel());
+        });
+      });
+    }
+
+    function cancelCardSwaps(card) {
+      if (card._swapAnimations) {
+        card._swapAnimations.forEach(animation => animation.cancel());
+      }
+      card._swapAnimations = [];
+      const swapLayer = card.querySelector('.map-card__swap');
+      if (swapLayer) swapLayer.style.removeProperty('opacity');
+      card.querySelectorAll('.map-card__text-ghost').forEach((ghost) => ghost.remove());
+    }
+
+    function animateContentSwap(card, targets, applyUpdate) {
+      cancelCardSwaps(card);
+      const swapLayer = card.querySelector('.map-card__swap');
+      if (prefersReducedMotion() || !swapLayer) {
+        applyUpdate();
+        return;
+      }
+
+      const token = String((Number(card.dataset.swap || '0') + 1));
+      card.dataset.swap = token;
+
+      const text = card.querySelector('.map-card__text');
+      let textGhost = null;
+      if (text) {
+        const textBox = text.getBoundingClientRect();
+        const cardBox = card.getBoundingClientRect();
+        textGhost = text.cloneNode(true);
+        textGhost.classList.add('map-card__text-ghost');
+        textGhost.style.left = `${textBox.left - cardBox.left}px`;
+        textGhost.style.top = `${textBox.top - cardBox.top}px`;
+        textGhost.style.width = `${textBox.width}px`;
+        textGhost.style.height = `${textBox.height}px`;
+        card.appendChild(textGhost);
+      }
+
+      // Cover first, swap once, then reveal. A separate fade-out made the
+      // change read as two animations.
+      swapLayer.style.opacity = '1';
+      applyUpdate();
+
+      // Art leads; the old text fades out as type and name reveal together.
+      const inAnimations = targets.map((target, index) =>
+        target.animate(
+          [
+            { opacity: 0, transform: 'translateY(6px)' },
+            { opacity: 1, transform: 'translateY(0)' }
+          ],
+          {
+            duration: CONTENT_IN_DURATION,
+            delay: index === 0 ? 0 : 60,
+            easing: FOCUS_EASE,
+            fill: 'forwards'
+          }
+        )
+      );
+      inAnimations.push(
+        swapLayer.animate(
+          [{ opacity: 1 }, { opacity: 0 }],
+          { duration: CURTAIN_FADE_DURATION, easing: FOCUS_EASE, fill: 'forwards' }
+        )
+      );
+      if (textGhost) {
+        inAnimations.push(
+          textGhost.animate(
+            [{ opacity: 1 }, { opacity: 0 }],
+            { duration: CONTENT_IN_DURATION, delay: 60, easing: FOCUS_EASE, fill: 'forwards' }
+          )
+        );
+      }
+      card._swapAnimations = inAnimations;
+
+      Promise.all(inAnimations.map(animation => animation.finished.catch(() => {}))).then(() => {
+        if (card.dataset.swap !== token) return;
+        swapLayer.style.removeProperty('opacity');
+        if (textGhost) textGhost.remove();
+        inAnimations.forEach(animation => animation.cancel());
+        card._swapAnimations = [];
+      });
+    }
+
+    function animateCardWidth(card, from, to, cleanup) {
+      if (prefersReducedMotion()) {
+        if (cleanup) cleanup();
+        return;
+      }
+      const animation = card.animate(
+        [{ flexGrow: String(from) }, { flexGrow: String(to) }],
+        { duration: RESIZE_DURATION, easing: FOCUS_EASE }
+      );
+      const finish = () => {
+        if (cleanup) cleanup();
+        animation.cancel();
+      };
+      animation.finished.then(finish, finish);
+    }
+
+    function animateLogoIn(logo, index) {
+      if (prefersReducedMotion()) return;
+      logo.getAnimations().forEach(animation => animation.cancel());
+      const animation = logo.animate(
+        [
+          { opacity: 0, transform: 'translate(-50%, -50%) scale(0.6)' },
+          { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }
+        ],
+        {
+          duration: LOGO_REVEAL_DURATION,
+          delay: index * 40,
+          easing: FOCUS_EASE,
+          fill: 'both'
+        }
+      );
+      animation.finished.then(() => animation.cancel(), () => animation.cancel());
     }
 
     function safeHexColor(value, fallback) {
@@ -784,7 +987,7 @@
     }
 
     // The banned heroes are ordered by who banned first, so the number on the
-    // diamond matches the order the bans were made in.
+    // order chip matches the order the bans were made in.
     function orderedBans(bans) {
       if (!bans) return [];
       const teamA = Array.isArray(bans.teamA) ? bans.teamA : [];
@@ -797,11 +1000,12 @@
       if (!names.length) return '';
       const items = names
         .map((heroName, index) => {
-          const portraitUrl = heroPortraits[heroName];
-          if (!portraitUrl) return '';
+          const iconUrl = heroIcons[heroName];
+          if (!iconUrl) return '';
+          const banDelay = `${(0.38 + index * 0.07).toFixed(2)}s`;
           return (
-            `<div class="map-card__ban">` +
-            `<img src="${escapeHtml(portraitUrl)}" alt="">` +
+            `<div class="map-card__ban" style="--ban-delay: ${banDelay}">` +
+            `<img src="${escapeHtml(iconUrl)}" alt="">` +
             `<span class="map-card__ban-number"><span>${index + 1}</span></span>` +
             `</div>`
           );
@@ -811,10 +1015,36 @@
       return `<div class="map-card__bans">${items}</div>`;
     }
 
+    function winnerDetails(mapData, teamAData, teamBData) {
+      const isCompleted = !!(mapData && mapData.completed);
+      const aWon = isCompleted && mapData.scoreA > mapData.scoreB;
+      const bWon = isCompleted && mapData.scoreB > mapData.scoreA;
+      const teamAColor = safeHexColor(teamAData && teamAData.color, '#3ecf8e');
+      const teamBColor = safeHexColor(teamBData && teamBData.color, '#ef5b5b');
+      const winnerColor = aWon ? teamAColor : bWon ? teamBColor : 'var(--fgc-accent)';
+      const logoUrl = aWon
+        ? teamAData && teamAData.logoUrl
+        : bWon
+          ? teamBData && teamBData.logoUrl
+          : '';
+      return {
+        isCompleted,
+        aWon,
+        bWon,
+        teamAColor,
+        teamBColor,
+        winnerColor,
+        logoUrl: logoUrl || '',
+        winner: aWon ? 'a' : bWon ? 'b' : 'none'
+      };
+    }
+
     function createMapCard(mapData, index, teamAData, teamBData, isCurrent, bans) {
       const card = document.createElement('div');
       card.className = isCurrent ? 'map-card map-card--current' : 'map-card';
       card.dataset.index = index;
+      card.dataset.current = isCurrent ? 'true' : 'false';
+      card.dataset.complete = mapData.completed ? 'true' : 'false';
 
       const mapNameRaw = mapData.name || '';
       const mapTypeRaw = mapData.type || '';
@@ -826,14 +1056,12 @@
       const mapName = hasMap ? mapNameRaw : 'TBC';
       const mapType = hasMode ? mapTypeRaw : 'TBC';
 
-      const modeName = hasMode ? mapType.toLowerCase() : '';
-      const modeIconUrl = modeName ? gameModeIcons[modeName] : null;
-
       const teamAColor = safeHexColor(teamAData && teamAData.color, '#3ecf8e');
-      const teamBColor = safeHexColor(teamBData && teamBData.color, '#ef51b7');
+      const teamBColor = safeHexColor(teamBData && teamBData.color, '#ef5b5b');
       const aWon = isCompleted && mapData.scoreA > mapData.scoreB;
       const bWon = isCompleted && mapData.scoreB > mapData.scoreA;
       const winnerColor = aWon ? teamAColor : bWon ? teamBColor : 'var(--fgc-accent)';
+      card.dataset.winner = aWon ? 'a' : bWon ? 'b' : 'none';
       card.setAttribute(
         'style',
         `--team-a-color: ${teamAColor}; --team-b-color: ${teamBColor}; --winner-color: ${winnerColor};`
@@ -848,8 +1076,6 @@
       } else if (bWon && teamBData && teamBData.logoUrl) {
         logoContent = `background-image: url('${teamBData.logoUrl}')`;
         logoClass += ' map-card__logo--winner';
-      } else if (!isCompleted && !hasMap && hasMode && modeIconUrl) {
-        logoContent = `background-image: url('${modeIconUrl}')`;
       } else {
         logoClass += ' map-card__logo--hidden';
       }
@@ -857,41 +1083,35 @@
       let imageClass = 'map-card__image';
       let imageStyle = '';
 
-      if (isCompleted && mapImage) {
-        imageClass += ' map-card__image--completed';
-        imageStyle = `background-image: url('${mapImage}')`;
-      } else if (hasMap && mapImage) {
+      if (mapImage && (isCompleted || hasMap)) {
         imageStyle = `background-image: url('${mapImage}')`;
       } else {
         imageClass += ' map-card__image--placeholder';
       }
+      if (isCompleted) {
+        imageClass += ' map-card__image--complete';
+      }
 
-      const boardClass = isCompleted ? 'map-card__board' : 'map-card__board map-card__board--hidden';
+      const visualClass =
+        isCompleted && (aWon || bWon)
+          ? 'map-card__visual map-card__visual--complete'
+          : 'map-card__visual';
 
       const showChosenBy = mapData.chosenByName && (isCompleted || isCurrent || !loserPicks);
       const chosenByText = showChosenBy ? `${mapData.chosenByName}'s Pick` : '';
       const chosenByClass = chosenByText ? 'map-card__chosen-by' : 'map-card__chosen-by map-card__chosen-by--hidden';
 
       card.innerHTML = `
-        ${isCurrent ? '<div class="map-card__current">Current map</div>' : ''}
         <div class="${logoClass}" id="logo-${index}" style="${logoContent}"></div>
-        <div class="map-card__visual">
+        <div class="${visualClass}">
           <div class="${imageClass}" id="image-${index}" style="${imageStyle}"></div>
+          <div class="map-card__swap"></div>
           ${createBanStrip(bans)}
         </div>
-        <div class="${boardClass}" id="board-${index}">
-          <div class="map-card__score-team map-card__score-team--a ${aWon ? 'map-card__score-team--winner' : ''}">
-            <span class="map-card__score-tag">${escapeHtml(teamAData && teamAData.tag ? teamAData.tag : 'A')}</span>
-            <span class="map-card__score" id="score-a-${index}">${escapeHtml(mapData.scoreA || 0)}</span>
-          </div>
-          <div class="map-card__score-divider">:</div>
-          <div class="map-card__score-team map-card__score-team--b ${bWon ? 'map-card__score-team--winner' : ''}">
-            <span class="map-card__score-tag">${escapeHtml(teamBData && teamBData.tag ? teamBData.tag : 'B')}</span>
-            <span class="map-card__score" id="score-b-${index}">${escapeHtml(mapData.scoreB || 0)}</span>
-          </div>
-        </div>
         <div class="map-card__text">
-          <div class="map-card__type">${escapeHtml(mapType || '')}</div>
+          <div class="map-card__meta">
+            <span class="map-card__type">${escapeHtml(mapType || '')}</span>
+          </div>
           <div class="map-card__name">${escapeHtml(mapName || '')}</div>
           <div class="${chosenByClass}">${escapeHtml(chosenByText)}</div>
         </div>
@@ -906,11 +1126,17 @@
       const mapsToShow = projectedMapCardCount(maps);
 
       for (let i = 0; i < mapsToShow; i++) {
-        const mapData = maps[i] || { name: '', type: '', scoreA: 0, scoreB: 0, mapImageUrl: '', completed: false, chosenByName: null };
+        const mapData = maps[i] || emptyMap();
         const isCurrent = i === currentMapIndex;
         const card = createMapCard(mapData, i, teamAData, teamBData, isCurrent, heroBans[i]);
+        if (isCurrent) {
+          const settleAfter = 0.1 + (mapsToShow - 1) * 0.1 + 1.25;
+          card.style.setProperty('--focus-delay', `calc(var(--anim-delay) + ${settleAfter}s)`);
+        }
         el.mapsContainer.appendChild(card);
       }
+
+      renderedCurrentIndex = currentMapIndex;
 
       if (!animationsTriggered) {
         triggerAnimations();
@@ -922,6 +1148,168 @@
           card.style.transform = '';
         });
       }
+    }
+
+    function refreshCardContent(card, index, mapData, teamAData, teamBData, bans, picks, isCurrent, iconsChanged) {
+      const previousMap = renderedMaps && renderedMaps[index] ? renderedMaps[index] : emptyMap();
+      const details = winnerDetails(mapData, teamAData, teamBData);
+      const previousDetails = winnerDetails(previousMap, renderedTeamA, renderedTeamB);
+
+      const mapNameRaw = mapData.name || '';
+      const mapTypeRaw = mapData.type || '';
+      const mapImage = mapData.mapImageUrl || '';
+      const hasMap = !!mapNameRaw && mapNameRaw.toLowerCase() !== 'tbc';
+      const hasMode = !!mapTypeRaw && mapTypeRaw.toLowerCase() !== 'tbc';
+      const mapName = hasMap ? mapNameRaw : 'TBC';
+      const mapType = hasMode ? mapTypeRaw : 'TBC';
+      const hasArt = !!mapImage && (details.isCompleted || hasMap);
+
+      const identityChanged =
+        !sameValue(previousMap.name, mapNameRaw) ||
+        !sameValue(previousMap.type, mapTypeRaw) ||
+        !sameValue(previousMap.mapImageUrl, mapImage);
+
+      card.style.setProperty('--team-a-color', details.teamAColor);
+      card.style.setProperty('--team-b-color', details.teamBColor);
+      card.style.setProperty('--winner-color', details.winnerColor);
+      card.dataset.complete = details.isCompleted ? 'true' : 'false';
+      card.dataset.winner = details.winner;
+
+      const image = card.querySelector('.map-card__image');
+      const visual = card.querySelector('.map-card__visual');
+      const type = card.querySelector('.map-card__type');
+      const name = card.querySelector('.map-card__name');
+      const logo = card.querySelector('.map-card__logo');
+
+      image.classList.toggle('map-card__image--placeholder', !hasArt);
+      image.classList.toggle('map-card__image--complete', details.isCompleted);
+      visual.classList.toggle(
+        'map-card__visual--complete',
+        details.isCompleted && (details.aWon || details.bWon)
+      );
+
+      if (identityChanged) {
+        const applyMapContent = () => {
+          image.style.backgroundImage = hasArt ? `url('${mapImage}')` : '';
+          type.textContent = mapType || '';
+          name.textContent = mapName || '';
+        };
+        // Empty slots have no art to wipe, so a curtain only makes them flicker.
+        if (hasArt) {
+          animateContentSwap(card, [image, type, name], applyMapContent);
+        } else {
+          cancelCardSwaps(card);
+          applyMapContent();
+        }
+      }
+
+      if (details.logoUrl) {
+        logo.classList.remove('map-card__logo--hidden');
+        logo.classList.add('map-card__logo--winner');
+        logo.style.backgroundImage = `url('${details.logoUrl}')`;
+        if (previousDetails.logoUrl !== details.logoUrl) {
+          animateLogoIn(logo, index);
+        }
+      } else {
+        logo.style.backgroundImage = '';
+        logo.classList.remove('map-card__logo--winner');
+        logo.classList.add('map-card__logo--hidden');
+      }
+
+      const showChosenBy = mapData.chosenByName && (details.isCompleted || isCurrent || !picks);
+      const chosenByText = showChosenBy ? `${mapData.chosenByName}'s Pick` : '';
+      const chosenBy = card.querySelector('.map-card__chosen-by');
+      chosenBy.textContent = chosenByText;
+      chosenBy.classList.toggle('map-card__chosen-by--hidden', !chosenByText);
+
+      const bansChanged =
+        iconsChanged || !sameValue(renderedHeroBans && renderedHeroBans[index], bans);
+      if (bansChanged) {
+        const existing = card.querySelector('.map-card__bans');
+        if (existing) existing.remove();
+        const strip = createBanStrip(bans);
+        if (strip) visual.insertAdjacentHTML('beforeend', strip);
+      }
+    }
+
+    function setCurrentVisual(nextIndex) {
+      const cards = Array.from(el.mapsContainer.querySelectorAll('.map-card'));
+      const previousCard = cards.find(card => Number(card.dataset.index) === renderedCurrentIndex);
+      const nextCard = cards.find(card => Number(card.dataset.index) === nextIndex);
+
+      if (previousCard && previousCard !== nextCard) {
+        previousCard.classList.remove('map-card--current');
+        previousCard.dataset.current = 'false';
+        previousCard.style.removeProperty('--current-grow');
+        animateCardWidth(previousCard, 1.8, 1);
+      }
+
+      if (nextCard) {
+        nextCard.classList.add('map-card--current');
+        nextCard.dataset.current = 'true';
+        nextCard.style.setProperty('--current-grow', '1.8');
+        if (previousCard !== nextCard) {
+          animateCardWidth(nextCard, 1, 1.8, () => {
+            nextCard.style.removeProperty('--current-grow');
+          });
+        } else {
+          nextCard.style.removeProperty('--current-grow');
+        }
+      }
+
+      renderedCurrentIndex = nextIndex;
+    }
+
+    function ensureCardCount(count, maps, teamAData, teamBData, bans, picks) {
+      const container = el.mapsContainer;
+
+      while (container.children.length > count) {
+        container.lastElementChild.remove();
+      }
+
+      while (container.children.length < count) {
+        const index = container.children.length;
+        const card = createMapCard(
+          maps[index] || emptyMap(),
+          index,
+          teamAData,
+          teamBData,
+          index === currentMapIndex,
+          bans[index]
+        );
+        card.classList.add('map-card--settled');
+        card.style.opacity = '1';
+        card.style.transform = '';
+        container.appendChild(card);
+      }
+    }
+
+    function reconcileMaps(maps, teamAData, teamBData, bans, picks, nextCurrentIndex) {
+      if (!openingSettled) {
+        settleInitialAnimations();
+        openingSettled = true;
+      }
+      currentMapIndex = nextCurrentIndex;
+
+      const mapsToShow = projectedMapCardCount(maps);
+      ensureCardCount(mapsToShow, maps, teamAData, teamBData, bans, picks);
+
+      const iconsChanged = !sameValue(renderedHeroIcons, heroIcons);
+      el.mapsContainer.querySelectorAll('.map-card').forEach((card, index) => {
+        refreshCardContent(
+          card,
+          index,
+          maps[index] || emptyMap(),
+          teamAData,
+          teamBData,
+          bans[index],
+          picks,
+          index === nextCurrentIndex,
+          iconsChanged
+        );
+      });
+
+      setCurrentVisual(nextCurrentIndex);
     }
 
     function connect() {
@@ -987,29 +1375,31 @@
       }
 
       if (data.type === 'scoreboard' || data.type === 'gameOverlay' || data.type === 'mapSelect') {
-        if (d.currentMapIndex !== undefined) {
-          currentMapIndex = d.currentMapIndex;
+        const nextCurrent = d.currentMapIndex !== undefined ? d.currentMapIndex : currentMapIndex;
+        const nextLoserPicks = d.loserPicks !== undefined ? d.loserPicks : loserPicks;
+        const nextBans = d.heroBans !== undefined ? d.heroBans : heroBans;
+        const nextIcons = d.heroIcons !== undefined ? d.heroIcons : heroIcons;
+        const nextMaps = d.maps !== undefined ? d.maps : renderedMaps || [];
+        const nextTeamA = d.teamA !== undefined ? d.teamA : renderedTeamA;
+        const nextTeamB = d.teamB !== undefined ? d.teamB : renderedTeamB;
+
+        currentMapIndex = nextCurrent;
+        loserPicks = nextLoserPicks;
+        heroBans = nextBans;
+        heroIcons = nextIcons;
+
+        if (!animationsTriggered && nextMaps.length) {
+          updateMapsContainer(nextMaps, nextTeamA, nextTeamB);
+        } else if (animationsTriggered) {
+          reconcileMaps(nextMaps, nextTeamA, nextTeamB, nextBans, nextLoserPicks, nextCurrent);
         }
 
-        if (d.loserPicks !== undefined) {
-          loserPicks = d.loserPicks;
-        }
-
-        if (d.gameModeIcons) {
-          gameModeIcons = d.gameModeIcons;
-        }
-
-        if (d.heroBans) {
-          heroBans = d.heroBans;
-        }
-
-        if (d.heroPortraits) {
-          heroPortraits = d.heroPortraits;
-        }
-
-        if (d.maps) {
-          updateMapsContainer(d.maps, d.teamA, d.teamB);
-        }
+        renderedMaps = snapshot(nextMaps);
+        renderedHeroBans = snapshot(nextBans);
+        renderedHeroIcons = snapshot(nextIcons);
+        renderedTeamA = snapshot(nextTeamA);
+        renderedTeamB = snapshot(nextTeamB);
+        renderedLoserPicks = nextLoserPicks;
 
         if (d.tournamentLogoUrl) {
           el.tournamentLogo.style.backgroundImage = `url(${d.tournamentLogoUrl})`;

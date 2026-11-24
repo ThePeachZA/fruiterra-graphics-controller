@@ -345,9 +345,9 @@
         root.dataset.fx = 'on';
       }
 
-      // Opaque turns transparency off; transparent turns it back on. The
-      // short aliases read naturally in a Browser Source URL. A document-level
-      // data-bg attribute lets a host page choose the default.
+      // Opaque is the default; transparent turns it back on. The short aliases
+      // read naturally in a Browser Source URL. A document-level data-bg
+      // attribute lets a host page override that default.
       const requestedBg = query.get('bg');
       const bgMode =
         requestedBg === 'off' ? 'opaque' :
@@ -355,8 +355,8 @@
         requestedBg;
       if (bgMode === 'opaque' || bgMode === 'transparent') {
         root.dataset.bg = bgMode;
-      } else if (root.dataset.bg !== 'opaque') {
-        root.dataset.bg = 'transparent';
+      } else if (root.dataset.bg !== 'opaque' && root.dataset.bg !== 'transparent') {
+        root.dataset.bg = 'opaque';
       }
 
       // A cached section message lets the app switch every connected source

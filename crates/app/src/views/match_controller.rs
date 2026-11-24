@@ -544,6 +544,8 @@ fn MapSelectionTab(match_state: Match) -> Element {
     let expected_maps = default_map_slots(match_state.first_to);
     let mut custom_names = use_signal(BTreeMap::<usize, String>::new);
     let mut custom_modes = use_signal(BTreeMap::<usize, String>::new);
+    let mut custom_hero_a = use_signal(BTreeMap::<usize, String>::new);
+    let mut custom_hero_b = use_signal(BTreeMap::<usize, String>::new);
     let map_names: Vec<String> = catalog
         .in_category(AssetCategory::Map)
         .map(|asset| asset.name.clone())
@@ -559,14 +561,6 @@ fn MapSelectionTab(match_state: Match) -> Element {
         .collect();
 
     rsx! {
-        if show_bans {
-            datalist { id: "fgc-hero-names",
-                for name in heroes.iter() {
-                    option { value: "{name}" }
-                }
-            }
-        }
-
         div { class: "fgc-view",
             div { class: "fgc-match__section-header",
                 p { class: "fgc-note",
@@ -605,6 +599,28 @@ fn MapSelectionTab(match_state: Match) -> Element {
                         let ban = bans.get(index).cloned().unwrap_or_else(empty_hero_bans);
                         let ban_team_a = ban.team_a.first().cloned().unwrap_or_default();
                         let ban_team_b = ban.team_b.first().cloned().unwrap_or_default();
+                        let custom_a = custom_hero_a.peek().contains_key(&index);
+                        let custom_b = custom_hero_b.peek().contains_key(&index);
+                        let hero_a_draft = custom_hero_a
+                            .peek()
+                            .get(&index)
+                            .cloned()
+                            .unwrap_or_else(|| ban_team_a.clone());
+                        let hero_b_draft = custom_hero_b
+                            .peek()
+                            .get(&index)
+                            .cloned()
+                            .unwrap_or_else(|| ban_team_b.clone());
+                        let hero_a_value = if custom_a {
+                            "__custom__".to_owned()
+                        } else {
+                            ban_team_a.clone()
+                        };
+                        let hero_b_value = if custom_b {
+                            "__custom__".to_owned()
+                        } else {
+                            ban_team_b.clone()
+                        };
                         let is_current = match_state.current_map == Some(index);
                         let chosen_by = map.chosen_by;
                         let loser_picks = match_state.loser_picks;
@@ -886,26 +902,104 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                                     }
                                                     label { class: "fgc-field",
                                                         span { class: "fgc-field__label", "Team A ban" }
-                                                        Input {
-                                                            list: "fgc-hero-names",
-                                                            value: "{ban_team_a}",
-                                                            placeholder: "Hero",
+                                                        select {
+                                                            class: "fgc-native-select",
                                                             aria_label: "Team A ban",
-                                                            oninput: move |event: FormEvent| {
-                                                                store.set_hero_ban(index, TeamSide::A, &event.value());
+                                                            value: hero_a_value,
+                                                            onchange: move |event| {
+                                                                let value = event.value();
+                                                                if value == "__custom__" {
+                                                                    let draft = custom_hero_a
+                                                                        .peek()
+                                                                        .get(&index)
+                                                                        .cloned()
+                                                                        .unwrap_or_default();
+                                                                    custom_hero_a.write().insert(index, draft.clone());
+                                                                    store.set_hero_ban(index, TeamSide::A, &draft);
+                                                                } else {
+                                                                    custom_hero_a.write().remove(&index);
+                                                                    store.set_hero_ban(index, TeamSide::A, &value);
+                                                                }
                                                             },
+                                                            option { value: "", "—" }
+                                                            for name in heroes.iter() {
+                                                                option { value: "{name}", selected: *name == ban_team_a, "{name}" }
+                                                            }
+                                                            if !ban_team_a.is_empty() && !heroes.contains(&ban_team_a) {
+                                                                option {
+                                                                    value: "{ban_team_a}",
+                                                                    selected: hero_a_value == ban_team_a,
+                                                                    "{ban_team_a} (imported)"
+                                                                }
+                                                            }
+                                                            option {
+                                                                value: "__custom__",
+                                                                selected: custom_a,
+                                                                "Custom…"
+                                                            }
+                                                        }
+                                                        if custom_a {
+                                                            Input {
+                                                                value: hero_a_draft,
+                                                                aria_label: "Custom team A ban",
+                                                                placeholder: "Type a hero name",
+                                                                oninput: move |event: FormEvent| {
+                                                                    let value = event.value();
+                                                                    custom_hero_a.write().insert(index, value.clone());
+                                                                    store.set_hero_ban(index, TeamSide::A, &value);
+                                                                },
+                                                            }
                                                         }
                                                     }
                                                     label { class: "fgc-field",
                                                         span { class: "fgc-field__label", "Team B ban" }
-                                                        Input {
-                                                            list: "fgc-hero-names",
-                                                            value: "{ban_team_b}",
-                                                            placeholder: "Hero",
+                                                        select {
+                                                            class: "fgc-native-select",
                                                             aria_label: "Team B ban",
-                                                            oninput: move |event: FormEvent| {
-                                                                store.set_hero_ban(index, TeamSide::B, &event.value());
+                                                            value: hero_b_value,
+                                                            onchange: move |event| {
+                                                                let value = event.value();
+                                                                if value == "__custom__" {
+                                                                    let draft = custom_hero_b
+                                                                        .peek()
+                                                                        .get(&index)
+                                                                        .cloned()
+                                                                        .unwrap_or_default();
+                                                                    custom_hero_b.write().insert(index, draft.clone());
+                                                                    store.set_hero_ban(index, TeamSide::B, &draft);
+                                                                } else {
+                                                                    custom_hero_b.write().remove(&index);
+                                                                    store.set_hero_ban(index, TeamSide::B, &value);
+                                                                }
                                                             },
+                                                            option { value: "", "—" }
+                                                            for name in heroes.iter() {
+                                                                option { value: "{name}", selected: *name == ban_team_b, "{name}" }
+                                                            }
+                                                            if !ban_team_b.is_empty() && !heroes.contains(&ban_team_b) {
+                                                                option {
+                                                                    value: "{ban_team_b}",
+                                                                    selected: hero_b_value == ban_team_b,
+                                                                    "{ban_team_b} (imported)"
+                                                                }
+                                                            }
+                                                            option {
+                                                                value: "__custom__",
+                                                                selected: custom_b,
+                                                                "Custom…"
+                                                            }
+                                                        }
+                                                        if custom_b {
+                                                            Input {
+                                                                value: hero_b_draft,
+                                                                aria_label: "Custom team B ban",
+                                                                placeholder: "Type a hero name",
+                                                                oninput: move |event: FormEvent| {
+                                                                    let value = event.value();
+                                                                    custom_hero_b.write().insert(index, value.clone());
+                                                                    store.set_hero_ban(index, TeamSide::B, &value);
+                                                                },
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -1412,5 +1506,29 @@ mod tests {
         assert_eq!(parse_score("12"), 12);
         assert_eq!(parse_score(""), 0);
         assert_eq!(parse_score("-1"), 0);
+    }
+
+    #[test]
+    fn hero_ban_pickers_keep_every_option_visible() {
+        let source = include_str!("match_controller.rs");
+        assert!(
+            !source.contains("datalist { id: \"fgc-hero-names\""),
+            "hero bans must not use a filtering datalist"
+        );
+        assert!(
+            source.contains("aria_label: \"Team A ban\"")
+                && source.contains("aria_label: \"Team B ban\"")
+                && source.contains("for name in heroes.iter() {")
+                && source.contains("\"{ban_team_a} (imported)\"")
+                && source.contains("\"{ban_team_b} (imported)\""),
+            "both hero pickers should render every hero and any imported value"
+        );
+        assert!(
+            source.contains("aria_label: \"Custom team A ban\"")
+                && source.contains("aria_label: \"Custom team B ban\"")
+                && source.contains("custom_hero_a.write().insert(index, value.clone())")
+                && source.contains("custom_hero_b.write().insert(index, value.clone())"),
+            "Custom… should keep the old free-text path for either team"
+        );
     }
 }

@@ -173,7 +173,7 @@ impl AppStore {
         let serve = use_signal(ServeState::default);
         let reveal_urls = use_signal(|| false);
         let overlay_visible = use_signal(|| true);
-        let background_opaque = use_signal(|| false);
+        let background_opaque = use_signal(|| true);
         let (auto_included, auto_active) = default_auto_overlay();
         let auto_overlay_included = use_signal(|| auto_included);
         let auto_overlay_active = use_signal(|| auto_active);
@@ -238,7 +238,7 @@ impl AppStore {
             serve: Signal::new(ServeState::Off),
             reveal_urls: Signal::new(false),
             overlay_visible: Signal::new(true),
-            background_opaque: Signal::new(false),
+            background_opaque: Signal::new(true),
             auto_overlay_included: Signal::new(auto_included),
             auto_overlay_active: Signal::new(auto_active),
             thumb_urls: Signal::new(HashMap::new()),
@@ -3742,13 +3742,7 @@ mod tests {
     fn background_mode_toggle_is_ephemeral() {
         fn scenario() -> Element {
             let store = AppStore::test_store(AppState::default());
-            assert!(!store.background_opaque());
-            let (_config, _base_url, outbound) = store.server_plan();
-            assert!(outbound.contains(&background_outbound(false)));
-
-            store.set_background_opaque(true);
             assert!(store.background_opaque());
-            assert!(!*store.dirty.peek());
             let (_config, _base_url, outbound) = store.server_plan();
             assert!(outbound.contains(&background_outbound(true)));
 
@@ -3757,6 +3751,12 @@ mod tests {
             assert!(!*store.dirty.peek());
             let (_config, _base_url, outbound) = store.server_plan();
             assert!(outbound.contains(&background_outbound(false)));
+
+            store.set_background_opaque(true);
+            assert!(store.background_opaque());
+            assert!(!*store.dirty.peek());
+            let (_config, _base_url, outbound) = store.server_plan();
+            assert!(outbound.contains(&background_outbound(true)));
             VNode::empty()
         }
 
