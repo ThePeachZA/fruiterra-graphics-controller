@@ -2143,5 +2143,5 @@ and `harmonize_text_color()` keeps the sampled hue while raising contrast when a
 logo-derived Text is too close to a manual Background. Raw CDP on Inglorious
 Blasters proved every switch and combination, and the original state was
 restored with its hash unchanged. All gates passed with 93 app tests and 36
-overlay tests. Screenshots exist but could not be visually reviewed, so OBS
-sign-off at 1920×1080 remains with the owner.
+overlay tests. The owner opened the app in OBS at 1920×1080 and reported: "A82
+is a pass." This closes the visual sign-off.

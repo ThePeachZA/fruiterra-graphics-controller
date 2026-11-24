@@ -1865,6 +1865,5 @@ target. Turning off an automatic switch enables manual editing of that field.
   ratio against the actual background.
 
 A82's real-browser evidence is in `docs/manual-qa.md` row A82, with repeatable
-steps in `docs/manual-qa-runbook.md` section A82. Screenshots were captured, but
-visual review was unavailable in this session, so OBS sign-off at 1920×1080
-remains an owner check.
+steps in `docs/manual-qa-runbook.md` section A82. The owner opened the app in OBS
+at 1920×1080 and reported: "A82 is a pass." The visual sign-off is complete.

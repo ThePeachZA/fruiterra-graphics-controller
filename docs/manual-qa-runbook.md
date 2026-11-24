@@ -5543,12 +5543,11 @@ constraint and byte-equality contract stay in force.
     `cargo clippy --workspace --all-targets -- -D warnings`,
     `cargo test --workspace --quiet` and `dx build --desktop`.
 
-**Result: Pass - assistant 2026-11-24.** The paired roster source guard, source
+**Result: Pass - owner 2026-11-24.** The paired roster source guard, source
 assertions, init replay probe, exact text-colour probe and luminance alpha probe
 all passed. Raw CDP proved independent Background and Text logo rules,
 text-only computed contrast, coexistence of all three rules and a similar-
 background fallback. The final hue-preserving fallback is covered by a unit test
 after the browser run. All gates passed with 93 app tests and 36 overlay tests.
-The restored app state hash was unchanged. OBS visual sign-off at 1920×1080
-remains an owner check because the captured screenshots could not be reviewed in
-this session.
+The restored app state hash was unchanged. The owner then opened the app in OBS
+at 1920×1080 and reported: "A82 is a pass." Visual sign-off is complete.
