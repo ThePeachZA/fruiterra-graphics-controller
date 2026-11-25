@@ -29,3 +29,4 @@
 # Windows Doctrine builds use directory junctions for slug aliases. They appear
 # as duplicate directories to Git; keep only the canonical NNN/ records.
 .doctrine/backlog/*/*-*/
+.slim/deepwork/

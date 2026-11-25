@@ -29,17 +29,23 @@
       width: 100%;
       height: 100%;
       border: 0;
-      display: none;
+      display: block;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
       background: transparent;
+      transition: opacity 600ms ease, visibility 0s linear 600ms;
     }
 
     .fgc-auto__scene[data-visible="true"] {
-      display: block;
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 600ms ease, visibility 0s;
     }
   </style>
 </head>
 <body>
-  <div class="fgc-auto" id="auto-root"></div>
+  <div class="fgc-auto" id="auto-root" data-transition="idle"></div>
 
   <script>
     const OVERLAYS = Object.freeze([
@@ -54,12 +60,15 @@
       'row-interviews.html'
     ]);
     const ALLOWED = new Set(OVERLAYS);
+    const SCENE_FADE_MS = 600;
     const query = new URLSearchParams(location.search);
     const root = document.getElementById('auto-root');
     const frames = new Map();
     let included = [];
     let active = null;
     let visible = true;
+    let displayed = null;
+    let fadeTimer = 0;
 
     function sceneUrl(file) {
       const params = new URLSearchParams();
@@ -90,19 +99,53 @@
       return frame;
     }
 
+    function replaceFrame(file) {
+      const previous = frames.get(file);
+      if (previous) {
+        previous.remove();
+        frames.delete(file);
+      }
+      return ensureFrame(file);
+    }
+
     function applySelection() {
       const includedSet = new Set(included);
       const safeActive = includedSet.has(active) ? active : null;
+      const target = visible && safeActive ? safeActive : null;
 
+      if (displayed === target) return;
+      displayed = target;
+
+      // A fresh frame gives the incoming overlay its own init frame, so its
+      // opening animations replay on every activation rather than only once.
+      const incoming = target ? replaceFrame(target) : null;
+
+      // The new frame starts from the hidden style and is promoted on the next
+      // paint, so both the outgoing and incoming scenes animate for 600ms.
       for (const frame of frames.values()) {
         frame.dataset.visible = 'false';
       }
-      for (const file of OVERLAYS) {
-        if (!includedSet.has(file)) continue;
-
-        const frame = ensureFrame(file);
-        if (visible && file === safeActive) frame.dataset.visible = 'true';
+      if (incoming) {
+        // Flush the hidden style before promoting the frame, otherwise the
+        // browser can coalesce both states and skip the opacity transition.
+        void incoming.offsetWidth;
+        requestAnimationFrame(() => {
+          incoming.dataset.visible = 'true';
+        });
       }
+
+      root.dataset.transition = 'fade';
+      clearTimeout(fadeTimer);
+      fadeTimer = setTimeout(() => {
+        root.dataset.transition = 'idle';
+        // Retire every frame except the live one. Switching back later creates
+        // a new frame and therefore replays that overlay's reveal animations.
+        for (const [file, frame] of frames) {
+          if (file === displayed) continue;
+          frame.remove();
+          frames.delete(file);
+        }
+      }, SCENE_FADE_MS);
     }
 
     function updateSelection(data) {
