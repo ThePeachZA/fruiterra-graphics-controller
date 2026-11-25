@@ -55,6 +55,9 @@ pub fn new_match() -> Match {
         scheduled_at: None,
         team_a: None,
         team_b: None,
+        tournament_id: None,
+        team_a_record: None,
+        team_b_record: None,
         maps: (0..default_map_slots(DEFAULT_FIRST_TO))
             .map(|_| empty_map_slot())
             .collect(),

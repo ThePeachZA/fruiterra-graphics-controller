@@ -175,6 +175,28 @@ pub fn seed_of(tournament: &Tournament, team: &TeamId) -> u32 {
         .map_or(u32::MAX, |entrant| entrant.seed)
 }
 
+/// Returns a short broadcast record for `team` from a tournament.
+///
+/// A played group fixture wins over an entrant seed: the former is a live
+/// win-loss record and the latter is a placement. When neither exists there
+/// is nothing useful to show, so the caller falls back to its own default.
+#[must_use]
+pub fn team_record(tournament: &Tournament, team: &TeamId) -> Option<String> {
+    for group in &tournament.groups {
+        let standing = compute_standings(tournament, group)
+            .into_iter()
+            .find(|row| &row.team_id == team);
+        if let Some(row) = standing
+            && row.played > 0
+        {
+            return Some(format!("{}-{}", row.wins, row.losses));
+        }
+    }
+
+    let seed = seed_of(tournament, team);
+    (seed != u32::MAX).then(|| format!("Seed {seed}"))
+}
+
 // ---------------------------------------------------------------------------
 // Seeding and round names
 // ---------------------------------------------------------------------------
@@ -3178,6 +3200,33 @@ mod tests {
         assert_eq!(standings[0].points, 3);
         assert_eq!(standings[3].team_id, team("team-4"));
         assert_eq!(standings[3].losses, 3);
+    }
+
+    #[test]
+    fn team_record_prefers_a_played_group_result() {
+        let mut tournament = tournament_with_teams(4, BracketFormat::RoundRobin);
+        generate_round_robin(&mut tournament, 1);
+        complete_fixture(&mut tournament, &team("team-1"), &team("team-2"), 2, 0);
+
+        assert_eq!(
+            team_record(&tournament, &team("team-1")),
+            Some("1-0".to_owned())
+        );
+        assert_eq!(
+            team_record(&tournament, &team("team-2")),
+            Some("0-1".to_owned())
+        );
+    }
+
+    #[test]
+    fn team_record_falls_back_to_the_entrant_seed() {
+        let tournament = tournament_with_teams(4, BracketFormat::SingleElim);
+
+        assert_eq!(
+            team_record(&tournament, &team("team-2")),
+            Some("Seed 2".to_owned())
+        );
+        assert_eq!(team_record(&tournament, &team("team-9")), None);
     }
 
     #[test]

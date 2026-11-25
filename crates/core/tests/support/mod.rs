@@ -18,7 +18,6 @@ pub fn team(id: &str, name: &str) -> Team {
         id: TeamId::from_raw(id),
         name: name.to_owned(),
         tag: "TAG".to_owned(),
-        record: Some("0-0".to_owned()),
         color: "#ff0000".to_owned(),
         text_color: "#ffffff".to_owned(),
         color_from_logo: false,
@@ -85,6 +84,9 @@ pub fn match_state(id: &str) -> Match {
         scheduled_at: None,
         team_a: Some(TeamId::from_raw("team-a")),
         team_b: Some(TeamId::from_raw("team-b")),
+        tournament_id: None,
+        team_a_record: None,
+        team_b_record: None,
         maps: vec![MapSlot {
             name: "Ilios".to_owned(),
             game_mode_name: "Control".to_owned(),

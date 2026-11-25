@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use fgc_core::{
     AppState, AssetCategory, AssetId, Match, Scoring, Team, TeamId, TeamSide, TimerSettings,
+    team_record as core_team_record,
 };
 
 use crate::{
@@ -68,9 +69,12 @@ impl<'a> Projector<'a> {
         let casters = self.casters(match_state);
         let show_hero_bans = self.state.settings.display.show_hero_bans;
 
+        let record_a = self.match_record(match_state, TeamSide::A);
+        let record_b = self.match_record(match_state, TeamSide::B);
+
         ScoreboardDto {
-            team_a: team_a.map(|team| team_dto(team, logo_a.clone())),
-            team_b: team_b.map(|team| team_dto(team, logo_b.clone())),
+            team_a: team_a.map(|team| team_dto(team, logo_a.clone(), record_a.clone())),
+            team_b: team_b.map(|team| team_dto(team, logo_b.clone(), record_b.clone())),
             score_a,
             score_b,
             title: match_state.title.clone(),
@@ -683,14 +687,42 @@ pub fn auto_overlay(included: Vec<String>, active: Option<String>) -> Message<Au
     Message::new(AUTO_OVERLAY_SECTION, AutoOverlayDto::new(included, active))
 }
 
-fn team_dto(team: &Team, logo_url: Option<String>) -> TeamDto {
-    let record = team
-        .record
-        .as_deref()
-        .filter(|record| !record.is_empty())
-        .unwrap_or("0-0")
-        .to_owned();
+impl<'a> Projector<'a> {
+    /// Resolves a match record from the manual override, then the selected
+    /// tournament's standings or seed.
+    fn match_record(&self, match_state: &Match, side: TeamSide) -> String {
+        let manual = match side {
+            TeamSide::A => &match_state.team_a_record,
+            TeamSide::B => &match_state.team_b_record,
+        };
+        if let Some(value) = manual
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            return value.to_owned();
+        }
 
+        let team_id = match side {
+            TeamSide::A => match_state.team_a.as_ref(),
+            TeamSide::B => match_state.team_b.as_ref(),
+        };
+        if let (Some(tournament_id), Some(team_id)) = (&match_state.tournament_id, team_id)
+            && let Some(tournament) = self
+                .state
+                .tournaments
+                .iter()
+                .find(|tournament| &tournament.id == tournament_id)
+            && let Some(record) = core_team_record(tournament, team_id)
+        {
+            return record;
+        }
+
+        "0-0".to_owned()
+    }
+}
+
+fn team_dto(team: &Team, logo_url: Option<String>, record: String) -> TeamDto {
     TeamDto {
         name: team.name.clone(),
         tag: team.tag.clone(),

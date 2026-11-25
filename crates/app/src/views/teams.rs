@@ -386,7 +386,6 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
     let store = use_context::<AppStore>();
     let name_id = team.id.clone();
     let tag_id = team.id.clone();
-    let record_id = team.id.clone();
     let logo_id = team.id.clone();
     let sample_id = team.id.clone();
     let color_id = team.id.clone();
@@ -425,19 +424,6 @@ fn TeamInfoPanel(team: Team, logo: Option<CoreAsset>) -> Element {
                         oninput: move |event: FormEvent| {
                             let value = event.value();
                             store.update_team(&tag_id, move |team| team.tag = value);
-                        },
-                    }
-                }
-                Field {
-                    label: "Record".to_owned(),
-                    hint: Some("Optional, for example 12-4".to_owned()),
-                    Input {
-                        value: team.record.clone().unwrap_or_default(),
-                        aria_label: "Team record",
-                        oninput: move |event: FormEvent| {
-                            let value = event.value();
-                            let record = (!value.trim().is_empty()).then_some(value);
-                            store.update_team(&record_id, move |team| team.record = record);
                         },
                     }
                 }

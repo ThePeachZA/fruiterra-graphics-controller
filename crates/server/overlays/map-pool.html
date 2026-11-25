@@ -68,6 +68,9 @@
       --fgc-text-faint: #6b7688;
       --fgc-text-inverse: #0b0d12;
 
+      /* Tag fallbacks sit on fixed dark plates, so they stay light in every theme. */
+      --fgc-tag-ink: #eef2f8;
+
       --fgc-accent: #ff7a1a;
       --fgc-accent-strong: #ff9346;
       --fgc-accent-soft: rgb(255 122 26 / 16%);
@@ -404,6 +407,22 @@
       filter: drop-shadow(0 0 22px rgb(var(--pick-glow-rgb, 255 122 26) / 85%));
     }
 
+    .map-logo-overlay__tag {
+      max-width: 92px;
+      padding: 7px 10px;
+      background: linear-gradient(180deg, rgb(11 13 18 / 82%), rgb(11 13 18 / 58%));
+      border: 1px solid rgb(238 242 248 / 18%);
+      border-radius: 4px;
+      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
+      font-size: 30px;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      text-align: center;
+      color: var(--fgc-tag-ink);
+      text-shadow: 0 2px 10px rgb(0 0 0 / 70%), 0 0 22px rgb(var(--pick-glow-rgb, 255 122 26) / 85%);
+      overflow-wrap: anywhere;
+    }
+
     .map-name {
       background: var(--fgc-surface);
       height: 52px;
@@ -653,6 +672,22 @@
       };
     }
 
+    function teamLogoPlaceholderText(team) {
+      if (!team) return '';
+      const tag = typeof team.tag === 'string' ? team.tag.trim() : '';
+      if (tag) return tag;
+      const name = typeof team.name === 'string' ? team.name.trim() : '';
+      if (!name) return '';
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
+      return parts.slice(0, 2).map((part) => Array.from(part)[0].toUpperCase()).join('');
+    }
+
+    function chosenByTag(mapData) {
+      const team = mapData.chosenBy === 'B' ? currentData?.teamB : currentData?.teamA;
+      return team && !mapData.chosenByLogo ? teamLogoPlaceholderText(team) : '';
+    }
+
     function pickRgb(mapData, colors) {
       return mapData.chosenBy === 'B' ? colors.B : colors.A;
     }
@@ -668,7 +703,8 @@
             name: map.name,
             imageUrl: map.imageUrl || '',
             chosenBy: map.chosenBy || '',
-            chosenByLogo: map.chosenByLogo || ''
+            chosenByLogo: map.chosenByLogo || '',
+            chosenByTag: chosenByTag(map)
           }))
         })),
         colors
@@ -733,7 +769,8 @@
     function refreshPickedState(card, mapData, colors, animations, revealPick) {
       const image = card.querySelector('.map-image');
       const nameBar = card.querySelector('.map-name');
-      const isPicked = !!(mapData.chosenBy && mapData.chosenByLogo);
+      const tag = chosenByTag(mapData);
+      const isPicked = !!(mapData.chosenBy && (mapData.chosenByLogo || tag));
 
       image.classList.toggle('chosen', isPicked);
       card.classList.toggle('picked', isPicked);
@@ -759,14 +796,18 @@
         card.insertBefore(logoLayer, nameBar);
       }
 
-      const logo = logoLayer.querySelector('img');
-      if (!logo) {
-        logoLayer.innerHTML = `<img src="${escapeHtml(mapData.chosenByLogo)}" alt="chosen by team" />`;
-      } else if (logo.getAttribute('src') !== mapData.chosenByLogo) {
-        logo.src = mapData.chosenByLogo;
-        if (revealPick) animateLogoIn(logo, animations);
+      const key = mapData.chosenByLogo || tag;
+      if (logoLayer.dataset.key !== key) {
+        if (mapData.chosenByLogo) {
+          logoLayer.innerHTML = `<img src="${escapeHtml(mapData.chosenByLogo)}" alt="chosen by team" />`;
+        } else {
+          logoLayer.innerHTML = '<span class="map-logo-overlay__tag"></span>';
+          logoLayer.firstElementChild.textContent = tag;
+        }
+        logoLayer.dataset.key = key;
+        if (revealPick) animateLogoIn(logoLayer.firstElementChild, animations);
       } else if (revealPick) {
-        animateLogoIn(logo, animations);
+        animateLogoIn(logoLayer.firstElementChild, animations);
       }
     }
 

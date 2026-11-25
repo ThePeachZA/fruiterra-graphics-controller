@@ -173,7 +173,6 @@ fn build_teams(state: &AppState) -> Result<Vec<Team>> {
     let mut northwind = team(
         "Northwind Sentinels",
         "NWS",
-        Some("12-3"),
         "#1f6feb",
         "#ffffff",
         Some(northwind_logo),
@@ -213,14 +212,7 @@ fn build_teams(state: &AppState) -> Result<Vec<Team>> {
         ),
     ];
 
-    let mut wxm = team(
-        "王小明战队",
-        "WXM",
-        Some("9-6"),
-        "#d29922",
-        "#111111",
-        Some(wxm_logo),
-    );
+    let mut wxm = team("王小明战队", "WXM", "#d29922", "#111111", Some(wxm_logo));
     wxm.players = vec![
         player(
             "Alex",
@@ -259,7 +251,6 @@ fn build_teams(state: &AppState) -> Result<Vec<Team>> {
     let long = team(
         "Long Team Name That Overflows",
         "LONG",
-        Some("0-0"),
         "#2ea043",
         "#ffffff",
         Some(blasters_logo),
@@ -267,7 +258,6 @@ fn build_teams(state: &AppState) -> Result<Vec<Team>> {
     let cyrillic = team(
         "ДМИТРИЙ ВОЛКОВ",
         "ДВ",
-        Some("3-1"),
         "#8250df",
         "#ffffff",
         Some(curro_logo),
@@ -278,7 +268,6 @@ fn build_teams(state: &AppState) -> Result<Vec<Team>> {
         teams.push(team(
             &format!("Team {index}"),
             &format!("T{index}"),
-            None,
             "#30363d",
             "#ffffff",
             None,
@@ -288,7 +277,6 @@ fn build_teams(state: &AppState) -> Result<Vec<Team>> {
         teams.push(team(
             &format!("Stress {index}"),
             &format!("S{index}"),
-            None,
             "#21262d",
             "#ffffff",
             None,
@@ -317,19 +305,11 @@ fn build_talent(state: &AppState) -> Result<Vec<Talent>> {
     ])
 }
 
-fn team(
-    name: &str,
-    tag: &str,
-    record: Option<&str>,
-    color: &str,
-    text_color: &str,
-    logo: Option<AssetId>,
-) -> Team {
+fn team(name: &str, tag: &str, color: &str, text_color: &str, logo: Option<AssetId>) -> Team {
     Team {
         id: TeamId::new(),
         name: name.to_owned(),
         tag: tag.to_owned(),
-        record: record.map(ToOwned::to_owned),
         color: color.to_owned(),
         text_color: text_color.to_owned(),
         color_from_logo: false,
@@ -399,6 +379,8 @@ fn build_match(state: &AppState) -> Result<Match> {
     current.subtitle = "Upper Bracket".to_owned();
     current.team_a = Some(northwind);
     current.team_b = Some(wxm);
+    current.team_a_record = Some("12-3".to_owned());
+    current.team_b_record = Some("9-6".to_owned());
     current.maps = vec![
         map_slot("Ilios", "Control", Some(TeamSide::A), true, 2, 1),
         map_slot("Nepal", "Control", Some(TeamSide::B), true, 1, 2),

@@ -68,6 +68,9 @@
       --fgc-text-faint: #6b7688;
       --fgc-text-inverse: #0b0d12;
 
+      /* Tag fallbacks sit on fixed dark plates, so they stay light in every theme. */
+      --fgc-tag-ink: #eef2f8;
+
       --fgc-accent: #ff7a1a;
       --fgc-accent-strong: #ff9346;
       --fgc-accent-soft: rgb(255 122 26 / 16%);
@@ -350,6 +353,21 @@
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
+    }
+
+    .hero-half__logo-art--placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      text-align: center;
+      color: var(--fgc-tag-ink);
+      text-shadow: 0 2px 8px rgb(0 0 0 / 65%);
+      overflow-wrap: anywhere;
     }
 
     .hero-half--home .hero-half__logo {
@@ -856,6 +874,25 @@
         root.style.setProperty(name, String(tokens[name]));
       });
     }
+    function teamLogoPlaceholderText(team) {
+      if (!team) return '';
+      const tag = typeof team.tag === 'string' ? team.tag.trim() : '';
+      if (tag) return tag;
+      const name = typeof team.name === 'string' ? team.name.trim() : '';
+      if (!name) return '';
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
+      return parts.slice(0, 2).map((part) => Array.from(part)[0].toUpperCase()).join('');
+    }
+
+    function setTeamLogoPlaceholder(art, team) {
+      const text = team && !team.logoUrl ? teamLogoPlaceholderText(team) : '';
+      art.textContent = text;
+      art.classList.toggle('hero-half__logo-art--placeholder', Boolean(text));
+      if (text) art.setAttribute('title', text);
+      else art.removeAttribute('title');
+    }
+
     function updateOverlay(data) {
       if (window.fgcUpdateBackground) window.fgcUpdateBackground(data);
       const d = data.data || data;
@@ -897,10 +934,12 @@
           el.homeLogoArt.style.backgroundImage = d.teamA.logoUrl ? `url(${d.teamA.logoUrl})` : '';
           el.heroBans.style.setProperty('--team-a-color', d.teamA.color || 'var(--fgc-accent)');
         }
+        setTeamLogoPlaceholder(el.homeLogoArt, d.teamA);
         if (d.teamB) {
           el.awayLogoArt.style.backgroundImage = d.teamB.logoUrl ? `url(${d.teamB.logoUrl})` : '';
           el.heroBans.style.setProperty('--team-b-color', d.teamB.color || 'var(--fgc-accent)');
         }
+        setTeamLogoPlaceholder(el.awayLogoArt, d.teamB);
 
         // Hero bans.
         const currentMapBans = (d.heroBans && d.heroBans[currentMapIndex])

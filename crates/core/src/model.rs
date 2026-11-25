@@ -586,9 +586,6 @@ pub struct Team {
     /// Short tag.
     #[serde(default)]
     pub tag: String,
-    /// Win-loss record, if entered.
-    #[serde(default)]
-    pub record: Option<String>,
     /// Primary colour.
     #[serde(default = "default_team_color")]
     pub color: String,
@@ -665,6 +662,15 @@ pub struct Match {
     /// Team B.
     #[serde(default)]
     pub team_b: Option<TeamId>,
+    /// Tournament whose seed or standings supply the default team records.
+    #[serde(default)]
+    pub tournament_id: Option<TournamentId>,
+    /// Manual win-loss or seed override for team A.
+    #[serde(default)]
+    pub team_a_record: Option<String>,
+    /// Manual win-loss or seed override for team B.
+    #[serde(default)]
+    pub team_b_record: Option<String>,
     /// Selected maps.
     #[serde(default)]
     pub maps: Vec<MapSlot>,

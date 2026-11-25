@@ -547,7 +547,6 @@ mod tests {
             id: TeamId::new(),
             name: "Peaches".to_owned(),
             tag: "PCH".to_owned(),
-            record: None,
             color: "#000000".to_owned(),
             text_color: "#ffffff".to_owned(),
             color_from_logo: false,

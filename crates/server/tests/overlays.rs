@@ -269,6 +269,59 @@ fn game_overlay_shows_a_tag_placeholder_for_empty_logo_slots() {
 }
 
 #[test]
+fn pick_overlays_show_a_tag_placeholder_for_empty_logo_slots() {
+    let hero_bans = overlay_text("hero-bans.html");
+    assert!(
+        hero_bans.contains("function teamLogoPlaceholderText(team)")
+            && hero_bans.contains("function setTeamLogoPlaceholder(art, team)")
+            && hero_bans.contains("--fgc-tag-ink: #eef2f8;")
+            && hero_bans.contains(".hero-half__logo-art--placeholder {")
+            && hero_bans.contains(
+                "color: var(--fgc-tag-ink);\n      text-shadow: 0 2px 8px rgb(0 0 0 / 65%);"
+            )
+            && hero_bans.contains("setTeamLogoPlaceholder(el.homeLogoArt, d.teamA);")
+            && hero_bans.contains("setTeamLogoPlaceholder(el.awayLogoArt, d.teamB);"),
+        "hero bans should render the team tag inside the hex badge when the logo is empty"
+    );
+
+    let map_select = overlay_text("map-select.html");
+    assert!(
+        map_select.contains("function teamLogoPlaceholderText(team)")
+            && map_select.contains("--fgc-tag-ink: #eef2f8;")
+            && map_select.contains(".map-card__logo--placeholder {")
+            && map_select.contains(
+                "background: linear-gradient(to bottom, rgb(11 13 18 / 86%), rgb(11 13 18 / 64%));"
+            )
+            && map_select.contains(
+                "color: var(--fgc-tag-ink);\n      text-shadow: 0 2px 10px rgb(0 0 0 / 70%);"
+            )
+            && map_select.contains("tag: logoUrl ? '' : teamLogoPlaceholderText(winnerTeam),")
+            && map_select.contains("logoText = escapeHtml(winnerDetailsForCard.tag);")
+            && map_select.contains("logo.textContent = details.tag;"),
+        "map select should render the winning team's tag when its logo is empty"
+    );
+
+    let map_pool = overlay_text("map-pool.html");
+    assert!(
+        map_pool.contains("function teamLogoPlaceholderText(team)")
+            && map_pool.contains("function chosenByTag(mapData)")
+            && map_pool.contains("--fgc-tag-ink: #eef2f8;")
+            && map_pool.contains(".map-logo-overlay__tag {")
+            && map_pool.contains(
+                "background: linear-gradient(180deg, rgb(11 13 18 / 82%), rgb(11 13 18 / 58%));"
+            )
+            && map_pool.contains(
+                "color: var(--fgc-tag-ink);\n      text-shadow: 0 2px 10px rgb(0 0 0 / 70%),"
+            )
+            && map_pool.contains(
+                "const isPicked = !!(mapData.chosenBy && (mapData.chosenByLogo || tag));"
+            )
+            && map_pool.contains("chosenByTag: chosenByTag(map)"),
+        "map pool should mark a pick and render the team tag when the logo is empty"
+    );
+}
+
+#[test]
 fn game_overlay_uses_night_broadcast_tokens() {
     let text = overlay_text("game-overlay.html");
 
@@ -289,6 +342,12 @@ fn game_overlay_uses_night_broadcast_tokens() {
         "the active map segment should be orange on dark"
     );
     assert!(
+        text.contains(".mode-item--active,\n    .mode-item--active-first,\n    .mode-item--active-last,\n    .mode-item--active-single {")
+            && text.contains("font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;")
+            && text.contains("font-weight: 600;"),
+        "only the selected game mode should use the heavier face"
+    );
+    assert!(
         !text.contains("#ac46f7") && !text.contains("rgba(172, 70, 247"),
         "the old purple accent should be retired from the game overlay"
     );
@@ -299,6 +358,141 @@ fn game_overlay_uses_night_broadcast_tokens() {
     assert!(
         text.contains("return luminance > 0.5 ? '#0b0d12' : '#eef2f8';"),
         "contrast text should use the Night Broadcast surfaces"
+    );
+}
+
+#[test]
+fn game_overlay_uses_position_side_gradients_without_resizing_bars() {
+    let text = overlay_text("game-overlay.html");
+
+    assert!(
+        text.contains("--fgc-bar-base: #0b0d12;")
+            && text.contains("--fgc-bar-ink: #eef2f8;")
+            && text.contains("--fgc-team-left: #2f6feb;")
+            && text.contains("--fgc-team-left-deep: #173d78;")
+            && text.contains("--fgc-team-right: #df4450;")
+            && text.contains("--fgc-team-right-deep: #792430;"),
+        "the score bar needs fixed broadcast side colours"
+    );
+    assert!(
+        text.contains(".team-bar--home {")
+            && text.contains(".team-bar--away {")
+            && text.contains(".team-bar--home.swapped {")
+            && text.contains(".team-bar--away.swapped {"),
+        "the side treatment must be expressible for both teams in both orders"
+    );
+    assert!(
+        text.contains("linear-gradient(270deg, var(--fgc-team-left) 0%, var(--fgc-team-left-deep) 38%, var(--fgc-bar-base) 100%)")
+            && text.contains("linear-gradient(90deg, var(--fgc-team-right) 0%, var(--fgc-team-right-deep) 38%, var(--fgc-bar-base) 100%)"),
+        "default bars should be strongest at the inner score end"
+    );
+    assert!(
+        text.contains(".team-bar--home.swapped {\n      background: linear-gradient(90deg, var(--fgc-team-right)")
+            && text.contains(".team-bar--away.swapped {\n      background: linear-gradient(270deg, var(--fgc-team-left)"),
+        "swapping sides must keep blue on the left and red on the right"
+    );
+    assert!(
+        text.contains(".team-bar--home.team-colored {\n      background: linear-gradient(270deg, color-mix(in srgb, var(--team-a-color,")
+            && text.contains(".team-bar--away.team-colored {\n      background: linear-gradient(90deg, color-mix(in srgb, var(--team-b-color,")
+            && text.contains(".team-bar--home.swapped.team-colored {\n      background: linear-gradient(90deg, color-mix(in srgb, var(--team-a-color,")
+            && text.contains(".team-bar--away.swapped.team-colored {\n      background: linear-gradient(270deg, color-mix(in srgb, var(--team-b-color,")
+            && !text.contains("background: var(--team-a-color, var(--fgc-surface));")
+            && !text.contains("background: var(--team-b-color, var(--fgc-surface));"),
+        "team colours must be a reversed wash rather than a flat fill"
+    );
+    assert!(
+        text.contains(".team-bar__logo {\n      --logo-fade: to right;\n      --logo-clip: inset(12px 0 17px 28px);\n      width: 75px;")
+            && text.contains("background-color: transparent;")
+            && text.contains("filter: drop-shadow(0 3px 5px rgb(0 0 0 / 62%));")
+            && !text.contains("--team-logo-bg"),
+        "the logo must sit directly on the bar without a solid tile"
+    );
+    assert!(
+        text.contains(".team-bar > .team-bar__logo {\n      clip-path: none;")
+            && text.contains(".team-bar__logo::after {")
+            && text.contains(".team-bar__logo::before {")
+            && text.contains("width: 134px;")
+            && text.contains("height: 84px;")
+            && text.contains("top: -12px;")
+            && text.contains("left: -28px;")
+            && text.matches("clip-path: var(--logo-clip);").count() == 2
+            && text.contains("background: linear-gradient(var(--logo-fade), rgb(3 3 6 / 94%) 0%, rgb(3 3 6 / 74%) 46%, transparent 82%);")
+            && text.contains("-webkit-mask-image: linear-gradient(var(--logo-fade), #000 0%, #000 88%, transparent 100%);"),
+        "the oversized logo art must be clipped on all sides and fade toward the name"
+    );
+    assert!(
+        text.contains(".team-bar__logo {\n      --logo-fade: to right;")
+            && text.contains(".team-bar--away .team-bar__logo,\n    .team-bar--home.swapped .team-bar__logo {\n      --logo-fade: to left;\n      --logo-clip: inset(12px 28px 17px 0);")
+            && text.contains(".team-bar--away.swapped .team-bar__logo {\n      --logo-fade: to right;\n      --logo-clip: inset(12px 0 17px 28px);")
+            && text.contains(".team-bar--away .team-bar__logo::before,\n    .team-bar--away .team-bar__logo::after,")
+            && text.contains(".team-bar--away.swapped .team-bar__logo::before,\n    .team-bar--away.swapped .team-bar__logo::after {")
+            && text.contains("right: -28px;"),
+        "the overscan, crop and fade must mirror on right-side logos"
+    );
+    assert!(
+        text.contains(".center-ban {\n      position: absolute;\n      top: 12px;\n      width: 47px;\n      height: 50px;")
+            && text.contains(".center-ban--home {\n      left: 762px;\n    }")
+            && text.contains(".center-ban--away {\n      right: 762px;\n    }")
+            && text.contains(".center-ban.hidden {")
+            && text.contains("width: 35px;\n      height: 42px;\n      border-radius: 5px;")
+            && text.contains(
+                "box-shadow: inset 0 0 0 1px rgb(238 242 248 / 18%), 0 2px 6px rgb(0 0 0 / 45%);"
+            )
+            && text.contains("filter: saturate(0.92) contrast(1.06);")
+            && text.contains(".team-bar__ban-icon::after {")
+            && text.contains(".team-bar__ban-icon::before {")
+            && text.contains("--ban-accent: var(--fgc-team-right);")
+            && text.contains("clip: rect(0, 0, 0, 0);")
+            && !text.contains("font-size: 9px;")
+            && !text.contains("letter-spacing: 0.06em;"),
+        "the bans must be compact chips flanking the centre status bar in fixed boxes"
+    );
+    assert!(
+        text.contains("@keyframes banChipIn {")
+            && text.contains("opacity: 0;\n        transform: translateY(8px) scale(0.88);")
+            && text.contains("opacity: 1;\n        transform: none;")
+            && text.contains("z-index: 2;\n      opacity: 0;")
+            && text.contains(
+                ".center-ban.animate-ban {\n      animation: banChipIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) var(--ban-delay, 2.5s) both;\n    }"
+            )
+            && text.contains("function revealBanChips(delayMs) {")
+            && text.contains("chip.style.setProperty('--ban-delay', `${delayMs + index * 120}ms`);")
+            && text.contains("revealBanChips(animationsTriggered ? 0 : 2500);"),
+        "the centre ban chips must animate after the other entrance animations"
+    );
+    assert!(
+        text.contains(".team-bar {\n      position: absolute;\n      top: 52px;\n      width: 525px;\n      height: 55px;")
+            && text.contains("the oversized logo artwork. */\n      overflow: hidden;\n      clip-path: inset(0 round 6px);")
+            && text.contains(".team-bar--home {\n      left: 43px;")
+            && text.contains(".team-bar--away {\n      left: 1348px;"),
+        "the team bar bounding boxes and final crop must not change"
+    );
+    assert!(
+        text.contains(
+            ".top-bar {\n      position: absolute;\n      top: 13px;\n      height: 25px;"
+        ) && text.contains(".top-bar--left {\n      left: 43px;\n      width: 525px;")
+            && text.contains(".top-bar--right {\n      left: 1348px;\n      width: 525px;"),
+        "the two top bars must keep their exact footprint"
+    );
+    assert!(
+        text.contains(".match-bug {\n      position: absolute;\n      top: 12px;\n      left: 821px;\n      width: 278px;\n      height: 50px;"),
+        "the centre status bar must keep its exact footprint"
+    );
+    assert!(
+        text.contains(".title-text {\n      flex: 1 1 0;\n      min-width: 0;\n      display: block;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;")
+            && text.contains(".subtitle-text {\n      flex: 1 1 0;\n      min-width: 0;\n      display: block;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;"),
+        "long title and subtitle text must ellipsise inside the single-line info bar"
+    );
+    assert!(
+        text.contains(".top-bar--left::before {")
+            && text.contains("background-image: linear-gradient(180deg, var(--fgc-accent-strong), var(--fgc-accent));")
+            && text.contains(".match-bug::before {")
+            && text.contains("background: linear-gradient(90deg, transparent, var(--fgc-accent), transparent);"),
+        "the top bars should carry restrained orange datums"
+    );
+    assert!(
+        !text.contains("transition: all 0.2s;"),
+        "the mode segments must use explicit token transitions"
     );
 }
 
@@ -317,11 +511,12 @@ fn game_overlay_drops_the_outline_rings_and_moves_the_logo_outward() {
     );
     assert!(
         text.contains(".team-bar--home .team-bar__logo { order: 1; }")
-            && text.contains(".team-bar--home .team-bar__ban { order: 3; }")
-            && text.contains(".team-bar--home .team-bar__score { order: 4; }")
-            && text.contains(".team-bar--away .team-bar__ban { order: 3; }")
-            && text.contains(".team-bar--away .team-bar__logo { order: 5; }"),
-        "the team logo belongs on the outer end and the ban next to the score"
+            && text.contains(".team-bar--home .team-bar__score { order: 3; }")
+            && text.contains(".team-bar--away .team-bar__score { order: 2; }")
+            && text.contains(".team-bar--away .team-bar__logo { order: 4; }")
+            && !text.contains(".team-bar--home .team-bar__ban { order:")
+            && !text.contains(".team-bar--away .team-bar__ban { order:"),
+        "the logo and score keep their order; bans no longer occupy the bars"
     );
     assert!(
         text.contains("if (teamAbbreviations && team.tag) return team.tag;")
@@ -2168,11 +2363,13 @@ fn the_type_scale_gives_each_role_one_weight() {
         );
     }
 
-    // A team or person name is Medium everywhere.
+    // A person name is Medium; the game overlay team name is the heavier face.
     assert!(
         overlay_text("game-overlay.html")
-            .contains(".team-bar__name {\n      flex: 1;\n      min-width: 0;\n      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;"),
-        "the game overlay team name should be Medium"
+            .contains(".team-bar__name {\n      flex: 1;\n      min-width: 0;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;\n      font-size: 27px;")
+            && overlay_text("game-overlay.html").contains("fitText(el.homeName, 27, 18);")
+            && overlay_text("game-overlay.html").contains("fitText(el.awayName, 27, 18);"),
+        "the game overlay team name should be SemiBold and slightly smaller"
     );
     assert!(
         overlay_text("team-roster-home.html").contains(

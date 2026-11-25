@@ -87,6 +87,15 @@
       --fgc-radius-pill: 999px;
       --fgc-margin: 43px;
 
+      /* Broadcast-only side colours. These stay stable across themes so the
+         score bar keeps the same contrast whether Night or Light is active. */
+      --fgc-bar-base: #0b0d12;
+      --fgc-bar-ink: #eef2f8;
+      --fgc-team-left: #2f6feb;
+      --fgc-team-left-deep: #173d78;
+      --fgc-team-right: #df4450;
+      --fgc-team-right-deep: #792430;
+
       --fgc-duration-micro: 120ms;
       --fgc-duration-state: 240ms;
       --fgc-duration-reveal: 480ms;
@@ -174,83 +183,132 @@
       to { opacity: 1; }
     }
 
+    @keyframes banChipIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.88);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
     /* === TEAM BARS === */
     .team-bar {
       position: absolute;
       top: 52px;
       width: 525px;
       height: 55px;
-      background: var(--fgc-surface);
+      background: var(--fgc-bar-base);
       border-radius: 6px;
       /* A soft drop shadow reads as a floating panel. The old hairline ring
          boxed the bar in and competed with the team logo. */
       box-shadow: 0 6px 22px rgb(0 0 0 / 38%);
-      display: flex;
+      /* Nothing inside the bar may enlarge its 525x55 footprint, including
+         the oversized logo artwork. */
       overflow: hidden;
       clip-path: inset(0 round 6px);
+      display: flex;
+      isolation: isolate;
     }
 
+    /* A quiet top sheen keeps the gradient from reading as a flat colour
+       block without adding another ring or changing the 525x55 footprint. */
+    .team-bar::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      background: linear-gradient(180deg, rgb(238 242 248 / 10%), transparent 46%);
+    }
+
+    /* Colour is strongest at the inner score end and falls away toward the
+       logo. The direction flips with the bar's screen side, not team identity. */
     .team-bar--home {
       left: 43px;
+      background: linear-gradient(270deg, var(--fgc-team-left) 0%, var(--fgc-team-left-deep) 38%, var(--fgc-bar-base) 100%);
     }
 
     .team-bar--away {
       left: 1348px;
+      background: linear-gradient(90deg, var(--fgc-team-right) 0%, var(--fgc-team-right-deep) 38%, var(--fgc-bar-base) 100%);
     }
 
-    /* Home team order: Logo | Name | Ban | Score | Side
-       The logo sits on the outer end of the bar and the ban sits next to the
-       score, so the two score-adjacent blocks always read together. */
+    /* Swapping sides keeps blue on the left and red on the right, with each
+       wash still anchored to its inner score end. */
+    .team-bar--home.swapped {
+      background: linear-gradient(90deg, var(--fgc-team-right) 0%, var(--fgc-team-right-deep) 38%, var(--fgc-bar-base) 100%);
+    }
+
+    .team-bar--away.swapped {
+      background: linear-gradient(270deg, var(--fgc-team-left) 0%, var(--fgc-team-left-deep) 38%, var(--fgc-bar-base) 100%);
+    }
+
+    /* Home team order: Logo | Name | Score | Side. Hero bans no longer sit in
+       the bar; they flank the centre status bar as their own compact chips. */
     .team-bar--home .team-bar__logo { order: 1; }
     .team-bar--home .team-bar__name { order: 2; }
-    .team-bar--home .team-bar__ban { order: 3; }
-    .team-bar--home .team-bar__score { order: 4; }
-    .team-bar--home .team-bar__side { order: 5; }
+    .team-bar--home .team-bar__score { order: 3; }
+    .team-bar--home .team-bar__side { order: 4; }
 
-    /* Away team order (reversed): Side | Score | Ban | Name | Logo */
+    /* Away team order (reversed): Side | Score | Name | Logo */
     .team-bar--away .team-bar__side { order: 1; }
     .team-bar--away .team-bar__score { order: 2; }
-    .team-bar--away .team-bar__ban { order: 3; }
-    .team-bar--away .team-bar__name { order: 4; }
-    .team-bar--away .team-bar__logo { order: 5; }
+    .team-bar--away .team-bar__name { order: 3; }
+    .team-bar--away .team-bar__logo { order: 4; }
 
     /* Swapped state: swap the flex orders so info stays consistent */
-    /* Home bar with swapped gets away's order (Side | Score | Ban | Name | Logo) */
+    /* Home bar with swapped gets away's order (Side | Score | Name | Logo) */
     .team-bar--home.swapped .team-bar__side { order: 1; }
     .team-bar--home.swapped .team-bar__score { order: 2; }
-    .team-bar--home.swapped .team-bar__ban { order: 3; }
-    .team-bar--home.swapped .team-bar__name { order: 4; }
-    .team-bar--home.swapped .team-bar__logo { order: 5; }
+    .team-bar--home.swapped .team-bar__name { order: 3; }
+    .team-bar--home.swapped .team-bar__logo { order: 4; }
 
-    /* Away bar with swapped gets home's order (Logo | Name | Ban | Score | Side) */
+    /* Away bar with swapped gets home's order (Logo | Name | Score | Side) */
     .team-bar--away.swapped .team-bar__logo { order: 1; }
     .team-bar--away.swapped .team-bar__name { order: 2; }
-    .team-bar--away.swapped .team-bar__ban { order: 3; }
-    .team-bar--away.swapped .team-bar__score { order: 4; }
-    .team-bar--away.swapped .team-bar__side { order: 5; }
+    .team-bar--away.swapped .team-bar__score { order: 3; }
+    .team-bar--away.swapped .team-bar__side { order: 4; }
 
-    /* All team bar children must clip */
+    /* Most children stay inside their own boxes. The logo keeps a larger
+       layer for the inward fade, but the bar's clip is the final boundary. */
     .team-bar > * {
+      position: relative;
+      z-index: 1;
       clip-path: inset(0);
     }
 
-    /* Default text colors (dark bg) */
-    .team-bar--home .team-bar__name,
-    .team-bar--away .team-bar__name {
-      color: var(--fgc-text);
+    .team-bar > .team-bar__logo {
+      clip-path: none;
+      overflow: visible;
     }
 
-    /* Team colors enabled */
+    /* The name sits on the colour wash, so it keeps one predictable ink. */
+    .team-bar--home .team-bar__name,
+    .team-bar--away .team-bar__name,
+    .team-bar.team-colored .team-bar__name {
+      color: var(--fgc-bar-ink);
+    }
+
+    /* Team colours enabled: the team hue leads at the inner score end and
+       falls back into the dark base before the logo. */
     .team-bar--home.team-colored {
-      background: var(--team-a-color, var(--fgc-surface));
+      background: linear-gradient(270deg, color-mix(in srgb, var(--team-a-color, var(--fgc-bar-base)) 58%, var(--fgc-bar-base)) 0%, color-mix(in srgb, var(--team-a-color, var(--fgc-bar-base)) 24%, var(--fgc-bar-base)) 44%, var(--fgc-bar-base) 100%);
     }
 
     .team-bar--away.team-colored {
-      background: var(--team-b-color, var(--fgc-surface));
+      background: linear-gradient(90deg, color-mix(in srgb, var(--team-b-color, var(--fgc-bar-base)) 58%, var(--fgc-bar-base)) 0%, color-mix(in srgb, var(--team-b-color, var(--fgc-bar-base)) 24%, var(--fgc-bar-base)) 44%, var(--fgc-bar-base) 100%);
     }
 
-    .team-bar.team-colored .team-bar__name {
-      color: var(--team-text-color, var(--fgc-text));
+    .team-bar--home.swapped.team-colored {
+      background: linear-gradient(90deg, color-mix(in srgb, var(--team-a-color, var(--fgc-bar-base)) 58%, var(--fgc-bar-base)) 0%, color-mix(in srgb, var(--team-a-color, var(--fgc-bar-base)) 24%, var(--fgc-bar-base)) 44%, var(--fgc-bar-base) 100%);
+    }
+
+    .team-bar--away.swapped.team-colored {
+      background: linear-gradient(270deg, color-mix(in srgb, var(--team-b-color, var(--fgc-bar-base)) 58%, var(--fgc-bar-base)) 0%, color-mix(in srgb, var(--team-b-color, var(--fgc-bar-base)) 24%, var(--fgc-bar-base)) 44%, var(--fgc-bar-base) 100%);
     }
 
     .team-bar.team-colored .team-bar__score {
@@ -258,47 +316,104 @@
       background: var(--fgc-surface-inverse);
     }
 
-    .team-bar__ban {
+    /* === CENTRE BANS ===
+       Hero bans sit as compact chips immediately outside the centre status
+       bar. They are siblings of the bars, so the five fixed boxes stay exact. */
+    .center-ban {
+      position: absolute;
+      top: 12px;
       width: 47px;
-      height: 55px;
-      background: var(--fgc-surface-muted);
+      height: 50px;
       display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      overflow: hidden;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      opacity: 0;
     }
 
-    .team-bar__ban.hidden {
+    /* The chips arrive as the last panels settle. JS supplies the delay so
+       live ban changes stay immediate. */
+    .center-ban.animate-ban {
+      animation: banChipIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) var(--ban-delay, 2.5s) both;
+    }
+
+    .center-ban--home {
+      left: 762px;
+    }
+
+    .center-ban--away {
+      right: 762px;
+    }
+
+    .center-ban.hidden {
       display: none;
     }
 
     .team-bar__ban-icon {
-      width: 47px;
-      height: 43px;
+      position: relative;
+      width: 35px;
+      height: 42px;
+      border-radius: 5px;
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center center;
+      box-shadow: inset 0 0 0 1px rgb(238 242 248 / 18%), 0 2px 6px rgb(0 0 0 / 45%);
+      filter: saturate(0.92) contrast(1.06);
+    }
+
+    .team-bar__ban-icon::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(180deg, transparent 58%, rgb(0 0 0 / 34%));
+      pointer-events: none;
+    }
+
+    .team-bar__ban-icon::before {
+      content: '';
+      position: absolute;
+      z-index: 2;
+      top: 5px;
+      bottom: 5px;
+      width: 2px;
+      background: var(--ban-accent, var(--fgc-team-left));
+      box-shadow: 0 0 6px var(--ban-accent, var(--fgc-team-left));
+    }
+
+    .center-ban--home .team-bar__ban-icon {
+      --ban-accent: var(--fgc-team-left);
+    }
+
+    .center-ban--away .team-bar__ban-icon {
+      --ban-accent: var(--fgc-team-right);
+    }
+
+    .center-ban--home .team-bar__ban-icon::before {
+      left: 0;
+    }
+
+    .center-ban--away .team-bar__ban-icon::before {
+      right: 0;
     }
 
     .team-bar__ban-text {
-      width: 47px;
-      flex: 1;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 10px;
-      color: var(--fgc-text);
-      text-transform: uppercase;
-      line-height: 1.2;
-      padding-top: 2px;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .team-bar__name {
       flex: 1;
       min-width: 0;
-      font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
-      font-size: 30px;
+      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
+      font-size: 27px;
       line-height: 55px;
       color: var(--fgc-text);
       text-transform: uppercase;
@@ -331,19 +446,84 @@
     }
 
     .team-bar__logo {
+      --logo-fade: to right;
+      --logo-clip: inset(12px 0 17px 28px);
       width: 75px;
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
+      background-size: 0 0;
+      background-repeat: no-repeat;
+      background-position: center;
+      padding: 6px;
+      background-color: transparent;
+      filter: drop-shadow(0 3px 5px rgb(0 0 0 / 62%));
+      flex-shrink: 0;
+      opacity: 0;
+    }
+
+    /* A near-black field under the crest dissolves into the plate before the
+       name. The oversized layer is clipped to the bar on all four sides. */
+    .team-bar__logo::after {
+      content: '';
+      position: absolute;
+      z-index: 0;
+      top: -12px;
+      left: -28px;
+      width: 134px;
+      height: 84px;
+      background: linear-gradient(var(--logo-fade), rgb(3 3 6 / 94%) 0%, rgb(3 3 6 / 74%) 46%, transparent 82%);
+      clip-path: var(--logo-clip);
+      pointer-events: none;
+    }
+
+    /* The artwork stays crisp and recognisable. Its oversized box is clipped
+       to the bar footprint on every side; a short mask eases the inner edge
+       toward the name. */
+    .team-bar__logo::before {
+      content: '';
+      position: absolute;
+      z-index: 1;
+      top: -12px;
+      left: -28px;
+      width: 134px;
+      height: 84px;
+      background-image: inherit;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      background-origin: content-box;
-      padding: 6px;
-      background-color: var(--team-logo-bg, var(--fgc-surface-inverse));
-      flex-shrink: 0;
-      opacity: 0;
+      clip-path: var(--logo-clip);
+      pointer-events: none;
+      -webkit-mask-image: linear-gradient(var(--logo-fade), #000 0%, #000 88%, transparent 100%);
+      mask-image: linear-gradient(var(--logo-fade), #000 0%, #000 88%, transparent 100%);
+    }
+
+    /* Away and swapped bars put the logo on the outer right edge, so the
+       overscan and the fade both mirror. */
+    .team-bar--away .team-bar__logo,
+    .team-bar--home.swapped .team-bar__logo {
+      --logo-fade: to left;
+      --logo-clip: inset(12px 28px 17px 0);
+    }
+
+    .team-bar--away.swapped .team-bar__logo {
+      --logo-fade: to right;
+      --logo-clip: inset(12px 0 17px 28px);
+    }
+
+    .team-bar--away .team-bar__logo::before,
+    .team-bar--away .team-bar__logo::after,
+    .team-bar--home.swapped .team-bar__logo::before,
+    .team-bar--home.swapped .team-bar__logo::after {
+      left: auto;
+      right: -28px;
+    }
+
+    .team-bar--away.swapped .team-bar__logo::before,
+    .team-bar--away.swapped .team-bar__logo::after {
+      left: -28px;
+      right: auto;
     }
 
     .team-bar__logo.animate-logo {
@@ -351,6 +531,8 @@
     }
 
     .team-bar__logo-placeholder {
+      position: relative;
+      z-index: 2;
       display: none;
       max-width: 100%;
       overflow: hidden;
@@ -361,7 +543,7 @@
       letter-spacing: 0.04em;
       line-height: 1;
       text-transform: uppercase;
-      color: var(--team-logo-placeholder-color, var(--fgc-text-inverse));
+      color: var(--fgc-bar-ink);
     }
 
     .team-bar__logo-placeholder--visible {
@@ -413,18 +595,20 @@
       position: absolute;
       top: 13px;
       height: 25px;
-      background: var(--fgc-surface);
+      background: linear-gradient(180deg, var(--fgc-surface-raised), var(--fgc-surface));
       border-radius: 6px;
       box-shadow: 0 4px 16px rgb(0 0 0 / 32%);
       display: flex;
       align-items: center;
       overflow: hidden;
+      isolation: isolate;
     }
 
     .top-bar--left {
       left: 43px;
       width: 525px;
       padding: 0 15px;
+      gap: 10px;
       clip-path: inset(0 round 6px);
     }
 
@@ -435,8 +619,24 @@
       clip-path: inset(0 round 6px);
     }
 
+    /* The info bar gets one small orange datum at the outer edge; the mode
+       bar stays clean so the active map remains the loudest top-row element. */
+    .top-bar--left::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      background: var(--fgc-accent);
+      z-index: 1;
+    }
+
     .title-text {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 0;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
       font-size: 16px;
       color: var(--fgc-text);
@@ -444,7 +644,12 @@
     }
 
     .subtitle-text {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 0;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-family: 'FGC Display Medium', 'Apotek Medium', sans-serif;
       font-size: 16px;
       color: var(--fgc-text-muted);
@@ -470,7 +675,7 @@
       font-size: 11px;
       color: var(--fgc-text-faint);
       text-transform: uppercase;
-      transition: all 0.2s;
+      transition: background-color var(--fgc-duration-state) var(--fgc-ease-out), color var(--fgc-duration-state) var(--fgc-ease-out), opacity var(--fgc-duration-state) var(--fgc-ease-out);
       padding: 0 2px;
       position: relative;
       min-width: 0;
@@ -483,23 +688,36 @@
       font-size: inherit;
     }
 
+    /* Only the selected mode gets the heavier face; the queue stays quiet. */
+    .mode-item--active,
+    .mode-item--active-first,
+    .mode-item--active-last,
+    .mode-item--active-single {
+      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
+      font-weight: 600;
+    }
+
     .mode-item--active {
       background: var(--fgc-accent);
+      background-image: linear-gradient(180deg, var(--fgc-accent-strong), var(--fgc-accent));
       color: var(--fgc-on-accent);
     }
 
     .mode-item--active-first {
       background: var(--fgc-accent);
+      background-image: linear-gradient(180deg, var(--fgc-accent-strong), var(--fgc-accent));
       color: var(--fgc-on-accent);
     }
 
     .mode-item--active-last {
       background: var(--fgc-accent);
+      background-image: linear-gradient(180deg, var(--fgc-accent-strong), var(--fgc-accent));
       color: var(--fgc-on-accent);
     }
 
     .mode-item--active-single {
       background: var(--fgc-accent);
+      background-image: linear-gradient(180deg, var(--fgc-accent-strong), var(--fgc-accent));
       color: var(--fgc-on-accent);
     }
 
@@ -529,7 +747,7 @@
       left: 821px;
       width: 278px;
       height: 50px;
-      background: var(--fgc-surface-raised);
+      background: linear-gradient(180deg, var(--fgc-surface-raised), var(--fgc-surface));
       border-radius: 6px;
       box-shadow: 0 4px 16px rgb(0 0 0 / 32%);
       display: flex;
@@ -537,6 +755,16 @@
       justify-content: center;
       gap: 0;
       padding: 0;
+      overflow: hidden;
+    }
+
+    .match-bug::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--fgc-accent), transparent);
+      opacity: 0.85;
     }
 
     .match-bug__logo {
@@ -597,10 +825,6 @@
 
     <!-- Home Team (Left) -->
     <div class="team-bar team-bar--home" id="home-bar" style="opacity: 0;">
-      <div class="team-bar__ban hidden" id="home-ban">
-        <div class="team-bar__ban-icon" id="home-ban-icon"></div>
-        <span class="team-bar__ban-text" id="home-ban-text">1st ban</span>
-      </div>
       <div class="team-bar__name" id="home-name">HOME</div>
       <div class="team-bar__logo" id="home-logo"><span class="team-bar__logo-placeholder" id="home-logo-placeholder" aria-hidden="true"></span></div>
       <div class="team-bar__score" id="home-score">0</div>
@@ -617,10 +841,6 @@
       <div class="team-bar__score" id="away-score">0</div>
       <div class="team-bar__logo" id="away-logo"><span class="team-bar__logo-placeholder" id="away-logo-placeholder" aria-hidden="true"></span></div>
       <div class="team-bar__name" id="away-name">AWAY</div>
-      <div class="team-bar__ban hidden" id="away-ban">
-        <div class="team-bar__ban-icon" id="away-ban-icon"></div>
-        <span class="team-bar__ban-text" id="away-ban-text">2nd ban</span>
-      </div>
     </div>
 
     <!-- Title Bar -->
@@ -644,6 +864,16 @@
         <span class="format-text" id="format-text">FIRST TO 3</span>
       </div>
       <div class="match-bug__logo match-bug__logo--hidden" id="watermark-logo"></div>
+    </div>
+
+    <!-- Hero bans flank the centre status bar without widening either team bar. -->
+    <div class="center-ban center-ban--home hidden" id="home-ban">
+      <div class="team-bar__ban-icon" id="home-ban-icon"></div>
+      <span class="team-bar__ban-text" id="home-ban-text">1st ban</span>
+    </div>
+    <div class="center-ban center-ban--away hidden" id="away-ban">
+      <div class="team-bar__ban-icon" id="away-ban-icon"></div>
+      <span class="team-bar__ban-text" id="away-ban-text">2nd ban</span>
     </div>
 
   </div>
@@ -693,8 +923,8 @@
     }
 
     function fitTeamNames() {
-      fitText(el.homeName, 30, 18);
-      fitText(el.awayName, 30, 18);
+      fitText(el.homeName, 27, 18);
+      fitText(el.awayName, 27, 18);
     }
 
     // The match controller can show the short team tag instead of the full
@@ -790,11 +1020,6 @@
       return luminance > 0.5 ? '#0b0d12' : '#eef2f8';
     }
 
-    function teamLogoPlaceholderColor(hexColor) {
-      const color = typeof hexColor === 'string' ? hexColor.trim() : '';
-      return getContrastColor(/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#eef2f8');
-    }
-
     function teamLogoPlaceholderText(team) {
       if (!team) return '';
       const tag = typeof team.tag === 'string' ? team.tag.trim() : '';
@@ -871,6 +1096,16 @@
       el.awaySide.classList.toggle('hidden', side === 0);
     }
 
+    function revealBanChips(delayMs) {
+      [el.homeBan, el.awayBan].forEach((chip, index) => {
+        chip.classList.remove('animate-ban');
+        chip.style.setProperty('--ban-delay', `${delayMs + index * 120}ms`);
+        // Force a reflow so a changed hero replays the entrance.
+        void chip.offsetWidth;
+        chip.classList.add('animate-ban');
+      });
+    }
+
     function updateBanDisplay(data) {
       // Clear previous state
       el.homeBanIcon.style.backgroundImage = '';
@@ -885,7 +1120,11 @@
       el.homeBan.classList.toggle('hidden', !hasBans);
       el.awayBan.classList.toggle('hidden', !hasBans);
 
-      if (!hasBans) return;
+      if (!hasBans) {
+        delete el.homeBan.dataset.banKey;
+        delete el.awayBan.dataset.banKey;
+        return;
+      }
 
       // First ban team determines which side is 1st ban
       const firstBanTeam = currentBans.firstBanTeam;
@@ -910,6 +1149,13 @@
       } else if (firstBanTeam === 'B' && homeHeroName && heroIcons[homeHeroName]) {
         el.homeBanIcon.style.backgroundImage = `url(${heroIcons[homeHeroName]})`;
         el.homeBanText.textContent = '2nd ban';
+      }
+
+      const banKey = `${firstBanTeam || ''}|${homeHeroName || ''}|${awayHeroName || ''}`;
+      if (el.homeBan.dataset.banKey !== banKey) {
+        el.homeBan.dataset.banKey = banKey;
+        el.awayBan.dataset.banKey = banKey;
+        revealBanChips(animationsTriggered ? 0 : 2500);
       }
     }
 
@@ -1052,11 +1298,6 @@
           const awayTextColor = getContrastColor(d.teamB.color || '#0b0d12');
           el.homeBar.style.setProperty('--team-text-color', homeTextColor);
           el.awayBar.style.setProperty('--team-text-color', awayTextColor);
-          // Set logo background colors
-          el.homeBar.style.setProperty('--team-logo-bg', d.teamA.logoBgColor || '#eef2f8');
-          el.awayBar.style.setProperty('--team-logo-bg', d.teamB.logoBgColor || '#eef2f8');
-          el.homeBar.style.setProperty('--team-logo-placeholder-color', teamLogoPlaceholderColor(d.teamA.logoBgColor));
-          el.awayBar.style.setProperty('--team-logo-placeholder-color', teamLogoPlaceholderColor(d.teamB.logoBgColor));
           el.homeBar.classList.add('team-colored');
           el.awayBar.classList.add('team-colored');
         } else {
@@ -1066,10 +1307,6 @@
           el.awayBar.style.removeProperty('--team-b-color');
           el.homeBar.style.removeProperty('--team-text-color');
           el.awayBar.style.removeProperty('--team-text-color');
-          el.homeBar.style.removeProperty('--team-logo-bg');
-          el.awayBar.style.removeProperty('--team-logo-bg');
-          el.homeBar.style.removeProperty('--team-logo-placeholder-color');
-          el.awayBar.style.removeProperty('--team-logo-placeholder-color');
         }
 
         // Scores

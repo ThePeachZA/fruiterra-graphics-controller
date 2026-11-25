@@ -3448,7 +3448,6 @@ pub fn new_team() -> Team {
         id: TeamId::new(),
         name: "New Team".to_owned(),
         tag: "TAG".to_owned(),
-        record: None,
         color: "#7C3AED".to_owned(),
         text_color: "#FFFFFF".to_owned(),
         color_from_logo: false,
@@ -3510,7 +3509,6 @@ mod tests {
             id: TeamId::new(),
             name: name.to_owned(),
             tag: "PCH".to_owned(),
-            record: None,
             color: "#000000".to_owned(),
             text_color: "#ffffff".to_owned(),
             color_from_logo: false,
@@ -4115,7 +4113,10 @@ mod tests {
         let mut team = new_team();
         team.name = "Peaches".to_owned();
         team.tag = "PCH".to_owned();
-        team.record = Some("12-4".to_owned());
+
+        let mut match_state = new_match();
+        match_state.team_a_record = Some("12-4".to_owned());
+        state.current_match = Some(match_state);
 
         let mut player = new_player();
         player.name = "Ripe".to_owned();
@@ -4141,7 +4142,13 @@ mod tests {
         let loaded_team = &loaded.teams[0];
         assert_eq!(loaded_team.name, "Peaches");
         assert_eq!(loaded_team.tag, "PCH");
-        assert_eq!(loaded_team.record.as_deref(), Some("12-4"));
+        assert_eq!(
+            loaded
+                .current_match
+                .as_ref()
+                .and_then(|m| m.team_a_record.as_deref()),
+            Some("12-4")
+        );
         assert_eq!(loaded_team.players.len(), 1);
         assert_eq!(loaded_team.players[0].name, "Ripe");
         assert_eq!(loaded_team.players[0].role, Role::Support);

@@ -11,8 +11,8 @@ use std::collections::BTreeMap;
 use dioxus::prelude::*;
 use fgc_core::{
     AssetCategory, AssetId, Match, MatchStatus, PlayerId, Scoring, Side, Talent, TalentId,
-    TalentSlot, TalentType, Team, TeamId, TeamSide, ThemePreset, default_map_slots,
-    empty_hero_bans,
+    TalentSlot, TalentType, Team, TeamId, TeamSide, ThemePreset, TournamentId, default_map_slots,
+    empty_hero_bans, team_record as core_team_record,
 };
 use fgc_protocol::AssetCatalog;
 use fgc_server::ServerStatus;
@@ -185,6 +185,7 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
     let store = use_context::<AppStore>();
     let state = store.state();
     let saved_matches = state.read().matches.clone();
+    let tournaments = state.read().tournaments.clone();
     let (score_a, score_b) = fgc_protocol::scores(&match_state);
     let manual = matches!(match_state.scoring, Scoring::Manual { .. });
     let (manual_a, manual_b) = match &match_state.scoring {
@@ -201,6 +202,38 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
         .as_ref()
         .and_then(|id| teams.iter().find(|team| &team.id == id))
         .cloned();
+    let tournament_value = match_state
+        .tournament_id
+        .as_ref()
+        .map_or_else(String::new, |id| id.as_str().to_owned());
+    let selected_tournament = match_state
+        .tournament_id
+        .as_ref()
+        .and_then(|id| tournaments.iter().find(|tournament| &tournament.id == id));
+    let auto_record = |team: Option<&Team>| -> String {
+        selected_tournament
+            .and_then(|tournament| team.and_then(|team| core_team_record(tournament, &team.id)))
+            .unwrap_or_else(|| "0-0".to_owned())
+    };
+    let record_a_auto = auto_record(team_a.as_ref());
+    let record_b_auto = auto_record(team_b.as_ref());
+    let record_a_value = match_state.team_a_record.clone().unwrap_or_default();
+    let record_b_value = match_state.team_b_record.clone().unwrap_or_default();
+    let has_manual_record = [&record_a_value, &record_b_value]
+        .iter()
+        .any(|value| !value.trim().is_empty());
+    let record_note = match selected_tournament {
+        Some(tournament) if !has_manual_record => {
+            format!(
+                "From {} — placeholders show group win-loss where played, otherwise seed. Clear a record to use it.",
+                tournament.name
+            )
+        }
+        Some(_) => "Manual records override the selected tournament.".to_owned(),
+        None => {
+            "Optional. Choose a tournament to fill records from its standings or seed.".to_owned()
+        }
+    };
     let team_a_tag = team_a
         .as_ref()
         .map_or_else(|| "Team A".to_owned(), |team| team.tag.clone());
@@ -312,6 +345,33 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
 
             Panel {
                 title: "Teams".to_owned(),
+                label { class: "fgc-field",
+                    span { class: "fgc-field__label", "Tournament" }
+                    select {
+                        class: "fgc-native-select",
+                        value: "{tournament_value}",
+                        onchange: move |event| {
+                            let value = event.value();
+                            store.update_match(|current| {
+                                current.tournament_id = if value.is_empty() {
+                                    None
+                                } else {
+                                    Some(TournamentId::from_raw(value))
+                                };
+                            });
+                        },
+                        option { value: "", "No tournament" }
+                        for tournament in tournaments.iter() {
+                            option {
+                                key: "{tournament.id}",
+                                value: "{tournament.id}",
+                                selected: tournament.id.as_str() == tournament_value.as_str(),
+                                "{tournament.name}"
+                            }
+                        }
+                    }
+                }
+                p { class: "fgc-note", "{record_note}" }
                 div { class: "fgc-match-teams",
                     label { class: "fgc-field",
                         span { class: "fgc-field__label", "Team A" }
@@ -334,6 +394,21 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
                                     "{team.tag} — {team.name}"
                                 }
                             }
+                        }
+                    }
+                    label { class: "fgc-field",
+                        span { class: "fgc-field__label", "Team A record" }
+                        Input {
+                            value: "{record_a_value}",
+                            placeholder: "{record_a_auto}",
+                            maxlength: "24",
+                            aria_label: "Team A record",
+                            oninput: move |event: FormEvent| {
+                                let value = event.value();
+                                store.update_match(move |current| {
+                                    current.team_a_record = (!value.trim().is_empty()).then_some(value);
+                                });
+                            },
                         }
                     }
                     div { class: "fgc-match-teams__swap",
@@ -368,6 +443,21 @@ fn MatchSetupTab(match_state: Match, teams: Vec<Team>) -> Element {
                                     "{team.tag} — {team.name}"
                                 }
                             }
+                        }
+                    }
+                    label { class: "fgc-field",
+                        span { class: "fgc-field__label", "Team B record" }
+                        Input {
+                            value: "{record_b_value}",
+                            placeholder: "{record_b_auto}",
+                            maxlength: "24",
+                            aria_label: "Team B record",
+                            oninput: move |event: FormEvent| {
+                                let value = event.value();
+                                store.update_match(move |current| {
+                                    current.team_b_record = (!value.trim().is_empty()).then_some(value);
+                                });
+                            },
                         }
                     }
                 }

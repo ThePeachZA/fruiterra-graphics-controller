@@ -6,8 +6,9 @@
 mod support;
 
 use fgc_core::{
-    Asset, AssetCategory, AssetId, AssetOrigin, IntervieweeRef, Match, PlayerId, Scoring, Side,
-    TeamId, TeamSide,
+    Asset, AssetCategory, AssetId, AssetOrigin, BracketFormat, BracketMatchStatus, Group, GroupId,
+    GroupMatch, IntervieweeRef, Match, MatchId, PlayerId, Scoring, Side, TeamId, TeamSide,
+    add_entrant, new_tournament,
 };
 use fgc_protocol::{
     AssetCatalog, AssetUrlResolver, DataUrlResolver, Projector, SCOREBOARD_TYPES,
@@ -478,13 +479,94 @@ fn record_defaults_to_zero_zero() {
 #[test]
 fn empty_record_defaults_to_zero_zero() {
     let (mut state, catalog, resolver) = full_parts();
-    state.teams[1].record = Some(String::new());
+    state
+        .current_match
+        .as_mut()
+        .expect("fixture match")
+        .team_b_record = Some(String::new());
     let projector = Projector::new(&state, &catalog, &resolver);
     let match_state = state.current_match.as_ref().expect("fixture match");
 
     let value = scoreboard_value(&projector, match_state);
 
     assert_eq!(value["teamB"]["record"], "0-0");
+}
+
+#[test]
+fn tournament_seed_supplies_a_record_when_no_fixtures_are_played() {
+    let (mut state, catalog, resolver) = full_parts();
+    let mut tournament = new_tournament("Protea Cup", BracketFormat::SingleElim);
+    add_entrant(&mut tournament, TeamId::from_raw("team-b"));
+    let tournament_id = tournament.id.clone();
+    state.tournaments.push(tournament);
+    {
+        let match_state = state.current_match.as_mut().expect("fixture match");
+        match_state.tournament_id = Some(tournament_id);
+        match_state.team_b_record = None;
+    }
+    let projector = Projector::new(&state, &catalog, &resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+
+    let value = scoreboard_value(&projector, match_state);
+
+    assert_eq!(value["teamB"]["record"], "Seed 1");
+}
+
+#[test]
+fn played_group_fixture_supplies_a_win_loss_record() {
+    let (mut state, catalog, resolver) = full_parts();
+    let group_id = GroupId::new();
+    let mut tournament = new_tournament("Protea Cup", BracketFormat::MultiStage);
+    tournament.groups.push(Group {
+        id: group_id.clone(),
+        name: "A".to_owned(),
+        team_ids: vec![TeamId::from_raw("team-a"), TeamId::from_raw("team-b")],
+    });
+    tournament.group_matches.push(GroupMatch {
+        id: MatchId::new(),
+        group: group_id,
+        team1: Some(TeamId::from_raw("team-a")),
+        team2: Some(TeamId::from_raw("team-b")),
+        score1: 2,
+        score2: 1,
+        status: BracketMatchStatus::Completed,
+        first_to: 3,
+        winner: None,
+        winner_manual: false,
+    });
+    let tournament_id = tournament.id.clone();
+    state.tournaments.push(tournament);
+    {
+        let match_state = state.current_match.as_mut().expect("fixture match");
+        match_state.tournament_id = Some(tournament_id);
+        match_state.team_b_record = None;
+    }
+    let projector = Projector::new(&state, &catalog, &resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+
+    let value = scoreboard_value(&projector, match_state);
+
+    assert_eq!(value["teamB"]["record"], "0-1");
+}
+
+#[test]
+fn manual_record_takes_precedence_over_tournament_data() {
+    let (mut state, catalog, resolver) = full_parts();
+    let mut tournament = new_tournament("Protea Cup", BracketFormat::SingleElim);
+    add_entrant(&mut tournament, TeamId::from_raw("team-b"));
+    let tournament_id = tournament.id.clone();
+    state.tournaments.push(tournament);
+    {
+        let match_state = state.current_match.as_mut().expect("fixture match");
+        match_state.tournament_id = Some(tournament_id);
+        match_state.team_b_record = Some("9-0".to_owned());
+    }
+    let projector = Projector::new(&state, &catalog, &resolver);
+    let match_state = state.current_match.as_ref().expect("fixture match");
+
+    let value = scoreboard_value(&projector, match_state);
+
+    assert_eq!(value["teamB"]["record"], "9-0");
 }
 
 #[test]

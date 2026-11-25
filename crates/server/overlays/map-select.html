@@ -68,6 +68,9 @@
       --fgc-text-faint: #6b7688;
       --fgc-text-inverse: #0b0d12;
 
+      /* Tag fallbacks sit on fixed dark plates, so they stay light in every theme. */
+      --fgc-tag-ink: #eef2f8;
+
       --fgc-accent: #ff7a1a;
       --fgc-accent-strong: #ff9346;
       --fgc-accent-soft: rgb(255 122 26 / 16%);
@@ -312,6 +315,24 @@
 
     .map-card__logo--hidden {
       display: none;
+    }
+
+    .map-card__logo--placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      background: linear-gradient(to bottom, rgb(11 13 18 / 86%), rgb(11 13 18 / 64%));
+      border: 1px solid rgb(238 242 248 / 18%);
+      border-radius: 4px;
+      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;
+      font-size: 26px;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      text-align: center;
+      color: var(--fgc-tag-ink);
+      text-shadow: 0 2px 10px rgb(0 0 0 / 70%);
+      overflow-wrap: anywhere;
     }
 
     .map-card__logo--winner {
@@ -986,6 +1007,17 @@
       return match ? `#${match[1]}` : fallback;
     }
 
+    function teamLogoPlaceholderText(team) {
+      if (!team) return '';
+      const tag = typeof team.tag === 'string' ? team.tag.trim() : '';
+      if (tag) return tag;
+      const name = typeof team.name === 'string' ? team.name.trim() : '';
+      if (!name) return '';
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
+      return parts.slice(0, 2).map((part) => Array.from(part)[0].toUpperCase()).join('');
+    }
+
     // The banned heroes are ordered by who banned first, so the number on the
     // order chip matches the order the bans were made in.
     function orderedBans(bans) {
@@ -1022,11 +1054,8 @@
       const teamAColor = safeHexColor(teamAData && teamAData.color, '#3ecf8e');
       const teamBColor = safeHexColor(teamBData && teamBData.color, '#ef5b5b');
       const winnerColor = aWon ? teamAColor : bWon ? teamBColor : 'var(--fgc-accent)';
-      const logoUrl = aWon
-        ? teamAData && teamAData.logoUrl
-        : bWon
-          ? teamBData && teamBData.logoUrl
-          : '';
+      const winnerTeam = aWon ? teamAData : bWon ? teamBData : null;
+      const logoUrl = winnerTeam && winnerTeam.logoUrl;
       return {
         isCompleted,
         aWon,
@@ -1035,6 +1064,7 @@
         teamBColor,
         winnerColor,
         logoUrl: logoUrl || '',
+        tag: logoUrl ? '' : teamLogoPlaceholderText(winnerTeam),
         winner: aWon ? 'a' : bWon ? 'b' : 'none'
       };
     }
@@ -1067,15 +1097,17 @@
         `--team-a-color: ${teamAColor}; --team-b-color: ${teamBColor}; --winner-color: ${winnerColor};`
       );
 
+      const winnerDetailsForCard = winnerDetails(mapData, teamAData, teamBData);
       let logoContent = '';
+      let logoText = '';
       let logoClass = 'map-card__logo';
 
-      if (aWon && teamAData && teamAData.logoUrl) {
-        logoContent = `background-image: url('${teamAData.logoUrl}')`;
+      if (winnerDetailsForCard.logoUrl) {
+        logoContent = `background-image: url('${winnerDetailsForCard.logoUrl}')`;
         logoClass += ' map-card__logo--winner';
-      } else if (bWon && teamBData && teamBData.logoUrl) {
-        logoContent = `background-image: url('${teamBData.logoUrl}')`;
-        logoClass += ' map-card__logo--winner';
+      } else if (winnerDetailsForCard.tag) {
+        logoText = escapeHtml(winnerDetailsForCard.tag);
+        logoClass += ' map-card__logo--winner map-card__logo--placeholder';
       } else {
         logoClass += ' map-card__logo--hidden';
       }
@@ -1102,7 +1134,7 @@
       const chosenByClass = chosenByText ? 'map-card__chosen-by' : 'map-card__chosen-by map-card__chosen-by--hidden';
 
       card.innerHTML = `
-        <div class="${logoClass}" id="logo-${index}" style="${logoContent}"></div>
+        <div class="${logoClass}" id="logo-${index}" style="${logoContent}">${logoText}</div>
         <div class="${visualClass}">
           <div class="${imageClass}" id="image-${index}" style="${imageStyle}"></div>
           <div class="map-card__swap"></div>
@@ -1204,15 +1236,25 @@
       }
 
       if (details.logoUrl) {
-        logo.classList.remove('map-card__logo--hidden');
+        logo.classList.remove('map-card__logo--hidden', 'map-card__logo--placeholder');
         logo.classList.add('map-card__logo--winner');
+        logo.textContent = '';
         logo.style.backgroundImage = `url('${details.logoUrl}')`;
         if (previousDetails.logoUrl !== details.logoUrl) {
           animateLogoIn(logo, index);
         }
+      } else if (details.tag) {
+        logo.style.backgroundImage = '';
+        logo.classList.remove('map-card__logo--hidden');
+        logo.classList.add('map-card__logo--winner', 'map-card__logo--placeholder');
+        if (logo.textContent !== details.tag) {
+          logo.textContent = details.tag;
+          animateLogoIn(logo, index);
+        }
       } else {
         logo.style.backgroundImage = '';
-        logo.classList.remove('map-card__logo--winner');
+        logo.textContent = '';
+        logo.classList.remove('map-card__logo--winner', 'map-card__logo--placeholder');
         logo.classList.add('map-card__logo--hidden');
       }
 
