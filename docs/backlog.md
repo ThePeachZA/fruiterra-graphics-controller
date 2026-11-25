@@ -2328,3 +2328,32 @@ Fixed risks from A90:
 | Ban chips keep the old blue and red accents when team colours are on | Fixed by A90 | The chip accent now resolves from `--team-a-color` and `--team-b-color`, with source assertions requiring both the set and removal paths. |
 | Team colours on the chips follow screen side rather than team identity | Fixed by A90 | The live swapped-state proof kept Team A pink on the left chip and Team B green on the right chip while the bars exchanged sides. |
 | Team colour on a chip changes its fixed geometry or entrance | Fixed by A90 | The proof measured unchanged 47x50 containers, 35x42 art, 2px accents and zero console errors in all three colour states. |
+
+A91 improves readability inside the two fixed top and side bars without changing
+their geometry. Dense mode queues now switch to a compact treatment instead of
+squeezing full names into narrow segments. `fitModeLabels()` restores each full
+name before measuring, then enables `.mode-order-container--compact` when there
+are more than five maps or any label cannot fit its segment. Compact segments use
+a 22px mode icon, a 4px gap and the first three letters of the mode name;
+ordinary three- and five-map queues keep full names and 14px icons. Each item
+keeps its full name in `title` and `aria-label`, so the visible abbreviation does
+not remove the accessible name. The owner first asked for icon-only marks, then
+asked for larger icons with three-letter labels after reviewing that proposal.
+
+The team names in the side bars are now centred in the flex section between the
+logo and the score on both sides and after a side swap. The previous home and
+away rules pushed the text toward the logo or score; those overrides are gone.
+Long names still use `fitText(..., 27, 18)` and ellipsise inside the same fixed
+boxes. Live WebView2 proofs at 1920x1080 measured icon-only queue labels,
+normal queue labels and centred names in default, swapped and long-name states,
+with bars at `x1348 y13 525x25` and `x43/x1348 y52 525x55`. A fresh visual
+review passed both changes. The owner reviewed the final captures and approved
+A91 on 2026-11-25.
+
+Fixed risks from A91:
+
+| Risk | Status | Guard |
+|---|---|---|
+| A First to 4 queue squashes unreadable mode names | Fixed by A91 | The overlay measures each label and switches queues over five maps or unreadable labels to 22px icons plus three-letter names. |
+| Abbreviated mode labels lose their meaning | Fixed by A91 | Full names remain in `title` and `aria-label`, and `fitModeLabels()` restores them when the queue fits again. |
+| Centring names moves the fixed side bars or clips long names | Fixed by A91 | The bar boxes stayed exact in live default, swapped and long-name proofs, with `fitText` and ellipsis unchanged. |

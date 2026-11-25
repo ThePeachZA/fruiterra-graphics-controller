@@ -2230,3 +2230,52 @@ errors, and passed a fresh visual review. The source guard in
 removal statements alongside the existing ban geometry assertions. Evidence is
 in `docs/manual-qa.md` row A90 and the A90 sign-off entry, with repeatable steps
 in `docs/manual-qa-runbook.md` section A90.
+
+## 24. Game overlay - readable dense modes and centred team names (A91)
+
+### 24.1 Mode queue density
+
+The mode bar remains at `x1348 y13 525x25`. Its items keep `text-overflow:
+ellipsis`, but A91 no longer relies on ellipsis alone to make a long queue
+readable. `fitModeLabels()` clears `.mode-order-container--compact`, restores
+every label from `data-full-name`, and measures each label against the space left
+after the icon, gap and padding. A queue is compact when `items.length > 5` or
+when any label has `label.scrollWidth > available`. Compact items use a 4px gap,
+a 22px icon and a label containing `fullName.slice(0, 3)`. Normal three- and
+five-map queues keep the original full label and 14px icon.
+
+Each mode item carries the full mode name in both `title` and `aria-label`. The
+visible three-letter text therefore has an accessible full name, and a later
+queue that fits restores the stored full name instead of keeping an abbreviation
+from an earlier update. `fitModeLabels()` runs at the end of `updateModeOrder()`
+and again after `document.fonts.ready`, alongside `fitTeamNames()`.
+
+### 24.2 Team name alignment
+
+The `.team-bar__name` rule uses `text-align: center` in the flex section between
+the logo and score. The home, away and swapped rules that set `justify-content`
+or left/right text alignment are removed. Flex order and the team-colour washes
+are untouched, and long names continue through `fitText(el.homeName, 27, 18)` and
+`fitText(el.awayName, 27, 18)` with ellipsis inside the fixed 525x55 bars.
+
+### 24.3 Verification
+
+The rebuilt desktop app ran in WebView2 at 1920x1080 with the local overlay
+server and isolated probe data. The density proof drove `updateOverlay()` through
+CDP and read the DOM state directly. First to 4 produced seven items,
+`compact: true`, labels `Con/Esc/Hyb/Fla/Pus/Con/Esc`, seven 22px icons and intact
+full names in `title` and `aria-label`. First to 3 and First to 2 kept full labels
+and 14px icons. The bar measured `x1348 y13 525x25` in every case.
+
+The centring proof measured computed alignment and text centres in default,
+swapped and long-name states. Default home and away centres differed from their
+text centres by 0 and 0.01px; swapped differed by 0 and 0.01px; long names
+differed by 0. All bars stayed at `x43 y52 525x55` and `x1348 y52 525x55`, and no
+name clipped. The first default capture missed the mode bar because the proof
+shot before the 1.8s opening reveal; the proof now waits until the reveal has
+settled, and the regenerated screenshots show the populated bar in all states.
+Source guards require the compact CSS, the measurement threshold, the three-letter
+conversion, the accessible-name attributes, centred name text and the absence of
+the old alignment overrides. Evidence is in `docs/manual-qa.md` row A91 and the
+A91 sign-off entry, with repeatable steps in `docs/manual-qa-runbook.md`
+section A91.

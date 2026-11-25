@@ -588,7 +588,7 @@ can be made transparent. Timer and game overlay have no background mode at all.
 | `background.html` | persistent backdrop beneath every scene | two drifting lattices, the product's mask alone | solid opaque `--fgc-surface` plate; `?tone=team` only for the washes | glow 84s, forward 88s, reverse 72s | not applicable; it is the richer standalone treatment |
 | `hero-bans.html` | full-bleed ban moment | logo 100×115, role 60×68, wall and grid | outer-edge team wash, neutral ink on art, no seam | 0.8s initial reveal; A84 adds a 560ms per-side ban reveal with 90ms stagger and preserves unchanged images | shipped 2026-11-23, A84 reveal refinement 2026-11-24 |
 | `timer.html` | non-game countdown and lower-third bug | no FX hexagon; planned hex plate | transparent body, theme text | no reveal delay, no per-frame clock | explicitly excluded by owner |
-| `game-overlay.html` | chrome around the game capture inside the five fixed boxes | no hexagon; transparent cropped logo art and two art-only centre ban chips | bars keep blue left and red right by screen position with gradients and washes strongest at the inner score end; ban chips use team colour when enabled and fall back to blue/red when off | 0.8s opening; bans enter over 0.36s at 2.5s/2.62s and at 0/120ms on later changes | explicitly excluded by owner |
+| `game-overlay.html` | chrome around the game capture inside the five fixed boxes | no hexagon; transparent cropped logo art and two art-only centre ban chips; team names centred in their logo-to-score sections | bars keep blue left and red right by screen position with gradients and washes strongest at the inner score end; ban chips use team colour when enabled and fall back to blue/red when off | 0.8s opening; bans enter over 0.36s at 2.5s/2.62s and at 0/120ms on later changes | A91 keeps dense mode queues readable with 22px marks and three-letter labels; normal queues keep full names |
 | `map-pool.html` | five-column map grid by mode with no header | plain mode icons with no hexagon; map art stays rectangular; no clip-path on thumbnails | bottom gradient, -1px seam overscan, wrapped names; picked art darkens and gains a lightened winner-colour wash, rule and crest shadow | A85 opens columns, cards and mode marks on staggered beats; live updates use stable slots, duplicate no-ops and one animation batch | shipped transparent FX and A85 Clean Canvas 2026-11-24 |
 | `map-select.html` | vertical map slots; A84 Clean Canvas removes the score slabs, per-card headers, mode icons and `Now playing` pill | ban portraits stay square inside hexes; the 112px winner logo is centred in a team-colour halo with no giant hex plate | completed art uses `brightness(0.52) saturate(0.45)` under a 0.13 radial winner wash | one-shot opening settle; live changes use stable slots, a dark swap curtain, ghost text crossfade and one animation batch | shipped transparent FX, A83 result clarity and A84 Clean Canvas 2026-11-24 |
 | `row-casters.html` | caster row | no portrait frame and no role chip; square photos stay clear | no per-card wash or photo gradient; the card tint alone separates the photo from the plate | 500ms startup hold, 620ms reveal with 110ms stagger; hidden→visible replays the reveal and later changes animate only their stable slot | shipped A86 Clean Canvas 2026-11-25 |
@@ -606,8 +606,11 @@ These are agreed ideas, not changes in the tree:
   transparent cropped logo art, position-based blue-left/red-right gradients
   that peak at the inner score end, and ban chips flanking the centre bar. A90
   lets those chips use the team colour when team colours are on, falling back to
-  blue-left/red-right when off, while keeping their geometry and entrance. Do
-  not add a hexagon score plate or opaque logo tiles without a new decision.
+  blue-left/red-right when off, while keeping their geometry and entrance. A91
+  centres team names in their fixed sections and keeps dense mode queues
+  readable with larger marks and three-letter labels instead of icon-only
+  switches or squashed full names. Do not add a hexagon score plate or opaque
+  logo tiles without a new decision.
 - **Map pool.** A85 delivered the five-column Clean Canvas: no header or fit
   pass, plain mode icons, wrapped map names, a bottom gradient and staggered
   opening beats. The picked map darkens and uses a readable, lightened version
@@ -809,3 +812,4 @@ it has shipped.
 | 2026-11-24 | A85 rebuilt map pool with the same design language: five columns, plain mode icons, no heading or fit pass, wrapped names, staggered opening beats, darker picked art, a readable lightened winner glow from the choosing team, nested-init unwrapping and stable-slot reconciliation. |
 | 2026-11-25 | A87 refreshed the game overlay inside the five fixed boxes with transparent cropped logos, position-based inner-edge gradients, heavier type and centre ban chips on a 2.5s/2.62s reveal; records moved to match scope with tournament derivation and manual override, and empty logos on the pick overlays gained theme-independent initials. |
 | 2026-11-25 | A90 made the centre ban chips follow Team A and Team B colours when team colours are enabled, falling back to the fixed blue-left/red-right accents when disabled, while preserving the exact chip boxes and entrance. |
+| 2026-11-25 | A91 kept dense mode queues readable with 22px icons and three-letter labels while normal queues kept full names, and centred team names inside their fixed bar sections. |

@@ -1847,3 +1847,26 @@ the rule consistent with the rest of the overlay and avoids a second colour
 setting. Preserving the team-identity mapping through a side swap matches the
 way the ban belongs to a team rather than to a screen edge. The owner reviewed
 the off, on and swapped captures and signed off on 2026-11-25.
+
+### D26 - Dense mode queues keep readable names and team names stay centred
+
+**Decision.** A91 keeps mode names visible in every queue. When there are more
+than five maps, or when measurement shows that a label cannot fit its segment,
+`game-overlay.html` adds `.mode-order-container--compact`: icons grow to 22px and
+labels become the first three letters of the mode name. Normal queues keep full
+names and 14px icons. The full name remains in `title` and `aria-label`, and the
+original text is restored before every measurement. Team names now use
+`text-align: center` in the flex section between logo and score; the side- and
+swap-specific alignment overrides are removed. No fixed bar box or text-fitting
+rule changed.
+
+**Reason.** The owner reported that First to 4 squashed the mode names and first
+suggested dropping to images only. Visual review showed readable marks but the
+owner wanted text as well, with slightly larger icons and the first three
+letters of each mode. Keeping a short name gives the operator a fast read without
+asking the fixed bar to grow, and preserving the full accessible name avoids
+making the compact state worse for assistive technology. Team names were hugging
+the logo or score on opposite sides, which read as unbalanced inside the same
+fixed section; centring them gives both teams the same treatment after a swap
+while keeping the established `fitText` and ellipsis safety. The owner reviewed
+the final captures and signed off on 2026-11-25.

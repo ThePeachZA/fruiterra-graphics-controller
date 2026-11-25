@@ -5973,3 +5973,55 @@ to Team A pink and Team B green, and the swapped state kept those team colours
 while the bars changed sides. All three states preserved the exact chip geometry
 and entrance, the console stayed clean, all gates passed, and the owner selected
 **Sign off (Recommended)** after the visual review.
+
+### A91 - Readable dense mode queues and centred team names
+
+1. Run `git diff --check`, `cargo fmt --all -- --check`,
+   `cargo clippy --workspace --all-targets -- -D warnings` and
+   `cargo test --workspace --quiet`. The overlay source test must require the
+   compact CSS, the `items.length > 5` threshold, the measured
+   `label.scrollWidth > available` condition, the three-letter conversion, the
+   full accessible names and the centred `.team-bar__name` rule without the old
+   side-specific alignment overrides.
+2. Stop the running app, run `dx build --desktop`, and relaunch
+   `target/dx/fruiterra-gc/debug/windows/app/fruiterra-gc.exe` with
+   `FGC_DATA_DIR=C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-data-probe`
+   and the WebView2 remote-debugging arguments. Confirm `/health` reports both
+   overlays on port 3001.
+3. Open the game overlay preview and run
+   `node C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-game-mode-density-proof.mjs`.
+   The script finds the game-mode icons from `/state`, drives `updateOverlay()`
+   through CDP, settles the entrance animations and captures the First to 4 and
+   First to 3 states.
+4. For First to 4, confirm the mode bar is still at `x1348 y13 525x25`, has seven
+   items, reports `compact: true`, shows `Con/Esc/Hyb/Fla/Pus/Con/Esc`, measures
+   all seven icons at 22px, and retains the full mode name in `title` and
+   `aria-label`. For First to 3 and First to 2, confirm full labels and 14px
+   icons in the same bar. The console must contain no application errors.
+5. Review the density screenshots. The first icon-only proposal was rejected;
+   the final marks must be visibly larger with three-letter text, evenly spaced,
+   unclipped and with the active segment still orange.
+6. Run
+   `node C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-game-name-centre-proof.mjs`.
+   It drives default, swapped and long-name states through CDP, settles the
+   opening reveal, measures computed `text-align`, section centres and text
+   bounding-box centres, and writes `fgc-team-name-centre-default.png`,
+   `-swapped.png` and `-long.png`.
+7. Confirm the text centre matches its section centre within about 0.01px in
+   each state, long names remain inside the fixed 525x55 bars through `fitText`,
+   and the bars stay at `x43 y52 525x55` and `x1348 y52 525x55`. If the first
+   default capture misses the mode bar, wait for the 1.8s opening reveal to
+   settle before recapturing; later updates paint the bar immediately.
+8. Ask a fresh visual reviewer to confirm that all three regenerated screenshots
+   show a populated, readable mode bar and centred names with no clipping or
+   overlap, then ask the owner to sign off on both changes together before
+   recording A91.
+
+**Result: Pass - owner 2026-11-25.** First to 4 switched to seven 22px icons with
+`Con/Esc/Hyb/Fla/Pus/Con/Esc` labels and intact full accessible names, while
+three- and five-map queues kept their original full labels and icons. The mode
+bar kept its exact geometry, the default, swapped and long-name captures centred
+every name within about 1px, and the regenerated default capture showed the mode
+bar after the reveal had settled. The final reviewer found no clipping, overlap
+or regression, all gates passed, and the owner selected **Sign off (Recommended)**
+after the combined review.
