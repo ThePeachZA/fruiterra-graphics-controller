@@ -1,8 +1,9 @@
 //! Assets destination: the content-addressed image library.
 //!
 //! Bundled assets are shown read-only because they live inside the binary.
-//! User assets can be imported from a file or URL, previewed, renamed and
-//! deleted. Deleting an asset clears every reference to it and lets garbage
+//! User assets can be imported from a file or URL, previewed, replaced,
+//! renamed and deleted. Replacing keeps the asset identity so every reference
+//! follows the new image; deleting clears references and lets garbage
 //! collection reclaim the bytes after the next save.
 
 use std::cmp::Reverse;
@@ -91,6 +92,7 @@ pub fn AssetsView() -> Element {
     let mut rename_target = use_signal(|| None::<CoreAsset>);
     let mut rename_text = use_signal(String::new);
     let mut delete_target = use_signal(|| None::<CoreAsset>);
+    let mut replace_target = use_signal(|| None::<CoreAsset>);
     let mut property_target = use_signal(|| None::<AssetId>);
     let mut import_category = use_signal(|| AssetCategory::Logo);
     let mut show_url_dialog = use_signal(|| false);
@@ -306,7 +308,9 @@ pub fn AssetsView() -> Element {
                                         key: "{asset.id}",
                                         asset: asset.clone(),
                                         mode_options: mode_options.clone(),
+                                        busy,
                                         on_preview: move |asset: CoreAsset| preview.set(Some(asset)),
+                                        on_replace: move |asset: CoreAsset| replace_target.set(Some(asset)),
                                         on_rename: move |asset: CoreAsset| {
                                             rename_text.set(asset.name.clone());
                                             rename_target.set(Some(asset));
@@ -410,6 +414,17 @@ pub fn AssetsView() -> Element {
                     }
                 }
                 div { class: "fgc-dialog-actions",
+                    if asset.origin != AssetOrigin::Bundled {
+                        Button {
+                            variant: ButtonVariant::Primary,
+                            disabled: busy,
+                            onclick: move |_| {
+                                replace_target.set(Some(asset.clone()));
+                                preview.set(None);
+                            },
+                            "Replace…"
+                        }
+                    }
                     Button {
                         variant: ButtonVariant::Outline,
                         onclick: move |_| preview.set(None),
@@ -478,6 +493,34 @@ pub fn AssetsView() -> Element {
                         }
                     },
                     "Delete"
+                }
+            }
+        }
+
+        Dialog {
+            open: replace_target().is_some(),
+            on_open_change: move |open: bool| if !open { replace_target.set(None) },
+            if let Some(asset) = replace_target() {
+                DialogTitle { "Replace {asset.name}?" }
+                DialogDescription {
+                    "Choose a new file for this asset. Its name and identity stay the same, so every team, player and overlay using it shows the new image. The old image is cleaned up after the next save."
+                }
+                div { class: "fgc-dialog-actions",
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        onclick: move |_| replace_target.set(None),
+                        "Cancel"
+                    }
+                    Button {
+                        variant: ButtonVariant::Primary,
+                        disabled: busy,
+                        onclick: move |_| {
+                            store.replace_asset_image(asset.id.clone(), move |_| {
+                                replace_target.set(None);
+                            });
+                        },
+                        if busy { "Working…" } else { "Choose image…" }
+                    }
                 }
             }
         }
@@ -818,13 +861,16 @@ pub fn AssetsView() -> Element {
 fn AssetCard(
     asset: CoreAsset,
     mode_options: Vec<CoreAsset>,
+    busy: bool,
     on_preview: EventHandler<CoreAsset>,
+    on_replace: EventHandler<CoreAsset>,
     on_rename: EventHandler<CoreAsset>,
     on_delete: EventHandler<CoreAsset>,
     on_game_mode: EventHandler<(CoreAsset, Option<AssetId>)>,
     on_properties: EventHandler<CoreAsset>,
 ) -> Element {
     let preview_asset = asset.clone();
+    let replace_asset = asset.clone();
     let rename_asset = asset.clone();
     let delete_asset = asset.clone();
     let mode_asset = asset.clone();
@@ -899,6 +945,13 @@ fn AssetCard(
                             onclick: move |_| on_properties.call(properties_asset.clone()),
                             "Properties…"
                         }
+                    }
+                    Button {
+                        variant: ButtonVariant::Outline,
+                        size: ButtonSize::Sm,
+                        disabled: busy,
+                        onclick: move |_| on_replace.call(replace_asset.clone()),
+                        "Replace…"
                     }
                     Button {
                         variant: ButtonVariant::Ghost,

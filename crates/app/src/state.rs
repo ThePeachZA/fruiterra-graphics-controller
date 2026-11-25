@@ -1773,6 +1773,105 @@ impl AppStore {
         });
     }
 
+    /// Replaces a user asset's image while keeping its logical identity.
+    ///
+    /// Every team, player and overlay references the asset id, so they all
+    /// follow the new bytes without being rewritten. The previous blob becomes
+    /// unreferenced and is reclaimed after the next save. The callback
+    /// receives `true` only after the image bytes were applied, so dialogs can
+    /// close once the picker and disk work are done.
+    pub fn replace_asset_image(&self, id: AssetId, on_finished: impl FnMut(bool) + 'static) {
+        let asset = self
+            .state
+            .peek()
+            .assets
+            .iter()
+            .find(|asset| asset.id == id)
+            .cloned();
+        let Some(asset) = asset else {
+            self.report_error("That asset is unavailable.");
+            return;
+        };
+        if asset.origin == AssetOrigin::Bundled {
+            self.report_error("Bundled images cannot be replaced.");
+            return;
+        }
+        if asset.is_attachment() {
+            self.report_error("Attached images are replaced from their parent asset.");
+            return;
+        }
+        if self.asset_busy() {
+            return;
+        }
+        let Some(asset_store) = self.asset_store.peek().clone() else {
+            self.report_error("Asset storage is unavailable.");
+            return;
+        };
+
+        let name = asset.name.clone();
+        let notice_name = name.clone();
+        let category = asset.category;
+        let mut on_finished = on_finished;
+        self.set_asset_busy(true);
+        let this = *self;
+        spawn(async move {
+            let picked = tokio::task::spawn_blocking(crate::assets_io::pick_image_file).await;
+            let path = match picked {
+                Ok(Some(path)) => path,
+                Ok(None) => {
+                    this.set_asset_busy(false);
+                    on_finished(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The file picker failed: {error}"));
+                    this.set_asset_busy(false);
+                    on_finished(false);
+                    return;
+                }
+            };
+
+            let read = tokio::task::spawn_blocking(move || read_image_file(&path)).await;
+            let (_, bytes, filename) = match read {
+                Ok(Ok(value)) => value,
+                Ok(Err(error)) => {
+                    this.report_error(error);
+                    this.set_asset_busy(false);
+                    on_finished(false);
+                    return;
+                }
+                Err(error) => {
+                    this.report_error(format!("The file read task failed: {error}"));
+                    this.set_asset_busy(false);
+                    on_finished(false);
+                    return;
+                }
+            };
+
+            let inserted = tokio::task::spawn_blocking(move || {
+                asset_store.insert(name, category, &bytes, filename)
+            })
+            .await;
+            let mut replaced = false;
+            match inserted {
+                Ok(Ok(outcome)) => {
+                    this.mutate(move |state| {
+                        apply_asset_replacement(state, &id, &outcome.asset);
+                    });
+                    this.refresh_unused();
+                    this.notify(format!("Replaced {notice_name}."));
+                    replaced = true;
+                }
+                Ok(Err(error)) => {
+                    this.report_error(format!("Could not replace the image: {error}"))
+                }
+                Err(error) => this.report_error(format!("The upload task failed: {error}")),
+            }
+            this.set_asset_busy(false);
+            on_finished(replaced);
+        });
+    }
+
     /// Uploads a ban icon owned by one hero.
     ///
     /// The file is stored as an attached Hero asset, so it never appears in the
@@ -3114,6 +3213,20 @@ impl AppStore {
     }
 }
 
+/// Applies new image bytes to an existing asset without changing its identity.
+///
+/// The name, category, position and hero attachments stay put so references
+/// remain valid. Only the content identity and original filename change.
+fn apply_asset_replacement(state: &mut AppState, id: &AssetId, replacement: &CoreAsset) -> bool {
+    let Some(asset) = state.assets.iter_mut().find(|asset| &asset.id == id) else {
+        return false;
+    };
+    asset.hash = replacement.hash.clone();
+    asset.ext = replacement.ext.clone();
+    asset.original_filename = replacement.original_filename.clone();
+    true
+}
+
 /// Reads one picked image into the form used by [`AssetStore::insert`].
 fn read_image_file(path: &Path) -> Result<(String, Vec<u8>, Option<String>), String> {
     let filename = path
@@ -3961,6 +4074,42 @@ mod tests {
         assert!(state.assets[1].game_mode.is_none());
         assert!(state.settings.display.tournament_logo.is_none());
         assert!(state.settings.display.watermark_logo.is_none());
+    }
+
+    #[test]
+    fn replacing_an_asset_keeps_its_identity_and_references() {
+        let mut original = user_asset("Peach logo");
+        original.added_at = Some("2026-01-01T00:00:00Z".to_owned());
+        original.icon = Some(AssetId::new());
+        let id = original.id.clone();
+        let name = original.name.clone();
+        let category = original.category;
+        let added_at = original.added_at.clone();
+        let icon = original.icon.clone();
+
+        let replacement = Asset::new_user(
+            "ignored",
+            category,
+            "f".repeat(64),
+            "webp",
+            Some("new-art.webp".to_owned()),
+        )
+        .expect("replacement asset");
+
+        let mut state = AppState::default();
+        state.assets.push(original);
+
+        assert!(apply_asset_replacement(&mut state, &id, &replacement));
+
+        let asset = &state.assets[0];
+        assert_eq!(asset.id, id);
+        assert_eq!(asset.name, name);
+        assert_eq!(asset.category, category);
+        assert_eq!(asset.added_at, added_at);
+        assert_eq!(asset.icon, icon);
+        assert_eq!(asset.hash, "f".repeat(64));
+        assert_eq!(asset.ext, "webp");
+        assert_eq!(asset.original_filename.as_deref(), Some("new-art.webp"));
     }
 
     #[test]
