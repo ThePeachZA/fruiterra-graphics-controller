@@ -2309,3 +2309,22 @@ Fixed risks from A89:
 | Generic side names hide which team is being edited | Fixed by A89 | The view resolves the selected team id and renders its name, then its tag, before falling back to `Team A` or `Team B`. |
 | Clearer labels change the stored pick or ban side | Fixed by A89 | Display strings changed only; select values remain `A` and `B`, and a state test asserts name, tag and empty-selection resolution. |
 | Long team names clip or break the layout | Fixed by A89 | A real WebView2 probe at 1280x800 and 375x812 showed the full names in selects and labels with no clipping, overlap or horizontal overflow. |
+
+A90 changes the centre ban chips on `game-overlay.html` so they follow the team
+colour when team colours are enabled. Each chip resolves its accent and glow from
+the same `--team-a-color` or `--team-b-color` variable that colours its team,
+and falls back to the fixed blue-left and red-right broadcast colours when team
+colours are off. The mapping stays tied to team identity: after a side swap the
+chips keep Team A pink and Team B green while the score bars exchange sides. The
+chips remain at `x762 y12 47x50` and `x1111 y12 47x50` with 35x42 art, 2px
+accents and the same 0.36s entrance, so only the colour source changed. The
+owner reviewed captures of the off, on and swapped states and approved A90 on
+2026-11-25.
+
+Fixed risks from A90:
+
+| Risk | Status | Guard |
+|---|---|---|
+| Ban chips keep the old blue and red accents when team colours are on | Fixed by A90 | The chip accent now resolves from `--team-a-color` and `--team-b-color`, with source assertions requiring both the set and removal paths. |
+| Team colours on the chips follow screen side rather than team identity | Fixed by A90 | The live swapped-state proof kept Team A pink on the left chip and Team B green on the right chip while the bars exchanged sides. |
+| Team colour on a chip changes its fixed geometry or entrance | Fixed by A90 | The proof measured unchanged 47x50 containers, 35x42 art, 2px accents and zero console errors in all three colour states. |

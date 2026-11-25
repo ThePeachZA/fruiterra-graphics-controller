@@ -5939,3 +5939,37 @@ ban label, no generic side names remained, and the long names rendered fully
 without clipping, overlap or horizontal overflow. All gates and the desktop
 build passed. The owner selected **Sign off (Recommended)** after the final
 visual review.
+
+### A90 - Centre ban chips follow team colour
+
+1. Stop the running app, run `dx build --desktop`, and relaunch the debug binary
+   with `FGC_DATA_DIR=C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-data-probe`
+   and the WebView2 remote-debugging arguments. Confirm `/health` reports both
+   overlays on port 3001.
+2. Open the game overlay preview and run
+   `node C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-game-ban-colour-proof.mjs`.
+   The script drives `updateOverlay()` through CDP, settles the entrance
+   animations and captures the off, on and swapped colour states.
+3. With team colours off, confirm the left chip accent and glow fall back to
+   `rgb(47, 111, 235)` and the right chip to `rgb(223, 68, 80)`. These must stay
+   blue-left and red-right after a side swap.
+4. With team colours on, confirm the left chip uses Team A's `rgb(255, 93, 177)`
+   and the right chip uses Team B's `rgb(140, 255, 77)`. In the swapped frame,
+   confirm the bars exchange sides while the chip colours stay pink and green.
+5. Review all three captures. Each chip must remain at `x762 y12 47x50` or
+   `x1111 y12 47x50` with 35x42 art, a 2px outer accent and 18px gaps to the
+   centre status bar. There must be no clipping, overlap or horizontal overflow.
+6. Filter the known WebView2 favicon 404s and confirm zero application console
+   errors in every colour state.
+7. Run `git diff --check`, `cargo fmt --all -- --check`,
+   `cargo clippy --workspace --all-targets -- -D warnings` and
+   `cargo test --workspace --quiet`. Confirm the overlay source guard requires
+   the chip colour variables and their removal path.
+8. Ask the owner to sign off on the off, on and swapped preview captures before
+   recording A90 in the docs.
+
+**Result: Pass - owner 2026-11-25.** The computed accents changed from blue/red
+to Team A pink and Team B green, and the swapped state kept those team colours
+while the bars changed sides. All three states preserved the exact chip geometry
+and entrance, the console stayed clean, all gates passed, and the owner selected
+**Sign off (Recommended)** after the visual review.

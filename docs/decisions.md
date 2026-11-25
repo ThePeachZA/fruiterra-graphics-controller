@@ -1829,3 +1829,21 @@ presentation change, not a new side identity. The fallback preserves the old
 readable text before a match has teams, while the tag covers a team with a blank
 name. The owner reviewed the running controller at both test widths, including
 the expanded HERO BANS section, and signed off on 2026-11-25.
+
+### D25 - Centre ban chips use team colour when team colours are on
+
+**Decision.** A90 lets the game overlay's centre ban chips take their accent and
+glow from the selected team while team colours are enabled. The Team A chip
+resolves `--team-a-color`, the Team B chip resolves `--team-b-color`, and both
+fall back to the fixed blue-left and red-right broadcast colours when team
+colours are off. The mapping follows team identity, so a side swap moves the
+bars but leaves Team A's chip pink and Team B's chip green. Geometry and motion
+are unchanged.
+
+**Reason.** The owner wanted the small chips to read as part of the same team
+identity as the bars without losing the reliable blue-left/red-right fallback
+used when team colours are disabled. Reusing the existing colour variables keeps
+the rule consistent with the rest of the overlay and avoids a second colour
+setting. Preserving the team-identity mapping through a side swap matches the
+way the ban belongs to a team rather than to a screen edge. The owner reviewed
+the off, on and swapped captures and signed off on 2026-11-25.

@@ -2196,3 +2196,37 @@ with repeatable steps in `docs/manual-qa-runbook.md` section A87. The source
 guards include `game_overlay_uses_position_side_gradients_without_resizing_bars`,
 `game_overlay_drops_the_outline_rings_and_moves_the_logo_outward` and
 `pick_overlays_show_a_tag_placeholder_for_empty_logo_slots`.
+
+## 23. Game overlay - team-coloured ban chips (A90)
+
+### 23.1 Colour source
+
+The two centre chips keep their art-only treatment and fixed positions but no
+longer always use the broadcast side colours. The home chip sets
+`--ban-accent: var(--team-a-color, var(--fgc-team-left))` and the away chip sets
+the equivalent with `--team-b-color` and `--fgc-team-right`. When team colours
+are enabled, the same update block that paints the bars writes `--team-a-color`
+onto the home ban element and `--team-b-color` onto the away ban element. When
+team colours are disabled, both properties are removed along with the bar
+properties, so the fallback restores blue on the left and red on the right.
+
+The variables follow team identity, not screen position. In the swapped proof
+the score bars exchanged sides while the left chip stayed Team A's pink and the
+right chip stayed Team B's green. No geometry or timing changed: both chips stay
+at `x762 y12 47x50` and `x1111 y12 47x50`, the art stays 35x42 with 2px accents,
+and the entrance remains 0.36s at 2.5s/2.62s or 0/120ms for later changes.
+
+### 23.2 Verification
+
+A rebuilt desktop app ran in WebView2 at 1920x1080 with the local overlay server
+and isolated probe data. The proof drove `updateOverlay()` through CDP, settled
+animations and sampled the computed chip accents and glows. With team colours
+off, the accents read `rgb(47, 111, 235)` and `rgb(223, 68, 80)`. With team
+colours on, they read `rgb(255, 93, 177)` and `rgb(140, 255, 77)`. With the
+teams swapped, the bars exchanged sides while the chip colours stayed unchanged.
+All three captures kept the exact chip boxes and accents, recorded zero console
+errors, and passed a fresh visual review. The source guard in
+`crates/server/tests/overlays.rs` requires both chip colour variables and both
+removal statements alongside the existing ban geometry assertions. Evidence is
+in `docs/manual-qa.md` row A90 and the A90 sign-off entry, with repeatable steps
+in `docs/manual-qa-runbook.md` section A90.
