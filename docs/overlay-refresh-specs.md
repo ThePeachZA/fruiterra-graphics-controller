@@ -2114,3 +2114,85 @@ repeatable steps in `docs/manual-qa-runbook.md` section A86. The source guards
 include `talent_rows_reconcile_cards_by_stable_slot`,
 `talent_rows_delay_the_opening_load_in` and
 `talent_rows_replay_load_in_when_shown`.
+
+## 22. Game overlay and pick overlays - fixed chrome and match records (A87)
+
+### 22.1 Fixed geometry and position colour
+
+A87 does not move the five game-overlay boxes. A real 1920×1080 CDP measurement
+reads the info bar at `x43 y13 525x25`, the mode bar at `x1348 y13 525x25`, the
+status bar at `x821 y12 278x50`, and the team bars at `x43 y52 525x55` and
+`x1348 y52 525x55`. The document scroll size stays `1920x1080`, so there is no
+gutter or overflow. Source assertions in
+`game_overlay_uses_position_side_gradients_without_resizing_bars` pin each box
+and require the gradients to reverse with the `.swapped` class: home default
+270deg blue, away default 90deg red, home swapped 90deg red and away swapped
+270deg blue. Blue always belongs to the left box and red to the right box even
+when the teams exchange sides.
+
+### 22.2 Logo, type and gradients
+
+The logo tile itself is transparent. Artwork boxes are 134×84 at `top: -12px`
+and an outer offset of -28px, so the fixed bar crops the art on all four sides;
+home default and away swapped use `inset(12px 0 17px 28px)`, while away default
+and home swapped use `inset(12px 28px 17px 0)`. A mask fades the cropped art
+toward the team name. `game_overlay_drops_the_outline_rings_and_moves_the_logo_outward`
+forbids the old opaque tile and outline rings. The team name uses the SemiBold
+face at 27px through `fitText(..., 27, 18)`, and active mode segments use the
+600 weight. Long titles, subtitles, team names and active-mode labels ellipsise
+inside the same fixed boxes instead of pushing their neighbours.
+
+### 22.3 Centre ban chips
+
+Bans no longer occupy the team bars. The two `.center-ban` chips sit at
+`x762 y12 47x50` and `x1111 y12 47x50`, leaving 12px gaps to the status bar.
+Each chip renders a 35×42 art-only tile with a 5px radius, inset keyline, bottom
+scrim and visually hidden text; a 2px accent sits on the left of the blue chip
+and the right of the red chip. `banChipIn` runs for 0.36s with
+`cubic-bezier(0.16, 1, 0.3, 1)`, translating 8px and scaling from 0.88 to 1.
+The initial delays are 2.5s and 2.62s. A changed ban after startup enters at
+0ms with a 120ms stagger, and a dataset key prevents duplicate frames from
+replaying the entrance. The live proof read opacity 0 initially, opacity
+0.741954, scale 0.969034 and `translateY` 2.06437px at an early 4% seek, then a
+crisp 35×42 final tile with accents `rgb(47, 111, 235)` and
+`rgb(223, 68, 80)`. The front-loaded easing explains why the old 50% midpoint
+looked nearly settled; the earlier seek demonstrates the in-flight state.
+
+### 22.4 Empty logos on the pick overlays
+
+`hero-bans.html`, `map-select.html` and `map-pool.html` substitute a tag or name
+initial when an expected logo is empty. The token `--fgc-tag-ink: #eef2f8` is
+fixed rather than following `--fgc-text`, which flips dark in the Light theme.
+Map Select and Map Pool add dark backplates so the initial stays legible over
+bright artwork. The source guards
+`game_overlay_shows_a_tag_placeholder_for_empty_logo_slots` and
+`pick_overlays_show_a_tag_placeholder_for_empty_logo_slots` check the token and
+the absence of a broken image for every empty slot.
+
+### 22.5 Match records
+
+`Team.record` is removed. `Match` carries `tournament_id`, `team_a_record` and
+`team_b_record` with serde defaults so older state files load. The core helper
+`fgc_core::tournament::team_record()` scans played group standings first and
+then falls back to `Seed n`. `Projector::match_record()` takes a non-empty manual
+override first, then the selected tournament, then `0-0`, and still writes the
+same `record` string into `TeamDto`. Match Controller Setup offers a Tournament
+select and two record inputs with derived placeholders. Tests
+`team_record_prefers_a_played_group_result`,
+`team_record_falls_back_to_the_entrant_seed`,
+`tournament_seed_supplies_a_record_when_no_fixtures_are_played`,
+`played_group_fixture_supplies_a_win_loss_record` and
+`manual_record_takes_precedence_over_tournament_data` cover the precedence.
+
+### 22.6 Verification
+
+All gates passed: `cargo fmt --all`, `git diff --check`,
+`cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings` and
+`cargo test --workspace --quiet`. `dx build --desktop` succeeded and the app was
+relaunched against the isolated probe data; `/health` reported two overlays on
+port 3001. A87's evidence is in `docs/manual-qa.md` row A87 and sign-off table,
+with repeatable steps in `docs/manual-qa-runbook.md` section A87. The source
+guards include `game_overlay_uses_position_side_gradients_without_resizing_bars`,
+`game_overlay_drops_the_outline_rings_and_moves_the_logo_outward` and
+`pick_overlays_show_a_tag_placeholder_for_empty_logo_slots`.

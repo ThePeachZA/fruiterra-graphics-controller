@@ -158,7 +158,10 @@ All five carry **the identical scoreboard payload**. The type name selects the s
 - `logoUrl`, `mapImageUrl`, `chosenByLogo`, `portraitUrl`, `heroImageUrl`, icon map values may be `null`.
 - `currentMapIndex` is `null` when no map is selected. `game-overlay` adds 1 for display (`MAP ${index + 1}`); the server sends the raw 0-based index (C2).
 - `currentMap` / `mapType` are `""` when no map is selected.
-- `record` defaults to `"0-0"`.
+- `record` defaults to `"0-0"`. It is resolved from the current match: a manual
+  Team A/B record override wins, then the selected tournament's played group
+  win-loss record or entrant seed, then `"0-0"`. The old `Team.record` field no
+  longer participates, but the DTO shape is unchanged.
 - `heroBans` is always an array; entries may be missing for maps that have none. When **Hero bans** is off, `heroBans` is `[]` and `heroIcons` is `{}` so no ban icons remain on any overlay.
 - `mapPoolData` is `[]` when the pool is empty.
 - `teamAbbreviations` mirrors the **Team abbreviations** switch in Match Controller. When it is `true`, the bundled game overlay shows the team's short `tag` instead of the full `name`. It defaults to `false`, and an overlay that does not recognise the field keeps showing the full name.

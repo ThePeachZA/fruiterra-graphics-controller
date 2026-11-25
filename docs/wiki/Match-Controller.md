@@ -31,6 +31,8 @@ The five tabs are:
 | **Status** | **Upcoming**, **Live** or **Complete**. |
 | **Side indicator** | **Neutral**, **Attack / Defend** or **Defend / Attack**. |
 | **Team A / Team B** | Choose the two teams from the roster. The tag shown on the map cards follows this choice. |
+| **Tournament** | Optional. Choose a tournament to fill the broadcast records from its played group standings or entrant seeds. |
+| **Team A record / Team B record** | Optional manual overrides for the broadcast record. Each field overrides its own derived value; clear both to use the tournament again. |
 
 **Swap sides** swaps Team A and Team B, including their scores, per-map picks
 and every completed map result.

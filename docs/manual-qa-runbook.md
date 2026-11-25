@@ -5788,3 +5788,111 @@ with a 500ms startup delay; visibility samples showed opacity 0.00, 0.93 and
 show, zero on a duplicate show, and one slot on a later change. The A86 reproof
 recorded no frames, no pills, no wash, no gradients, an opaque canvas
 and zero console errors. The owner reviewed the final app and approved A86.
+
+### A87 - Game overlay refresh, centre ban chips and match-scoped records
+
+1. Build the fixture with two long team names, a long title and subtitle, two
+   team colours, one active mode, a side swap, and one map with bans for both
+   teams. Keep the authoritative `app.json` untouched by launching the app with
+   `FGC_DATA_DIR=C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-data-probe` and
+   WebView2 remote debugging on port 9222. Confirm `/health` reports two overlays
+   on port 3001.
+2. Load `game-overlay.html` at 1920×1080 with
+   `node C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-game-refresh-proof.mjs`.
+   Confirm the document is `1920x1080` with no gutters, and measure the five
+   boxes: `#title-bar` at `x43 y13 525x25`, `#mode-order` at
+   `x1348 y13 525x25`, `#match-bug` at `x821 y12 278x50`, `#home-bar` at
+   `x43 y52 525x55` and `#away-bar` at `x1348 y52 525x55`.
+3. Switch on team colours and swap sides. Confirm the left box stays blue and
+   the right box stays red, with each gradient strongest at the inner score
+   end. Confirm the logo tile has a transparent background, the artwork is
+   clipped by the bar on all four sides, and the long names and headers
+   ellipsise without moving a box.
+4. Run
+   `node C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-game-edge-probe.mjs`.
+   The computed ban animations must be `banChipIn`, delays `2.5s` and `2.62s`,
+   duration `0.36s` and initial opacity `0`. The proof settles the surrounding
+   chrome, seeks only the chips to 4% of the entrance and records opacity
+   `0.741954`, scale `0.969034` and `translateY` `2.06437px`. A later ban change
+   must replay at `0ms` with a `120ms` stagger, and a duplicate frame must leave
+   the dataset key unchanged.
+5. Inspect the final 1920×1080 capture. The two chip bodies must be exactly
+   35×42 at `x762 y12 47x50` and `x1111 y12 47x50`, with blue `rgb(47, 111, 235)`
+   on the left chip, red `rgb(223, 68, 80)` on the right chip, 12px gaps to the
+   status bar, no clipping and no overlap. The app console must be empty apart
+   from the known favicon 404 from WebView2.
+6. Run
+   `node C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-pick-placeholder-proof.mjs`
+   in Night and Light. Empty logo slots on hero bans, map select and map pool
+   must show a tag or name initial in `--fgc-tag-ink: #eef2f8`, with the pick
+   overlays keeping their dark backplates.
+7. In Match Controller, create a tournament with the two teams as entrants and
+   at least one played group fixture, then select it on **Match → Tournament**.
+   Confirm the record placeholders show the played win-loss record where one
+   exists and otherwise `Seed n`. Type a manual Team A or Team B record and
+   confirm it overrides the derived value; clear both fields and confirm the
+   derived value returns. Confirm the Teams view no longer has a Record field,
+   while `/state` still carries the existing `record` string on the scoreboard
+   DTO.
+8. Stage the owner preview tabs with
+   `node C:\Users\Cameron\AppData\Local\Temp\opencode\fgc-stage-multiple.mjs` and
+   ask the owner to review the game, hero-bans, map-select and map-pool overlays.
+   After the requested earlier entrance is applied, repeat steps 4 and 5 and
+   ask for final sign-off.
+9. Run `git diff --check`, `cargo fmt --all -- --check`,
+   `cargo clippy --workspace --all-targets -- -D warnings` and
+   `cargo test --workspace --quiet`. Stop the app, run `dx build --desktop`,
+   relaunch it with the isolated probe data and re-check `/health`.
+
+**Result: Pass - owner 2026-11-25.** The final live probe read delays 2.5s and
+2.62s, duration 0.36s, opacity 0 at rest and 0.741954 at an early 4% seek, with
+scale 0.969034 and `translateY` 2.06437px. The settled chips were exactly 35×42
+with the correct left blue and right red accents, no clipping and no overlap.
+All five boxes kept their exact geometry in both long and empty states, the
+placeholders passed in both themes, record precedence passed for manual, played
+group and seed cases, and the app console recorded zero errors. All gates and
+the desktop build passed. The owner selected **Sign off (Recommended)** after
+the earlier timing was applied.
+
+### A88 - Replace imported images in place
+
+1. Build and run the desktop app with an isolated `FGC_DATA_DIR` and WebView2
+   debugging on port 9222, using a probe data directory rather than the
+   operator's shipped project. Confirm `/health` reports the local overlay
+   server is up.
+2. Open **Assets** in the real WebView2 app and set the CDP device metrics to
+   1280x800 and then 375x812. The controller is a fixed desktop layout, so the
+   document remains 1944px wide at both sizes; confirm the Replace UI introduces
+   no new horizontal overflow and that its buttons wrap inside the card actions.
+3. Confirm every imported, non-attached card has **Replace…** between Properties
+   and Rename, with the existing outline small Button styling. Confirm a bundled
+   asset and a hero attachment expose no replacement action.
+4. Click a card's **Replace…** button. Confirm a `role="dialog"` appears with the
+   asset name in the title, copy stating the name and identity stay the same,
+   that all team, player and overlay references follow the new image, and that
+   the old image is reclaimed after the next save. Confirm **Cancel** and
+   **Choose image…** are enabled, then cancel.
+5. Open the asset preview and click **Replace…**. Confirm it closes the preview
+   and opens the same confirmation dialog, then cancel it.
+6. Focus the first visible button and send **Tab** through CDP. Confirm focus
+   moves to the next labelled control with a visible focus outline and no
+   uncaught exception. Filter out the known WebView2 favicon 404s and confirm
+   there are no application console errors.
+7. The native file picker cannot be driven by CDP. Instead run
+   `cargo test --workspace --quiet` and confirm
+   `replacing_an_asset_keeps_its_identity_and_references` passes. Read the source
+   guards to confirm the store rejects bundled and attached ids, copies only
+   hash, extension and original filename, and clears busy before calling the
+   completion callback.
+8. Run `git diff --check`, `cargo fmt --all -- --check`,
+   `cargo clippy --workspace --all-targets -- -D warnings` and
+   `cargo test --workspace --quiet`. Stop the app, run `dx build --desktop`,
+   relaunch it and re-check `/health`.
+
+**Result: Pass - assistant 2026-11-25.** The live WebView2 probe at 1280x800 and
+375x812 found the Replace button on every user card, opened and cancelled the
+confirmation from both the card and preview, and saw a visible focus outline
+while tabbing. No app exceptions appeared and the only console noise was the
+known favicon 404. The native picker was not automatable, so the stable-identity
+contract was verified by the passing state test and source guards. All gates and
+the desktop build passed.

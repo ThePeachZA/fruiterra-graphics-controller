@@ -1765,3 +1765,50 @@ animations and then for a startup delay; the show replay lets the controller
 bring a source back without a manual OBS refresh, while the late-guest fix keeps
 the first animation consistent when data arrives in separate frames. The owner
 approved the final running app in person on 2026-11-25.
+
+### D22 - Fixed broadcast chrome, position colour and match-scoped records
+
+**Decision.** A87 keeps the five game-overlay boxes at their shipped 1920×1080
+coordinates and treats them as immutable broadcast geometry. Blue-left and
+red-right follow screen position even after a side swap. Team colour appears only
+as a gradient or wash, strongest at the inner score end, and the logo tile is
+transparent so overscanned art can be cropped by the bar rather than sitting on
+a coloured plate. Hero bans move into two art-only chips flanking the status bar
+and enter on 2.5s/2.62s delays over 0.36s, with immediate 0/120ms timing for
+later changes. Records move from `Team` to `Match`: a manual override wins,
+otherwise the selected tournament supplies a played group win-loss record or an
+entrant seed, and the DTO still sends the same `record` string to overlays. Empty
+logos fall back to tag or name initials with a theme-independent ink token.
+
+**Reason.** The owner wanted a more polished game overlay and the sibling pick
+overlays to stay coherent, but the five boxes are the contract OBS scenes already
+depend on, so visual work had to happen inside them. Position-based colour keeps
+the broadcast read stable when the operator swaps sides. Gradients and washes
+preserve the Night Broadcast language without turning the bars into flat colour
+blocks. Moving the ban art into the centre cleared the team names and gave the
+chips a dedicated reveal that can start earlier without disturbing the settled
+chrome. A record describes a team in a particular match, not the team forever,
+so it belongs beside the tournament selection and manual override rather than in
+the shared team library; keeping the DTO shape unchanged protects every existing
+overlay. The owner reviewed the staged preview tabs, asked for the earlier ban
+entrance, then approved the final timing in the sign-off prompt.
+
+### D23 - Replace imported images in place
+
+**Decision.** A88 adds **Replace…** to imported asset cards and to the asset
+preview dialog. The new file is stored by content hash and only the hash,
+extension and original filename are copied onto the existing asset. Its id,
+name, category, added date, hero attachments and variant flags do not change, so
+teams, players and overlays keep pointing at the same logical image. Bundled
+assets and hero attachment images cannot be replaced, and the action is disabled
+while work is in progress. The replaced blob becomes unused and is reclaimed by
+the existing clean-up pass after save.
+
+**Reason.** The owner asked for a way to replace an image in Assets. Re-linking
+every reference would have meant touching teams, talent, matches and overlay
+state, and a new asset id would leave backups and projects carrying stale links.
+Keeping the id makes the operation a byte swap behind a confirmation, which is
+easy to explain and hard to misuse. The browser proof verified the reachable
+buttons, confirmation copy and keyboard focus in the running WebView2 app; the
+native file dialog cannot be driven by CDP, so the byte-level identity contract
+is covered by the state test and source guards instead.

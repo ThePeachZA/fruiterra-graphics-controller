@@ -157,6 +157,12 @@ change priority. Use **Reset to default** to restore the default order.
 Before generation, select **Delete group** and confirm to remove a group. After
 generation that control is hidden because the fixtures and results are fixed.
 
+The current match can select a tournament on **Match Controller → Match**. Its
+broadcast record then comes from the team's played group win-loss record where
+one exists, otherwise from `Seed n`. A manual record typed on the Match tab wins
+over that derived value; clearing both record fields restores it. This is only a
+broadcast label and does not change standings, fixtures or seeds.
+
 ## Settings
 
 **Playoff bracket** can follow a group stage:

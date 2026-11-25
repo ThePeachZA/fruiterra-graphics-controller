@@ -2224,3 +2224,70 @@ Fixed risks from A86:
 | Role chips and hexagon frames obscure the row photos | Fixed by A86 | Source assertions forbid `.talent-role`, `.talent-image-frame`, the wash and both photo gradients. |
 | Replaying the row reveal also replays unrelated slots | Fixed by A86 | Duplicate frames are no-ops; after the opening settles only changed stable slots animate. |
 | The guest arrives after the opening frame and never animates | Fixed by A86 | Late changed cards use the startup delay, and the live-load trace shows the guest animating with a 500ms delay. |
+
+A87 refreshes `game-overlay.html` inside the five fixed 1920×1080 boxes. The info
+bar stays at `x43 y13 525x25`, the mode bar at `x1348 y13 525x25`, the centre
+status bar at `x821 y12 278x50`, and the team bars at `x43 y52 525x55` and
+`x1348 y52 525x55`. Side colour follows screen position, not team identity, so
+blue stays on the left and red on the right after a side swap. Team colours are
+only ever gradients or washes, strongest at the inner score end of each bar;
+there are no flat team-colour fills. The logo tile is transparent, the artwork
+overscans the bar and is clipped on all four sides, and the crop fades inward
+toward the name. Team names use the heavier SemiBold face with a 27px fit that
+drops to 18px, and long titles, subtitles, names and active modes ellipsise
+inside their fixed boxes.
+
+Hero bans leave the team bars and become compact 47×50 chips flanking the centre
+status bar at `x762 y12` and `x1111 y12`, with 12px gaps to the status bar. Each
+chip holds a 35×42 art-only tile with a 5px radius, inset keyline, bottom scrim,
+visually hidden text and a 2px blue-left or red-right accent. The chips enter
+with `banChipIn` over 0.36s; initial delays are 2.5s and 2.62s, and a later ban
+change enters immediately with a 120ms second-chip stagger. A dataset key keeps
+duplicate frames from replaying the reveal. The owner asked for this entrance
+to start earlier after reviewing the first timing, and the final live probe
+showed opacity 0 before the entrance and a visibly interpolated frame after an
+early seek.
+
+Records move from the team library to the current match. `Team.record` is gone;
+`Match` now carries `tournament_id`, `team_a_record` and `team_b_record`, all
+optional with serde defaults. `fgc_core::tournament::team_record()` prefers a
+played group win-loss record and falls back to the entrant seed. Projection
+resolves a manual match override first, then the selected tournament, then
+`0-0`; the `record` field on the wire DTO keeps its original shape. Match
+Controller Setup gained a Tournament select and Team A/B record inputs with
+derived placeholders, while the Teams view no longer offers a Record field.
+Empty logo slots on hero bans, map select and map pool now show a tag or name
+initial through the theme-independent `--fgc-tag-ink: #eef2f8` token, with dark
+scrims where the surrounding art would wash them out. The owner reviewed the
+staged overlays and approved A87 on 2026-11-25.
+
+Fixed risks from A87:
+
+| Risk | Status | Guard |
+|---|---|---|
+| The refresh changes broadcast geometry or swaps side colours with team identity | Fixed by A87 | Source assertions fix all five boxes and require position-based blue-left/red-right gradients, including `.swapped`. |
+| Team colour returns as a flat fill | Fixed by A87 | Only gradients and washes are allowed in the team bars; source guards reject flat fills. |
+| A large logo or long name breaks the fixed chrome | Fixed by A87 | The logo is transparent, overscanned and clipped on all four sides; names and headers fit or ellipsise inside their boxes. |
+| A record belongs to a team rather than the match it is broadcast in | Fixed by A87 | Records live on `Match`, the Teams field is removed, and projection preserves the existing DTO `record` shape. |
+| Empty logo initials disappear under the Light theme | Fixed by A87 | Placeholders use the fixed `--fgc-tag-ink` token and dark backplates on the pick overlays. |
+| The ban entrance starts too late or replays on duplicate frames | Fixed by A87 | Initial delays are 2.5s/2.62s, live changes run at 0/120ms, and the reveal is keyed by dataset state. |
+
+A88 answers the owner's request for a way to replace an image in Assets. Every
+imported asset card now has a **Replace…** action, and the preview dialog has the
+same action for the asset it shows. Choosing it opens a confirmation that names
+the asset and explains that its identity and display name stay the same, that
+every team, player and overlay reference follows the new image, and that the old
+image data is reclaimed after the next save. The system file picker then supplies
+a replacement in the same formats as an import. The store inserts the new bytes
+by content hash, copies only the hash, extension and original filename onto the
+existing asset, and leaves the id, name, category, added date, hero attachments
+and variant flags untouched. Bundled art and hero attachment images are rejected,
+and the button disables while the replacement is being read and stored.
+
+Fixed risks from A88:
+
+| Risk | Status | Guard |
+|---|---|---|
+| Replacing an image breaks every reference to it | Fixed by A88 | The asset id is preserved and only hash, extension and original filename change; a state test asserts identity, name, category, added date and icon survive. |
+| Bundled or attached art is replaced through the new button | Fixed by A88 | The UI hides the action for bundled assets and the store rejects bundled and attached ids. |
+| The new action is unreachable or loses keyboard focus | Fixed by A88 | A real WebView2 probe found the button on every user card, opened the confirmation from both card and preview, and saw a visible focus outline while tabbing. |

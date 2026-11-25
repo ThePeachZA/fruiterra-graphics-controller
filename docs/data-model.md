@@ -33,7 +33,6 @@ pub struct Team {
     pub id: TeamId,
     pub name: String,
     pub tag: String,
-    pub record: Option<String>,      // wire default "0-0" when None
     pub color: String,               // "#RRGGBB"
     pub text_color: String,
     pub aux_color: String,
@@ -58,6 +57,9 @@ pub struct Match {
     pub subtitle: String,
     pub team_a: Option<TeamId>,
     pub team_b: Option<TeamId>,
+    pub tournament_id: Option<TournamentId>,   // record source
+    pub team_a_record: Option<String>,         // manual override
+    pub team_b_record: Option<String>,         // manual override
     pub maps: Vec<MapSlot>,
     pub hero_bans: Vec<MapHeroBans>,
     pub map_pool: Vec<String>,       // map *names*, matching the original
@@ -246,7 +248,11 @@ into the same `IntervieweeDto` used by the overlays.
 - `Asset.role` (`role` on the wire, `#[serde(default)]`) is the hero's role, one of `tank`, `damage` or `support`. It is picked from the hero's **Properties…** dialog and drawn as a hexagon on the hero bans overlay.
 - `Asset.badge` (`badge` on the wire, `#[serde(default)]`) points at a small hexagonal emblem for a hero. It is uploaded from the hero's **Properties…** dialog and is empty for a hero without one.
 - `Asset.attachment` (`attachment` on the wire, `#[serde(default)]`) marks media owned by another asset. `kind: "heroBanIcon"` is the first variant, `kind: "heroTransparent"` the second and `kind: "heroBadge"` the third; attached files are hidden from the library and pickers and are deleted with their owner. No schema version change was needed.
-- `Team.record` is `Option<String>` internally; the wire DTO substitutes `"0-0"` exactly as the original does.
+- Records are match-scoped. `Match.tournament_id` selects the source, and
+  `team_a_record` / `team_b_record` are optional manual overrides. The wire DTO
+  still substitutes `"0-0"` when no override or derived value exists. Older
+  `teams[].record` values are ignored on load and are not written back; a record
+  describes a team in one match, not the team forever.
 - Timer state (running/seconds) is **ephemeral runtime state**, not persisted — matching the original. Only timer *settings* persist.
 - Asset lookup is case-insensitive by `name` for maps/heroes/game modes, matching the original `find` calls.
 - Assets are content-addressed: the URL is derived from `hash` + `ext`, so replacing an image produces a new URL and cannot serve a stale cache. Full asset semantics are in `docs/assets.md`.
@@ -268,7 +274,6 @@ into the same `IntervieweeDto` used by the overlays.
       "id": "…uuid…",
       "name": "Team Name",
       "tag": "TAG",
-      "record": "0-0",
       "color": "#ff0000",
       "textColor": "#ffffff",
       "auxColor": "#090909",
@@ -293,6 +298,9 @@ into the same `IntervieweeDto` used by the overlays.
     "subtitle": "",
     "teamA": null,
     "teamB": null,
+    "tournamentId": null,
+    "teamARecord": null,
+    "teamBRecord": null,
     "maps": [
       {
         "name": "Ilios",

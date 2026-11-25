@@ -39,13 +39,24 @@ The limit is **20 MB** per image. SVG files are checked for scripts and external
 references before they are stored; unsafe files are rejected.
 
 Bundled art ships with the application and is read-only. Imported art is yours
-to rename or delete.
+to replace, rename or delete.
 
 ### From an image picker
 
 Image pickers in Teams, Talent and Match Controller can upload a new image
 directly into the relevant category. When a picker upload creates a new asset,
 that asset is selected automatically.
+
+## Replace an image
+
+Select **Replace…** on an imported asset card, or open its preview and choose
+**Replace…**. Pick the new PNG, JPEG, WebP, GIF or SVG file when the system file
+dialog opens. The asset keeps its name, category and identity, so every team,
+player and overlay that uses it follows the new image without being linked
+again. The old image data becomes unused and is removed after the next save.
+
+Bundled assets and images attached to a hero cannot be replaced. The button is
+disabled while a replacement is being read and stored.
 
 ## Rename or delete
 
