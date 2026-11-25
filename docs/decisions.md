@@ -1870,3 +1870,26 @@ the logo or score on opposite sides, which read as unbalanced inside the same
 fixed section; centring them gives both teams the same treatment after a swap
 while keeping the established `fitText` and ellipsis safety. The owner reviewed
 the final captures and signed off on 2026-11-25.
+
+### D27 - Auto scene changes use a 600ms crossfade with fresh reveal frames
+
+**Decision.** A92 removes the HTML stinger work from IDE-028 and makes the auto
+switcher crossfade between scenes over 600ms. The auto page creates only the
+active scene iframe. On a real active-scene change it replaces the target
+iframe, starts that frame hidden, flushes the hidden style with
+`void incoming.offsetWidth;`, then promotes it in `requestAnimationFrame` so
+the outgoing and incoming frames overlap for the full fade. Once the fade
+finishes, inactive frames are removed. Duplicate selections and hidden states
+do not fade. The root exposes `data-transition="fade"` during the change and
+`idle` afterwards.
+
+**Reason.** The owner rejected several opaque-stinger designs as too busy or
+too fast, and finally asked for a simple fade instead of further stinger
+iterations. A true crossfade preserves broadcast continuity without adding
+another Browser Source, custom animation language or OBS transition settings.
+Replacing the target iframe is necessary because the overlay pages fire their
+opening reveals only on first keyed init; reusing a frame left later scene
+activations visually static. Fresh frames keep those reveals visible under and
+after the host fade while leaving the overlay pages themselves unchanged. The
+owner reviewed the live 300ms, 650ms, 900ms and replay captures and approved
+the behaviour on 2026-11-26. IDE-028 is closed as `wont-do`.

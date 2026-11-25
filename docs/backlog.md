@@ -961,7 +961,7 @@ Migrated records: **74**. Breakdown: issue/closed · fixed × 15, issue/closed �
 | Follow-up note | IMP-032 | improvement | closed · done | Placeholder TAG image for empty slots |
 | Follow-up note | IDE-026 | idea | triaged | In-app variable and script inspector |
 | Follow-up note | IDE-027 | idea | triaged | Legacy Electron app.json importer |
-| Owner request | IDE-028 | idea | open | Animated HTML stinger transitions (team and head-to-head) |
+| Owner request | IDE-028 | idea | closed · wont-do | Animated HTML stinger transitions (team and head-to-head) |
 | Owner request | IDE-029 | idea | open | Flythrough overlay with looping video and lower-third series data |
 
 No v1.0.0 content, schema, protocol or QA state was changed by the migration.
@@ -1162,23 +1162,39 @@ hashes restored. No screenshots were taken or published, and
 
 ## AE. Stinger transitions idea — IDE-028 (2026-11-21)
 
-IDE-028 is open and tagged `area:overlay`, `needs-design`, `post-v1`,
-`user-requested` and `prior-art:docs-c`. It needs IDE-004 (auto-overlay host)
-and follows IDE-018 (§C presentation roadmap). No code was implemented: this
-item records the owner's request for animated HTML stingers that incorporate
-tournament and team logos, available separately and also built into the auto
-overlay. A team transition should feature that team's logo; the
-`game-overlay.html` transition should show the two logos head-to-head.
+IDE-028 is closed as `wont-do`. It was tagged `area:overlay`, `needs-design`,
+`post-v1`, `user-requested` and `prior-art:docs-c`, depended on the IDE-004
+auto-overlay host, and followed the IDE-018 presentation roadmap. The owner
+originally asked for animated HTML stingers carrying tournament and team logos,
+usable both as separate browser sources and inside the auto overlay: a team
+transition would feature that team's logo and `game-overlay.html` would show a
+head-to-head pair.
 
-The item's prose records research across OWL, OWWC and OWCS, LoL Worlds/MSI/LCK/
-LPL, and VALORANT VCT. The common convention is a modular, late-bound system:
-one shared motion language and swappable team/event data, rather than unrelated
-bespoke clips. OWL used fast 2D swipe/wipe motion; Riot toolkits handled many
-teams with late-bound logos and colours; OWCS used regional wordmarks and
-palettes; VCT used timing tokens and responsive text; LCK kept overlays
-restrained. The proposed direction is separate transparent HTML pages plus a
-reusable auto-overlay module, with fallbacks for missing logos and colours and
-no CDN or official-mark copying.
+The item's research covered OWL, OWWC and OWCS, LoL Worlds/MSI/LCK/LPL and
+VALORANT VCT. The common convention is a modular, late-bound system with one
+shared motion language and swappable team or event data, rather than unrelated
+bespoke clips. OWL used fast 2D swipes and layered cards with strong easings;
+Riot toolkits handled many teams through late-bound logos and colours; OWCS used
+regional wordmarks and palettes; VCT used timing tokens and responsive text; LCK
+stayed restrained. The owner's older WebM stingers and five legacy HTML concept
+files were reviewed as additional evidence: a large skewed logo sliding into a
+flat colour field, followed by a short diagonal wipe.
+
+Implementation was attempted in several passes. The first used transparent
+card-style stingers with a Promise replay contract and auto-host hand-off. The
+owner then required fully opaque stingers, more motion, esports-researched
+timing, Exeldro Browser Transition support, and a general fallback chain of
+tournament logo, watermark logo and text. Later passes shortened and lengthened
+the animation, moved to logo-only compositions, and finally modernised the
+legacy skewed-panel concept. Each pass was built, tested and demonstrated in
+real WebView2/CDP at 1920x1080, including sampled opacity, phase, logo fallback
+and auto-switcher behaviour. The owner rejected every visual direction as too
+busy or too fast and ultimately asked for all HTML stingers to be removed and
+replaced by a simple 600ms fade between automatic scenes. The stinger files,
+host wiring, tests for the replay contract and all nine scene-to-stinger
+triggers were reverted before release. No stinger page, transition asset or
+Exeldro configuration remains in the product. A92 records the accepted
+replacement.
 
 ## AF. Flythrough overlay idea — IDE-029 (2026-11-21)
 
@@ -2357,3 +2373,42 @@ Fixed risks from A91:
 | A First to 4 queue squashes unreadable mode names | Fixed by A91 | The overlay measures each label and switches queues over five maps or unreadable labels to 22px icons plus three-letter names. |
 | Abbreviated mode labels lose their meaning | Fixed by A91 | Full names remain in `title` and `aria-label`, and `fitModeLabels()` restores them when the queue fits again. |
 | Centring names moves the fixed side bars or clips long names | Fixed by A91 | The bar boxes stayed exact in live default, swapped and long-name proofs, with `fitText` and ellipsis unchanged. |
+
+## AH. Auto-overlay crossfade with replaying scene reveals — A92 (2026-11-26)
+
+A92 replaces the rejected IDE-028 stinger work with a simple crossfade between
+automatic scenes. `auto.html` keeps the auto switcher as the single Browser
+Source and no longer creates, prewarms or listens to any stinger frames. The
+root carries `data-transition="idle"` normally and `data-transition="fade"`
+while a scene change is in progress. Every scene iframe uses the same
+600ms opacity transition; visibility changes immediately when a scene is shown
+and is delayed by 600ms when it is hidden.
+
+On an included active-scene change, `applySelection()` removes any previous
+frame for the target file and creates a fresh iframe. The new frame starts at
+`data-visible="false"`; a forced `offsetWidth` read flushes that hidden style
+before `requestAnimationFrame` promotes it to `true`, so the outgoing and
+incoming frames genuinely overlap for 600ms instead of one snapping in. After
+the fade timer, the root returns to `idle` and frames for inactive files are
+retired. Switching away and back therefore creates another fresh frame, which
+is necessary because each overlay page fires its opening reveal only on first
+keyed init. Duplicate selections still return before any fade, and hidden
+selections clear all frames without a transition.
+
+The live WebView2/CDP proof at 1920x1080 sampled the crossfade midway: at
+300ms the outgoing game overlay was at opacity 0.21692 and the incoming map
+select at 0.78308, with both reporting `transitionDuration: "0.6s, 0s"`. By
+650ms the root was back to `idle`, the old frame hidden and the new frame fully
+visible. The map-select reveal elements were still animating after the host
+fade, and switching away and back replayed them (inner opacities 0.500923 and
+0.752024 at 900ms). Hide and show stayed clean, no duplicate fade fired, and
+the console was empty. The owner reviewed the 300ms, 650ms, 900ms and replay
+captures and approved A92 on 2026-11-26.
+
+Fixed risks from A92:
+
+| Risk | Status | Guard |
+|---|---|---|
+| A scene snaps in instead of crossfading | Fixed by A92 | The incoming frame starts hidden, `void incoming.offsetWidth;` flushes the style, and `requestAnimationFrame` promotes it so both frames animate for 600ms. |
+| Reveal animations only play once per overlay page | Fixed by A92 | Each activation replaces the target iframe and retires inactive frames after the fade, so a later return receives a fresh init and replays its reveal. |
+| Duplicate or hidden switches trigger a fade | Fixed by A92 | `displayed === target` returns early and hidden selection creates no frame; live proof returned `same` for duplicates and left no frames while hidden. |
