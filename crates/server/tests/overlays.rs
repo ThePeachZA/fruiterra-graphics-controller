@@ -362,6 +362,52 @@ fn game_overlay_uses_night_broadcast_tokens() {
 }
 
 #[test]
+fn game_overlay_shortens_mode_labels_when_the_queue_is_unreadable() {
+    let text = overlay_text("game-overlay.html");
+
+    assert!(
+        text.contains(".mode-item span {\n      min-width: 0;\n      overflow: hidden;\n      text-overflow: ellipsis;")
+            && text.contains(".mode-order-container--compact .mode-item {\n      gap: 4px;\n    }")
+            && text.contains(".mode-order-container--compact .mode-item__icon {\n      width: 22px;\n      height: 22px;\n    }")
+            && text.contains(".mode-order-container--compact .mode-item span {\n      letter-spacing: 0.02em;\n    }"),
+        "dense mode queues should grow the marks and keep short labels beside an icon"
+    );
+    assert!(
+        text.contains("function fitModeLabels()")
+            && text.contains("const dense = items.length > 5;")
+            && text.contains("return available <= 0 || label.scrollWidth > available;")
+            && text.contains("container.classList.add('mode-order-container--compact');")
+            && text.contains("label.textContent = fullName.slice(0, 3);")
+            && text.contains("}).join('');\n      fitModeLabels();"),
+        "the overlay must measure its labels and abbreviate dense queues"
+    );
+    assert!(
+        text.contains(
+            "title=\"${escapeHtml(textContent)}\" aria-label=\"${escapeHtml(textContent)}\""
+        ) && text.contains("<span data-full-name=\"${escapeHtml(textContent)}\">")
+            && text.contains(
+                "if (label && label.dataset.fullName) label.textContent = label.dataset.fullName;"
+            ),
+        "shortened modes must keep their full accessible name and restore it when the queue fits"
+    );
+}
+
+#[test]
+fn game_overlay_centres_team_names_in_their_bar_sections() {
+    let text = overlay_text("game-overlay.html");
+
+    assert!(
+        text.contains(
+            ".team-bar__name {\n      flex: 1;\n      min-width: 0;\n      font-family: 'FGC Display SemiBold', 'Apotek Semibold', sans-serif;\n      font-size: 27px;\n      line-height: 55px;\n      color: var(--fgc-text);\n      text-transform: uppercase;\n      white-space: nowrap;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      padding: 0 15px;\n      text-align: center;\n    }"
+        ) && !text.contains(".team-bar--home .team-bar__name {\n      justify-content:")
+            && !text.contains(".team-bar--away .team-bar__name {\n      justify-content:")
+            && !text.contains(".team-bar--home.swapped .team-bar__name {\n      justify-content:")
+            && !text.contains(".team-bar--away.swapped .team-bar__name {\n      justify-content:"),
+        "team names must stay centred in their flex section on both sides and after a swap"
+    );
+}
+
+#[test]
 fn game_overlay_uses_position_side_gradients_without_resizing_bars() {
     let text = overlay_text("game-overlay.html");
 
