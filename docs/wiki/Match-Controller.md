@@ -63,23 +63,27 @@ refused with an error.
 ## Maps & Bans
 
 Each slot is a map card. The list is sized to the **Format** (for example, Best
-of 5 shows five slots). The first map is picked by Team A. When **Loser picks**
-is off, every later map is picked by Team B. When **Loser picks** is on, each
-map after the first is picked by the team that lost the previous map.
+of 5 shows five slots). The first map is picked by the team selected as Team A.
+When **Loser picks** is off, every later map is picked by the team selected as
+Team B. When **Loser picks** is on, each map after the first is picked by the
+team that lost the previous map. The labels in this view use the selected teams'
+display names, falling back to their tags and then to `Team A` or `Team B` only
+when no team is selected.
 
 **Loser picks** is configured on the [Config](#config) tab.
 
 > [!NOTE]
-> The cards follow the pick order. After Team A loses the previous map, the
-> **Picked by** label on the next card shows **TBD** until that map's result is
-> known, while the header text and the live `map-select` overlay already show the
-> picking team.
+> The cards follow the pick order. After the Team A side loses the previous map,
+> the **Picked by** label on the next card shows **TBD** until that map's result
+> is known, while the header text and the live `map-select` overlay already show
+> the picking team.
 
 On each card:
 
 - **Current map** marks the map that is in progress. The **Current** button on a
   card selects it.
-- **Picked by** chooses Team A or Team B for that map, except the first map.
+- **Picked by** chooses the team selected as Team A or Team B for that map,
+  except the first map. The option text shows that team's display name.
 - **Map** chooses the map from the custom **Map pool**. A map that is not in the
   pool appears as **Custom**.
 - **Game mode** is the game mode for that map. It is filled from the map's
@@ -98,9 +102,10 @@ picks** is on.
 score, stay in place.
 
 When **Hero bans** is enabled on the [Config](#config) tab, each map card also
-shows a collapsible **Hero bans** section with the banned hero pickers for Team A
-and Team B. Bans for unplayed maps do not appear on the hero-bans overlay until
-that map is relevant.
+shows a collapsible **Hero bans** section with the banned hero pickers for the
+two selected teams. The **First ban** option and both ban labels use the teams'
+display names. Bans for unplayed maps do not appear on the hero-bans overlay
+until that map is relevant.
 
 ## Talent
 

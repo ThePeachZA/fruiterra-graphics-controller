@@ -1812,3 +1812,20 @@ easy to explain and hard to misuse. The browser proof verified the reachable
 buttons, confirmation copy and keyboard focus in the running WebView2 app; the
 native file dialog cannot be driven by CDP, so the byte-level identity contract
 is covered by the state test and source guards instead.
+
+### D24 - Maps and Bans labels resolve from the selected teams
+
+**Decision.** A89 resolves the two Maps and Bans sides from the teams selected
+in Setup. A team's name is shown first, then its tag, with `Team A` or `Team B`
+used only when no team is selected. The same resolved label appears in the
+intro note, **Chosen by** options, score labels, **First ban** options, ban
+labels and their accessibility names. The underlying values remain `A` and `B`.
+
+**Reason.** The owner wanted to know immediately which team they were picking
+for or scoring. The old static labels forced a mental jump back to Setup, and
+that became harder to follow when both teams had long names. Resolving the label
+in the view keeps the broadcast state and projection untouched: this is a
+presentation change, not a new side identity. The fallback preserves the old
+readable text before a match has teams, while the tag covers a team with a blank
+name. The owner reviewed the running controller at both test widths, including
+the expanded HERO BANS section, and signed off on 2026-11-25.

@@ -5896,3 +5896,46 @@ while tabbing. No app exceptions appeared and the only console noise was the
 known favicon 404. The native picker was not automatable, so the stable-identity
 contract was verified by the passing state test and source guards. All gates and
 the desktop build passed.
+
+### A89 - Maps and Bans labels follow the selected teams
+
+1. Build and run the desktop app with an isolated `FGC_DATA_DIR` and WebView2
+   debugging on port 9222. Use a probe match with two named teams; the current
+   probe data uses `5 Knights at Freddy's` and `Sparkling Bottles`. Confirm
+   `/health` reports the local controller is running.
+2. Open **Match Controller**, then **Maps & Bans**. Set the CDP device metrics to
+   1280x800 and then 375x812. Confirm the intro note, **Chosen by** options and
+   both score labels use the selected team names rather than `Team A` or
+   `Team B`.
+3. Inspect the HERO BANS disclosure directly. The proof must check that the
+   ancestor `<details>` has `open = true` and that the First ban select has a
+   non-zero height; a visible rectangle alone is not enough because CSS gives a
+   closed disclosure body a layout box. Click the disclosure `summary` only when
+   `open` is false, then scroll the internal `.fgc-content` container until the
+   First ban select is centred.
+4. Confirm the **First ban** options are `—`, the Team A name and the Team B
+   name. Confirm the two ban rows are labelled with the actual team names and
+   their selects carry the same names in their accessibility labels.
+5. Review screenshots at both widths. The long names must be fully readable in
+   native selects, wrap cleanly in score labels, and stay free of clipping,
+   overlap and horizontal overflow. Ignore the fixed timer bar and the dev
+   rebuild banner.
+6. Run `cargo test --workspace --quiet` and confirm
+   `maps_and_bans_label_the_selected_teams` passes. It must cover full names,
+   tag fallback when a name is blank and the `Team A`/`Team B` fallback when no
+   team is selected. Confirm the stored select values remain `A` and `B`.
+7. Filter out the known WebView2 favicon 404s and confirm there are no
+   application console errors in either viewport.
+8. Run `git diff --check`, `cargo fmt --all -- --check`,
+   `cargo clippy --workspace --all-targets -- -D warnings` and
+   `cargo test --workspace --quiet`. Stop the app, run `dx build --desktop`,
+   relaunch it and re-check `/health`.
+
+**Result: Pass - owner 2026-11-25.** After the `details.open` fix, the final
+captures showed the HERO BANS panel expanded on both viewports, with the First
+ban select and both ban rows in frame. `5 Knights at Freddy's` appeared in the
+First ban option and its ban label, `Sparkling Bottles` appeared in the other
+ban label, no generic side names remained, and the long names rendered fully
+without clipping, overlap or horizontal overflow. All gates and the desktop
+build passed. The owner selected **Sign off (Recommended)** after the final
+visual review.

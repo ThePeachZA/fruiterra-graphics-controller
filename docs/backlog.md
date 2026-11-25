@@ -2291,3 +2291,21 @@ Fixed risks from A88:
 | Replacing an image breaks every reference to it | Fixed by A88 | The asset id is preserved and only hash, extension and original filename change; a state test asserts identity, name, category, added date and icon survive. |
 | Bundled or attached art is replaced through the new button | Fixed by A88 | The UI hides the action for bundled assets and the store rejects bundled and attached ids. |
 | The new action is unreachable or loses keyboard focus | Fixed by A88 | A real WebView2 probe found the button on every user card, opened the confirmation from both card and preview, and saw a visible focus outline while tabbing. |
+
+A89 answers the owner's request for clearer Maps and Bans controls. The view
+now receives the team library and resolves each side from the selected team id.
+A team's name is used first, then its tag, and the old `Team A` or `Team B`
+label remains only when no team is selected. The intro note, **Chosen by**
+options, both score labels, **First ban** options, both ban labels and their
+accessibility names all use the resolved names. The stored side values stay `A`
+and `B`, so fixtures, projection and overlay state are unchanged. The owner
+reviewed the running controller at desktop and phone widths, including the
+expanded HERO BANS section, and approved A89 on 2026-11-25.
+
+Fixed risks from A89:
+
+| Risk | Status | Guard |
+|---|---|---|
+| Generic side names hide which team is being edited | Fixed by A89 | The view resolves the selected team id and renders its name, then its tag, before falling back to `Team A` or `Team B`. |
+| Clearer labels change the stored pick or ban side | Fixed by A89 | Display strings changed only; select values remain `A` and `B`, and a state test asserts name, tag and empty-selection resolution. |
+| Long team names clip or break the layout | Fixed by A89 | A real WebView2 probe at 1280x800 and 375x812 showed the full names in selects and labels with no clipping, overlap or horizontal overflow. |
