@@ -163,7 +163,7 @@ pub fn MatchControllerView() -> Element {
                     MatchSetupTab { match_state: match_state.clone(), teams }
                 },
                 MatchTab::Maps => rsx! {
-                    MapSelectionTab { match_state: match_state.clone() }
+                    MapSelectionTab { match_state: match_state.clone(), teams: teams.clone() }
                 },
                 MatchTab::Talent => rsx! {
                     TalentTab { match_state: match_state.clone(), talents, teams }
@@ -622,9 +622,24 @@ fn saved_match_teams(entry: &Match, teams: &[Team]) -> String {
     format!("{} vs {}", tag(&entry.team_a), tag(&entry.team_b))
 }
 
+/// Full name of the team selected for a side, with a stable label when it is unset.
+fn selected_team_label(id: &Option<TeamId>, teams: &[Team], fallback: &str) -> String {
+    id.as_ref()
+        .and_then(|id| teams.iter().find(|team| &team.id == id))
+        .and_then(|team| {
+            let name = team.name.trim();
+            if !name.is_empty() {
+                return Some(name.to_owned());
+            }
+            let tag = team.tag.trim();
+            (!tag.is_empty()).then(|| tag.to_owned())
+        })
+        .unwrap_or_else(|| fallback.to_owned())
+}
+
 /// Map slots, map names, modes, scores and per-map hero bans.
 #[component]
-fn MapSelectionTab(match_state: Match) -> Element {
+fn MapSelectionTab(match_state: Match, teams: Vec<Team>) -> Element {
     let store = use_context::<AppStore>();
     let state = store.state();
     let show_bans = state.read().settings.display.show_hero_bans;
@@ -650,12 +665,14 @@ fn MapSelectionTab(match_state: Match) -> Element {
         .filter(|asset| catalog.is_selectable_hero(asset))
         .map(|asset| asset.name.clone())
         .collect();
+    let team_a_label = selected_team_label(&match_state.team_a, &teams, "Team A");
+    let team_b_label = selected_team_label(&match_state.team_b, &teams, "Team B");
 
     rsx! {
         div { class: "fgc-view",
             div { class: "fgc-match__section-header",
                 p { class: "fgc-note",
-                    "{map_count} map slot(s); first to {match_state.first_to} defaults to {expected_maps}. The first map is picked by team A; later maps follow the loser of the previous map when loser picks is enabled. A map's mode follows its game mode in Assets; choose Custom to override one slot."
+                    "{map_count} map slot(s); first to {match_state.first_to} defaults to {expected_maps}. The first map is picked by {team_a_label}; later maps follow the loser of the previous map when loser picks is enabled. A map's mode follows its game mode in Assets; choose Custom to override one slot."
                 }
                 div { class: "fgc-actions",
                     Button {
@@ -876,8 +893,8 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                                     store.set_map_chosen_by(index, side);
                                                 },
                                                 option { value: "", "None" }
-                                                option { value: "A", "Team A" }
-                                                option { value: "B", "Team B" }
+                                                option { value: "A", "{team_a_label}" }
+                                                option { value: "B", "{team_b_label}" }
                                             }
                                         }
                                     }
@@ -933,7 +950,7 @@ fn MapSelectionTab(match_state: Match) -> Element {
 
                                     div { class: "fgc-map-slot__scores",
                                         label { class: "fgc-field",
-                                            span { class: "fgc-field__label", "Team A score" }
+                                            span { class: "fgc-field__label", "{team_a_label} score" }
                                             Input {
                                                 r#type: "number",
                                                 value: "{map.score_a}",
@@ -948,7 +965,7 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                         }
                                         span { class: "fgc-map-slot__vs", "vs" }
                                         label { class: "fgc-field",
-                                            span { class: "fgc-field__label", "Team B score" }
+                                            span { class: "fgc-field__label", "{team_b_label} score" }
                                             Input {
                                                 r#type: "number",
                                                 value: "{map.score_b}",
@@ -987,15 +1004,15 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                                                 store.set_first_ban_team(index, side);
                                                             },
                                                             option { value: "", "—" }
-                                                            option { value: "A", "Team A" }
-                                                            option { value: "B", "Team B" }
+                                                            option { value: "A", "{team_a_label}" }
+                                                            option { value: "B", "{team_b_label}" }
                                                         }
                                                     }
                                                     label { class: "fgc-field",
-                                                        span { class: "fgc-field__label", "Team A ban" }
+                                                        span { class: "fgc-field__label", "{team_a_label} ban" }
                                                         select {
                                                             class: "fgc-native-select",
-                                                            aria_label: "Team A ban",
+                                                            aria_label: "{team_a_label} ban",
                                                             value: hero_a_value,
                                                             onchange: move |event| {
                                                                 let value = event.value();
@@ -1032,7 +1049,7 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                                         if custom_a {
                                                             Input {
                                                                 value: hero_a_draft,
-                                                                aria_label: "Custom team A ban",
+                                                                aria_label: "Custom {team_a_label} ban",
                                                                 placeholder: "Type a hero name",
                                                                 oninput: move |event: FormEvent| {
                                                                     let value = event.value();
@@ -1043,10 +1060,10 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                                         }
                                                     }
                                                     label { class: "fgc-field",
-                                                        span { class: "fgc-field__label", "Team B ban" }
+                                                        span { class: "fgc-field__label", "{team_b_label} ban" }
                                                         select {
                                                             class: "fgc-native-select",
-                                                            aria_label: "Team B ban",
+                                                            aria_label: "{team_b_label} ban",
                                                             value: hero_b_value,
                                                             onchange: move |event| {
                                                                 let value = event.value();
@@ -1083,7 +1100,7 @@ fn MapSelectionTab(match_state: Match) -> Element {
                                                         if custom_b {
                                                             Input {
                                                                 value: hero_b_draft,
-                                                                aria_label: "Custom team B ban",
+                                                                aria_label: "Custom {team_b_label} ban",
                                                                 placeholder: "Type a hero name",
                                                                 oninput: move |event: FormEvent| {
                                                                     let value = event.value();
@@ -1672,6 +1689,34 @@ mod tests {
     }
 
     #[test]
+    fn maps_and_bans_label_the_selected_teams() {
+        let mut team_a = crate::state::new_team();
+        team_a.name = "Pink Salamanders".to_owned();
+        team_a.tag = "PS".to_owned();
+        let mut team_b = crate::state::new_team();
+        team_b.name = "Inglorious Blasters".to_owned();
+        team_b.tag = "IB".to_owned();
+        let teams = vec![team_a.clone(), team_b.clone()];
+
+        assert_eq!(
+            selected_team_label(&Some(team_a.id.clone()), &teams, "Team A"),
+            "Pink Salamanders"
+        );
+        assert_eq!(
+            selected_team_label(&Some(team_b.id.clone()), &teams, "Team B"),
+            "Inglorious Blasters"
+        );
+        assert_eq!(selected_team_label(&None, &teams, "Team A"), "Team A");
+
+        team_a.name.clear();
+        let teams = vec![team_a, team_b];
+        assert_eq!(
+            selected_team_label(&Some(teams[0].id.clone()), &teams, "Team A"),
+            "PS"
+        );
+    }
+
+    #[test]
     fn hero_ban_pickers_keep_every_option_visible() {
         let source = include_str!("match_controller.rs");
         assert!(
@@ -1679,16 +1724,16 @@ mod tests {
             "hero bans must not use a filtering datalist"
         );
         assert!(
-            source.contains("aria_label: \"Team A ban\"")
-                && source.contains("aria_label: \"Team B ban\"")
+            source.contains("aria_label: \"{team_a_label} ban\"")
+                && source.contains("aria_label: \"{team_b_label} ban\"")
                 && source.contains("for name in heroes.iter() {")
                 && source.contains("\"{ban_team_a} (imported)\"")
                 && source.contains("\"{ban_team_b} (imported)\""),
             "both hero pickers should render every hero and any imported value"
         );
         assert!(
-            source.contains("aria_label: \"Custom team A ban\"")
-                && source.contains("aria_label: \"Custom team B ban\"")
+            source.contains("aria_label: \"Custom {team_a_label} ban\"")
+                && source.contains("aria_label: \"Custom {team_b_label} ban\"")
                 && source.contains("custom_hero_a.write().insert(index, value.clone())")
                 && source.contains("custom_hero_b.write().insert(index, value.clone())"),
             "Custom… should keep the old free-text path for either team"
