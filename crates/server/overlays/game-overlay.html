@@ -381,12 +381,14 @@
       box-shadow: 0 0 6px var(--ban-accent, var(--fgc-team-left));
     }
 
+    /* The chip accents follow the selected teams when team colours are on.
+       The broadcast blue and red remain the fallback when they are off. */
     .center-ban--home .team-bar__ban-icon {
-      --ban-accent: var(--fgc-team-left);
+      --ban-accent: var(--team-a-color, var(--fgc-team-left));
     }
 
     .center-ban--away .team-bar__ban-icon {
-      --ban-accent: var(--fgc-team-right);
+      --ban-accent: var(--team-b-color, var(--fgc-team-right));
     }
 
     .center-ban--home .team-bar__ban-icon::before {
@@ -1293,6 +1295,8 @@
         if (d.teamColorsEnabled && d.teamA && d.teamB) {
           el.homeBar.style.setProperty('--team-a-color', d.teamA.color || '#0b0d12');
           el.awayBar.style.setProperty('--team-b-color', d.teamB.color || '#0b0d12');
+          el.homeBan.style.setProperty('--team-a-color', d.teamA.color || '#0b0d12');
+          el.awayBan.style.setProperty('--team-b-color', d.teamB.color || '#0b0d12');
           // Calculate text color based on background luminance
           const homeTextColor = getContrastColor(d.teamA.color || '#0b0d12');
           const awayTextColor = getContrastColor(d.teamB.color || '#0b0d12');
@@ -1305,6 +1309,8 @@
           el.awayBar.classList.remove('team-colored');
           el.homeBar.style.removeProperty('--team-a-color');
           el.awayBar.style.removeProperty('--team-b-color');
+          el.homeBan.style.removeProperty('--team-a-color');
+          el.awayBan.style.removeProperty('--team-b-color');
           el.homeBar.style.removeProperty('--team-text-color');
           el.awayBar.style.removeProperty('--team-text-color');
         }

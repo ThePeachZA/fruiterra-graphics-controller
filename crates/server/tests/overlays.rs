@@ -441,11 +441,21 @@ fn game_overlay_uses_position_side_gradients_without_resizing_bars() {
             && text.contains("filter: saturate(0.92) contrast(1.06);")
             && text.contains(".team-bar__ban-icon::after {")
             && text.contains(".team-bar__ban-icon::before {")
-            && text.contains("--ban-accent: var(--fgc-team-right);")
+            && text.contains("--ban-accent: var(--team-a-color, var(--fgc-team-left));")
+            && text.contains("--ban-accent: var(--team-b-color, var(--fgc-team-right));")
             && text.contains("clip: rect(0, 0, 0, 0);")
             && !text.contains("font-size: 9px;")
             && !text.contains("letter-spacing: 0.06em;"),
         "the bans must be compact chips flanking the centre status bar in fixed boxes"
+    );
+    assert!(
+        text.contains(
+            "el.homeBan.style.setProperty('--team-a-color', d.teamA.color || '#0b0d12');"
+        ) && text.contains(
+            "el.awayBan.style.setProperty('--team-b-color', d.teamB.color || '#0b0d12');"
+        ) && text.contains("el.homeBan.style.removeProperty('--team-a-color');")
+            && text.contains("el.awayBan.style.removeProperty('--team-b-color');"),
+        "ban chip accents must follow team colours only while team colours are enabled"
     );
     assert!(
         text.contains("@keyframes banChipIn {")
