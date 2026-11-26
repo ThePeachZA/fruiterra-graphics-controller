@@ -73,6 +73,8 @@ See [Overlays in OBS](Overlays-in-OBS).
 The **Local control** panel shows the loopback-only endpoint used by hardware
 buttons and touch panels: `POST http://127.0.0.1:<port>/control`. The port shown
 is the running server's port, or the configured port when the server is stopped.
+[Local control](Local-Control) explains the full button-to-overlay flow in plain
+language before going into the request contract.
 The bearer token is a UUIDv4 string stored at
 `%APPDATA%\Fruiterra\Fruiterra Graphics Controller\data\control-token`, beside
 `app.json`; a `--data-dir` or `FGC_DATA_DIR` override moves it with the rest of

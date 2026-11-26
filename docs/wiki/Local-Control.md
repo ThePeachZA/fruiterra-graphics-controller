@@ -6,6 +6,64 @@ It is one authenticated HTTP endpoint on the overlay server. It does not replace
 the Match Controller, change the overlay protocol, or expose the app to a
 network.
 
+## How it works
+
+Think of local control as a safe way for a button on the controller computer to
+press the app's existing **Show**, **Hide** and scene controls. It does not
+control OBS and it does not invent a new kind of overlay message. OBS keeps
+showing the ordinary Browser Sources. The button talks to the app, the app
+changes its overlay state, and the existing Browser Source connection repaints
+the overlays.
+
+There are three parts:
+
+1. **The overlay server** is already running so OBS can load the Browser
+   Sources. In post-v1 builds it also accepts `POST /control`. That extra route
+   only accepts connections from the same computer.
+2. **The token** is a secret shown in **Settings → Local control**. A Stream
+   Deck or Touch Portal action includes it with every request, like a key.
+3. **The app bridge** receives accepted actions from the server. The server does
+   not edit the UI or the overlays itself; it hands the action to the running
+   app, which calls the same functions used by the app's own controls.
+
+The path for one button press is:
+
+```text
+Stream Deck / Touch Portal on this computer
+  -> POST /control with token, action, timestamp and nonce
+  -> overlay server checks the request
+  -> desktop app applies the action through its existing controls
+  -> OBS Browser Sources update over the normal overlay connection
+```
+
+Here is a concrete example. Suppose a Stream Deck key is set to **Hide**:
+
+1. The key action creates a fresh Unix timestamp and a new random nonce.
+2. It sends `{"action":"hide", ...}` to `http://127.0.0.1:<port>/control` with
+   `Authorization: Bearer <token>`.
+3. The server checks that the request came from this computer, that the token
+   matches, that the timestamp is recent, and that the nonce has not been used
+   already.
+4. If those checks pass, the server forwards `hide` to the app and replies with
+   HTTP 200. The reply means the request was accepted and handed to the app; the
+   app then applies it on its UI task.
+5. All connected overlays are hidden through the existing show message. Nothing
+   changes in OBS itself.
+
+The extra request values exist for specific reasons:
+
+| Value | Why it is there |
+|---|---|
+| Token | Proves the client is allowed to send commands. Without it, any local program could press the app's controls. |
+| Timestamp | Proves the command is being sent now. A request captured earlier stops working once it is more than 60 seconds old. |
+| Nonce | Gives every press a unique ID. A repeated press or captured request cannot be applied twice within five minutes. |
+
+Set-up is a one-time job. Start the overlay server from the app, copy the
+endpoint and token into the hardware client, then assign one of the actions
+below to each button. After that, the client generates a new timestamp and nonce
+for every press. You do not need to touch the app again unless the port or token
+changes.
+
 The endpoint is available only after the overlay server is running. The app
 shows the current address under **Settings → Local control**, using the loopback
 address and the configured overlay port:
