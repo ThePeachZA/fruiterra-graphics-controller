@@ -11,7 +11,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use dioxus::prelude::*;
 use fgc_core::{
@@ -21,7 +21,7 @@ use fgc_core::{
     MatchId, MatchLink, MatchStatus, MemoryStore, Player, PlayerId, Position, RemoteAccessMode,
     Role, Scoring, Side, SlotError, Store, Talent, TalentId, TalentRef, TalentSlot, TalentType,
     Team, TeamId, TeamReference, TeamSide, ThemePreset, Tiebreaker, TimerAlignment, TimerMode,
-    Tournament, TournamentId, TournamentStage, TournamentStatus, UnusedAssets,
+    TimerSettings, Tournament, TournamentId, TournamentStage, TournamentStatus, UnusedAssets,
     add_entrant as core_add_entrant, add_group_fixture as core_add_group_fixture,
     add_match as core_add_match, add_round as core_add_round, clear_player_references,
     clear_talent_references, derived_scores, insert_map, match_mut as core_match_mut,
@@ -41,7 +41,11 @@ use fgc_core::{
     validate_and_repair,
 };
 use fgc_protocol::{AssetCatalog, auto_overlay, data_url_for, parse_theme_json};
-use fgc_server::{AssetMode, ControlAction, Outbound, ServerConfig};
+use fgc_server::{
+    AssetMode, ControlAction, ControlMapOutcome, ControlMatchSide, ControlMatchStatus,
+    ControlOptionalTeam, ControlTeamSide, ControlTimerAlignment, ControlTimerCommand,
+    ControlTimerMode, Outbound, ServerConfig,
+};
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
@@ -52,6 +56,10 @@ use crate::tailscale::{ServeState, TailscaleState, TailscaleStatus};
 
 /// How often dirty state is written to disk.
 const SAVE_INTERVAL: Duration = Duration::from_millis(500);
+
+/// Single-use remote undo entries expire after five minutes.
+const UNDO_TTL: Duration = Duration::from_secs(300);
+const UNDO_CACHE_LIMIT: usize = 128;
 
 /// How many inlined thumbnails are kept in memory at once.
 ///
@@ -103,6 +111,27 @@ fn canonical_auto_overlay(
     (included, active)
 }
 
+/// One in-memory inverse captured for a remote write.
+struct UndoEntry {
+    issued: Instant,
+    restore: Box<dyn FnOnce()>,
+}
+
+fn control_team(side: ControlTeamSide) -> TeamSide {
+    match side {
+        ControlTeamSide::A => TeamSide::A,
+        ControlTeamSide::B => TeamSide::B,
+    }
+}
+
+fn control_optional_team(side: ControlOptionalTeam) -> Option<TeamSide> {
+    match side {
+        ControlOptionalTeam::A => Some(TeamSide::A),
+        ControlOptionalTeam::B => Some(TeamSide::B),
+        ControlOptionalTeam::None => None,
+    }
+}
+
 /// UI-facing owner of the domain state and the overlay server.
 #[derive(Clone, Copy)]
 pub struct AppStore {
@@ -133,6 +162,10 @@ pub struct AppStore {
     auto_overlay_active: Signal<Option<String>>,
     /// Cached data URLs for thumbnails, keyed by `hash:ext`.
     thumb_urls: Signal<HashMap<String, String>>,
+    /// Single-use inverses for accepted remote writes, keyed by undo token.
+    undo: Signal<HashMap<String, UndoEntry>>,
+    /// Channel registered by the root component for timer run commands.
+    timer_control: Signal<Option<mpsc::UnboundedSender<(ControlTimerCommand, String)>>>,
     server: ServerController,
 }
 
@@ -180,6 +213,8 @@ impl AppStore {
         let auto_overlay_included = use_signal(|| auto_included);
         let auto_overlay_active = use_signal(|| auto_active);
         let thumb_urls = use_signal(HashMap::<String, String>::new);
+        let undo = use_signal(HashMap::<String, UndoEntry>::new);
+        let timer_control = use_signal(|| None);
 
         let app = Self {
             state,
@@ -201,6 +236,8 @@ impl AppStore {
             auto_overlay_included,
             auto_overlay_active,
             thumb_urls,
+            undo,
+            timer_control,
             server,
         };
         app.spawn_saver();
@@ -244,6 +281,8 @@ impl AppStore {
             auto_overlay_included: Signal::new(auto_included),
             auto_overlay_active: Signal::new(auto_active),
             thumb_urls: Signal::new(HashMap::new()),
+            undo: Signal::new(HashMap::new()),
+            timer_control: Signal::new(None),
             server: ServerController::test_controller(),
         }
     }
@@ -501,6 +540,79 @@ impl AppStore {
         self.set_auto_overlay_active(&included[next]);
     }
 
+    /// Registers the root component's channel for timer run commands.
+    pub(crate) fn set_timer_control_channel(
+        &self,
+        sender: mpsc::UnboundedSender<(ControlTimerCommand, String)>,
+    ) {
+        let mut channel = self.timer_control;
+        channel.set(Some(sender));
+    }
+
+    /// Stores the inverse of one accepted remote write.
+    pub(crate) fn record_undo(&self, token: String, restore: impl FnOnce() + 'static) {
+        let mut undo = self.undo;
+        let mut entries = undo.write();
+        let now = Instant::now();
+        entries.retain(|_, entry| now.duration_since(entry.issued) < UNDO_TTL);
+        let oldest = (entries.len() >= UNDO_CACHE_LIMIT && !entries.contains_key(&token))
+            .then(|| {
+                entries
+                    .iter()
+                    .min_by_key(|(_, entry)| entry.issued)
+                    .map(|(token, _)| token.clone())
+            })
+            .flatten();
+        if let Some(oldest) = oldest {
+            entries.remove(&oldest);
+        }
+        entries.insert(
+            token,
+            UndoEntry {
+                issued: now,
+                restore: Box::new(restore),
+            },
+        );
+    }
+
+    fn match_snapshot(&self) -> (Option<Match>, Vec<Match>) {
+        let state = self.state.peek();
+        (state.current_match.clone(), state.matches.clone())
+    }
+
+    fn restore_match_snapshot(&self, snapshot: (Option<Match>, Vec<Match>)) {
+        self.mutate(move |state| {
+            state.current_match = snapshot.0;
+            state.matches = snapshot.1;
+        });
+    }
+
+    fn timer_snapshot(&self) -> TimerSettings {
+        self.state.peek().settings.timer.clone()
+    }
+
+    fn restore_timer_snapshot(&self, settings: TimerSettings) {
+        self.mutate(move |state| state.settings.timer = settings);
+    }
+
+    fn with_match_undo(&self, token: &str, apply: impl FnOnce()) {
+        let snapshot = self.match_snapshot();
+        let store = *self;
+        apply();
+        store.record_undo(token.to_owned(), move || {
+            store.restore_match_snapshot(snapshot)
+        });
+    }
+
+    fn with_timer_undo(&self, token: &str, apply: impl FnOnce()) {
+        let settings = self.timer_snapshot();
+        let store = *self;
+        apply();
+        store.record_undo(token.to_owned(), move || {
+            store.restore_timer_snapshot(settings)
+        });
+    }
+
     /// Applies one validated hardware-controller action on the UI task.
     pub fn apply_control_action(&self, action: ControlAction) {
         match action {
@@ -514,6 +626,256 @@ impl AppStore {
             }
             ControlAction::NextScene => self.cycle_auto_overlay(1),
             ControlAction::PreviousScene => self.cycle_auto_overlay(-1),
+            ControlAction::Undo(token) => {
+                let mut undo = self.undo;
+                let entry = undo.write().remove(&token);
+                if let Some(entry) = entry {
+                    (entry.restore)();
+                }
+            }
+            ControlAction::WithUndo { action, undo } => match *action {
+                ControlAction::Timer(command) => {
+                    let sender = self.timer_control.peek().clone();
+                    if let Some(sender) = sender {
+                        let _ = sender.send((command, undo));
+                    }
+                }
+                action => self.apply_match_write(action, &undo),
+            },
+            action => self.apply_match_write(action, ""),
+        }
+    }
+
+    fn apply_match_write(&self, action: ControlAction, undo: &str) {
+        match action {
+            ControlAction::SetMatchTitle { value } => self.with_match_undo(undo, move || {
+                self.update_match(move |current| current.title = value);
+            }),
+            ControlAction::SetMatchSubtitle { value } => self.with_match_undo(undo, move || {
+                self.update_match(move |current| current.subtitle = value);
+            }),
+            ControlAction::SetMatchScheduledAt { value } => {
+                self.with_match_undo(undo, move || self.set_match_scheduled_at(value));
+            }
+            ControlAction::SetMatchFirstTo { value } => {
+                self.with_match_undo(undo, move || self.set_match_first_to(value));
+            }
+            ControlAction::SetMatchStatus { status } => {
+                let status = match status {
+                    ControlMatchStatus::Pre => MatchStatus::Pre,
+                    ControlMatchStatus::Live => MatchStatus::Live,
+                    ControlMatchStatus::Post => MatchStatus::Post,
+                };
+                self.with_match_undo(undo, move || self.set_match_status(status));
+            }
+            ControlAction::SetMatchSide { side } => {
+                let side = match side {
+                    ControlMatchSide::Neutral => Side::Neutral,
+                    ControlMatchSide::HomeAttacks => Side::HomeAttacks,
+                    ControlMatchSide::HomeDefends => Side::HomeDefends,
+                };
+                self.with_match_undo(undo, move || self.set_match_side(side));
+            }
+            ControlAction::SetMatchTournament { value } => {
+                self.with_match_undo(undo, move || {
+                    self.update_match(move |current| {
+                        current.tournament_id = value.map(TournamentId::from_raw);
+                    });
+                });
+            }
+            ControlAction::SetMatchTeam { team, value } => {
+                let team = control_team(team);
+                self.with_match_undo(undo, move || {
+                    self.set_match_team(team, value.map(TeamId::from_raw));
+                });
+            }
+            ControlAction::SetMatchRecord { team, value } => {
+                self.with_match_undo(undo, move || {
+                    self.update_match(move |current| match control_team(team) {
+                        TeamSide::A => current.team_a_record = value,
+                        TeamSide::B => current.team_b_record = value,
+                    });
+                });
+            }
+            ControlAction::SetSwapSides { enabled } => {
+                self.with_match_undo(undo, move || {
+                    self.update_match(move |current| current.swap_sides = enabled);
+                });
+            }
+            ControlAction::SetManualScoring { enabled } => {
+                self.with_match_undo(undo, move || self.set_manual_scoring(enabled));
+            }
+            ControlAction::SetManualScore { team, score } => {
+                let team = control_team(team);
+                self.with_match_undo(undo, move || self.set_manual_score(team, score));
+            }
+            ControlAction::ScoreAdjust { team, delta } => {
+                let team = control_team(team);
+                self.with_match_undo(undo, move || {
+                    let current = self.state.peek().current_match.clone();
+                    let Some(current) = current else { return };
+                    let (a, b) = match &current.scoring {
+                        Scoring::Manual { a, b } => (*a, *b),
+                        Scoring::Derived => derived_scores(&current),
+                    };
+                    let score = if team == TeamSide::A { a } else { b };
+                    let next = if delta > 0 {
+                        score.saturating_add(1)
+                    } else {
+                        score.saturating_sub(1)
+                    };
+                    self.set_manual_scoring(true);
+                    self.set_manual_score(team, next);
+                });
+            }
+            ControlAction::SaveCurrentMatch => {
+                self.with_match_undo(undo, move || self.save_current_match());
+            }
+            ControlAction::LoadSavedMatch { id } => {
+                self.with_match_undo(undo, move || {
+                    self.load_saved_match(MatchId::from_raw(id));
+                });
+            }
+            ControlAction::DeleteSavedMatch { id } => {
+                self.with_match_undo(undo, move || {
+                    self.delete_saved_match(MatchId::from_raw(id));
+                });
+            }
+            ControlAction::CreateMatch => {
+                self.with_match_undo(undo, move || self.create_match());
+            }
+            ControlAction::Timer(_) => {}
+            ControlAction::SetTimerMode { mode } => {
+                let mode = match mode {
+                    ControlTimerMode::CountUp => TimerMode::CountUp,
+                    ControlTimerMode::CountDown => TimerMode::CountDown,
+                    ControlTimerMode::Target => TimerMode::Target,
+                    ControlTimerMode::Scheduled => TimerMode::Scheduled,
+                };
+                self.with_timer_undo(undo, move || self.set_timer_mode(mode));
+            }
+            ControlAction::SetTimerAlignment { alignment } => {
+                let alignment = match alignment {
+                    ControlTimerAlignment::Left => TimerAlignment::Left,
+                    ControlTimerAlignment::Center => TimerAlignment::Center,
+                    ControlTimerAlignment::Right => TimerAlignment::Right,
+                };
+                self.with_timer_undo(undo, move || self.set_timer_alignment(alignment));
+            }
+            ControlAction::SetTimerLeadingZeroes { enabled } => {
+                self.with_timer_undo(undo, move || self.set_timer_leading_zeroes(enabled));
+            }
+            ControlAction::SetTimerShowHours { enabled } => {
+                self.with_timer_undo(undo, move || self.set_timer_show_hours(enabled));
+            }
+            ControlAction::SetTimerStandalone { enabled } => {
+                self.with_timer_undo(undo, move || self.set_timer_standalone(enabled));
+            }
+            ControlAction::SetCurrentMap { index } => {
+                self.with_match_undo(undo, move || self.set_current_map(Some(index)));
+            }
+            ControlAction::ClearCurrentMap => {
+                self.with_match_undo(undo, move || self.set_current_map(None));
+            }
+            ControlAction::SetMapPick { index, team } => {
+                let team = control_optional_team(team);
+                self.with_match_undo(undo, move || {
+                    let loser_picks = self
+                        .state
+                        .peek()
+                        .current_match
+                        .as_ref()
+                        .is_some_and(|current| current.loser_picks);
+                    if !loser_picks {
+                        self.set_map_chosen_by(index, team);
+                    }
+                });
+            }
+            ControlAction::SetMapResult { index, outcome } => {
+                self.with_match_undo(undo, move || match outcome {
+                    ControlMapOutcome::A => {
+                        self.set_map_scores(index, 1, 0);
+                        self.set_map_completed(index, true);
+                    }
+                    ControlMapOutcome::B => {
+                        self.set_map_scores(index, 0, 1);
+                        self.set_map_completed(index, true);
+                    }
+                    ControlMapOutcome::Draw => {
+                        self.set_map_scores(index, 0, 0);
+                        self.set_map_completed(index, true);
+                    }
+                    ControlMapOutcome::Unplayed => self.set_map_completed(index, false),
+                });
+            }
+            ControlAction::SetMapName { index, value } => {
+                self.with_match_undo(undo, move || {
+                    self.update_match(move |current| {
+                        let mode = current
+                            .maps
+                            .get(index)
+                            .map(|map| map.game_mode_name.clone())
+                            .unwrap_or_default();
+                        set_map_name(current, index, &value, &mode);
+                    });
+                });
+            }
+            ControlAction::SetMapMode { index, mode } => {
+                self.with_match_undo(undo, move || {
+                    self.update_match(move |current| set_map_mode(current, index, &mode));
+                });
+            }
+            ControlAction::SetMapScores {
+                index,
+                score_a,
+                score_b,
+            } => {
+                self.with_match_undo(undo, move || {
+                    self.set_map_scores(index, score_a, score_b);
+                });
+            }
+            ControlAction::SetMapCompleted { index, enabled } => {
+                self.with_match_undo(undo, move || self.set_map_completed(index, enabled));
+            }
+            ControlAction::InsertMap { index } => {
+                self.with_match_undo(undo, move || self.insert_map(index));
+            }
+            ControlAction::RemoveMap { index } => {
+                self.with_match_undo(undo, move || self.remove_map(index));
+            }
+            ControlAction::MoveMap { index, direction } => {
+                self.with_match_undo(undo, move || self.move_map(index, isize::from(direction)));
+            }
+            ControlAction::ResetMaps => {
+                self.with_match_undo(undo, move || self.reset_maps());
+            }
+            ControlAction::ResetHeroBans => {
+                self.with_match_undo(undo, move || self.reset_hero_bans());
+            }
+            ControlAction::SetFirstBanTeam { index, team } => {
+                let team = control_optional_team(team);
+                self.with_match_undo(undo, move || self.set_first_ban_team(index, team));
+            }
+            ControlAction::SetHeroBan { index, team, hero } => {
+                let team = control_team(team);
+                self.with_match_undo(undo, move || self.set_hero_ban(index, team, &hero));
+            }
+            ControlAction::SetMapPoolIncluded { name, enabled } => {
+                self.with_match_undo(undo, move || self.set_map_pool_included(&name, enabled));
+            }
+            ControlAction::MoveMapPool { index, direction } => {
+                self.with_match_undo(undo, move || {
+                    self.move_map_pool(index, isize::from(direction));
+                });
+            }
+            ControlAction::Show
+            | ControlAction::Hide
+            | ControlAction::ForceUpdate
+            | ControlAction::SetScene(_)
+            | ControlAction::NextScene
+            | ControlAction::PreviousScene
+            | ControlAction::Undo(_)
+            | ControlAction::WithUndo { .. } => {}
         }
     }
 
@@ -4468,5 +4830,73 @@ mod tests {
         assert_eq!(state.teams[0].players[0].role, Role::Support);
         assert!(state.teams[1].players.is_empty());
         assert_ne!(peaches_id, mangoes_id);
+    }
+
+    #[test]
+    fn remote_score_adjust_clamps_and_undo_restores_the_match() {
+        fn scenario() -> Element {
+            let state = AppState {
+                current_match: Some(new_match()),
+                ..AppState::default()
+            };
+            let store = AppStore::test_store(state);
+
+            store.apply_control_action(ControlAction::WithUndo {
+                action: Box::new(ControlAction::ScoreAdjust {
+                    team: ControlTeamSide::A,
+                    delta: -1,
+                }),
+                undo: "undo-score".to_owned(),
+            });
+            let current = store.state().peek().current_match.clone().expect("match");
+            assert_eq!(current.scoring, Scoring::Manual { a: 0, b: 0 });
+
+            store.apply_control_action(ControlAction::Undo("undo-score".to_owned()));
+            let current = store.state().peek().current_match.clone().expect("match");
+            assert_eq!(current.scoring, Scoring::Derived);
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
+    }
+
+    #[test]
+    fn remote_hero_ban_is_undoable_and_no_match_is_a_no_op() {
+        fn scenario() -> Element {
+            let state = AppState {
+                current_match: Some(new_match()),
+                ..AppState::default()
+            };
+            let store = AppStore::test_store(state);
+
+            store.apply_control_action(ControlAction::WithUndo {
+                action: Box::new(ControlAction::SetHeroBan {
+                    index: 0,
+                    team: ControlTeamSide::B,
+                    hero: "Ana".to_owned(),
+                }),
+                undo: "undo-ban".to_owned(),
+            });
+            let current = store.state().peek().current_match.clone().expect("match");
+            assert_eq!(current.hero_bans[0].team_b, vec!["Ana"]);
+
+            store.apply_control_action(ControlAction::Undo("undo-ban".to_owned()));
+            let current = store.state().peek().current_match.clone().expect("match");
+            assert!(current.hero_bans[0].team_b.is_empty());
+
+            let empty = AppStore::test_store(AppState::default());
+            empty.apply_control_action(ControlAction::WithUndo {
+                action: Box::new(ControlAction::SetMatchTitle {
+                    value: "Ignored".to_owned(),
+                }),
+                undo: "undo-empty".to_owned(),
+            });
+            assert!(empty.state().peek().current_match.is_none());
+            VNode::empty()
+        }
+
+        let mut dom = VirtualDom::new(scenario);
+        dom.rebuild_in_place();
     }
 }

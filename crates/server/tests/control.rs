@@ -5,7 +5,9 @@ mod common;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use common::start;
-use fgc_server::{CONTROL_PATH, ControlAction, ServerConfig, generate_control_token};
+use fgc_server::{
+    CONTROL_PATH, ControlAction, ControlTeamSide, ServerConfig, generate_control_token,
+};
 use reqwest::{Client, StatusCode, header};
 use tokio::sync::mpsc;
 
@@ -301,6 +303,83 @@ async fn requests_over_the_rate_limit_are_rejected() {
         rx.try_recv().is_err(),
         "limited action must not be delivered"
     );
+
+    handle.stop().await.expect("stop");
+}
+
+#[tokio::test]
+async fn destructive_match_edits_require_confirmation() {
+    let (handle, base_url) = start(ServerConfig::new(0));
+    let token = generate_control_token();
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    handle.set_control(&token, tx, false);
+    let client = client();
+    let mut request = body("set_map_pick", "nonce-pick-0001");
+    request["index"] = serde_json::json!(0);
+    request["team"] = serde_json::json!("b");
+
+    let response = post(&client, &base_url, &token, &request).await;
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let json: serde_json::Value = response.json().await.expect("error json");
+    assert_eq!(
+        json,
+        serde_json::json!({ "error": "confirmation_required" })
+    );
+    assert!(
+        rx.try_recv().is_err(),
+        "unconfirmed edit must not be delivered"
+    );
+
+    request["confirm"] = serde_json::json!(true);
+    let accepted = post(&client, &base_url, &token, &request).await;
+    assert_eq!(accepted.status(), StatusCode::OK);
+    assert!(rx.recv().await.is_some(), "confirmed edit is delivered");
+
+    handle.stop().await.expect("stop");
+}
+
+#[tokio::test]
+async fn match_writes_return_a_single_use_undo_token() {
+    let (handle, base_url) = start(ServerConfig::new(0));
+    let token = generate_control_token();
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    handle.set_control(&token, tx, false);
+    let client = client();
+    let mut request = body("score_adjust", "nonce-score-0001");
+    request["team"] = serde_json::json!("a");
+    request["delta"] = serde_json::json!(1);
+
+    let response = post(&client, &base_url, &token, &request).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let json: serde_json::Value = response.json().await.expect("response json");
+    let undo = json["undo"].as_str().expect("undo token").to_owned();
+    assert!(undo.starts_with("u-"));
+    assert_eq!(
+        rx.recv().await.expect("forwarded action"),
+        ControlAction::WithUndo {
+            action: Box::new(ControlAction::ScoreAdjust {
+                team: ControlTeamSide::A,
+                delta: 1,
+            }),
+            undo: undo.clone(),
+        }
+    );
+
+    let mut restore = body("undo", "nonce-undo-0001");
+    restore["undo"] = serde_json::json!(undo);
+    let response = post(&client, &base_url, &token, &restore).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        rx.recv().await.expect("forwarded undo"),
+        ControlAction::Undo(undo.clone())
+    );
+
+    let mut again = body("undo", "nonce-undo-0002");
+    again["undo"] = serde_json::json!(undo);
+    let response = post(&client, &base_url, &token, &again).await;
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+    let json: serde_json::Value = response.json().await.expect("error json");
+    assert_eq!(json, serde_json::json!({ "error": "undo_unavailable" }));
 
     handle.stop().await.expect("stop");
 }

@@ -8,6 +8,8 @@ use dioxus_icons::lucide::{
 use dioxus_primitives::toast::{ToastOptions, use_toast};
 use fgc_core::{TimerAlignment, TimerMode};
 use fgc_protocol::TimerActionDto;
+use fgc_server::ControlTimerCommand;
+use tokio::sync::mpsc;
 
 use crate::components::input::Input;
 use crate::components::switch::Switch;
@@ -79,6 +81,21 @@ pub fn App() -> Element {
     // the operator visits another destination.
     let timer = TimerController::use_controller();
     use_context_provider(|| timer);
+    // Remote timer commands arrive on the shared control channel; the root is
+    // the only place with both the store and the ephemeral timer state.
+    use_future(move || async move {
+        let (sender, mut receiver) = mpsc::unbounded_channel();
+        store.set_timer_control_channel(sender);
+        while let Some((command, undo)) = receiver.recv().await {
+            let previous: TimerState = *(timer.state).peek();
+            match command {
+                ControlTimerCommand::Start => start_timer(store, timer),
+                ControlTimerCommand::Pause => pause_timer(store, timer),
+                ControlTimerCommand::Stop => stop_timer(store, timer),
+            }
+            store.record_undo(undo, move || restore_timer_state(store, timer, previous));
+        }
+    });
     let mut destination = use_signal(|| Destination::Overlay);
     let mut compact_nav = use_signal(|| false);
 
@@ -651,6 +668,21 @@ fn set_timer_seconds(store: AppStore, mut timer: TimerController, total_seconds:
         total_seconds,
     });
     send_timer_action(&store, TimerActionDto::reset(hours, minutes, seconds));
+}
+
+/// Restores the timer snapshot captured for a remote command.
+fn restore_timer_state(store: AppStore, mut timer: TimerController, previous: TimerState) {
+    (timer.state).set(previous);
+    let (hours, minutes, seconds) = split_time(previous.total_seconds);
+    send_timer_action(&store, TimerActionDto::reset(hours, minutes, seconds));
+    send_timer_action(
+        &store,
+        if previous.running {
+            TimerActionDto::start()
+        } else {
+            TimerActionDto::pause()
+        },
+    );
 }
 
 /// Updates the count-down duration and previews it in the widget.
