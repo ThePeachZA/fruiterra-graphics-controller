@@ -354,3 +354,91 @@ Please confirm or correct:
       `/fgc/remote`.
 - [ ] No Funnel, no v1 changes, and A94 must pass before a release enables this.
 - [ ] The Phase 2 write set in §6 is the right order of priority.
+
+---
+
+## 12. Addendum — match-controller actions and destructive edits
+
+Owner direction after Phase 1: remote control must also drive elements of the
+Match Controller, including **map/ban edits**. This addendum replaces the
+Phase 1-only action list in §6 for the next slice. It is **draft for owner
+review**; implementation waits for approval of this section.
+
+### 12.1 Action set
+
+All new actions remain variants of the existing `ControlAction` enum on
+`POST /control`. They use the same bearer/HMAC authentication, replay guard and
+UI-task dispatch as Phase 1.
+
+| Action | Fields | Effect on the existing app |
+|---|---|---|
+| `score_adjust` | `team: "a" \| "b"`, `delta: 1 \| -1` | Reads the current score, clamps at zero, switches to manual scoring and applies the new value. |
+| `timer` | `command: "start" \| "pause" \| "stop"` | Calls the existing timer controller; stop resets to the mode's initial seconds. |
+| `set_current_map` | `index: usize` | Marks one map slot current; out-of-range values are ignored. |
+| `set_map_pick` | `index: usize`, `team: "a" \| "b" \| "none"` | Sets the slot's picking team. Refused when `loser_picks` is on. |
+| `set_map_result` | `index: usize`, `outcome: "a" \| "b" \| "draw" \| "unplayed"` | Sets both map scores (1–0, 0–1, 0–0) and the completed flag; unplayed clears completion. |
+| `set_hero_ban` | `index: usize`, `team: "a" \| "b"`, `hero: string` | Sets one hero ban; an empty or whitespace hero clears the ban. |
+| `set_first_ban_team` | `index: usize`, `team: "a" \| "b" \| "none"` | Sets which team bans first on that slot. |
+
+No `reset_maps`, `reset_hero_bans`, match replacement, team swaps or new-match
+actions are exposed remotely in this slice. They are destructive beyond a
+single-field undo and stay desktop-only.
+
+### 12.2 Confirmation
+
+`score_adjust`, `timer`, and `set_current_map` are single-step, like Phase 1.
+Pick, result, first-ban-team and hero-ban edits are **two-step**:
+
+1. The first press prepares the action and shows a confirmation panel naming
+   the slot, field and new value. Nothing is sent.
+2. **Confirm** sends the signed request. **Cancel** discards it.
+3. The request carries `confirm: true`; a prepared action sent without it is
+   rejected with `confirmation_required`. The field is part of the signed body,
+   so it cannot be added by a proxy.
+
+This gives the operator a chance to check the slot number on a phone screen
+before a match record changes.
+
+### 12.3 Undo
+
+Every accepted mutating request returns an `undo` token derived from the
+request nonce. For the next five minutes, `POST /control` with
+`action: "undo"`, `undo: <token>`, plus a fresh timestamp and nonce restores
+the previous value of that one field. The app stores the inverse in memory
+only; it is not persisted and is lost on restart. Undo is single-use and
+subject to the same replay and rate-limit guards. A stale or already-used undo
+token returns `undo_unavailable`. The browser page offers an **Undo** button
+in the success status for the duration of the window.
+
+Undo is deliberately field-scoped. It does not restore deleted matches, do
+cascading repairs, or reverse a timer that has kept running. The confirmation
+panel states that plainly.
+
+### 12.4 Page and status
+
+The remote page gains a compact **Match** section below Show actions, grouped
+as Score, Timer, Maps and Bans. It disables all match controls when there is
+no current match, when `loser_picks` blocks manual picks, or when the server
+is unreachable. Successful actions announce the applied value and expose the
+Undo button; rejected actions show the server's error code in plain language
+and re-enable the controls. Long hero names wrap and the confirm panel stays
+inside the viewport at phone width. Keyboard focus moves into the confirm
+panel on prepare and back to the originating button on cancel/confirm.
+
+### 12.5 Verification
+
+- Server unit tests for each new wire shape, the `confirmation_required`
+  refusal, undo inverse restoration, single-use undo and invalid indices.
+- App tests for score clamping, loser-pick refusal, ban clearing and no-current
+  match no-ops, using the existing domain helpers.
+- Second-device QA case A94 is extended with one score adjustment, one timer
+  press, one map pick/result, one hero ban, one confirm/cancel pair and one
+  undo, on both LAN and Tailscale.
+
+### 12.6 Approval checklist
+
+- [ ] Expose the seven match actions in §12.1 and keep reset/new-match actions
+      desktop-only.
+- [ ] Two-step confirmation for pick, result, first-ban-team and hero-ban edits.
+- [ ] Five-minute in-memory, single-use undo for every accepted write.
+- [ ] Disabling rules for no match, loser-picks and unreachable server.
