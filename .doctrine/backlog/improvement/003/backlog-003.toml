@@ -5,10 +5,10 @@ id = 3
 slug = "stream-deck-and-touch-portal-control-integration"
 title = "Stream Deck and Touch Portal control integration"
 kind = "improvement"
-status = "triaged"
+status = "started"
 resolution = ""
 created = "2026-11-21"
-updated = "2026-11-21"
+updated = "2026-11-26"
 tags = ["area:control", "docs:wiki", "merged", "post-v1", "prior-art:docs-p5", "security", "user-requested"]
 
 # outbound-only. Cross-kind structural edges (e.g. references with a role

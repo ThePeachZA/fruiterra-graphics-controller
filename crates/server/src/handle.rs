@@ -12,6 +12,7 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
 
 use crate::config::ServerConfig;
+use crate::control::ControlAction;
 use crate::error::ServerError;
 use crate::runtime::{self, Command, SharedState};
 
@@ -121,6 +122,14 @@ impl ServerHandle {
         if self.commands.send(Command::RebroadcastAll).is_err() {
             warn!("cannot rebroadcast: the overlay server is not running");
         }
+    }
+
+    /// Installs the authenticated control bridge and its action receiver.
+    ///
+    /// The caller keeps the receiver and must apply actions on its own UI
+    /// task. Installing a bridge clears replay and rate-limit state.
+    pub fn set_control(&self, token: &str, actions: mpsc::UnboundedSender<ControlAction>) {
+        self.shared.set_control(token, actions);
     }
 
     /// Returns the current lifecycle state.

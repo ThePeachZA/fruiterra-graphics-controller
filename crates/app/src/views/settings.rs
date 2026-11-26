@@ -1,7 +1,7 @@
 //! Settings destination: overlay network, startup and display defaults.
 
 use dioxus::prelude::*;
-use fgc_server::AssetMode;
+use fgc_server::{AssetMode, ServerStatus};
 
 use crate::assets_io::format_bytes;
 use crate::components::button::{Button, ButtonSize, ButtonVariant};
@@ -13,7 +13,7 @@ use crate::remote_access;
 use crate::server::DEFAULT_PORT;
 use crate::state::AppStore;
 use crate::tailscale::{TailscaleState, TailscaleStatus};
-use crate::views::overlay::OverlayUrls;
+use crate::views::overlay::{OverlayUrls, copy_to_clipboard};
 
 /// Editable settings that are live in milestone M4 and M5.
 #[component]
@@ -34,6 +34,19 @@ pub fn SettingsView() -> Element {
     let port_text = use_signal(|| settings.overlay.port.to_string());
     let port_error = use_signal(|| None::<String>);
     let mut confirm_backup = use_signal(|| false);
+    let mut reveal_control_token = use_signal(|| false);
+    let mut confirm_token = use_signal(|| false);
+
+    let control_status = server.status();
+    let control_port = match &control_status {
+        ServerStatus::Running { port, .. } => *port,
+        _ => settings.overlay.port,
+    };
+    let control_endpoint = format!("http://127.0.0.1:{control_port}/control");
+    let endpoint_for_copy = control_endpoint.clone();
+    let control_token = server.control_token();
+    let token_for_copy = control_token.clone();
+    let masked_control_token = "•".repeat(control_token.len());
 
     let tailscale: Option<TailscaleStatus> = store.tailscale_status();
     let tailscale_ready = matches!(
@@ -202,6 +215,79 @@ pub fn SettingsView() -> Element {
                     p { class: "fgc-note", "{notice}" }
                 }
             }
+            Panel {
+                title: "Local control".to_owned(),
+                description: "Hardware buttons can drive show actions through a loopback-only endpoint.".to_owned(),
+                KeyValues {
+                    KeyValue {
+                        label: "Control endpoint".to_owned(),
+                        value: control_endpoint.clone(),
+                    }
+                    KeyValue {
+                        label: "Access".to_owned(),
+                        value: "Loopback only".to_owned(),
+                    }
+                }
+                Field {
+                    label: "Bearer token".to_owned(),
+                    hint: Some("Keep this private. Regenerate it if it has been shared.".to_owned()),
+                    error: server.control_error(),
+                    div { class: "fgc-inline",
+                        Input {
+                            r#type: if reveal_control_token() { "text" } else { "password" },
+                            value: if reveal_control_token() {
+                                control_token.clone()
+                            } else {
+                                masked_control_token.clone()
+                            },
+                            readonly: true,
+                            aria_label: "Local control bearer token",
+                        }
+                        Button {
+                            variant: ButtonVariant::Outline,
+                            size: ButtonSize::Sm,
+                            aria_label: if reveal_control_token() {
+                                "Hide local control token"
+                            } else {
+                                "Show local control token"
+                            },
+                            onclick: move |_| reveal_control_token.set(!reveal_control_token()),
+                            if reveal_control_token() { "Hide" } else { "Reveal" }
+                        }
+                        Button {
+                            variant: ButtonVariant::Ghost,
+                            size: ButtonSize::Sm,
+                            aria_label: "Copy local control token",
+                            onclick: move |_| {
+                                copy_to_clipboard(&token_for_copy);
+                                store.notify("Local control token copied.");
+                            },
+                            "Copy"
+                        }
+                    }
+                }
+                div { class: "fgc-actions",
+                    Button {
+                        variant: ButtonVariant::Ghost,
+                        size: ButtonSize::Sm,
+                        aria_label: "Copy local control endpoint",
+                        onclick: move |_| {
+                            copy_to_clipboard(&endpoint_for_copy);
+                            store.notify("Local control endpoint copied.");
+                        },
+                        "Copy endpoint"
+                    }
+                    Button {
+                        variant: ButtonVariant::Destructive,
+                        size: ButtonSize::Sm,
+                        onclick: move |_| confirm_token.set(true),
+                        "Regenerate token"
+                    }
+                }
+                p { class: "fgc-note",
+                    "POST JSON to this endpoint with Authorization: Bearer <token>, a current Unix timestamp and a unique nonce. LAN and Tailscale control are reserved for a later release."
+                }
+            }
             OverlayUrls {}
             CollapsiblePanel {
                 title: "Display".to_owned(),
@@ -346,6 +432,30 @@ pub fn SettingsView() -> Element {
                         confirm_backup.set(false);
                     },
                     "Import project"
+                }
+            }
+        }
+
+        Dialog {
+            open: confirm_token(),
+            on_open_change: move |open: bool| if !open { confirm_token.set(false) },
+            DialogTitle { "Regenerate the local control token?" }
+            DialogDescription {
+                "Existing Stream Deck and Touch Portal profiles will stop working until their bearer token is updated."
+            }
+            div { class: "fgc-dialog-actions",
+                Button {
+                    variant: ButtonVariant::Outline,
+                    onclick: move |_| confirm_token.set(false),
+                    "Cancel"
+                }
+                Button {
+                    variant: ButtonVariant::Destructive,
+                    onclick: move |_| {
+                        store.regenerate_control_token();
+                        confirm_token.set(false);
+                    },
+                    "Regenerate token"
                 }
             }
         }

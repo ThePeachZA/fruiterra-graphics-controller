@@ -14,7 +14,8 @@ use fgc_core::{AppState, Asset, AssetOrigin, Match};
 use fgc_protocol::{
     AssetCatalog, DataUrlResolver, Projector, SectionCache, ServedAssetResolver, theme_message,
 };
-use fgc_server::{AssetMode, Outbound, ServerConfig, ServerHandle, ServerStatus};
+use fgc_server::{AssetMode, ControlAction, Outbound, ServerConfig, ServerHandle, ServerStatus};
+use tokio::sync::mpsc;
 use tracing::{debug, warn};
 
 /// How often the UI refreshes the displayed server status.
@@ -34,6 +35,8 @@ pub struct ServerController {
     blob_dir: Signal<Option<PathBuf>>,
     differ: Signal<ProjectionDiffer>,
     last_broadcast: Signal<Option<Instant>>,
+    control_token: Signal<String>,
+    control_error: Signal<Option<String>>,
 }
 
 impl ServerController {
@@ -49,6 +52,15 @@ impl ServerController {
         let blob_dir = use_signal(|| fgc_core::assets_root().ok());
         let differ = use_signal(ProjectionDiffer::new);
         let last_broadcast = use_signal(|| None::<Instant>);
+        let token_result = use_hook(crate::control::load_or_create_token);
+        let control_token = use_signal(|| match &token_result {
+            Ok(token) => token.clone(),
+            Err(_) => String::new(),
+        });
+        let control_error = use_signal(|| match &token_result {
+            Ok(_) => None,
+            Err(error) => Some(error.clone()),
+        });
 
         use_future(move || async move {
             let mut status = status;
@@ -72,6 +84,8 @@ impl ServerController {
             blob_dir,
             differ,
             last_broadcast,
+            control_token,
+            control_error,
         }
     }
 
@@ -87,6 +101,8 @@ impl ServerController {
             blob_dir: Signal::new(None::<PathBuf>),
             differ: Signal::new(ProjectionDiffer::new()),
             last_broadcast: Signal::new(None::<Instant>),
+            control_token: Signal::new(String::new()),
+            control_error: Signal::new(None::<String>),
         }
     }
 
@@ -120,6 +136,36 @@ impl ServerController {
     #[must_use]
     pub fn asset_mode(&self) -> AssetMode {
         *self.asset_mode.read()
+    }
+
+    /// Token accepted by the loopback control endpoint.
+    #[must_use]
+    pub fn control_token(&self) -> String {
+        self.control_token.cloned()
+    }
+
+    /// Last token persistence error, if one occurred during startup.
+    #[must_use]
+    pub fn control_error(&self) -> Option<String> {
+        self.control_error.cloned()
+    }
+
+    /// Replaces the active control token.
+    pub fn set_control_token(&self, token: impl Into<String>) {
+        let mut control_token = self.control_token;
+        control_token.set(token.into());
+    }
+
+    /// Records a control token error for display in settings.
+    pub fn set_control_error(&self, error: impl Into<String>) {
+        let mut control_error = self.control_error;
+        control_error.set(Some(error.into()));
+    }
+
+    /// Clears the displayed control token error.
+    pub fn clear_control_error(&self) {
+        let mut control_error = self.control_error;
+        control_error.set(None);
     }
 
     /// True while a start or stop transition is in flight.
@@ -164,7 +210,14 @@ impl ServerController {
     }
 
     /// Starts the listener. Ignored when already running or busy.
-    pub fn start(&self, config: ServerConfig, base_url: String, initial: Vec<Outbound>) {
+    pub fn start(
+        &self,
+        config: ServerConfig,
+        base_url: String,
+        initial: Vec<Outbound>,
+        control_token: String,
+        on_control: impl FnOnce(mpsc::UnboundedReceiver<ControlAction>) + 'static,
+    ) {
         if self.busy() || self.is_running() {
             return;
         }
@@ -192,6 +245,13 @@ impl ServerController {
                     }
                     if sent_initial {
                         last_broadcast_signal.set(Some(Instant::now()));
+                    }
+                    if control_token.trim().is_empty() {
+                        warn!("local control token unavailable; control endpoint disabled");
+                    } else {
+                        let (actions, receiver) = mpsc::unbounded_channel();
+                        handle.set_control(&control_token, actions);
+                        on_control(receiver);
                     }
                     debug!(port = ?handle.port(), "overlay server started");
                     status_signal.set(handle.status());
@@ -248,7 +308,14 @@ impl ServerController {
     }
 
     /// Stops any current listener and starts a new one with `config`.
-    pub fn restart(&self, config: ServerConfig, base_url: String, initial: Vec<Outbound>) {
+    pub fn restart(
+        &self,
+        config: ServerConfig,
+        base_url: String,
+        initial: Vec<Outbound>,
+        control_token: String,
+        on_control: impl FnOnce(mpsc::UnboundedReceiver<ControlAction>) + 'static,
+    ) {
         if self.busy() {
             return;
         }
@@ -283,6 +350,13 @@ impl ServerController {
                     }
                     if sent_initial {
                         last_broadcast_signal.set(Some(Instant::now()));
+                    }
+                    if control_token.trim().is_empty() {
+                        warn!("local control token unavailable; control endpoint disabled");
+                    } else {
+                        let (actions, receiver) = mpsc::unbounded_channel();
+                        handle.set_control(&control_token, actions);
+                        on_control(receiver);
                     }
                     debug!(port = ?handle.port(), "overlay server restarted");
                     status_signal.set(handle.status());

@@ -41,7 +41,8 @@ use fgc_core::{
     validate_and_repair,
 };
 use fgc_protocol::{AssetCatalog, auto_overlay, data_url_for, parse_theme_json};
-use fgc_server::{AssetMode, Outbound, ServerConfig};
+use fgc_server::{AssetMode, ControlAction, Outbound, ServerConfig};
+use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
 use crate::assets_io::format_bytes;
@@ -500,6 +501,32 @@ impl AppStore {
         self.set_auto_overlay_active(&included[next]);
     }
 
+    /// Applies one validated hardware-controller action on the UI task.
+    pub fn apply_control_action(&self, action: ControlAction) {
+        match action {
+            ControlAction::Show => self.set_overlays_visible(true),
+            ControlAction::Hide => self.set_overlays_visible(false),
+            ControlAction::ForceUpdate => self.force_update(),
+            ControlAction::SetScene(file) => {
+                if SCENE_OVERLAY_FILES.contains(&file.as_str()) {
+                    self.set_auto_overlay_active(&file);
+                }
+            }
+            ControlAction::NextScene => self.cycle_auto_overlay(1),
+            ControlAction::PreviousScene => self.cycle_auto_overlay(-1),
+        }
+    }
+
+    /// Drains control actions on the Dioxus UI task.
+    pub fn spawn_control_receiver(&self, mut receiver: mpsc::UnboundedReceiver<ControlAction>) {
+        let store = *self;
+        spawn(async move {
+            while let Some(action) = receiver.recv().await {
+                store.apply_control_action(action);
+            }
+        });
+    }
+
     fn update_auto_overlay(&self, included: Vec<String>, active: Option<String>) {
         let (included, active) = canonical_auto_overlay(included, active);
         let mut included_signal = self.auto_overlay_included;
@@ -540,6 +567,24 @@ impl AppStore {
     pub fn notify(&self, message: impl Into<String>) {
         let mut notice = self.notice;
         notice.set(Some(message.into()));
+    }
+
+    /// Replaces the local control token and applies it to a running server.
+    pub fn regenerate_control_token(&self) {
+        match crate::control::create_token() {
+            Ok(token) => {
+                self.server.set_control_token(token);
+                self.server.clear_control_error();
+                if self.server.is_running() {
+                    self.restart_server();
+                }
+                self.notify("Local control token regenerated.");
+            }
+            Err(error) => {
+                self.server.set_control_error(error);
+                self.report_error("Could not regenerate the local control token.");
+            }
+        }
     }
 
     /// Applies a mutation, validates the result and reprojects it.
@@ -2922,8 +2967,13 @@ impl AppStore {
     /// Starts the overlay server with the current settings.
     pub fn start_server(&self) {
         let (config, base_url, outbound) = self.server_plan();
+        let token = self.server.control_token();
+        let store = *self;
         self.server.set_base_url(base_url.clone());
-        self.server.start(config, base_url, outbound);
+        self.server
+            .start(config, base_url, outbound, token, move |receiver| {
+                store.spawn_control_receiver(receiver);
+            });
         self.sync_tailscale_serve(true);
     }
 
@@ -2936,8 +2986,13 @@ impl AppStore {
     /// Restarts the overlay server with the current settings.
     pub fn restart_server(&self) {
         let (config, base_url, outbound) = self.server_plan();
+        let token = self.server.control_token();
+        let store = *self;
         self.server.set_base_url(base_url.clone());
-        self.server.restart(config, base_url, outbound);
+        self.server
+            .restart(config, base_url, outbound, token, move |receiver| {
+                store.spawn_control_receiver(receiver);
+            });
         self.sync_tailscale_serve(true);
     }
 

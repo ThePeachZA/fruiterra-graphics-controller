@@ -5,6 +5,7 @@
 //! payloads are serialised once here and fanned out through
 //! `tokio::sync::broadcast<Arc<str>>`.
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU16, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
@@ -18,6 +19,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{error, warn};
 
 use crate::config::ServerConfig;
+use crate::control::{ControlAction, ControlBridge, ControlGuard};
 use crate::error::ServerError;
 use crate::handle::Outbound;
 
@@ -64,6 +66,10 @@ pub(crate) struct SharedState {
     pub(crate) blob_dir: Option<PathBuf>,
     /// Cancelled to close WebSocket clients and stop the listener.
     pub(crate) shutdown: CancellationToken,
+    /// Authenticated control bridge, installed by the application.
+    control: RwLock<Option<Arc<ControlBridge>>>,
+    /// Replay and rate-limit state for the control endpoint.
+    control_guard: ControlGuard,
     /// Lifecycle marker.
     status: Mutex<Lifecycle>,
 }
@@ -81,6 +87,8 @@ impl SharedState {
             overlay_override_dir: config.overlay_override_dir,
             blob_dir: config.blob_dir,
             shutdown: CancellationToken::new(),
+            control: RwLock::new(None),
+            control_guard: ControlGuard::default(),
             status: Mutex::new(Lifecycle::Starting),
         }
     }
@@ -150,6 +158,29 @@ impl SharedState {
     /// Sends one already-serialised frame to every subscriber.
     pub(crate) fn send(&self, frame: String) {
         let _ = self.tx.send(Arc::from(frame));
+    }
+
+    /// Installs or replaces the authenticated control bridge.
+    pub(crate) fn set_control(&self, token: &str, actions: mpsc::UnboundedSender<ControlAction>) {
+        let bridge = Arc::new(ControlBridge::new(token, actions));
+        match self.control.write() {
+            Ok(mut guard) => *guard = Some(bridge),
+            Err(poisoned) => *poisoned.into_inner() = Some(bridge),
+        }
+        self.control_guard.clear();
+    }
+
+    /// Returns the installed control bridge, if the app has configured one.
+    pub(crate) fn control_bridge(&self) -> Option<Arc<ControlBridge>> {
+        match self.control.read() {
+            Ok(guard) => guard.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        }
+    }
+
+    /// Returns the shared replay and rate-limit state.
+    pub(crate) fn control_guard(&self) -> &ControlGuard {
+        &self.control_guard
     }
 }
 
@@ -238,9 +269,12 @@ async fn run(
     let shutdown = shared.shutdown.clone();
     let app = crate::routes::router(Arc::clone(&shared));
     let server = tokio::spawn(async move {
-        axum::serve(listener, app)
-            .with_graceful_shutdown(shutdown.cancelled_owned())
-            .await
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(shutdown.cancelled_owned())
+        .await
     });
 
     loop {

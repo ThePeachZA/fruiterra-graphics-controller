@@ -3,7 +3,8 @@
 //! The listener serves overlays, bundled and user assets, fonts, `/health` and
 //! `/state`, plus the WebSocket endpoint at `/`. Every response is small and
 //! cache headers are explicit so OBS reloads overlays after an override edit
-//! while content-addressed assets stay immutable.
+//! while content-addressed assets stay immutable. The authenticated
+//! `/control` route is built separately so it never inherits permissive CORS.
 
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
@@ -12,12 +13,13 @@ use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde_json::json;
 use tower_http::cors::CorsLayer;
 use tracing::warn;
 
+use crate::control::{self, CONTROL_PATH};
 use crate::embed;
 use crate::overrides;
 use crate::range::{RangeOutcome, parse_range};
@@ -29,7 +31,7 @@ const NO_STORE: &str = "no-store";
 
 /// Builds the Axum router for one server instance.
 pub(crate) fn router(shared: Arc<SharedState>) -> Router {
-    Router::new()
+    let public = Router::new()
         .route("/", get(ws::upgrade))
         .route("/health", get(health))
         .route("/state", get(state))
@@ -37,7 +39,11 @@ pub(crate) fn router(shared: Arc<SharedState>) -> Router {
         .route("/assets/fonts/{name}", get(font))
         .route("/assets/{file}", get(asset))
         .layer(CorsLayer::permissive())
-        .with_state(shared)
+        .with_state(Arc::clone(&shared));
+    let control = Router::new()
+        .route(CONTROL_PATH, post(control::control))
+        .with_state(shared);
+    Router::new().merge(public).merge(control)
 }
 
 async fn health(State(shared): State<Arc<SharedState>>) -> Response {

@@ -11,6 +11,7 @@
 mod app;
 mod assets_io;
 mod components;
+mod control;
 mod hero_sync;
 mod logo_colors;
 mod remote_access;
