@@ -5,10 +5,10 @@ id = 2
 slug = "remote-browser-control-of-match-controller"
 title = "Remote browser control of Match Controller"
 kind = "idea"
-status = "triaged"
+status = "started"
 resolution = ""
 created = "2026-11-21"
-updated = "2026-11-21"
+updated = "2026-11-26"
 tags = ["area:remote", "needs-design", "post-v1", "security", "user-requested"]
 
 # outbound-only. Cross-kind structural edges (e.g. references with a role

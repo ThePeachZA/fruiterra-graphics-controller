@@ -35,7 +35,23 @@ rules as the overlay URLs.
   rules as Browser Source URLs.
 - A second-device QA case is added to `docs/manual-qa-runbook.md` §7.
 
+## Design
+
+`docs/remote-control-design.md` is the design pass, written 2026-11-26 while
+this item was started. It is **draft for owner review**, not implemented. It
+answers both open questions below with a recommended decision and an approval
+checklist:
+
+- One control API shared with IMP-003; bearer stays on loopback, HMAC-SHA256
+  signing is used for remote requests, with the existing token as the single
+  secret.
+- Phase 1 exposes only the six show actions already shipped in IMP-003. Score,
+  timer and map writes are phased later; destructive edits need a separate
+  confirmation/undo design.
+
 ## Open questions
 
-- Which actions are safe to expose first?
-- What credential or token model is acceptable for LAN and tailnet use?
+- Which actions are safe to expose first? — **Answered in the design draft**;
+  awaiting owner approval.
+- What credential or token model is acceptable for LAN and tailnet use? —
+  **Answered in the design draft**; awaiting owner approval.
