@@ -2403,7 +2403,9 @@ visible. The map-select reveal elements were still animating after the host
 fade, and switching away and back replayed them (inner opacities 0.500923 and
 0.752024 at 900ms). Hide and show stayed clean, no duplicate fade fired, and
 the console was empty. The owner reviewed the 300ms, 650ms, 900ms and replay
-captures and approved A92 on 2026-11-26.
+captures and approved A92 on 2026-11-26. The owner then ran the accepted build
+in OBS and confirmed the automatic scene fade in the real broadcast workflow,
+so the outstanding OBS check is complete.
 
 Fixed risks from A92:
 
