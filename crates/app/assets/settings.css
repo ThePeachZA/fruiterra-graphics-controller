@@ -15,6 +15,25 @@
     flex: 0 0 auto;
 }
 
+.fgc-remote-pages {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--fgc-space-2);
+}
+
+.fgc-remote-pages > .fgc-inline > span:first-child {
+    flex: 0 0 8rem;
+    color: var(--fgc-text-muted);
+}
+
+.fgc-remote-pages code {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-family: var(--fgc-font-mono);
+    font-size: 0.85rem;
+}
+
 .fgc-access-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));

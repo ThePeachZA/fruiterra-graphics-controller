@@ -13,6 +13,7 @@ fgc-protocol.workspace = true
 
 axum.workspace = true
 futures-util.workspace = true
+hmac.workspace = true
 mime_guess.workspace = true
 rust-embed.workspace = true
 serde.workspace = true

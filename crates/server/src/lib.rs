@@ -23,6 +23,7 @@ mod error;
 mod handle;
 mod overrides;
 mod range;
+mod remote_page;
 mod routes;
 mod runtime;
 mod ws;

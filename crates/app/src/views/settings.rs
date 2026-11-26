@@ -73,6 +73,18 @@ pub fn SettingsView() -> Element {
     let remote_notice = remote_access::pending_notice(remote_mode);
     let serve_line = tailscale_enabled
         .then(|| remote_access::serve_text(&store.serve_state(), server.is_running()));
+    let remote_control_available = local_enabled || tailscale_enabled;
+    let remote_pages: Vec<(String, String)> =
+        remote_access::browser_source_groups(&snapshot, dns_name)
+            .into_iter()
+            .filter(|group| group.key != "this-pc")
+            .map(|group| {
+                (
+                    group.label.to_owned(),
+                    format!("{}/remote", group.base_url.trim_end_matches('/')),
+                )
+            })
+            .collect();
     drop(snapshot);
 
     let tailscale_summary = tailscale.as_ref().map_or_else(
@@ -227,6 +239,39 @@ pub fn SettingsView() -> Element {
                         label: "Access".to_owned(),
                         value: "Loopback only".to_owned(),
                     }
+                    KeyValue {
+                        label: "Remote browser control".to_owned(),
+                        value: if remote_control_available {
+                            "Enabled".to_owned()
+                        } else {
+                            "Off".to_owned()
+                        },
+                    }
+                }
+                if remote_control_available {
+                    div { class: "fgc-remote-pages",
+                        for (label, url) in remote_pages.clone() {
+                            div { class: "fgc-inline",
+                                span { "{label}" }
+                                if store.urls_visible() {
+                                    code { "{url}" }
+                                    Button {
+                                        variant: ButtonVariant::Ghost,
+                                        size: ButtonSize::Sm,
+                                        aria_label: format!("Copy {label} remote control page URL"),
+                                        onclick: move |_| {
+                                            let target = url.clone();
+                                            copy_to_clipboard(&target);
+                                            store.notify("Remote control page URL copied.");
+                                        },
+                                        "Copy"
+                                    }
+                                } else {
+                                    span { class: "fgc-note", "Hidden — select Show URLs" }
+                                }
+                            }
+                        }
+                    }
                 }
                 Field {
                     label: "Bearer token".to_owned(),
@@ -285,7 +330,7 @@ pub fn SettingsView() -> Element {
                     }
                 }
                 p { class: "fgc-note",
-                    "POST JSON to this endpoint with Authorization: Bearer <token>, a current Unix timestamp and a unique nonce. LAN and Tailscale control are reserved for a later release."
+                    "Loopback clients POST JSON with Authorization: Bearer <token>, a current Unix timestamp and a unique nonce. Remote pages sign the same request with HMAC-SHA256 using this token; type it into the page, and regenerate it here to revoke every client."
                 }
             }
             OverlayUrls {}

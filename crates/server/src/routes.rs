@@ -23,6 +23,7 @@ use crate::control::{self, CONTROL_PATH};
 use crate::embed;
 use crate::overrides;
 use crate::range::{RangeOutcome, parse_range};
+use crate::remote_page;
 use crate::runtime::SharedState;
 use crate::ws;
 
@@ -42,8 +43,19 @@ pub(crate) fn router(shared: Arc<SharedState>) -> Router {
         .with_state(Arc::clone(&shared));
     let control = Router::new()
         .route(CONTROL_PATH, post(control::control))
+        .route("/remote", get(remote_control_page))
         .with_state(shared);
     Router::new().merge(public).merge(control)
+}
+
+async fn remote_control_page(State(shared): State<Arc<SharedState>>) -> Response {
+    if !shared
+        .control_bridge()
+        .is_some_and(|bridge| bridge.remote_enabled())
+    {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    text_response(remote_page::html(), "text/html; charset=utf-8", NO_STORE)
 }
 
 async fn health(State(shared): State<Arc<SharedState>>) -> Response {

@@ -48,7 +48,7 @@ async fn valid_request_delivers_action_without_cors_headers() {
     let (handle, base_url) = start(ServerConfig::new(0));
     let token = generate_control_token();
     let (tx, mut rx) = mpsc::unbounded_channel();
-    handle.set_control(&token, tx);
+    handle.set_control(&token, tx, false);
     let client = client();
 
     let response = client
@@ -90,7 +90,7 @@ async fn set_scene_uses_its_scene_field() {
     let (handle, base_url) = start(ServerConfig::new(0));
     let token = generate_control_token();
     let (tx, mut rx) = mpsc::unbounded_channel();
-    handle.set_control(&token, tx);
+    handle.set_control(&token, tx, false);
     let client = client();
     let request = serde_json::json!({
         "action": "set_scene",
@@ -124,7 +124,7 @@ async fn set_scene_without_a_scene_is_rejected() {
     let (handle, base_url) = start(ServerConfig::new(0));
     let token = generate_control_token();
     let (tx, mut rx) = mpsc::unbounded_channel();
-    handle.set_control(&token, tx);
+    handle.set_control(&token, tx, false);
     let client = client();
     let request = body("set_scene", "nonce-noscene-001");
 
@@ -141,7 +141,7 @@ async fn missing_and_invalid_tokens_are_rejected() {
     let (handle, base_url) = start(ServerConfig::new(0));
     let token = generate_control_token();
     let (tx, mut rx) = mpsc::unbounded_channel();
-    handle.set_control(&token, tx);
+    handle.set_control(&token, tx, false);
     let client = client();
 
     let missing = client
@@ -172,7 +172,7 @@ async fn stale_timestamp_is_rejected() {
     let (handle, base_url) = start(ServerConfig::new(0));
     let token = generate_control_token();
     let (tx, mut rx) = mpsc::unbounded_channel();
-    handle.set_control(&token, tx);
+    handle.set_control(&token, tx, false);
     let client = client();
     let stale = serde_json::json!({
         "action": "show",
@@ -195,7 +195,7 @@ async fn replayed_nonce_is_rejected() {
     let (handle, base_url) = start(ServerConfig::new(0));
     let token = generate_control_token();
     let (tx, mut rx) = mpsc::unbounded_channel();
-    handle.set_control(&token, tx);
+    handle.set_control(&token, tx, false);
     let client = client();
     let request = body("next_scene", "nonce-replay-001");
 
@@ -280,7 +280,7 @@ async fn requests_over_the_rate_limit_are_rejected() {
     let (handle, base_url) = start(ServerConfig::new(0));
     let token = generate_control_token();
     let (tx, mut rx) = mpsc::unbounded_channel();
-    handle.set_control(&token, tx);
+    handle.set_control(&token, tx, false);
     let client = client();
 
     for index in 0..30 {

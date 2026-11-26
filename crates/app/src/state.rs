@@ -2968,12 +2968,19 @@ impl AppStore {
     pub fn start_server(&self) {
         let (config, base_url, outbound) = self.server_plan();
         let token = self.server.control_token();
+        let remote_enabled = self.remote_control_enabled();
         let store = *self;
         self.server.set_base_url(base_url.clone());
-        self.server
-            .start(config, base_url, outbound, token, move |receiver| {
+        self.server.start(
+            config,
+            base_url,
+            outbound,
+            token,
+            remote_enabled,
+            move |receiver| {
                 store.spawn_control_receiver(receiver);
-            });
+            },
+        );
         self.sync_tailscale_serve(true);
     }
 
@@ -2987,12 +2994,19 @@ impl AppStore {
     pub fn restart_server(&self) {
         let (config, base_url, outbound) = self.server_plan();
         let token = self.server.control_token();
+        let remote_enabled = self.remote_control_enabled();
         let store = *self;
         self.server.set_base_url(base_url.clone());
-        self.server
-            .restart(config, base_url, outbound, token, move |receiver| {
+        self.server.restart(
+            config,
+            base_url,
+            outbound,
+            token,
+            remote_enabled,
+            move |receiver| {
                 store.spawn_control_receiver(receiver);
-            });
+            },
+        );
         self.sync_tailscale_serve(true);
     }
 
@@ -3058,6 +3072,11 @@ impl AppStore {
                 }
             }
         });
+    }
+
+    fn remote_control_enabled(&self) -> bool {
+        let state = self.state.peek();
+        remote_access::is_local_enabled(&state) || remote_access::is_tailscale_enabled(&state)
     }
 
     fn server_plan(&self) -> (ServerConfig, String, Vec<Outbound>) {

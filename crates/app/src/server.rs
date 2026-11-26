@@ -216,6 +216,7 @@ impl ServerController {
         base_url: String,
         initial: Vec<Outbound>,
         control_token: String,
+        remote_control_enabled: bool,
         on_control: impl FnOnce(mpsc::UnboundedReceiver<ControlAction>) + 'static,
     ) {
         if self.busy() || self.is_running() {
@@ -250,7 +251,7 @@ impl ServerController {
                         warn!("local control token unavailable; control endpoint disabled");
                     } else {
                         let (actions, receiver) = mpsc::unbounded_channel();
-                        handle.set_control(&control_token, actions);
+                        handle.set_control(&control_token, actions, remote_control_enabled);
                         on_control(receiver);
                     }
                     debug!(port = ?handle.port(), "overlay server started");
@@ -314,6 +315,7 @@ impl ServerController {
         base_url: String,
         initial: Vec<Outbound>,
         control_token: String,
+        remote_control_enabled: bool,
         on_control: impl FnOnce(mpsc::UnboundedReceiver<ControlAction>) + 'static,
     ) {
         if self.busy() {
@@ -355,7 +357,7 @@ impl ServerController {
                         warn!("local control token unavailable; control endpoint disabled");
                     } else {
                         let (actions, receiver) = mpsc::unbounded_channel();
-                        handle.set_control(&control_token, actions);
+                        handle.set_control(&control_token, actions, remote_control_enabled);
                         on_control(receiver);
                     }
                     debug!(port = ?handle.port(), "overlay server restarted");

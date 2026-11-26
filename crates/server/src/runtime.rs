@@ -161,8 +161,13 @@ impl SharedState {
     }
 
     /// Installs or replaces the authenticated control bridge.
-    pub(crate) fn set_control(&self, token: &str, actions: mpsc::UnboundedSender<ControlAction>) {
-        let bridge = Arc::new(ControlBridge::new(token, actions));
+    pub(crate) fn set_control(
+        &self,
+        token: &str,
+        actions: mpsc::UnboundedSender<ControlAction>,
+        remote_enabled: bool,
+    ) {
+        let bridge = Arc::new(ControlBridge::new(token, actions, remote_enabled));
         match self.control.write() {
             Ok(mut guard) => *guard = Some(bridge),
             Err(poisoned) => *poisoned.into_inner() = Some(bridge),

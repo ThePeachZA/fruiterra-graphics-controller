@@ -128,8 +128,13 @@ impl ServerHandle {
     ///
     /// The caller keeps the receiver and must apply actions on its own UI
     /// task. Installing a bridge clears replay and rate-limit state.
-    pub fn set_control(&self, token: &str, actions: mpsc::UnboundedSender<ControlAction>) {
-        self.shared.set_control(token, actions);
+    pub fn set_control(
+        &self,
+        token: &str,
+        actions: mpsc::UnboundedSender<ControlAction>,
+        remote_enabled: bool,
+    ) {
+        self.shared.set_control(token, actions, remote_enabled);
     }
 
     /// Returns the current lifecycle state.
