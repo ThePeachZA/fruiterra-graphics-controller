@@ -359,35 +359,67 @@ Please confirm or correct:
 
 ## 12. Addendum — match-controller actions and destructive edits
 
-Owner direction after Phase 1: remote control must also drive elements of the
-Match Controller, including **map/ban edits**. This addendum replaces the
-Phase 1-only action list in §6 for the next slice. It is **draft for owner
-review**; implementation waits for approval of this section.
+Owner direction after Phase 1: remote control must also drive the Match
+Controller. The owner approved widening the original seven-action draft to
+**every value exposed by the Match Controller except the Config and Talent
+tabs**. Config (overlay appearance, branding, theme, portraits, loser-picks
+and ban visibility) and Talent (assignments, interview) stay desktop-only.
+This addendum replaces the Phase 1-only action list in §6.
 
 ### 12.1 Action set
 
 All new actions remain variants of the existing `ControlAction` enum on
-`POST /control`. They use the same bearer/HMAC authentication, replay guard and
-UI-task dispatch as Phase 1.
+`POST /control`. They use the same bearer/HMAC authentication, replay guard,
+rate limit and UI-task dispatch as Phase 1. All requests are flat JSON objects
+with `action`, `timestamp` and `nonce`; unknown fields, wrong types, negative
+or oversized indices, out-of-range scores, malformed ids and values outside
+the documented sets are rejected as `invalid_request` (422). Indices are
+zero-based and capped at 64; an index that is valid on the wire but beyond the
+current match's slot count is a no-op in the app.
 
-| Action | Fields | Effect on the existing app |
-|---|---|---|
-| `score_adjust` | `team: "a" \| "b"`, `delta: 1 \| -1` | Reads the current score, clamps at zero, switches to manual scoring and applies the new value. |
-| `timer` | `command: "start" \| "pause" \| "stop"` | Calls the existing timer controller; stop resets to the mode's initial seconds. |
-| `set_current_map` | `index: usize` | Marks one map slot current; out-of-range values are ignored. |
-| `set_map_pick` | `index: usize`, `team: "a" \| "b" \| "none"` | Sets the slot's picking team. Refused when `loser_picks` is on. |
-| `set_map_result` | `index: usize`, `outcome: "a" \| "b" \| "draw" \| "unplayed"` | Sets both map scores (1–0, 0–1, 0–0) and the completed flag; unplayed clears completion. |
-| `set_hero_ban` | `index: usize`, `team: "a" \| "b"`, `hero: string` | Sets one hero ban; an empty or whitespace hero clears the ban. |
-| `set_first_ban_team` | `index: usize`, `team: "a" \| "b" \| "none"` | Sets which team bans first on that slot. |
-
-No `reset_maps`, `reset_hero_bans`, match replacement, team swaps or new-match
-actions are exposed remotely in this slice. They are destructive beyond a
-single-field undo and stay desktop-only.
+| Tab | Action | Fields | Effect |
+|---|---|---|---|
+| Match | `set_match_title` / `set_match_subtitle` | `value: string` | Sets the match title or subtitle; empty clears it. |
+| Match | `set_match_scheduled_at` | `value: string` | Sets a `YYYY-MM-DDTHH:MM` value; empty clears it. |
+| Match | `set_match_first_to` | `value: 1..4` | Sets the format and resizes empty slots. |
+| Match | `set_match_status` | `status: "pre" \| "live" \| "post"` | Sets match status. |
+| Match | `set_match_side` | `side: "neutral" \| "home_attacks" \| "home_defends"` | Sets the side indicator. |
+| Match | `set_match_tournament` | `value: id \| ""` | Sets or clears the tournament link. |
+| Match | `set_match_team` | `team: "a" \| "b"`, `value: id \| ""` | Sets or clears one team. |
+| Match | `set_match_record` | `team: "a" \| "b"`, `value: string \| ""` | Sets or clears a manual record (max 24 chars). |
+| Match | `set_swap_sides` / `set_manual_scoring` | `enabled: bool` | Toggles side swap or manual score override. |
+| Match | `set_manual_score` | `team: "a" \| "b"`, `score: 0..999` | Sets one manual score. |
+| Match | `score_adjust` | `team: "a" \| "b"`, `delta: 1 \| -1` | Clamps at zero, switches to manual scoring and applies one point. |
+| Match | `save_current_match` | — | Snapshots the current match into the library. |
+| Match | `load_saved_match` / `delete_saved_match` | `id: string` | Loads or deletes a library entry. |
+| Match | `create_match` | — | Replaces the current match with a fresh one. |
+| Timer | `timer` | `command: "start" \| "pause" \| "stop"` | Drives the desktop `TimerController` through a channel registered by the root component; stop resets to the mode's initial seconds. |
+| Timer | `set_timer_mode` | `mode: "count_up" \| "count_down" \| "target" \| "scheduled"` | Sets the counting mode. |
+| Timer | `set_timer_alignment` | `alignment: "left" \| "center" \| "right"` | Sets timer alignment. |
+| Timer | `set_timer_leading_zeroes` / `set_timer_show_hours` / `set_timer_standalone` | `enabled: bool` | Sets the remaining timer display switches. |
+| Maps | `set_current_map` / `clear_current_map` | `index: usize` / — | Sets or clears the current map. |
+| Maps | `set_map_pick` | `index: usize`, `team: "a" \| "b" \| "none"` | Sets a slot's picker. Refused while `loser_picks` is on (a Config-tab switch). |
+| Maps | `set_map_result` | `index: usize`, `outcome: "a" \| "b" \| "draw" \| "unplayed"` | Sets scores (1–0, 0–1, 0–0) and completion; unplayed clears it. |
+| Maps | `set_map_name` / `set_map_mode` | `index: usize`, `value: string` / `mode: string` | Sets a slot name or free-text mode. |
+| Maps | `set_map_scores` | `index: usize`, `score_a: 0..999`, `score_b: 0..999` | Sets both map scores. |
+| Maps | `set_map_completed` | `index: usize`, `enabled: bool` | Marks a slot complete or incomplete. |
+| Maps | `insert_map` / `remove_map` | `index: usize` | Adds or removes one slot. |
+| Maps | `move_map` | `index: usize`, `direction: 1 \| -1` | Moves one slot. |
+| Maps | `reset_maps` | — | Resets all slots. |
+| Maps | `set_first_ban_team` | `index: usize`, `team: "a" \| "b" \| "none"` | Sets the first-ban team. |
+| Maps | `set_hero_ban` | `index: usize`, `team: "a" \| "b"`, `hero: string` | Sets one hero ban; empty clears it. |
+| Maps | `reset_hero_bans` | — | Clears all bans. |
+| Map Pool | `set_map_pool_included` | `name: string`, `enabled: bool` | Adds or removes a pool entry. |
+| Map Pool | `move_map_pool` | `index: usize`, `direction: 1 \| -1` | Moves one pool entry. |
+| — | `undo` | `undo: <token>` | Restores the inverse captured for a previous write. |
 
 ### 12.2 Confirmation
 
-`score_adjust`, `timer`, and `set_current_map` are single-step, like Phase 1.
-Pick, result, first-ban-team and hero-ban edits are **two-step**:
+Single-field edits (setup fields, timer, current-map selection, map completion
+and score adjustments) are single-step, like Phase 1. Actions that replace,
+remove or reset records are **two-step**: library load/delete/create, map
+pick/result, map name/mode/scores, slot insert/remove/move/reset,
+first-ban-team, hero ban, ban reset, pool membership and pool order.
 
 1. The first press prepares the action and shows a confirmation panel naming
    the slot, field and new value. Nothing is sent.
@@ -401,44 +433,48 @@ before a match record changes.
 
 ### 12.3 Undo
 
-Every accepted mutating request returns an `undo` token derived from the
-request nonce. For the next five minutes, `POST /control` with
-`action: "undo"`, `undo: <token>`, plus a fresh timestamp and nonce restores
-the previous value of that one field. The app stores the inverse in memory
-only; it is not persisted and is lost on restart. Undo is single-use and
-subject to the same replay and rate-limit guards. A stale or already-used undo
-token returns `undo_unavailable`. The browser page offers an **Undo** button
-in the success status for the duration of the window.
+Every accepted write returns an `undo` token derived from the request nonce in
+the response body: `{"ok":true,"action":...,"undo":"<token>"}`. For the next
+five minutes, `POST /control` with `action: "undo"`, `undo: <token>`, plus a
+fresh timestamp and nonce restores the snapshot captured before the write:
+current match plus library for match/pool edits, timer settings for timer
+configuration, and timer run state for `timer` commands. The app stores the
+inverse in memory only; it is not persisted and is lost on restart. Undo is
+single-use and subject to the same replay and rate-limit guards. A stale or
+already-used undo token returns `undo_unavailable`. The browser page offers an
+**Undo** button in the success status for the duration of the window.
 
-Undo is deliberately field-scoped. It does not restore deleted matches, do
-cascading repairs, or reverse a timer that has kept running. The confirmation
-panel states that plainly.
+Undo does not do cascading repairs, and a timer that has kept running since
+the command will have advanced beyond the restored value.
 
 ### 12.4 Page and status
 
 The remote page gains a compact **Match** section below Show actions, grouped
-as Score, Timer, Maps and Bans. It disables all match controls when there is
-no current match, when `loser_picks` blocks manual picks, or when the server
-is unreachable. Successful actions announce the applied value and expose the
-Undo button; rejected actions show the server's error code in plain language
-and re-enable the controls. Long hero names wrap and the confirm panel stays
-inside the viewport at phone width. Keyboard focus moves into the confirm
-panel on prepare and back to the originating button on cancel/confirm.
+as Match, Score, Timer, Maps, Bans and Map Pool, with one control per action
+in §12.1. Match controls stay disabled while the server is unreachable or the
+token is absent; writes with no current match are accepted by the endpoint but
+no-op in the app. Manual picks are refused while the desktop-only
+`loser_picks` switch is on. Successful actions announce the applied value and
+expose the Undo button; rejected actions show the server's error code in plain
+language and re-enable the controls. Long hero names wrap and the confirm
+panel stays inside the viewport at phone width. Keyboard focus moves into the
+confirm panel on prepare and back to the originating button on cancel/confirm.
 
 ### 12.5 Verification
 
-- Server unit tests for each new wire shape, the `confirmation_required`
-  refusal, undo inverse restoration, single-use undo and invalid indices.
-- App tests for score clamping, loser-pick refusal, ban clearing and no-current
-  match no-ops, using the existing domain helpers.
+- Server unit and integration tests for each new wire shape, the
+  `confirmation_required` refusal, undo token derivation, single-use undo and
+  invalid indices/fields.
+- App tests for score clamping, loser-pick refusal, ban clearing, undo
+  restoration and no-current-match no-ops, using the existing domain helpers.
 - Second-device QA case A94 is extended with one score adjustment, one timer
   press, one map pick/result, one hero ban, one confirm/cancel pair and one
   undo, on both LAN and Tailscale.
 
 ### 12.6 Approval checklist
 
-- [ ] Expose the seven match actions in §12.1 and keep reset/new-match actions
-      desktop-only.
-- [ ] Two-step confirmation for pick, result, first-ban-team and hero-ban edits.
-- [ ] Five-minute in-memory, single-use undo for every accepted write.
-- [ ] Disabling rules for no match, loser-picks and unreachable server.
+- [x] Expose every Match Controller value except the Config and Talent tabs.
+- [x] Two-step confirmation for record replacement, removal, reset and ban edits.
+- [x] Five-minute in-memory, single-use undo for every accepted write.
+- [x] Match controls disabled without a token or server, and picks blocked by
+      `loser_picks`.
