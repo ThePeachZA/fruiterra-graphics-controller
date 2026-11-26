@@ -68,9 +68,32 @@ The default folder is:
 
 See [Overlays in OBS](Overlays-in-OBS).
 
+## Local control
+
+The **Local control** panel shows the loopback-only endpoint used by hardware
+buttons and touch panels: `POST http://127.0.0.1:<port>/control`. The port shown
+is the running server's port, or the configured port when the server is stopped.
+The bearer token is a UUIDv4 string stored at
+`%APPDATA%\Fruiterra\Fruiterra Graphics Controller\data\control-token`, beside
+`app.json`; a `--data-dir` or `FGC_DATA_DIR` override moves it with the rest of
+the project. It is hidden by default. **Reveal** shows it in the field, **Copy**
+copies it without showing it on screen, and **Copy endpoint** copies the full
+URL.
+
+**Regenerate token** asks for confirmation because every Stream Deck or Touch
+Portal client must be updated afterwards. Regenerating while the server is
+running restarts it so the old token stops working immediately. The token is a
+local secret: do not put it in a URL, screenshot, shared profile or support log.
+
+Local network and Tailscale access change OBS Browser Source URLs only. They do
+not make `/control` reachable from another machine. See
+[Local control](Local-Control) for the request contract and client examples.
+
 ## Related pages
 
 - [Overlays in OBS](Overlays-in-OBS)
+- [Remote overlays (post-v1)](Remote-Overlays)
+- [Local control](Local-Control)
 - [Match Controller](Match-Controller)
 - [Assets](Assets)
 - [Data and Backups](Data-and-Backups)

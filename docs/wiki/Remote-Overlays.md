@@ -10,6 +10,13 @@ The overlay server normally listens on `127.0.0.1`. Remote access changes which
 addresses can load the seven OBS Browser Sources; it does not change the overlay
 HTML, the messages or the 1920×1080 Browser Source settings.
 
+> [!WARNING]
+> The authenticated `/control` endpoint is not part of remote access. It remains
+> loopback-only when **Local network** or **Tailscale** is on, and a LAN or
+> tailnet client cannot drive show actions through it. Do not expose the app port
+> through Funnel, a router or a tunnel to work around this boundary. See
+> [Local control](Local-Control).
+
 ## Access methods
 
 | Setting | URL shape | Availability |
@@ -129,5 +136,6 @@ A missing app path is treated as success, so stopping twice is safe.
 
 - [Overlays in OBS](Overlays-in-OBS)
 - [Settings](Settings)
+- [Local control](Local-Control)
 - [Troubleshooting](Troubleshooting)
 - [FAQ](FAQ)

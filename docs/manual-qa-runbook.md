@@ -6025,3 +6025,78 @@ every name within about 1px, and the regenerated default capture showed the mode
 bar after the reveal had settled. The final reviewer found no clipping, overlap
 or regression, all gates passed, and the owner selected **Sign off (Recommended)**
 after the combined review.
+
+### A93 — Authenticated local control API
+
+**Covers:** IMP-003
+
+**Precondition:** Use a disposable `FGC_DATA_DIR` and an isolated WebView profile
+so the operator's token and project are untouched. Build with
+`dx build --desktop`, then start the app with
+`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 --remote-allow-origins=*`.
+The Stream Deck and Touch Portal files under `examples/control/` are request
+templates and setup instructions, not importable `.streamDeckProfile` or `.tpz`
+files; do not claim profile import support during this gate.
+
+1. Run `cargo fmt --all -- --check`, `cargo check --workspace --all-targets`,
+   `cargo clippy --workspace --all-targets -- -D warnings`,
+   `cargo test --workspace`, `git diff --check` and `dx build --desktop`. The
+   server suite must include the control tests for missing and invalid tokens,
+   wrong method, stale timestamp, replayed nonce, malformed nonce, rate limit,
+   valid action delivery, bridge teardown and CORS separation.
+2. Open **Settings** in the real WebView2 app. Confirm the **Local control**
+   panel shows `POST http://127.0.0.1:<port>/control`, **Loopback only**, a
+   read-only token field masked with one bullet per character, and **Reveal**,
+   **Copy**, **Copy endpoint** and **Regenerate token** controls. Select
+   **Reveal** and confirm the field is still read-only and its value matches the
+   `data/control-token` file under the probe data root. At 1360×860 and 1920×1080
+   the panel must not overflow horizontally.
+3. Select **Regenerate token** and confirm the dialog warns that existing client
+   profiles must be updated. Select **Cancel** and confirm the token file is
+   byte-for-byte unchanged. A separate rotation check may select the destructive
+   button, confirm the token changes, and update any client after the run; do not
+   rotate a production token during this gate.
+4. Start the overlay server from **Overlays** and confirm `/health` reports
+   `status=ok` and the same port shown in Settings. Send `POST /control` with
+   `Authorization: Bearer <token>`, `Content-Type: application/json` and a fresh
+   `timestamp`, `nonce` and action. The accepted actions are `show`, `hide`,
+   `force_update`, `set_scene`, `next_scene` and `previous_scene`; `set_scene`
+   also needs a `scene` such as `game-overlay.html`. The response must be
+   `{ "ok": true, "action": "<name>" }`, with `scene` echoed only for
+   `set_scene`. Check `hide` and `show` change the overlay visibility and that a
+   valid `set_scene` makes `/state` report the chosen `autoOverlay.active`.
+5. Repeat a request with a wrong or missing bearer token and confirm 401
+   `unauthorised`; use a timestamp older than the 60-second window and confirm
+   400 `stale_timestamp`; replay a previously accepted nonce and confirm 409
+   `replayed_nonce`. Confirm every control response carries
+   `Cache-Control: no-store` and no `Access-Control-Allow-Origin`, while
+   `/health` keeps permissive CORS for the public overlay surface. Do not expect
+   custom error codes for malformed JSON or unknown actions: Axum returns 422.
+6. Enable **Local network** and **Tailscale** in turn and confirm the Browser
+   Source URL sets change as documented in A42–A48. Repeat a control request
+   from the host loopback address only; a LAN or tailnet client must still be
+   rejected as a non-loopback peer with 403 `loopback_only` if the listener is
+   reachable. No Funnel, router or public tunnel exposure is permitted before
+   D8-5, and HMAC signing is deferred until LAN or Tailscale control exposure is
+   designed.
+7. Stop the server, close the app and confirm the listener disappears and any
+   `tailscale serve` paths owned by the app are removed. `tailscale serve status`
+   should return `No serve config` when no other service owns those paths. A
+   token file remaining under the disposable data root is expected; the token is
+   not part of project bundles or backups.
+8. Ask the owner to approve the Settings and regenerate-dialog screenshots in
+   the Review pane, then record A93 only after the visual sign-off and a clean
+   console apart from the usual `favicon.ico` 404.
+
+**Result: Pass — owner 2026-11-26.** The assistant ran the broad gates and the
+real WebView2/CDP proof on a `dx build --desktop` binary with an isolated data
+root. The panel showed the correct endpoint and a masked read-only token; the
+revealed value matched `data/control-token`; the regenerate dialog opened and
+Cancel left the file unchanged. With the server running, `hide`, `show` and
+`set_scene` delivered the documented success bodies and `/state` reflected the
+selected scene. Invalid token, stale timestamp and replayed nonce returned 401,
+400 and 409 respectively; control responses carried `no-store` and no permissive
+CORS, and `/health` remained healthy. The owner selected **Approve** after
+reviewing the panel and dialog screenshots. The remote-access and teardown rows
+are operator checks recorded for repeatable QA; no Funnel or public exposure was
+used.
